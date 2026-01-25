@@ -3,7 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev --port 3000",
+		"dev": "npm run build && wrangler dev --port 3000",
+		"dev:vite": "vite dev --port 3000",
 		"build": "vite build",
 		"serve": "vite preview",
 		"test": "vitest run",

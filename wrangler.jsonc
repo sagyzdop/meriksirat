@@ -9,6 +9,19 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"d1_databases": [
+		{
+			"binding": "meriksirat_d1",
+			"database_name": "meriksirat",
+			"database_id": "ffa4f17b-6c91-4f3e-a645-e04be7e93233"
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "meriksirat",
+			"binding": "meriksirat_r2"
+		}
+	],
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
 		"enabled": true
