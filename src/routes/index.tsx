@@ -1,14 +1,17 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { getSessionFn } from '@/lib/session'
 
-export const Route = createFileRoute('/')({ component: App })
+export const Route = createFileRoute('/')({
+  beforeLoad: async () => {
+    const session = await getSessionFn()
 
-function App() {
+    if (session?.user) {
+      throw redirect({ to: '/dashboard' })
+    } else {
+      throw redirect({ to: '/login' })
+    }
+  },
+  component: App,
+})
 
-  return (
-    <div className="max-w-5xl mx-auto p-8">
-      <h1 className="text-4xl font-bold mb-8 text-center">
-        Welcome to Your New React Router App!
-      </h1>
-    </div>
-  )
-}
+function App() {}

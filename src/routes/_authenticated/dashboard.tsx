@@ -1,33 +1,50 @@
 // src/routes/_authenticated/dashboard.tsx
-import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { authClient } from "@/lib/auth-client"
-import { Button } from "@/components/ui/button"
+import { createFileRoute } from '@tanstack/react-router'
+import { SectionCards } from '@/components/dashboard/section-cards'
+import { ChartAreaInteractive } from '@/components/dashboard/chart-area-interactive'
+import { DataTable } from '@/components/dashboard/data-table'
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = createFileRoute('/_authenticated/dashboard')({
   component: Dashboard,
 })
 
+// Sample data for DataTable
+const sampleData = [
+  {
+    id: 1,
+    header: 'Project Alpha',
+    type: 'Development',
+    status: 'In Progress',
+    target: 'Q1 2024',
+    limit: '100k',
+    reviewer: 'John Doe',
+  },
+  {
+    id: 2,
+    header: 'Project Beta',
+    type: 'Design',
+    status: 'Completed',
+    target: 'Q2 2024',
+    limit: '50k',
+    reviewer: 'Jane Smith',
+  },
+  {
+    id: 3,
+    header: 'Project Gamma',
+    type: 'Marketing',
+    status: 'Pending',
+    target: 'Q3 2024',
+    limit: '75k',
+    reviewer: 'Bob Johnson',
+  },
+]
+
 function Dashboard() {
-  const { session } = Route.useRouteContext()
-  const router = useRouter()
-  
-  const handleLogout = async () => {
-    await authClient.signOut()
-    router.invalidate()
-    router.navigate({ to: "/login" })
-  }
-  
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Welcome, {session.user.name}!</h1>
-          <p className="text-muted-foreground">This is your protected dashboard.</p>
-        </div>
-        <Button variant="outline" onClick={handleLogout}>
-          Logout
-        </Button>
-      </div>
+    <div className="flex-1 space-y-4">
+      <SectionCards />
+      <ChartAreaInteractive />
+      <DataTable data={sampleData} />
     </div>
   )
 }

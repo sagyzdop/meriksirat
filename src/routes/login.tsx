@@ -1,14 +1,13 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
-import { LoginForm } from "@/components/auth/login-form"
-import { getSessionFn } from "@/lib/session"
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { LoginForm } from '@/components/auth/login-form'
+import { getSessionFn } from '@/lib/session'
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute('/login')({
   beforeLoad: async () => {
     const session = await getSessionFn()
-    
-    // If already logged in, redirect to dashboard
+
     if (session?.user) {
-      throw redirect({ to: "/dashboard" })
+      throw redirect({ to: '/dashboard' })
     }
   },
   component: LoginPage,
