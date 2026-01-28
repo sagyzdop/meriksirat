@@ -4,6 +4,7 @@ import { authClient } from '@/lib/auth-client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
+import { Link } from '@tanstack/react-router'
 
 export function LoginForm({
   className,
@@ -27,11 +28,11 @@ export function LoginForm({
           <div className="flex size-8 items-center justify-center rounded-md">
             <GalleryVerticalEnd className="size-6" />
           </div>
-          <span className="sr-only">Acme Inc.</span>
+          <span className="sr-only">MerikSirat</span>
         </a>
-        <h1 className="text-xl font-bold">Welcome to Acme Inc.</h1>
+        <h1 className="text-xl font-bold">Welcome to MerikSirat</h1>
         <FieldDescription>
-          Don&apos;t have an account? You'll be signed up automatically.
+          Sign in with your Google account to continue
         </FieldDescription>
       </div>
 
@@ -59,8 +60,9 @@ export function LoginForm({
       </FieldGroup>
 
       <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{' '}
-        and <a href="#">Privacy Policy</a>.
+        <Link to="/faq" className="underline hover:text-primary">
+          FAQ
+        </Link>
       </FieldDescription>
     </div>
   )
