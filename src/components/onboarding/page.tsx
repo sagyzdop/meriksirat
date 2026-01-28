@@ -1,23 +1,177 @@
-import { GalleryVerticalEnd } from 'lucide-react'
-import { authClient } from '@/lib/auth-client'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useNavigate } from '@tanstack/react-router'
+import { GalleryVerticalEnd, ExternalLink } from 'lucide-react'
+import { updateUserOnboardingFn, completeTelegramOnboardingFn } from '@/lib/user'
+import { getEnvironmentFn } from '@/lib/get-env'
+import { getTelegramLinkUrl } from '@/lib/telegram-deeplink'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
-import { Link } from '@tanstack/react-router'
+import { FieldDescription, FieldGroup } from '@/components/ui/field'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import DatePicker from './date-picker'
+import { useState } from 'react'
+
+const updateOnboardingSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  birthday: z.date(),
+})
+
+type OnboardingForm = z.infer<typeof updateOnboardingSchema>
+
+type OnboardingStep = 'profile' | 'telegram'
 
 export function Page({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
-  const handleGoogleSignIn = async () => {
+  const navigate = useNavigate()
+  const [step, setStep] = useState<OnboardingStep>('profile')
+  const [telegramUrl, setTelegramUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isCheckingTelegram, setIsCheckingTelegram] = useState(false)
+  const [isDevelopment, setIsDevelopment] = useState(false)
+  
+  const form = useForm<OnboardingForm>({
+    resolver: zodResolver(updateOnboardingSchema),
+    mode: 'onBlur', // Show validation on blur
+    reValidateMode: 'onChange', // Re-validate on change after first validation
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      birthday: undefined,
+    },
+  })
+
+  const onSubmit = async (data: OnboardingForm) => {
     try {
-      await authClient.signIn.social({
-        provider: 'google',
-        callbackURL: '/dashboard',
+      setError(null)
+      const result = await updateUserOnboardingFn({
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          birthday: data.birthday.toISOString(),
+        }
       })
+      
+      if (result.needsTelegramLink) {
+        setStep('telegram')
+        // Generate telegram link token
+        const tokenResult = await getTelegramLinkUrl()
+        if (tokenResult.alreadyLinked) {
+          // User already has telegram linked, complete onboarding
+          await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
+          navigate({ to: '/dashboard' })
+        } else {
+          setTelegramUrl(tokenResult.telegramUrl)
+          // Check if we're in development
+          const envResult = await getEnvironmentFn()
+          setIsDevelopment(envResult.isDevelopment)
+        }
+      }
     } catch (error) {
-      console.error('Sign in failed:', error)
+      console.error('Onboarding failed:', error)
+      setError('Failed to save profile information. Please try again.')
     }
+  }
+
+  const handleTelegramLink = () => {
+    if (telegramUrl) {
+      window.open(telegramUrl, '_blank')
+      
+      // Start checking if telegram is linked
+      setIsCheckingTelegram(true)
+      checkTelegramStatus()
+    }
+  }
+
+  const checkTelegramStatus = async () => {
+    try {
+      await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
+      navigate({ to: '/dashboard' })
+    } catch (error) {
+      // Not linked yet, check again in 3 seconds
+      setTimeout(checkTelegramStatus, 3000)
+    }
+  }
+
+  const handleSkipTelegram = async () => {
+    // For development when webhook isn't set up
+    try {
+      await completeTelegramOnboardingFn({ data: { skipTelegram: true } })
+      navigate({ to: '/dashboard' })
+    } catch (error) {
+      console.error('Skip failed:', error)
+      setError('Unable to skip telegram linking. Please contact support.')
+    }
+  }
+
+  if (step === 'telegram') {
+    return (
+      <div className={cn('flex flex-col gap-6', className)} {...props}>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <a href="#" className="flex flex-col items-center gap-2 font-medium">
+            <div className="flex size-8 items-center justify-center rounded-md">
+              <GalleryVerticalEnd className="size-6" />
+            </div>
+            <span className="sr-only">MerikSirat</span>
+          </a>
+          <h1 className="text-xl font-bold">Link Your Telegram</h1>
+          <FieldDescription>
+            Connect your Telegram account to complete onboarding
+          </FieldDescription>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Step 2: Telegram Integration</CardTitle>
+            <CardDescription>
+              Link your Telegram account to receive notifications and access club features
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={handleTelegramLink} 
+              className="w-full"
+              disabled={!telegramUrl || isCheckingTelegram}
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              {isCheckingTelegram ? 'Waiting for Telegram...' : 'Open Telegram Bot'}
+            </Button>
+            
+            {isCheckingTelegram && (
+              <div className="text-center text-sm text-muted-foreground space-y-2">
+                <p>1. Click the link above to open Telegram</p>
+                <p>2. Send /start command to the bot</p>
+                <p>3. We'll automatically continue once linked...</p>
+                {isDevelopment && (
+                  <div className="mt-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleSkipTelegram}
+                      className="text-xs"
+                    >
+                      Skip for now (Development)
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {error && (
+              <div className="text-center text-sm text-red-600 bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -29,40 +183,70 @@ export function Page({
           </div>
           <span className="sr-only">MerikSirat</span>
         </a>
-        <h1 className="text-xl font-bold">Welcome to MerikSirat</h1>
+        <h1 className="text-xl font-bold">Complete Your Profile</h1>
         <FieldDescription>
-          Sign in with your Google account to continue
+          Please provide your information to complete onboarding
         </FieldDescription>
       </div>
 
-      <FieldGroup>
-        <Field className="grid gap-4">
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleGoogleSignIn}
-            className="w-full"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="mr-2 h-4 w-4"
-            >
-              <path
-                d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                fill="currentColor"
-              />
-            </svg>
-            Continue with Google
-          </Button>
-        </Field>
-      </FieldGroup>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FieldGroup>
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>First Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your first name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your last name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="birthday"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Birth</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </FieldGroup>
 
-      <FieldDescription className="px-6 text-center">
-        <Link to="/faq" className="underline hover:text-primary">
-          FAQ
-        </Link>
-      </FieldDescription>
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Completing...' : 'Complete Onboarding'}
+          </Button>
+
+          {error && (
+            <div className="text-center text-sm text-red-600 bg-red-50 p-2 rounded">
+              {error}
+            </div>
+          )}
+        </form>
+      </Form>
     </div>
   )
 }

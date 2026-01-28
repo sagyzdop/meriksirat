@@ -9,15 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedMyBookingsIndexRouteImport } from './routes/_authenticated/my-bookings/index'
+import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthenticatedMyBookingsSplatRouteImport } from './routes/_authenticated/my-bookings/$'
+import { Route as AuthenticatedEquipmentSplatRouteImport } from './routes/_authenticated/equipment/$'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -29,65 +47,172 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTelegramRoute = ApiTelegramRouteImport.update({
+  id: '/api/telegram',
+  path: '/api/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMyBookingsIndexRoute =
+  AuthenticatedMyBookingsIndexRouteImport.update({
+    id: '/my-bookings/',
+    path: '/my-bookings/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEquipmentIndexRoute =
+  AuthenticatedEquipmentIndexRouteImport.update({
+    id: '/equipment/',
+    path: '/equipment/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedMyBookingsSplatRoute =
+  AuthenticatedMyBookingsSplatRouteImport.update({
+    id: '/my-bookings/$',
+    path: '/my-bookings/$',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEquipmentSplatRoute =
+  AuthenticatedEquipmentSplatRouteImport.update({
+    id: '/equipment/$',
+    path: '/equipment/$',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/api/telegram': typeof ApiTelegramRoute
+  '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
+  '/my-bookings/$': typeof AuthenticatedMyBookingsSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/equipment/': typeof AuthenticatedEquipmentIndexRoute
+  '/my-bookings/': typeof AuthenticatedMyBookingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/api/telegram': typeof ApiTelegramRoute
+  '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
+  '/my-bookings/$': typeof AuthenticatedMyBookingsSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/equipment': typeof AuthenticatedEquipmentIndexRoute
+  '/my-bookings': typeof AuthenticatedMyBookingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/api/telegram': typeof ApiTelegramRoute
+  '/_authenticated/equipment/$': typeof AuthenticatedEquipmentSplatRoute
+  '/_authenticated/my-bookings/$': typeof AuthenticatedMyBookingsSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authenticated/equipment/': typeof AuthenticatedEquipmentIndexRoute
+  '/_authenticated/my-bookings/': typeof AuthenticatedMyBookingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/dashboard' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/faq'
+    | '/login'
+    | '/onboarding'
+    | '/dashboard'
+    | '/profile'
+    | '/api/telegram'
+    | '/equipment/$'
+    | '/my-bookings/$'
+    | '/api/auth/$'
+    | '/equipment/'
+    | '/my-bookings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard' | '/api/auth/$'
+  to:
+    | '/'
+    | '/faq'
+    | '/login'
+    | '/onboarding'
+    | '/dashboard'
+    | '/profile'
+    | '/api/telegram'
+    | '/equipment/$'
+    | '/my-bookings/$'
+    | '/api/auth/$'
+    | '/equipment'
+    | '/my-bookings'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/faq'
     | '/login'
+    | '/onboarding'
     | '/_authenticated/dashboard'
+    | '/_authenticated/profile'
+    | '/api/telegram'
+    | '/_authenticated/equipment/$'
+    | '/_authenticated/my-bookings/$'
     | '/api/auth/$'
+    | '/_authenticated/equipment/'
+    | '/_authenticated/my-bookings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  FaqRoute: typeof FaqRoute
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
+  ApiTelegramRoute: typeof ApiTelegramRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -104,11 +229,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/telegram': {
+      id: '/api/telegram'
+      path: '/api/telegram'
+      fullPath: '/api/telegram'
+      preLoaderRoute: typeof ApiTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/my-bookings/': {
+      id: '/_authenticated/my-bookings/'
+      path: '/my-bookings'
+      fullPath: '/my-bookings/'
+      preLoaderRoute: typeof AuthenticatedMyBookingsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/equipment/': {
+      id: '/_authenticated/equipment/'
+      path: '/equipment'
+      fullPath: '/equipment/'
+      preLoaderRoute: typeof AuthenticatedEquipmentIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/api/auth/$': {
@@ -118,25 +271,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/my-bookings/$': {
+      id: '/_authenticated/my-bookings/$'
+      path: '/my-bookings/$'
+      fullPath: '/my-bookings/$'
+      preLoaderRoute: typeof AuthenticatedMyBookingsSplatRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/equipment/$': {
+      id: '/_authenticated/equipment/$'
+      path: '/equipment/$'
+      fullPath: '/equipment/$'
+      preLoaderRoute: typeof AuthenticatedEquipmentSplatRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
+  AuthenticatedMyBookingsSplatRoute: typeof AuthenticatedMyBookingsSplatRoute
+  AuthenticatedEquipmentIndexRoute: typeof AuthenticatedEquipmentIndexRoute
+  AuthenticatedMyBookingsIndexRoute: typeof AuthenticatedMyBookingsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,
+  AuthenticatedMyBookingsSplatRoute: AuthenticatedMyBookingsSplatRoute,
+  AuthenticatedEquipmentIndexRoute: AuthenticatedEquipmentIndexRoute,
+  AuthenticatedMyBookingsIndexRoute: AuthenticatedMyBookingsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
-  AuthenticatedRouteChildren
+  AuthenticatedRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  FaqRoute: FaqRoute,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
+  ApiTelegramRoute: ApiTelegramRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,13 +1,17 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { LoginForm } from '@/components/auth/login-form'
-import { getSessionFn } from '@/lib/session'
+import { Page } from '@/components/auth/page'
+import { getUserFn } from '@/lib/user'
 
 export const Route = createFileRoute('/login')({
   beforeLoad: async () => {
-    const session = await getSessionFn()
+    const user = await getUserFn()
 
-    if (session?.user) {
-      throw redirect({ to: '/dashboard' })
+    if (user) {
+      if (user.onboardingComplete) {
+        throw redirect({ to: '/dashboard' })
+      } else {
+        throw redirect({ to: '/onboarding' })
+      }
     }
   },
   component: LoginPage,
@@ -16,7 +20,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <LoginForm />
+      <Page />
     </div>
   )
 }
