@@ -9,6 +9,17 @@ export const user = sqliteTable('user', {
     .default(false)
     .notNull(),
   image: text('image'),
+  // Telegram fields
+  telegramChatId: text('telegram_chat_id'),
+  telegramUsername: text('telegram_username'),
+  // Onboarding fields
+  googleId: text('google_id').unique(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  birthday: text('birthday'),
+  clearanceLevel: integer('clearance_level').default(1),
+  role: text('role', { enum: ['user', 'admin'] }).default('user'),
+  onboardingComplete: integer('onboarding_complete', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
@@ -90,7 +101,9 @@ export const verification = sqliteTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  telegramLinkTokens: many(telegramTokens),
 }))
+
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
@@ -102,6 +115,22 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
+    references: [user.id],
+  }),
+}))
+
+// Telegram Link Tokens Table
+
+export const telegramTokens = sqliteTable('telegram_link_tokens', {
+  token: text('token').primaryKey(),
+  userId: text('user_id').notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  consumed: integer('consumed', { mode: 'boolean' }).default(false).notNull(),
+})
+
+export const telegramLinkTokenRelations = relations(telegramTokens, ({ one }) => ({
+  user: one(user, {
+    fields: [telegramTokens.userId],
     references: [user.id],
   }),
 }))
