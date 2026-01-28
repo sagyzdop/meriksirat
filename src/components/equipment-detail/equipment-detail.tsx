@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-export function Page() {
+export function EquipmentDetail() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8">
       <div className="flex items-start justify-between">

@@ -14,7 +14,7 @@ interface ProfileHeaderProps {
   };
 }
 
-export default function ProfileHeader({ user }: ProfileHeaderProps) {
+export function ProfileHeader({ user }: ProfileHeaderProps) {
   const joinedDate = new Date(user.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',

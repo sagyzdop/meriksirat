@@ -1,5 +1,5 @@
-import ProfileHeader from "./profile-header";
-import ProfileContent from "./profile-content";
+import {ProfileHeader} from "./profile-header";
+import {ProfileContent} from "./profile-content";
 
 interface ProfilePageProps {
   user?: {

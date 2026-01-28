@@ -1,4 +1,3 @@
-// src/components/login-form.tsx
 import { GalleryVerticalEnd } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { cn } from '@/lib/utils'
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
 import { Link } from '@tanstack/react-router'
 
-export function LoginForm({
+export function Page({
   className,
   ...props
 }: React.ComponentProps<'div'>) {

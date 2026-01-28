@@ -20,7 +20,7 @@ interface ProfileContentProps {
   };
 }
 
-export default function ProfileContent({ user }: ProfileContentProps) {
+export function ProfileContent({ user }: ProfileContentProps) {
   const nameParts = user.name.split(' ');
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';

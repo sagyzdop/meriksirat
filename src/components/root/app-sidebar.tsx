@@ -35,8 +35,8 @@ const data = {
       icon: IconCamera,
     },
     {
-      title: 'Booking',
-      url: '/booking',
+      title: 'My Bookings',
+      url: '/my-bookings',
       icon: IconCamera,
     },
   ],
@@ -87,7 +87,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <Link to="/booking">
+              <Link to="/my-bookings">
                 <IconInnerShadowTop className="size-5!" />
                 <span className="text-base font-semibold">MerikSirat</span>
               </Link>

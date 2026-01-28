@@ -38,4 +38,4 @@ const FAQ = ({ items }: FAQAccordionProps) => {
   );
 };
 
-export default FAQ;
+export { FAQ };
