@@ -123,9 +123,8 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 export const telegramTokens = sqliteTable('telegram_link_tokens', {
   token: text('token').primaryKey(),
-  userId: text('user_id').notNull(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
   expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-  consumed: integer('consumed', { mode: 'boolean' }).default(false).notNull(),
 })
 
 export const telegramLinkTokenRelations = relations(telegramTokens, ({ one }) => ({
@@ -134,3 +133,40 @@ export const telegramLinkTokenRelations = relations(telegramTokens, ({ one }) =>
     references: [user.id],
   }),
 }))
+
+
+// Equipment Catalog Releated Tables
+
+export const equipment = sqliteTable('equipment', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  modelName: text('model_name').notNull(),
+  description: text('description'),
+  categoryId: integer('category_id').references(() => category.id),
+  googleCalendarId: text('gcal_id').notNull().unique(), // Dedicated Google calendar per equipment
+  requiredClearanceLevel: integer('required_clearance_level').default(1),
+  imagePath: text('image_path'), // R2 path: equipment-images/{id}.jpg
+  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
+export const equipmentRelations = relations(equipment, ({ one }) => ({
+  category: one(category, {
+    fields: [equipment.categoryId],
+    references: [category.id],
+  }),
+}))
+
+
+export const category = sqliteTable('categories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
+export const categoryRelations = relations(category, ({ many }) => ({
+  equipment: many(equipment),
+}));

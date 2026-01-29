@@ -12,8 +12,15 @@
     {
       "idx": 1,
       "version": "6",
-      "when": 1769616026853,
-      "tag": "0001_additional_user_columns",
+      "when": 1769681341642,
+      "tag": "0001_complete_onboarding_setup",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1769691221332,
+      "tag": "0002_equipment_tables_setup",
       "breakpoints": true
     }
   ]
