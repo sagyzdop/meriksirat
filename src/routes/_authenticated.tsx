@@ -10,6 +10,7 @@ import { authClient } from '@/lib/auth-client'
 import { AppSidebar } from '@/components/root/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { SiteHeader } from '@/components/root/site-header'
+import { Toaster } from '@/components/ui/sonner'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async () => {
@@ -39,13 +40,14 @@ function AuthenticatedLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar onLogout={handleLogout} />
       <SidebarInset>
         <SiteHeader onLogout={handleLogout} />
         <div className="flex flex-col flex-1 px-4 py-8">
           <Outlet />
         </div>
       </SidebarInset>
+      <Toaster />
     </SidebarProvider>
   )
 }

@@ -1,72 +1,64 @@
+/**
+ * Telegram Webhook Route Handler
+ * 
+ * This route receives webhook updates from Telegram and processes them using Telegraf.
+ * 
+ * Security:
+ * - Verifies webhook secret token from x-telegram-bot-api-secret-token header
+ * - Returns 401 Unauthorized if secret doesn't match env.TELEGRAM_WEBHOOK_SECRET
+ * 
+ * Processing:
+ * - Creates Telegraf bot instance with environment bindings
+ * - Delegates update handling to bot.handleUpdate()
+ * - Returns 200 OK on success, 500 on error
+ * 
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 11.1, 11.2, 11.3, 11.4, 11.5
+ */
+
 import { createFileRoute } from '@tanstack/react-router'
-import { db } from '@/db'
-import { user, telegramTokens } from '@/db/schema'
-import { eq } from 'drizzle-orm'
 import { env } from 'cloudflare:workers'
+import { createBot } from '@/lib/telegram/bot'
+import type { Update } from 'telegraf/types'
 
 export const Route = createFileRoute('/api/telegram')({
   server: {
     handlers: {
       async POST({ request }) {
-        const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-        const headerSecret = request.headers.get('x-telegram-bot-api-secret-token')
+        try {
+          // Verify webhook secret token (Requirement 8.4)
+          const headerSecret = request.headers.get('x-telegram-bot-api-secret-token')
+          
+          if (env.TELEGRAM_WEBHOOK_SECRET && headerSecret !== env.TELEGRAM_WEBHOOK_SECRET) {
+            console.warn('Unauthorized webhook attempt', {
+              receivedSecret: headerSecret ? '[REDACTED]' : 'none',
+              timestamp: new Date().toISOString()
+            })
+            return new Response('Unauthorized', { status: 401 }) // Requirement 8.5
+          }
 
-        if (secret && headerSecret !== secret) {
-          return new Response('Unauthorized', { status: 401 })
-        }
-
-        const update = await request.json() as { message?: { text?: string; chat: { id: number | string }; from?: { username?: string } } }
-        const msg = update.message
-        if (!msg?.text) return new Response('ok')
-
-        const match = msg.text.match(/^\/start (.+)$/)
-        if (!match) return new Response('ok')
-
-        const token = match[1]
-        const chatId = String(msg.chat.id)
-        const username = msg.from?.username ?? null
-
-        const database = db(env.meriksirat_d1 as D1Database)
-
-        const tokenRow = await database
-          .select()
-          .from(telegramTokens)
-          .where(eq(telegramTokens.token, token))
-          .get()
-
-        if (!tokenRow || tokenRow.consumed || tokenRow.expiresAt < new Date()) {
-          await sendMessage(process.env.TELEGRAM_BOT_TOKEN!, chatId, 'Link expired or invalid.')
-          return new Response('ok')
-        }
-
-        // Link user and complete onboarding
-        await database
-          .update(user)
-          .set({
-            telegramChatId: chatId,
-            telegramUsername: username,
-            onboardingComplete: true,
-            updatedAt: new Date(),
+          // Parse Telegram update from request body
+          const update = await request.json() as Update
+          
+          // Create bot instance with environment bindings (Requirement 8.2)
+          const bot = createBot(env)
+          
+          // Process update through Telegraf (Requirements 11.1-11.5)
+          await bot.handleUpdate(update)
+          
+          // Return success response (Requirement 8.6)
+          return new Response('OK', { status: 200 })
+        } catch (error) {
+          // Log error with context for debugging (Requirement 12.5)
+          console.error('Webhook error:', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            timestamp: new Date().toISOString()
           })
-          .where(eq(user.id, tokenRow.userId))
-
-        // Consume token
-        await database
-          .update(telegramTokens)
-          .set({ consumed: true })
-          .where(eq(telegramTokens.token, token))
-
-        await sendMessage(process.env.TELEGRAM_BOT_TOKEN!, chatId, 'Telegram linked ✅')
-        return new Response('ok')
+          
+          // Return error response (Requirement 8.6)
+          return new Response('Internal Server Error', { status: 500 })
+        }
       },
     },
   },
 })
-
-async function sendMessage(botToken: string, chatId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  })
-}

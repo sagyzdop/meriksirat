@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 interface ProfileContentProps {
   user: {
     id: string;
-    name: string;
+    firstName?: string | null;
+    lastName?: string | null;
     email: string;
     image?: string | null;
     createdAt: Date;
@@ -21,9 +22,8 @@ interface ProfileContentProps {
 }
 
 export function ProfileContent({ user }: ProfileContentProps) {
-  const nameParts = user.name.split(' ');
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts.slice(1).join(' ') || '';
+  const firstName = user.firstName || '';
+  const lastName = user.lastName || '';
 
   return (
     <Tabs defaultValue="personal" className="space-y-6">

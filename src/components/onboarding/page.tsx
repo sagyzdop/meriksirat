@@ -3,9 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from '@tanstack/react-router'
 import { GalleryVerticalEnd, ExternalLink } from 'lucide-react'
-import { updateUserOnboardingFn, completeTelegramOnboardingFn } from '@/lib/user'
-import { getEnvironmentFn } from '@/lib/get-env'
-import { getTelegramLinkUrl } from '@/lib/telegram-deeplink'
+import { updateUserOnboardingFn, completeTelegramOnboardingFn, getTelegramLinkUrlFn } from '@/lib/onboarding'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { FieldDescription, FieldGroup } from '@/components/ui/field'
@@ -19,6 +17,10 @@ const updateOnboardingSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   birthday: z.date(),
+  instagramUsername: z.string().optional(),
+  nuId: z.string().min(1, 'NU ID is required'),
+  major: z.string().min(1, 'Major is required'),
+  graduationYear: z.string().min(1, 'Graduation year is required'),
 })
 
 type OnboardingForm = z.infer<typeof updateOnboardingSchema>
@@ -44,6 +46,10 @@ export function Page({
       firstName: '',
       lastName: '',
       birthday: undefined,
+      instagramUsername: '',
+      nuId: '',
+      major: '',
+      graduationYear: '',
     },
   })
 
@@ -55,22 +61,24 @@ export function Page({
           firstName: data.firstName,
           lastName: data.lastName,
           birthday: data.birthday.toISOString(),
+          instagramUsername: data.instagramUsername,
+          nuId: parseInt(data.nuId),
+          major: data.major,
+          graduationYear: parseInt(data.graduationYear),
         }
       })
       
       if (result.needsTelegramLink) {
         setStep('telegram')
         // Generate telegram link token
-        const tokenResult = await getTelegramLinkUrl()
+        const tokenResult = await getTelegramLinkUrlFn()
         if (tokenResult.alreadyLinked) {
           // User already has telegram linked, complete onboarding
           await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
-          navigate({ to: '/dashboard' })
+          navigate({ to: '/equipment' })
         } else {
-          setTelegramUrl(tokenResult.telegramUrl)
-          // Check if we're in development
-          const envResult = await getEnvironmentFn()
-          setIsDevelopment(envResult.isDevelopment)
+          setTelegramUrl(tokenResult.url)
+          setIsDevelopment(tokenResult.isDevelopment)
         }
       }
     } catch (error) {
@@ -92,7 +100,7 @@ export function Page({
   const checkTelegramStatus = async () => {
     try {
       await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
-      navigate({ to: '/dashboard' })
+      navigate({ to: '/equipment' })
     } catch (error) {
       // Not linked yet, check again in 3 seconds
       setTimeout(checkTelegramStatus, 3000)
@@ -103,7 +111,7 @@ export function Page({
     // For development when webhook isn't set up
     try {
       await completeTelegramOnboardingFn({ data: { skipTelegram: true } })
-      navigate({ to: '/dashboard' })
+      navigate({ to: '/equipment' })
     } catch (error) {
       console.error('Skip failed:', error)
       setError('Unable to skip telegram linking. Please contact support.')
@@ -229,6 +237,68 @@ export function Page({
                       value={field.value}
                       onChange={field.onChange}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nuId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>NU ID</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="Enter your NU ID" 
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="major"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Major</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your major" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="graduationYear"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Graduation Year</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="Enter your graduation year" 
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="instagramUsername"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instagram Username (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@username" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

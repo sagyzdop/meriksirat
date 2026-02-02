@@ -13,13 +13,31 @@ export const user = sqliteTable('user', {
   telegramChatId: text('telegram_chat_id'),
   telegramUsername: text('telegram_username'),
   // Onboarding fields
+  instagramUsername: text('instagram_username'),
   googleId: text('google_id').unique(),
+  nuId: integer('nu_id').unique(),
   firstName: text('first_name'),
   lastName: text('last_name'),
   birthday: text('birthday'),
+  major: text('major'),
+  graduationYear: integer('graduation_year'),
+  status: text('status', {
+    enum: [
+      'Active',
+      'Inactive',
+      'On Probation',
+      'Board',
+      'Ex-Board',
+      'Roommate',
+      'Ex-Roommate',
+      'Graduated',
+    ],
+  }).default('Active'),
   clearanceLevel: integer('clearance_level').default(1),
-  role: text('role', { enum: ['user', 'admin'] }).default('user'),
-  onboardingComplete: integer('onboarding_complete', { mode: 'boolean' }).default(false),
+  role: text('role', { enum: ['user', 'manager', 'admin'] }).default('user'),
+  onboardingComplete: integer('onboarding_complete', {
+    mode: 'boolean',
+  }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
@@ -101,9 +119,9 @@ export const verification = sqliteTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
-  telegramLinkTokens: many(telegramTokens),
+  telegramLinkTokens: many(telegramToken),
+  bookings: many(booking),
 }))
-
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
@@ -121,52 +139,106 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 // Telegram Link Tokens Table
 
-export const telegramTokens = sqliteTable('telegram_link_tokens', {
+export const telegramToken = sqliteTable('telegram_link_token', {
   token: text('token').primaryKey(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
 })
 
-export const telegramLinkTokenRelations = relations(telegramTokens, ({ one }) => ({
-  user: one(user, {
-    fields: [telegramTokens.userId],
-    references: [user.id],
-  }),
-}))
-
+export const telegramLinkTokenRelations = relations(
+  telegramToken,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [telegramToken.userId],
+      references: [user.id],
+    }),
+  })
+)
 
 // Equipment Catalog Releated Tables
 
 export const equipment = sqliteTable('equipment', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   modelName: text('model_name').notNull(),
+  shortName: text('short_name'),
   description: text('description'),
   categoryId: integer('category_id').references(() => category.id),
   googleCalendarId: text('gcal_id').notNull().unique(), // Dedicated Google calendar per equipment
   requiredClearanceLevel: integer('required_clearance_level').default(1),
   imagePath: text('image_path'), // R2 path: equipment-images/{id}.jpg
   isActive: integer('is_active', { mode: 'boolean' }).default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-});
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+})
 
-export const equipmentRelations = relations(equipment, ({ one }) => ({
+export const equipmentRelations = relations(equipment, ({ one, many }) => ({
   category: one(category, {
     fields: [equipment.categoryId],
     references: [category.id],
   }),
+  bookings: many(booking),
 }))
 
-
-export const category = sqliteTable('categories', {
+export const category = sqliteTable('category', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
   description: text('description'),
   sortOrder: integer('sort_order').default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-});
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+})
 
 export const categoryRelations = relations(category, ({ many }) => ({
   equipment: many(equipment),
-}));
+}))
+
+// Bookings Table
+
+export const booking = sqliteTable('booking', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id),
+  equipmentId: integer('equipment_id')
+    .notNull()
+    .references(() => equipment.id),
+  startTime: integer('start_time', { mode: 'timestamp_ms' }).notNull(),
+  endTime: integer('end_time', { mode: 'timestamp_ms' }).notNull(),
+  status: text('status', {
+    enum: ['booked', 'active', 'returned', 'cancelled', 'overdue'],
+  })
+    .notNull()
+    .default('booked'),
+  googleCalendarEventId: text('gcal_event_id'), // Google Calendar event ID
+  userEventDetails: text('user_event_details'), // User-provided booking notes
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+})
+
+export const bookingRelations = relations(booking, ({ one }) => ({
+  user: one(user, {
+    fields: [booking.userId],
+    references: [user.id],
+  }),
+  equipment: one(equipment, {
+    fields: [booking.equipmentId],
+    references: [equipment.id],
+  }),
+}))

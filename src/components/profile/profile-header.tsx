@@ -7,7 +7,8 @@ import { Camera, Calendar, Mail, MapPin } from "lucide-react";
 interface ProfileHeaderProps {
   user: {
     id: string;
-    name: string;
+    firstName?: string | null;
+    lastName?: string | null;
     email: string;
     image?: string | null;
     createdAt: Date;
@@ -20,6 +21,9 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
     month: 'long',
   });
 
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
+  const initials = [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U';
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -28,7 +32,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
             <Avatar className="h-24 w-24">
               <AvatarImage src={user.image || "https://bundui-images.netlify.app/avatars/08.png"} alt="Profile" />
               <AvatarFallback className="text-2xl">
-                {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                {initials}
               </AvatarFallback>
             </Avatar>
             <Button
@@ -38,9 +42,9 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
               <Camera />
             </Button>
           </div>
-          <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2">
             <div className="flex flex-col gap-2 md:flex-row md:items-center">
-              <h1 className="text-2xl font-bold">{user.name}</h1>
+              <h1 className="text-2xl font-bold">{fullName}</h1>
               <Badge variant="secondary">Pro Member</Badge>
             </div>
             <p className="text-muted-foreground">Senior Product Designer</p>

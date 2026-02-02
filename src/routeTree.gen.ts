@@ -11,17 +11,31 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as FaqRouteImport } from './routes/faq'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedFaqRouteImport } from './routes/_authenticated/faq'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedMyBookingsIndexRouteImport } from './routes/_authenticated/my-bookings/index'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
+import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings/index'
+import { Route as ApiImagesSplatRouteImport } from './routes/api/images.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AuthenticatedMyBookingsSplatRouteImport } from './routes/_authenticated/my-bookings/$'
 import { Route as AuthenticatedEquipmentSplatRouteImport } from './routes/_authenticated/equipment/$'
+import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
+import { Route as AuthenticatedBookingsSplatRouteImport } from './routes/_authenticated/bookings/$'
+import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
+import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
+import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin/users/index'
+import { Route as AuthenticatedAdminEquipmentIndexRouteImport } from './routes/_authenticated/admin/equipment/index'
+import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/_authenticated/admin/categories/index'
+import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings/index'
+import { Route as AuthenticatedBookingsSplatEditRouteImport } from './routes/_authenticated/bookings/$.edit'
+import { Route as AuthenticatedAdminEquipmentNewRouteImport } from './routes/_authenticated/admin/equipment/new'
+import { Route as AuthenticatedAdminUsersSplatEditRouteImport } from './routes/_authenticated/admin/users/$.edit'
+import { Route as AuthenticatedAdminEquipmentSplatEditRouteImport } from './routes/_authenticated/admin/equipment/$.edit'
+import { Route as AuthenticatedAdminBookingsSplatEditRouteImport } from './routes/_authenticated/admin/bookings/$.edit'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -31,11 +45,6 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FaqRoute = FaqRouteImport.update({
-  id: '/faq',
-  path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -57,139 +66,310 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedFaqRoute = AuthenticatedFaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedMyBookingsIndexRoute =
-  AuthenticatedMyBookingsIndexRouteImport.update({
-    id: '/my-bookings/',
-    path: '/my-bookings/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedEquipmentIndexRoute =
   AuthenticatedEquipmentIndexRouteImport.update({
     id: '/equipment/',
     path: '/equipment/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedBookingsIndexRoute =
+  AuthenticatedBookingsIndexRouteImport.update({
+    id: '/bookings/',
+    path: '/bookings/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const ApiImagesSplatRoute = ApiImagesSplatRouteImport.update({
+  id: '/api/images/$',
+  path: '/api/images/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedMyBookingsSplatRoute =
-  AuthenticatedMyBookingsSplatRouteImport.update({
-    id: '/my-bookings/$',
-    path: '/my-bookings/$',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedEquipmentSplatRoute =
   AuthenticatedEquipmentSplatRouteImport.update({
     id: '/equipment/$',
     path: '/equipment/$',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedBookingsNewRoute =
+  AuthenticatedBookingsNewRouteImport.update({
+    id: '/bookings/new',
+    path: '/bookings/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedBookingsSplatRoute =
+  AuthenticatedBookingsSplatRouteImport.update({
+    id: '/bookings/$',
+    path: '/bookings/$',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminSettingsRoute =
+  AuthenticatedAdminSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminDashboardRoute =
+  AuthenticatedAdminDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminUsersIndexRoute =
+  AuthenticatedAdminUsersIndexRouteImport.update({
+    id: '/users/',
+    path: '/users/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminEquipmentIndexRoute =
+  AuthenticatedAdminEquipmentIndexRouteImport.update({
+    id: '/equipment/',
+    path: '/equipment/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminCategoriesIndexRoute =
+  AuthenticatedAdminCategoriesIndexRouteImport.update({
+    id: '/categories/',
+    path: '/categories/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBookingsIndexRoute =
+  AuthenticatedAdminBookingsIndexRouteImport.update({
+    id: '/bookings/',
+    path: '/bookings/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedBookingsSplatEditRoute =
+  AuthenticatedBookingsSplatEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AuthenticatedBookingsSplatRoute,
+  } as any)
+const AuthenticatedAdminEquipmentNewRoute =
+  AuthenticatedAdminEquipmentNewRouteImport.update({
+    id: '/equipment/new',
+    path: '/equipment/new',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminUsersSplatEditRoute =
+  AuthenticatedAdminUsersSplatEditRouteImport.update({
+    id: '/users/$/edit',
+    path: '/users/$/edit',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminEquipmentSplatEditRoute =
+  AuthenticatedAdminEquipmentSplatEditRouteImport.update({
+    id: '/equipment/$/edit',
+    path: '/equipment/$/edit',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBookingsSplatEditRoute =
+  AuthenticatedAdminBookingsSplatEditRouteImport.update({
+    id: '/bookings/$/edit',
+    path: '/bookings/$/edit',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/faq': typeof AuthenticatedFaqRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/bookings/$': typeof AuthenticatedBookingsSplatRouteWithChildren
+  '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
-  '/my-bookings/$': typeof AuthenticatedMyBookingsSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/images/$': typeof ApiImagesSplatRoute
+  '/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/equipment/': typeof AuthenticatedEquipmentIndexRoute
-  '/my-bookings/': typeof AuthenticatedMyBookingsIndexRoute
+  '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
+  '/bookings/$/edit': typeof AuthenticatedBookingsSplatEditRoute
+  '/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
+  '/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
+  '/admin/equipment/': typeof AuthenticatedAdminEquipmentIndexRoute
+  '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
+  '/admin/bookings/$/edit': typeof AuthenticatedAdminBookingsSplatEditRoute
+  '/admin/equipment/$/edit': typeof AuthenticatedAdminEquipmentSplatEditRoute
+  '/admin/users/$/edit': typeof AuthenticatedAdminUsersSplatEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/faq': typeof AuthenticatedFaqRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/bookings/$': typeof AuthenticatedBookingsSplatRouteWithChildren
+  '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
-  '/my-bookings/$': typeof AuthenticatedMyBookingsSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/images/$': typeof ApiImagesSplatRoute
+  '/bookings': typeof AuthenticatedBookingsIndexRoute
   '/equipment': typeof AuthenticatedEquipmentIndexRoute
-  '/my-bookings': typeof AuthenticatedMyBookingsIndexRoute
+  '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
+  '/bookings/$/edit': typeof AuthenticatedBookingsSplatEditRoute
+  '/admin/bookings': typeof AuthenticatedAdminBookingsIndexRoute
+  '/admin/categories': typeof AuthenticatedAdminCategoriesIndexRoute
+  '/admin/equipment': typeof AuthenticatedAdminEquipmentIndexRoute
+  '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
+  '/admin/bookings/$/edit': typeof AuthenticatedAdminBookingsSplatEditRoute
+  '/admin/equipment/$/edit': typeof AuthenticatedAdminEquipmentSplatEditRoute
+  '/admin/users/$/edit': typeof AuthenticatedAdminUsersSplatEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/faq': typeof AuthenticatedFaqRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/_authenticated/bookings/$': typeof AuthenticatedBookingsSplatRouteWithChildren
+  '/_authenticated/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/_authenticated/equipment/$': typeof AuthenticatedEquipmentSplatRoute
-  '/_authenticated/my-bookings/$': typeof AuthenticatedMyBookingsSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/images/$': typeof ApiImagesSplatRoute
+  '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/_authenticated/equipment/': typeof AuthenticatedEquipmentIndexRoute
-  '/_authenticated/my-bookings/': typeof AuthenticatedMyBookingsIndexRoute
+  '/_authenticated/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
+  '/_authenticated/bookings/$/edit': typeof AuthenticatedBookingsSplatEditRoute
+  '/_authenticated/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
+  '/_authenticated/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
+  '/_authenticated/admin/equipment/': typeof AuthenticatedAdminEquipmentIndexRoute
+  '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
+  '/_authenticated/admin/bookings/$/edit': typeof AuthenticatedAdminBookingsSplatEditRoute
+  '/_authenticated/admin/equipment/$/edit': typeof AuthenticatedAdminEquipmentSplatEditRoute
+  '/_authenticated/admin/users/$/edit': typeof AuthenticatedAdminUsersSplatEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/faq'
     | '/login'
     | '/onboarding'
+    | '/admin'
     | '/dashboard'
+    | '/faq'
     | '/profile'
     | '/api/telegram'
+    | '/admin/dashboard'
+    | '/admin/settings'
+    | '/bookings/$'
+    | '/bookings/new'
     | '/equipment/$'
-    | '/my-bookings/$'
     | '/api/auth/$'
+    | '/api/images/$'
+    | '/bookings/'
     | '/equipment/'
-    | '/my-bookings/'
+    | '/admin/equipment/new'
+    | '/bookings/$/edit'
+    | '/admin/bookings/'
+    | '/admin/categories/'
+    | '/admin/equipment/'
+    | '/admin/users/'
+    | '/admin/bookings/$/edit'
+    | '/admin/equipment/$/edit'
+    | '/admin/users/$/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/faq'
     | '/login'
     | '/onboarding'
+    | '/admin'
     | '/dashboard'
+    | '/faq'
     | '/profile'
     | '/api/telegram'
+    | '/admin/dashboard'
+    | '/admin/settings'
+    | '/bookings/$'
+    | '/bookings/new'
     | '/equipment/$'
-    | '/my-bookings/$'
     | '/api/auth/$'
+    | '/api/images/$'
+    | '/bookings'
     | '/equipment'
-    | '/my-bookings'
+    | '/admin/equipment/new'
+    | '/bookings/$/edit'
+    | '/admin/bookings'
+    | '/admin/categories'
+    | '/admin/equipment'
+    | '/admin/users'
+    | '/admin/bookings/$/edit'
+    | '/admin/equipment/$/edit'
+    | '/admin/users/$/edit'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
-    | '/faq'
     | '/login'
     | '/onboarding'
+    | '/_authenticated/admin'
     | '/_authenticated/dashboard'
+    | '/_authenticated/faq'
     | '/_authenticated/profile'
     | '/api/telegram'
+    | '/_authenticated/admin/dashboard'
+    | '/_authenticated/admin/settings'
+    | '/_authenticated/bookings/$'
+    | '/_authenticated/bookings/new'
     | '/_authenticated/equipment/$'
-    | '/_authenticated/my-bookings/$'
     | '/api/auth/$'
+    | '/api/images/$'
+    | '/_authenticated/bookings/'
     | '/_authenticated/equipment/'
-    | '/_authenticated/my-bookings/'
+    | '/_authenticated/admin/equipment/new'
+    | '/_authenticated/bookings/$/edit'
+    | '/_authenticated/admin/bookings/'
+    | '/_authenticated/admin/categories/'
+    | '/_authenticated/admin/equipment/'
+    | '/_authenticated/admin/users/'
+    | '/_authenticated/admin/bookings/$/edit'
+    | '/_authenticated/admin/equipment/$/edit'
+    | '/_authenticated/admin/users/$/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  FaqRoute: typeof FaqRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   ApiTelegramRoute: typeof ApiTelegramRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiImagesSplatRoute: typeof ApiImagesSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -206,13 +386,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/faq': {
-      id: '/faq'
-      path: '/faq'
-      fullPath: '/faq'
-      preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -243,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/faq': {
+      id: '/_authenticated/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof AuthenticatedFaqRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -250,11 +430,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/my-bookings/': {
-      id: '/_authenticated/my-bookings/'
-      path: '/my-bookings'
-      fullPath: '/my-bookings/'
-      preLoaderRoute: typeof AuthenticatedMyBookingsIndexRouteImport
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/equipment/': {
@@ -264,19 +444,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEquipmentIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bookings/': {
+      id: '/_authenticated/bookings/'
+      path: '/bookings'
+      fullPath: '/bookings/'
+      preLoaderRoute: typeof AuthenticatedBookingsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/images/$': {
+      id: '/api/images/$'
+      path: '/api/images/$'
+      fullPath: '/api/images/$'
+      preLoaderRoute: typeof ApiImagesSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/my-bookings/$': {
-      id: '/_authenticated/my-bookings/$'
-      path: '/my-bookings/$'
-      fullPath: '/my-bookings/$'
-      preLoaderRoute: typeof AuthenticatedMyBookingsSplatRouteImport
-      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/equipment/$': {
       id: '/_authenticated/equipment/$'
@@ -285,25 +472,168 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEquipmentSplatRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bookings/new': {
+      id: '/_authenticated/bookings/new'
+      path: '/bookings/new'
+      fullPath: '/bookings/new'
+      preLoaderRoute: typeof AuthenticatedBookingsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/bookings/$': {
+      id: '/_authenticated/bookings/$'
+      path: '/bookings/$'
+      fullPath: '/bookings/$'
+      preLoaderRoute: typeof AuthenticatedBookingsSplatRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/settings': {
+      id: '/_authenticated/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/dashboard': {
+      id: '/_authenticated/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/users/': {
+      id: '/_authenticated/admin/users/'
+      path: '/users'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AuthenticatedAdminUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/equipment/': {
+      id: '/_authenticated/admin/equipment/'
+      path: '/equipment'
+      fullPath: '/admin/equipment/'
+      preLoaderRoute: typeof AuthenticatedAdminEquipmentIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/categories/': {
+      id: '/_authenticated/admin/categories/'
+      path: '/categories'
+      fullPath: '/admin/categories/'
+      preLoaderRoute: typeof AuthenticatedAdminCategoriesIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/bookings/': {
+      id: '/_authenticated/admin/bookings/'
+      path: '/bookings'
+      fullPath: '/admin/bookings/'
+      preLoaderRoute: typeof AuthenticatedAdminBookingsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/bookings/$/edit': {
+      id: '/_authenticated/bookings/$/edit'
+      path: '/edit'
+      fullPath: '/bookings/$/edit'
+      preLoaderRoute: typeof AuthenticatedBookingsSplatEditRouteImport
+      parentRoute: typeof AuthenticatedBookingsSplatRoute
+    }
+    '/_authenticated/admin/equipment/new': {
+      id: '/_authenticated/admin/equipment/new'
+      path: '/equipment/new'
+      fullPath: '/admin/equipment/new'
+      preLoaderRoute: typeof AuthenticatedAdminEquipmentNewRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/users/$/edit': {
+      id: '/_authenticated/admin/users/$/edit'
+      path: '/users/$/edit'
+      fullPath: '/admin/users/$/edit'
+      preLoaderRoute: typeof AuthenticatedAdminUsersSplatEditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/equipment/$/edit': {
+      id: '/_authenticated/admin/equipment/$/edit'
+      path: '/equipment/$/edit'
+      fullPath: '/admin/equipment/$/edit'
+      preLoaderRoute: typeof AuthenticatedAdminEquipmentSplatEditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/bookings/$/edit': {
+      id: '/_authenticated/admin/bookings/$/edit'
+      path: '/bookings/$/edit'
+      fullPath: '/admin/bookings/$/edit'
+      preLoaderRoute: typeof AuthenticatedAdminBookingsSplatEditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
+  AuthenticatedAdminEquipmentNewRoute: typeof AuthenticatedAdminEquipmentNewRoute
+  AuthenticatedAdminBookingsIndexRoute: typeof AuthenticatedAdminBookingsIndexRoute
+  AuthenticatedAdminCategoriesIndexRoute: typeof AuthenticatedAdminCategoriesIndexRoute
+  AuthenticatedAdminEquipmentIndexRoute: typeof AuthenticatedAdminEquipmentIndexRoute
+  AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
+  AuthenticatedAdminBookingsSplatEditRoute: typeof AuthenticatedAdminBookingsSplatEditRoute
+  AuthenticatedAdminEquipmentSplatEditRoute: typeof AuthenticatedAdminEquipmentSplatEditRoute
+  AuthenticatedAdminUsersSplatEditRoute: typeof AuthenticatedAdminUsersSplatEditRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+  AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
+  AuthenticatedAdminEquipmentNewRoute: AuthenticatedAdminEquipmentNewRoute,
+  AuthenticatedAdminBookingsIndexRoute: AuthenticatedAdminBookingsIndexRoute,
+  AuthenticatedAdminCategoriesIndexRoute:
+    AuthenticatedAdminCategoriesIndexRoute,
+  AuthenticatedAdminEquipmentIndexRoute: AuthenticatedAdminEquipmentIndexRoute,
+  AuthenticatedAdminUsersIndexRoute: AuthenticatedAdminUsersIndexRoute,
+  AuthenticatedAdminBookingsSplatEditRoute:
+    AuthenticatedAdminBookingsSplatEditRoute,
+  AuthenticatedAdminEquipmentSplatEditRoute:
+    AuthenticatedAdminEquipmentSplatEditRoute,
+  AuthenticatedAdminUsersSplatEditRoute: AuthenticatedAdminUsersSplatEditRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedBookingsSplatRouteChildren {
+  AuthenticatedBookingsSplatEditRoute: typeof AuthenticatedBookingsSplatEditRoute
+}
+
+const AuthenticatedBookingsSplatRouteChildren: AuthenticatedBookingsSplatRouteChildren =
+  {
+    AuthenticatedBookingsSplatEditRoute: AuthenticatedBookingsSplatEditRoute,
+  }
+
+const AuthenticatedBookingsSplatRouteWithChildren =
+  AuthenticatedBookingsSplatRoute._addFileChildren(
+    AuthenticatedBookingsSplatRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFaqRoute: typeof AuthenticatedFaqRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedBookingsSplatRoute: typeof AuthenticatedBookingsSplatRouteWithChildren
+  AuthenticatedBookingsNewRoute: typeof AuthenticatedBookingsNewRoute
   AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
-  AuthenticatedMyBookingsSplatRoute: typeof AuthenticatedMyBookingsSplatRoute
+  AuthenticatedBookingsIndexRoute: typeof AuthenticatedBookingsIndexRoute
   AuthenticatedEquipmentIndexRoute: typeof AuthenticatedEquipmentIndexRoute
-  AuthenticatedMyBookingsIndexRoute: typeof AuthenticatedMyBookingsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFaqRoute: AuthenticatedFaqRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedBookingsSplatRoute: AuthenticatedBookingsSplatRouteWithChildren,
+  AuthenticatedBookingsNewRoute: AuthenticatedBookingsNewRoute,
   AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,
-  AuthenticatedMyBookingsSplatRoute: AuthenticatedMyBookingsSplatRoute,
+  AuthenticatedBookingsIndexRoute: AuthenticatedBookingsIndexRoute,
   AuthenticatedEquipmentIndexRoute: AuthenticatedEquipmentIndexRoute,
-  AuthenticatedMyBookingsIndexRoute: AuthenticatedMyBookingsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -313,11 +643,11 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  FaqRoute: FaqRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   ApiTelegramRoute: ApiTelegramRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiImagesSplatRoute: ApiImagesSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

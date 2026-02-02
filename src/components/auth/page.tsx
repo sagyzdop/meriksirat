@@ -13,7 +13,7 @@ export function Page({
     try {
       await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/dashboard',
+        callbackURL: '/equipment',
       })
     } catch (error) {
       console.error('Sign in failed:', error)
@@ -59,9 +59,7 @@ export function Page({
       </FieldGroup>
 
       <FieldDescription className="px-6 text-center">
-        <Link to="/faq" className="underline hover:text-primary">
-          FAQ
-        </Link>
+        Made by <a href="https://sagyzdop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">sagyzdop</a>
       </FieldDescription>
     </div>
   )
