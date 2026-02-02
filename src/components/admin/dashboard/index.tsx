@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 
 export function Page() {
   return (
-    <div className="flex-1 space-y-6 p-4 sm:p-6">
+    <div className="flex-1 space-y-6 px-4 py-8 sm:px-6">
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-sm sm:text-base text-muted-foreground">
@@ -104,7 +104,7 @@ export function Page() {
 
       <div className="space-y-4">
         <h2 className="text-lg sm:text-xl font-semibold">Quick Actions</h2>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link to="/admin/users">
               <IconUsers className="mr-2 h-4 w-4" />

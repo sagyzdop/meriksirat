@@ -3,6 +3,7 @@ import { z } from 'zod'
 export interface EquipmentWithCategory {
   id: number
   modelName: string
+  shortName: string | null
   description: string | null
   categoryId: number | null
   googleCalendarId: string

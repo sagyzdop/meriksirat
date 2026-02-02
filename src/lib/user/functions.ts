@@ -3,7 +3,8 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { 
   AdminUserFiltersSchema, 
   UpdateUserAdminSchema,
-  GetUserByIdSchema
+  GetUserByIdSchema,
+  UpdateUserProfileSchema
 } from './types'
 
 export const getUserFn = createServerFn({ method: 'GET' }).handler(
@@ -306,4 +307,85 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
     }
     
     return userData
+  })
+
+/**
+ * Update user's own profile information
+ * Users can update their personal information but not role/status/clearance
+ */
+export const updateUserProfileFn = createServerFn({ method: 'POST' })
+  .inputValidator(UpdateUserProfileSchema)
+  .handler(async ({ data }) => {
+    // Import server-only code inside handler
+    const { auth } = await import('@/lib/auth/auth')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    
+    const headers = getRequestHeaders()
+    const session = await auth.api.getSession({
+      headers,
+    })
+
+    if (!session?.user) {
+      throw new Error('Unauthorized')
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    
+    // Build update object with only provided fields
+    const updateData: Partial<typeof user.$inferInsert> = {}
+    
+    if (data.name !== undefined) {
+      updateData.name = data.name
+    }
+    
+    if (data.firstName !== undefined) {
+      updateData.firstName = data.firstName
+    }
+    
+    if (data.lastName !== undefined) {
+      updateData.lastName = data.lastName
+    }
+    
+    if (data.instagramUsername !== undefined) {
+      updateData.instagramUsername = data.instagramUsername
+    }
+    
+    if (data.birthday !== undefined) {
+      updateData.birthday = data.birthday
+    }
+    
+    if (data.major !== undefined) {
+      updateData.major = data.major
+    }
+    
+    if (data.graduationYear !== undefined) {
+      updateData.graduationYear = data.graduationYear
+    }
+    
+    if (data.image !== undefined) {
+      updateData.image = data.image
+    }
+    
+    // Only update if there are changes
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('No valid fields provided for update')
+    }
+    
+    // Perform the update
+    await database
+      .update(user)
+      .set(updateData)
+      .where(eq(user.id, session.user.id))
+    
+    // Return updated user data
+    const updatedUser = await database
+      .select()
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get()
+    
+    return updatedUser
   })

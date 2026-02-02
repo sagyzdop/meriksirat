@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Calendar, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Equipment } from "./types";
 
 interface EquipmentCardProps {
@@ -13,57 +13,64 @@ export function EquipmentCard({ equipment }: EquipmentCardProps) {
   const placeholderImage = "/equipment-placeholder.svg";
   const imageUrl = equipment.imagePath ? `/api/images/${equipment.imagePath}` : placeholderImage;
   
+  // Determine availability status (for now, using isActive as a proxy)
+  const availabilityStatus = equipment.isActive ? "available" : "unavailable";
+  const availabilityVariant = equipment.isActive ? "default" : "secondary";
+  
   return (
-    <Card className="group transition-shadow hover:shadow-lg">
-      <CardContent className="p-3 sm:p-4">
-        <div className="relative mb-3 sm:mb-4">
+    <Card className="group flex flex-col transition-shadow hover:shadow-lg">
+      <CardHeader className="p-0">
+        <div className="relative">
           <img
             src={imageUrl}
             alt={equipment.modelName}
-            className="h-40 w-full rounded-md object-cover sm:h-48"
+            className="h-48 w-full rounded-t-lg object-cover"
             onError={(e) => {
               // Fallback to placeholder if image fails to load
               e.currentTarget.src = placeholderImage;
             }}
           />
           {equipment.category && (
-            <Badge className="absolute top-2 left-2 text-xs">
+            <Badge className="absolute top-2 left-2">
               {equipment.category.name}
             </Badge>
           )}
+          <Badge 
+            variant={availabilityVariant}
+            className="absolute top-2 right-2"
+          >
+            {availabilityStatus}
+          </Badge>
         </div>
+      </CardHeader>
 
-        <div className="space-y-2">
-          <h3 className="line-clamp-2 text-sm leading-tight font-medium">
-            {equipment.modelName}
-          </h3>
+      <CardContent className="flex-1 p-6">
+        <CardTitle className="mb-2 line-clamp-2 text-lg font-semibold">
+          {equipment.modelName}
+        </CardTitle>
 
-          {equipment.description && (
-            <p className="text-muted-foreground text-xs line-clamp-2">
-              {equipment.description}
-            </p>
-          )}
+        {equipment.description && (
+          <p className="text-muted-foreground mb-3 text-sm line-clamp-2">
+            {equipment.description}
+          </p>
+        )}
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {equipment.requiredClearanceLevel && (
-              <div className="flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                <span>Level {equipment.requiredClearanceLevel}</span>
-              </div>
-            )}
+        {equipment.requiredClearanceLevel && (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Shield className="h-4 w-4" />
+            <span>Clearance Level {equipment.requiredClearanceLevel}</span>
           </div>
-
-          <div className="flex gap-2 pt-2">
-            <Button asChild className="flex-1" size="sm">
-              <Link to="/equipment/$" params={{ _splat: equipment.id.toString() }}>
-                <Calendar className="mr-1 h-4 w-4 sm:mr-2" />
-                <span className="xs:inline hidden">Book Equipment</span>
-                <span className="xs:hidden">Book</span>
-              </Link>
-            </Button>
-          </div>
-        </div>
+        )}
       </CardContent>
+
+      <CardFooter className="p-6 pt-0">
+        <Button asChild className="w-full">
+          <Link to="/equipment/$" params={{ _splat: equipment.id.toString() }}>
+            <Calendar className="mr-2 h-4 w-4" />
+            Book Now
+          </Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

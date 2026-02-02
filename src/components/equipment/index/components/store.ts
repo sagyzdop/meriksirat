@@ -8,6 +8,7 @@ interface EquipmentStore {
   categories: Category[];
   filteredEquipment: Equipment[];
   selectedCategoryId: string;
+  selectedAvailability: 'all' | 'available' | 'unavailable';
   searchQuery: string;
   isLoading: boolean;
   error: string | null;
@@ -20,9 +21,11 @@ interface EquipmentStore {
 
   // Actions
   setSelectedCategoryId: (categoryId: string) => void;
+  setSelectedAvailability: (availability: 'all' | 'available' | 'unavailable') => void;
   setSearchQuery: (query: string) => void;
   setViewMode: (mode: string) => void;
   setCurrentPage: (page: number) => void;
+  clearFilters: () => void;
   loadEquipment: () => Promise<void>;
   loadCategories: () => Promise<void>;
   initialize: () => Promise<void>;
@@ -34,10 +37,13 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
   categories: [],
   filteredEquipment: [],
   selectedCategoryId: "",
+  selectedAvailability: "all",
   searchQuery: "",
   isLoading: false,
   error: null,
-  viewMode: "grid",
+  viewMode: typeof window !== 'undefined' 
+    ? localStorage.getItem('equipment-view-mode') || 'grid'
+    : 'grid',
   currentPage: 1,
   totalPages: 1,
   totalItems: 0,
@@ -48,6 +54,11 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
     get().loadEquipment();
   },
 
+  setSelectedAvailability: (availability) => {
+    set({ selectedAvailability: availability, currentPage: 1 });
+    get().loadEquipment();
+  },
+
   setSearchQuery: (query) => {
     set({ searchQuery: query, currentPage: 1 });
     // The actual search will be triggered by the debounced effect in the component
@@ -55,6 +66,10 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
 
   setViewMode: (mode) => {
     set({ viewMode: mode });
+    // Persist view mode to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('equipment-view-mode', mode);
+    }
   },
 
   setCurrentPage: (page) => {
@@ -62,19 +77,38 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
     get().loadEquipment();
   },
 
+  clearFilters: () => {
+    set({ 
+      selectedCategoryId: "", 
+      selectedAvailability: "all",
+      searchQuery: "",
+      currentPage: 1 
+    });
+    get().loadEquipment();
+  },
+
   loadEquipment: async () => {
-    const { selectedCategoryId, searchQuery, currentPage } = get();
+    const { selectedCategoryId, selectedAvailability, searchQuery, currentPage } = get();
     set({ isLoading: true, error: null });
 
     try {
       const filters: EquipmentFilters = {
         page: currentPage,
         limit: 20,
-        isActive: true,
+        sortBy: 'modelName',
+        sortOrder: 'asc',
       };
 
+      // Apply availability filter
+      if (selectedAvailability === 'available') {
+        filters.isActive = true;
+      } else if (selectedAvailability === 'unavailable') {
+        filters.isActive = false;
+      }
+      // If 'all', don't set isActive filter
+
       if (selectedCategoryId) {
-        filters.categoryId = selectedCategoryId;
+        filters.categoryId = parseInt(selectedCategoryId, 10);
       }
 
       if (searchQuery.trim()) {

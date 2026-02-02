@@ -64,7 +64,7 @@ export function Page({ settings }: PageProps) {
   }
   
   return (
-    <div className="flex-1 space-y-6 p-4 sm:p-6">
+    <div className="flex-1 space-y-6 px-4 py-8 sm:px-6">
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-sm sm:text-base text-muted-foreground">

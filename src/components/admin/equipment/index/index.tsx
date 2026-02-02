@@ -1,6 +1,14 @@
-import { equipmentColumns } from "./components/equipment-columns"
+
+import { useState } from "react"
+import { createEquipmentColumns } from "./components/equipment-columns"
 import { EquipmentDataTable } from "./components/equipment-data-table"
+import { EquipmentDeleteDialog } from "./components/equipment-delete-dialog"
 import { EquipmentWithCategory } from "@/lib/equipment"
+import { PageContainer } from "@/components/layout/page-container"
+import { PageHeader } from "@/components/layout/page-header"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import { Link } from "@tanstack/react-router"
 
 interface Pagination {
   page: number
@@ -30,25 +38,46 @@ interface PageProps {
 }
 
 export function Page({ equipment, pagination, filters }: PageProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentWithCategory | null>(null)
+
+  const handleDeleteEquipment = (equipment: EquipmentWithCategory) => {
+    setSelectedEquipment(equipment)
+    setDeleteDialogOpen(true)
+  }
+
+  const columns = createEquipmentColumns(() => {}, handleDeleteEquipment)
+
+  const description = pagination.total > 0 
+    ? `Managing ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
+    : "No equipment found"
+
   return (
-    <div className="h-full flex-1 flex-col gap-6 p-4 sm:gap-8 sm:p-8 md:flex">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Equipment Management</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {pagination.total > 0 
-              ? `Managing ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
-              : "No equipment found"
-            }
-          </p>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        title="Manage Equipment"
+        description={description}
+        actions={
+          <Button asChild>
+            <Link to="/admin/equipment/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Equipment
+            </Link>
+          </Button>
+        }
+      />
       <EquipmentDataTable 
         data={equipment} 
-        columns={equipmentColumns} 
+        columns={columns} 
         pagination={pagination}
         filters={filters}
       />
-    </div>
+
+      <EquipmentDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        equipment={selectedEquipment}
+      />
+    </PageContainer>
   )
 }

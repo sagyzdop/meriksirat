@@ -39,9 +39,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
-import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Plus } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { EquipmentWithCategory } from "@/lib/equipment"
-import { Link } from "@tanstack/react-router"
 
 interface Pagination {
   page: number
@@ -262,7 +261,7 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-1">
           <Input
-            placeholder="Search equipment by model name..."
+            placeholder="Search equipment by name or description..."
             value={filters.searchQuery || ""}
             onChange={(event) => handleSearchChange(event.target.value)}
             className="h-8 w-full sm:w-[200px] lg:w-[300px]"
@@ -295,12 +294,6 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-2">
-          <Button asChild size="sm" className="h-8 w-full sm:w-auto">
-            <Link to="/admin/equipment/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Equipment
-            </Link>
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">

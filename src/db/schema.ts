@@ -243,18 +243,21 @@ export const bookingRelations = relations(booking, ({ one }) => ({
   }),
 }))
 
-
 export const settings = sqliteTable('settings', {
   id: text('id').primaryKey().default('global'),
-  
+
   // Notifications
   globalBookingNote: text('global_booking_note').default(''),
-  
+
   // Daily operating hours (minutes since midnight: 0-1439)
   operatingHoursStart: integer('operating_hours_start').default(0),
-  operatingHoursEnd: integer('operating_hours_end').default(1439), 
-  
+  operatingHoursEnd: integer('operating_hours_end').default(1439),
+
   // Timestamps
-  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-});
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(
+    () => new Date()
+  ),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(
+    () => new Date()
+  ),
+})

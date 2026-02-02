@@ -15,12 +15,21 @@ import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import { EquipmentWithCategory } from "@/lib/equipment"
 
+interface EquipmentActionsProps {
+  equipment: EquipmentWithCategory
+  onEdit: (equipment: EquipmentWithCategory) => void
+  onDelete: (equipment: EquipmentWithCategory) => void
+}
+
 const statusConfig = {
   true: { label: "Active", variant: "default" as const },
   false: { label: "Inactive", variant: "secondary" as const },
 }
 
-export const equipmentColumns: ColumnDef<EquipmentWithCategory>[] = [
+export const createEquipmentColumns = (
+  onEdit: (equipment: EquipmentWithCategory) => void,
+  onDelete: (equipment: EquipmentWithCategory) => void
+): ColumnDef<EquipmentWithCategory>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -152,6 +161,30 @@ export const equipmentColumns: ColumnDef<EquipmentWithCategory>[] = [
     },
   },
   {
+    id: "availability",
+    header: "Availability",
+    cell: ({ row }) => {
+      const isActive = row.getValue("isActive") as boolean | null
+      const status = isActive === null ? true : isActive
+      
+      // For now, show availability based on active status
+      // In a real implementation, this would check current bookings
+      if (!status) {
+        return (
+          <Badge variant="secondary">
+            Unavailable
+          </Badge>
+        )
+      }
+      
+      return (
+        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+          Available
+        </Badge>
+      )
+    },
+  },
+  {
     accessorKey: "createdAt",
     header: ({ column }) => (
       <Button
@@ -207,8 +240,8 @@ export const equipmentColumns: ColumnDef<EquipmentWithCategory>[] = [
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link 
-                to="/admin/equipment/$/edit" 
-                params={{ _splat: equipment.id.toString() }}
+                to="/admin/equipment/$equipmentId/edit" 
+                params={{ equipmentId: equipment.id.toString() }}
                 className="flex items-center gap-2"
               >
                 <Edit className="h-4 w-4" />
@@ -238,10 +271,7 @@ export const equipmentColumns: ColumnDef<EquipmentWithCategory>[] = [
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:text-destructive"
-              onClick={() => {
-                // TODO: Implement delete functionality
-                console.log("Delete equipment:", equipment.id)
-              }}
+              onClick={() => onDelete(equipment)}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete equipment

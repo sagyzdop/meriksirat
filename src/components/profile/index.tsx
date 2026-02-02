@@ -1,32 +1,34 @@
-import {ProfileHeader} from "./components/profile-header";
-import {ProfileContent} from "./components/profile-content";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
+import { Section } from "@/components/layout/section";
+import { ProfileHeader } from "./components/profile-header";
+import { ProfileContent } from "./components/profile-content";
+import type { UserProfile } from "@/lib/user/types";
 
 interface ProfilePageProps {
-  user?: {
-    id: string;
-    firstName?: string | null;
-    lastName?: string | null;
-    email: string;
-    image?: string | null;
-    createdAt: Date;
-  };
+  user?: UserProfile;
 }
 
 export function Page({ user }: ProfilePageProps) {
   if (!user) {
     return (
-      <div className="container mx-auto space-y-6 px-4 py-10">
-        <div className="flex items-center justify-center">
+      <PageContainer>
+        <div className="flex items-center justify-center py-10">
           <div className="text-muted-foreground">Please sign in to view your profile.</div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-10">
-      <ProfileHeader user={user} />
-      <ProfileContent user={user} />
-    </div>
+    <PageContainer>
+      <PageHeader title="Profile" />
+      <Section spacing="compact">
+        <ProfileHeader user={user} />
+      </Section>
+      <Section spacing="compact">
+        <ProfileContent user={user} />
+      </Section>
+    </PageContainer>
   );
 }

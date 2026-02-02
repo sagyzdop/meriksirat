@@ -1,5 +1,9 @@
-import { userColumns } from "./components/user-columns"
+import { createUserColumns } from "./components/user-columns"
 import { UserDataTable } from "./components/user-data-table"
+import { PageContainer } from "@/components/layout/page-container"
+import { PageHeader } from "@/components/layout/page-header"
+import { useState } from "react"
+import { DeactivateUserDialog } from "./components/deactivate-user-dialog"
 
 interface User {
   id: string
@@ -39,25 +43,38 @@ interface PageProps {
 }
 
 export function Page({ users, pagination, filters }: PageProps) {
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+
+  const description = pagination.totalCount > 0 
+    ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
+    : "No users found"
+
+  const handleDeactivateUser = (user: User) => {
+    setSelectedUser(user)
+    setDeactivateDialogOpen(true)
+  }
+
+  const columns = createUserColumns(undefined, handleDeactivateUser)
+
   return (
-    <div className="h-full flex-1 flex-col gap-6 p-4 sm:gap-8 sm:p-8 md:flex">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">User Management</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {pagination.totalCount > 0 
-              ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
-              : "No users found"
-            }
-          </p>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        title="Manage Users"
+        description={description}
+      />
       <UserDataTable 
         data={users} 
-        columns={userColumns} 
+        columns={columns}
         pagination={pagination}
         filters={filters}
       />
-    </div>
+
+      <DeactivateUserDialog
+        open={deactivateDialogOpen}
+        onOpenChange={setDeactivateDialogOpen}
+        user={selectedUser}
+      />
+    </PageContainer>
   )
 }

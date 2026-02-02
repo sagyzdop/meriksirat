@@ -50,6 +50,7 @@ export function NavUser({
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              aria-label="User menu"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
                 <AvatarImage src={user.avatar} alt={user.name} />
@@ -61,7 +62,7 @@ export function NavUser({
                   {user.email}
                 </span>
               </div>
-              <IconDotsVertical className="ml-auto size-4" />
+              <IconDotsVertical className="ml-auto size-4" aria-hidden="true" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -69,6 +70,7 @@ export function NavUser({
             side={isMobile ? 'bottom' : 'right'}
             align="end"
             sideOffset={4}
+            aria-label="User account menu"
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
@@ -87,15 +89,15 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to="/profile">
-                  <IconUserCircle />
+                <Link to="/profile" aria-label="Go to account settings">
+                  <IconUserCircle aria-hidden="true" />
                   Account
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLogout}>
-              <IconLogout />
+            <DropdownMenuItem onClick={onLogout} aria-label="Log out of your account">
+              <IconLogout aria-hidden="true" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -121,15 +121,16 @@ export function AppSidebar({ onLogout, ...props }: React.ComponentProps<typeof S
   const hasAdminAccess = userData?.role === 'admin' || userData?.role === 'manager';
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="offcanvas" {...props} aria-label="Main navigation sidebar">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:p-1.5!">
+              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              aria-label="Go to equipment page">
               <Link to="/equipment">
-                <IconInnerShadowTop className="size-5!" />
+                <IconInnerShadowTop className="size-5!" aria-hidden="true" />
                 <span className="text-base font-semibold">MerikSirat</span>
               </Link>
             </SidebarMenuButton>

@@ -1,6 +1,11 @@
 import { bookingColumns } from "./components/booking-columns"
 import { BookingDataTable } from "./components/booking-data-table"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
+import { PageContainer } from "@/components/layout/page-container"
+import { PageHeader } from "@/components/layout/page-header"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import { Link } from "@tanstack/react-router"
 
 interface Pagination {
   page: number
@@ -31,25 +36,30 @@ interface PageProps {
 }
 
 export function Page({ bookings, pagination, filters }: PageProps) {
+  const description = pagination.total > 0 
+    ? `Managing ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
+    : "No bookings found"
+
   return (
-    <div className="h-full flex-1 flex-col gap-6 p-4 sm:gap-8 sm:p-8 md:flex">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Booking Oversight</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            {pagination.total > 0 
-              ? `Managing ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
-              : "No bookings found"
-            }
-          </p>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        title="Manage Bookings"
+        description={description}
+        actions={
+          <Button asChild>
+            <Link to="/admin/bookings/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Booking
+            </Link>
+          </Button>
+        }
+      />
       <BookingDataTable 
         data={bookings} 
         columns={bookingColumns} 
         pagination={pagination}
         filters={filters}
       />
-    </div>
+    </PageContainer>
   )
 }

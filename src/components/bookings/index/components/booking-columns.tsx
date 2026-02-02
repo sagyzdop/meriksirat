@@ -1,4 +1,5 @@
 
+import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,8 @@ import { BookingWithEquipment } from "@/lib/booking/types"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import { createTelegramBotLink, canReturnBooking, getReturnButtonText, TELEGRAM_BOT_CONFIG } from "@/lib/telegram/client-utils"
+import { BookingDetailDialog } from "./booking-detail-dialog"
+import { CancelBookingDialog } from "./cancel-booking-dialog"
 
 const statusConfig = {
   booked: { label: "Booked", variant: "secondary" as const },
@@ -51,15 +54,28 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
   {
     accessorKey: "id",
     header: "Booking ID",
-    cell: ({ row }) => (
-      <Link 
-        to="/bookings/$bookingId" 
-        params={{ bookingId: row.getValue("id").toString() }}
-        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-      >
-        #{row.getValue("id")}
-      </Link>
-    ),
+    cell: ({ row }) => {
+      const id = row.getValue("id") as number
+      const booking = row.original
+      const [showDetailDialog, setShowDetailDialog] = React.useState(false)
+      
+      return (
+        <>
+          <button
+            onClick={() => setShowDetailDialog(true)}
+            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            #{id}
+          </button>
+          
+          <BookingDetailDialog
+            booking={booking}
+            open={showDetailDialog}
+            onOpenChange={setShowDetailDialog}
+          />
+        </>
+      )
+    },
   },
   {
     id: "equipment",
@@ -212,47 +228,62 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const booking = row.original
+      const [showDetailDialog, setShowDetailDialog] = React.useState(false)
+      const [showCancelDialog, setShowCancelDialog] = React.useState(false)
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(booking.id.toString())}
-            >
-              Copy booking ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link 
-                to="/bookings/$bookingId" 
-                params={{ bookingId: booking.id.toString() }}
-                className="flex items-center gap-2"
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(booking.id.toString())}
               >
-                <Eye className="h-4 w-4" />
+                Copy booking ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowDetailDialog(true)}>
+                <Eye className="mr-2 h-4 w-4" />
                 View details
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link 
-                to="/bookings/$bookingId/edit" 
-                params={{ bookingId: booking.id.toString() }}
-                className="flex items-center gap-2"
-              >
-                Edit booking
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
-              Cancel booking
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link 
+                  to="/bookings/$bookingId/edit" 
+                  params={{ bookingId: booking.id.toString() }}
+                  className="flex items-center gap-2"
+                >
+                  Edit booking
+                </Link>
+              </DropdownMenuItem>
+              {(booking.status === "booked" || booking.status === "active") && (
+                <DropdownMenuItem 
+                  className="text-destructive"
+                  onClick={() => setShowCancelDialog(true)}
+                >
+                  Cancel booking
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <BookingDetailDialog
+            booking={booking}
+            open={showDetailDialog}
+            onOpenChange={setShowDetailDialog}
+          />
+
+          <CancelBookingDialog
+            booking={booking}
+            open={showCancelDialog}
+            onOpenChange={setShowCancelDialog}
+          />
+        </>
       )
     },
   },

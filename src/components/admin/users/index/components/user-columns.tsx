@@ -10,9 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Shield } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Eye, Edit, Shield, UserX } from "lucide-react"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
+import type { EditUserFormData } from "./edit-user-dialog"
 
 interface User {
   id: string
@@ -44,7 +45,15 @@ const statusConfig = {
   Graduated: { label: "Graduated", variant: "secondary" as const },
 }
 
-export const userColumns: ColumnDef<User>[] = [
+interface UserColumnsProps {
+  onEdit?: (user: User) => void
+  onDeactivate?: (user: User) => void
+}
+
+export const createUserColumns = (
+  onEdit?: (user: User) => void,
+  onDeactivate?: (user: User) => void
+): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -251,8 +260,8 @@ export const userColumns: ColumnDef<User>[] = [
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link 
-                to="/admin/users/$/edit" 
-                params={{ _splat: user.id }}
+                to="/admin/users/$userId/edit" 
+                params={{ userId: user.id }}
                 className="flex items-center gap-2"
               >
                 <Edit className="h-4 w-4" />
@@ -269,9 +278,24 @@ export const userColumns: ColumnDef<User>[] = [
                 View profile
               </Link>
             </DropdownMenuItem>
+            {onDeactivate && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDeactivate(user)}
+                >
+                  <UserX className="h-4 w-4 mr-2" />
+                  Deactivate user
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )
     },
   },
 ]
+
+// Export a default version for backward compatibility
+export const userColumns = createUserColumns()

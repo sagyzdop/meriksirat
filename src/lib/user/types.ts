@@ -1,5 +1,30 @@
 import { z } from 'zod'
 
+// User Profile Types
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image: string | null;
+  telegramChatId: string | null;
+  telegramUsername: string | null;
+  instagramUsername: string | null;
+  googleId: string | null;
+  nuId: number | null;
+  firstName: string | null;
+  lastName: string | null;
+  birthday: string | null;
+  major: string | null;
+  graduationYear: number | null;
+  status: string | null;
+  clearanceLevel: number | null;
+  role: string | null;
+  onboardingComplete: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Admin User Management Schemas
 export const AdminUserFiltersSchema = z.object({
   role: z.enum(['user', 'manager', 'admin']).optional(),
@@ -47,4 +72,16 @@ export const UpdateUserAdminSchema = z.object({
 
 export const GetUserByIdSchema = z.object({
   userId: z.string(),
+})
+
+// User Profile Update Schema (for users updating their own profile)
+export const UpdateUserProfileSchema = z.object({
+  name: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  instagramUsername: z.string().optional(),
+  birthday: z.string().optional(),
+  major: z.string().optional(),
+  graduationYear: z.number().min(1900).max(2100).optional(),
+  image: z.string().optional(),
 })

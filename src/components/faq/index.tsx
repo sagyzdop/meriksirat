@@ -29,7 +29,7 @@ const faqItems = [
 
 export function Page() {
   return (
-    <div>
+    <div className="py-8">
       <div id="faqs" className="bg-faq py-16 md:py-32">
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">

@@ -1,3 +1,4 @@
+import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,11 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Calendar, AlertCircle } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Eye, Edit, Calendar, AlertCircle, Trash } from "lucide-react"
 import { format, isPast } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
+import { DeleteBookingDialog } from "./delete-booking-dialog"
 
 const statusConfig = {
   booked: { label: "Booked", variant: "default" as const },
@@ -223,64 +225,85 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const booking = row.original
+      const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(booking.id.toString())}
-            >
-              Copy booking ID
-            </DropdownMenuItem>
-            {booking.googleCalendarEventId && (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(booking.googleCalendarEventId || '')}
+                onClick={() => navigator.clipboard.writeText(booking.id.toString())}
               >
-                Copy calendar event ID
+                Copy booking ID
               </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link 
-                to="/admin/bookings/$/edit" 
-                params={{ _splat: booking.id.toString() }}
-                className="flex items-center gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Edit booking
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link 
-                to="/bookings/$" 
-                params={{ _splat: booking.id.toString() }}
-                className="flex items-center gap-2"
-              >
-                <Eye className="h-4 w-4" />
-                View details
-              </Link>
-            </DropdownMenuItem>
-            {booking.equipment?.id && (
+              {booking.googleCalendarEventId && (
+                <DropdownMenuItem
+                  onClick={() => navigator.clipboard.writeText(booking.googleCalendarEventId || '')}
+                >
+                  Copy calendar event ID
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link 
-                  to="/equipment/$" 
-                  params={{ _splat: booking.equipment.id.toString() }}
-                  className="flex items-center gap-2"
+                  to="/admin/bookings/$bookingId/edit" 
+                  params={{ bookingId: booking.id.toString() }}
+                  className="flex items-center"
                 >
-                  <Calendar className="h-4 w-4" />
-                  View equipment
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit booking
                 </Link>
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem asChild>
+                <Link 
+                  to="/bookings/$" 
+                  params={{ _splat: booking.id.toString() }}
+                  className="flex items-center"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View details
+                </Link>
+              </DropdownMenuItem>
+              {booking.equipment?.id && (
+                <DropdownMenuItem asChild>
+                  <Link 
+                    to="/equipment/$" 
+                    params={{ _splat: booking.equipment.id.toString() }}
+                    className="flex items-center"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    View equipment
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setDeleteDialogOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash className="mr-2 h-4 w-4" />
+                Delete booking
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DeleteBookingDialog
+            booking={booking}
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onSuccess={() => {
+              // Refresh the page or update the data
+              window.location.reload()
+            }}
+          />
+        </>
       )
     },
   },

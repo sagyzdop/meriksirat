@@ -10,24 +10,24 @@ export function SiteHeader({ onLogout }: { onLogout?: () => void }) {
   // Get current page name based on pathname
   const getPageName = () => {
     const segments = pathname.split('/').filter(Boolean)
-    
+
     if (segments.length === 0 || (segments.length === 1 && segments[0] === 'equipment')) {
       return 'Equipment'
     }
 
     const section = segments[0]
-    
+
     switch (section) {
       case 'bookings':
         if (segments.length === 1) return 'My Bookings'
         if (segments[1] === 'new') return 'New Booking'
         if (segments[1] === 'edit') return 'Edit Booking'
         return 'Booking Details'
-        
+
       case 'equipment':
         if (segments.length === 1) return 'Equipment'
         return 'Equipment Details'
-        
+
       case 'admin':
         if (segments.length === 1) return 'Admin'
         if (segments[1] === 'dashboard') return 'Admin Dashboard'
@@ -37,16 +37,16 @@ export function SiteHeader({ onLogout }: { onLogout?: () => void }) {
         if (segments[1] === 'bookings') return 'Booking Oversight'
         if (segments[1] === 'settings') return 'Admin Settings'
         return 'Admin'
-        
+
       case 'profile':
         return 'My Profile'
-        
+
       case 'faq':
         return 'FAQ'
-        
+
       case 'dashboard':
         return 'Dashboard'
-        
+
       default:
         return section.charAt(0).toUpperCase() + section.slice(1)
     }
@@ -64,11 +64,7 @@ export function SiteHeader({ onLogout }: { onLogout?: () => void }) {
         />
         <h1 className="text-base font-medium">{pageName}</h1>
         <div className="ml-auto flex items-center gap-2">
-          {onLogout && (
-            <Button variant="ghost" size="sm" onClick={onLogout}>
-              Logout
-            </Button>
-          )}
+          Made by <a href="https://sagyzdop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">sagyzdop</a>
         </div>
       </div>
     </header>

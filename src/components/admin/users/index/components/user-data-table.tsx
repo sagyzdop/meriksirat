@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
+import { createUserColumns } from "./user-columns"
 import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 
 interface User {
@@ -73,7 +74,7 @@ interface Filters {
 }
 
 interface UserDataTableProps {
-  columns: ColumnDef<User>[]
+  columns?: ColumnDef<User>[]
   data: User[]
   pagination: Pagination
   filters: Filters
@@ -104,12 +105,23 @@ const clearanceLevelOptions = [
   { value: "5", label: "Level 5" },
 ]
 
-export function UserDataTable({ columns, data, pagination, filters }: UserDataTableProps) {
+export function UserDataTable({ 
+  columns: providedColumns, 
+  data, 
+  pagination, 
+  filters
+}: UserDataTableProps) {
   const navigate = useNavigate()
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [sorting, setSorting] = React.useState<SortingState>([])
+
+  // Create columns
+  const columns = React.useMemo(
+    () => providedColumns || createUserColumns(),
+    [providedColumns]
+  )
 
   // Initialize filters from URL params
   React.useEffect(() => {

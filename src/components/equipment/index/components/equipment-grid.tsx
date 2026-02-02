@@ -1,35 +1,74 @@
 import { EquipmentCard } from "./equipment-card";
-import { Equipment } from "../../types";
+import { EquipmentListCard } from "./equipment-list-card";
+import { Equipment } from "./types";
+import { ContentGrid } from "@/components/layout/content-grid";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
+import { PackageOpen, Search } from "lucide-react";
 
 interface EquipmentGridProps {
   equipment: Equipment[];
   viewMode: string;
+  hasActiveFilters?: boolean;
 }
 
-export function EquipmentGrid({ equipment, viewMode }: EquipmentGridProps) {
+export function EquipmentGrid({ equipment, viewMode, hasActiveFilters = false }: EquipmentGridProps) {
   if (equipment.length === 0) {
+    // Show different empty state based on whether filters are active
+    if (hasActiveFilters) {
+      return (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Search />
+            </EmptyMedia>
+            <EmptyTitle>No results found</EmptyTitle>
+            <EmptyDescription>
+              No equipment matches your current search or filter criteria. Try adjusting your filters or search terms.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      );
+    }
+
+    // No equipment at all
     return (
-      <div className="py-12 text-center">
-        <div className="mx-auto max-w-md">
-          <div className="mb-4 text-6xl">🔧</div>
-          <h3 className="text-lg font-semibold mb-2">No Equipment Found</h3>
-          <p className="text-muted-foreground text-sm">
-            No equipment matches your current search or filter criteria.
-          </p>
-        </div>
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <PackageOpen />
+          </EmptyMedia>
+          <EmptyTitle>No equipment available</EmptyTitle>
+          <EmptyDescription>
+            There is no equipment available at this time. Please check back later.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
+  // Use ContentGrid for grid view, single column for list view
+  if (viewMode === "grid") {
+    return (
+      <ContentGrid
+        columns={{
+          mobile: 1,
+          tablet: 2,
+          desktop: 4,
+        }}
+        gap={6}
+      >
+        {equipment.map((item) => (
+          <EquipmentCard key={item.id} equipment={item} />
+        ))}
+      </ContentGrid>
+    );
+  }
+
+  // List view - single column with horizontal layout
   return (
-    <div
-      className={`grid gap-4 sm:gap-6 ${
-        viewMode === "grid"
-          ? "xs:grid-cols-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4"
-          : "grid-cols-1"
-      }`}>
+    <div className="grid grid-cols-1 gap-4">
       {equipment.map((item) => (
-        <EquipmentCard key={item.id} equipment={item} />
+        <EquipmentListCard key={item.id} equipment={item} />
       ))}
     </div>
   );

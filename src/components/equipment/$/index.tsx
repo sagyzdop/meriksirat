@@ -91,7 +91,7 @@ export function Page() {
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Equipment Calendar</h3>
                     <iframe
-                        src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=Y182YWZiN2RkOGI0ZDQzNmEwODlkNmQxNjQ5NWE2ZmYwZGQ1MmNhODVlNGNjMzU5MTg1ZWZjNDc2ODJjZDQ5YTJiQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20&color=%237986cb`}
+                        src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=${encodeURIComponent(equipment.googleCalendarId)}&color=%237986cb`}
                         className="w-full h-[600px] border rounded-lg"
                         style={{ borderWidth: 1 }}
                         allowFullScreen
