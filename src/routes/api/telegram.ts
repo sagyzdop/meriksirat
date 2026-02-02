@@ -5,7 +5,7 @@
  * 
  * Security:
  * - Verifies webhook secret token from x-telegram-bot-api-secret-token header
- * - Returns 401 Unauthorized if secret doesn't match env.TELEGRAM_WEBHOOK_SECRET
+ * - Returns 401 Unauthorized if secret doesn't match process.env.TELEGRAM_WEBHOOK_SECRET
  * 
  * Processing:
  * - Creates Telegraf bot instance with environment bindings
@@ -28,7 +28,7 @@ export const Route = createFileRoute('/api/telegram')({
           // Verify webhook secret token (Requirement 8.4)
           const headerSecret = request.headers.get('x-telegram-bot-api-secret-token')
           
-          if (env.TELEGRAM_WEBHOOK_SECRET && headerSecret !== env.TELEGRAM_WEBHOOK_SECRET) {
+          if (process.env.TELEGRAM_WEBHOOK_SECRET && headerSecret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
             console.warn('Unauthorized webhook attempt', {
               receivedSecret: headerSecret ? '[REDACTED]' : 'none',
               timestamp: new Date().toISOString()

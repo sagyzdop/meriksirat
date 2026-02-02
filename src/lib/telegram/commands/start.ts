@@ -142,7 +142,7 @@ export const getTelegramLinkUrl = createServerFn({ method: 'POST' })
     }
 
     // Generate a unique token
-    const token = nanoid(32)
+    const token = crypto.randomUUID().replace(/-/g, '')
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
     // Store token in database
