@@ -88,9 +88,28 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
       .where(eq(equipment.id, equipmentId))
       .get()
 
+    // Get global booking note from settings
+    const { settings } = await import('@/db/schema')
+    const settingsData = await database
+      .select({ globalBookingNote: settings.globalBookingNote })
+      .from(settings)
+      .where(eq(settings.id, 'global'))
+      .get()
+
+    const globalNote = settingsData?.globalBookingNote
+    const descriptionParts = [
+      `Booking ID: ${bookingId}`,
+      `User: ${userEmail}`,
+      `Notes: ${notes || 'No additional notes'}`
+    ]
+    
+    if (globalNote && globalNote.trim()) {
+      descriptionParts.push('', '---', globalNote)
+    }
+
     const event = {
       summary: `${equipmentData?.modelName || `Equipment ${equipmentId}`} - Booking`,
-      description: `Booking ID: ${bookingId}\nUser: ${userEmail}\nNotes: ${notes || 'No additional notes'}`,
+      description: descriptionParts.join('\n'),
       start: { dateTime: startTime, timeZone: 'UTC' },
       end: { dateTime: endTime, timeZone: 'UTC' },
     }
@@ -488,9 +507,28 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
           .where(eq(equipment.id, bookingData.equipmentId))
           .get()
 
+        // Get global booking note from settings
+        const { settings } = await import('@/db/schema')
+        const settingsData = await database
+          .select({ globalBookingNote: settings.globalBookingNote })
+          .from(settings)
+          .where(eq(settings.id, 'global'))
+          .get()
+
+        const globalNote = settingsData?.globalBookingNote
+        const descriptionParts = [
+          `Booking ID: ${data.bookingId}`,
+          `User: ${userEmail}`,
+          `Notes: ${newNotes || 'No additional notes'}`
+        ]
+        
+        if (globalNote && globalNote.trim()) {
+          descriptionParts.push('', '---', globalNote)
+        }
+
         const event = {
           summary: `${equipmentData?.modelName || `Equipment ${bookingData.equipmentId}`} - Booking`,
-          description: `Booking ID: ${data.bookingId}\nUser: ${userEmail}\nNotes: ${newNotes || 'No additional notes'}`,
+          description: descriptionParts.join('\n'),
           start: { dateTime: newStartTime, timeZone: 'UTC' },
           end: { dateTime: newEndTime, timeZone: 'UTC' },
         }

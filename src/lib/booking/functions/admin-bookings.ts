@@ -276,9 +276,29 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
           })
         } else {
           // Update calendar event with new status and admin notes
+          // Get global booking note from settings
+          const { settings } = await import('@/db/schema')
+          const settingsData = await database
+            .select({ globalBookingNote: settings.globalBookingNote })
+            .from(settings)
+            .where(eq(settings.id, 'global'))
+            .get()
+
+          const globalNote = settingsData?.globalBookingNote
+          const descriptionParts = [
+            `Booking ID: ${data.bookingId}`,
+            `User: ${bookingData.user?.email}`,
+            `Status: ${data.status}`,
+            `Notes: ${updatedNotes || 'No notes'}`
+          ]
+          
+          if (globalNote && globalNote.trim()) {
+            descriptionParts.push('', '---', globalNote)
+          }
+
           const event = {
             summary: `${bookingData.equipment.modelName || `Equipment ${bookingData.equipmentId}`} - Booking (${data.status.toUpperCase()})`,
-            description: `Booking ID: ${data.bookingId}\nUser: ${bookingData.user?.email}\nStatus: ${data.status}\nNotes: ${updatedNotes || 'No notes'}`,
+            description: descriptionParts.join('\n'),
             start: { dateTime: bookingData.startTime.toISOString(), timeZone: 'UTC' },
             end: { dateTime: bookingData.endTime.toISOString(), timeZone: 'UTC' },
           }
