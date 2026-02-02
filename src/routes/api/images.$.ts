@@ -12,7 +12,7 @@ export const Route = createFileRoute('/api/images/$')({
           }
 
           // Check authentication
-          const { auth } = await import('@/lib/auth')
+          const { auth } = await import('@/lib/auth/auth')
           const session = await auth.api.getSession({
             headers: request.headers,
           })

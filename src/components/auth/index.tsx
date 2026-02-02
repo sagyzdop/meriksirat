@@ -1,9 +1,8 @@
 import { GalleryVerticalEnd } from 'lucide-react'
-import { authClient } from '@/lib/auth-client'
+import { authClient } from '@/lib/auth/auth-client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
-import { Link } from '@tanstack/react-router'
 
 export function Page({
   className,

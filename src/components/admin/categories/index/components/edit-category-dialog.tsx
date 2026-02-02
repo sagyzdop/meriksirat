@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { updateCategoryFn } from '@/lib/admin'
 import { toast } from 'sonner'
-import { CategoryWithCount } from '../page'
+import { CategoryWithCount } from '..'
 
 interface EditCategoryDialogProps {
   open: boolean

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, ArrowLeft, Clock, MapPin, User } from "lucide-react";
-import type { BookingWithEquipment } from "@/lib/booking-types";
+import type { BookingWithEquipment } from "@/lib/booking/types";
 import { cancelBookingFn } from "@/lib/booking";
 import { format } from "date-fns";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -194,8 +194,8 @@ export function Page({ booking }: PageProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link 
-                  to="/equipment/$" 
-                  params={{ _splat: booking.equipmentId.toString() }}
+                  to="/bookings/$bookingId/edit" 
+                  params={{ bookingId: booking.id.toString() }}
                 >
                   <Button variant="outline" className="w-full">
                     Edit Booking

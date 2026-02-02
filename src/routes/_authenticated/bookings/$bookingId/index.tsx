@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Page } from '@/components/bookings/$/page'
+import { Page } from '@/components/bookings/$bookingId'
 import { getBookingByIdFn } from '@/lib/booking'
 import { z } from 'zod'
 
@@ -7,11 +7,11 @@ const BookingDetailSearchSchema = z.object({
   bookingId: z.coerce.number().optional(),
 })
 
-export const Route = createFileRoute('/_authenticated/bookings/$')({
+export const Route = createFileRoute('/_authenticated/bookings/$bookingId/')({
   component: RouteComponent,
   validateSearch: BookingDetailSearchSchema,
   loader: async ({ params }) => {
-    const bookingId = parseInt(params._splat || '0')
+    const bookingId = parseInt(params.bookingId || '0')
     
     if (!bookingId || isNaN(bookingId)) {
       throw new Error('Invalid booking ID')

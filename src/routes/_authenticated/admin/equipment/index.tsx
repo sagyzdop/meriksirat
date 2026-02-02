@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Page } from '@/components/admin/equipment/index/page'
+import { Page } from '@/components/admin/equipment/index'
 import { getAdminEquipmentFn } from '@/lib/equipment'
 import { z } from 'zod'
 

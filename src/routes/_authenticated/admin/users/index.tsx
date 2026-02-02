@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Page } from '@/components/admin/users/index/page'
+import { Page } from '@/components/admin/users/index'
 import { getAdminUsersFn } from '@/lib/user'
 import { z } from 'zod'
 

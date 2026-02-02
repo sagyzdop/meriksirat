@@ -16,7 +16,7 @@ export const getEquipmentFn = createServerFn({
   .inputValidator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth')
+    const { auth } = await import('@/lib/auth/auth')
     const { getUserClearanceLevel } = await import('./server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
@@ -127,7 +127,7 @@ export const getEquipmentByIdFn = createServerFn({
   .inputValidator(z.object({ equipmentId: z.coerce.number() }))
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth')
+    const { auth } = await import('@/lib/auth/auth')
     const { getUserClearanceLevel } = await import('./server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
@@ -182,7 +182,7 @@ export const getEquipmentByIdFn = createServerFn({
 export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth')
+    const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { category } = await import('@/db/schema')

@@ -3,7 +3,7 @@ import { Calendar, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Equipment } from "../types";
+import { Equipment } from "./types";
 
 interface EquipmentCardProps {
   equipment: Equipment;

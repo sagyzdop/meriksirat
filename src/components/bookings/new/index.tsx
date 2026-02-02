@@ -16,9 +16,10 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { checkCalendarFreeBusy } from "@/lib/google-caledar"
+import { checkCalendarFreeBusy } from "@/lib/google/google-caledar"
 import { handleBookingAndCalendar } from "@/lib/booking"
 import { getEquipmentByIdFn, type EquipmentWithCategory } from "@/lib/equipment"
+import { getBookingSettingsFn, minutesToTime } from "@/lib/booking"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Spinner } from "@/components/ui/spinner"
@@ -36,6 +37,13 @@ export function NewBookingPage() {
   const [selectedEquipment, setSelectedEquipment] = React.useState<EquipmentWithCategory | null>(null)
   const [isLoadingEquipment, setIsLoadingEquipment] = React.useState(false)
   
+  // Settings state
+  const [bookingSettings, setBookingSettings] = React.useState<{
+    globalBookingNote: string
+    operatingHoursStart: number
+    operatingHoursEnd: number
+  } | null>(null)
+  
   // Booking state
   const [date, setDate] = React.useState<Date | undefined>(new Date())
   const [month, setMonth] = React.useState<Date>(new Date())
@@ -46,12 +54,27 @@ export function NewBookingPage() {
   const [notes, setNotes] = React.useState("")
   const [isBooking, setIsBooking] = React.useState(false)
 
+  // Load settings on mount
+  React.useEffect(() => {
+    loadSettings()
+  }, [])
+
   // Load equipment if equipmentId is provided in URL
   React.useEffect(() => {
     if (searchParams.equipmentId) {
       loadEquipment(searchParams.equipmentId)
     }
   }, [searchParams.equipmentId])
+
+  const loadSettings = async () => {
+    try {
+      const settings = await getBookingSettingsFn()
+      setBookingSettings(settings)
+    } catch (error) {
+      console.error("Failed to load settings:", error)
+      toast.error("Failed to load booking settings")
+    }
+  }
 
   const loadEquipment = async (equipmentId: number) => {
     setIsLoadingEquipment(true)
@@ -70,29 +93,39 @@ export function NewBookingPage() {
     }
   }
 
-  // Generate all possible time slots (24/7, 30-minute increments)
+  // Generate time slots based on operating hours (30-minute increments)
   const generateTimeSlots = (): string[] => {
+    if (!bookingSettings) return []
+    
     const slots: string[] = []
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        slots.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`)
-      }
+    const startMinutes = bookingSettings.operatingHoursStart
+    const endMinutes = bookingSettings.operatingHoursEnd
+    
+    for (let minutes = startMinutes; minutes <= endMinutes; minutes += 30) {
+      // Don't add slot if it would end after operating hours
+      if (minutes + 30 > endMinutes) break
+      slots.push(minutesToTime(minutes))
     }
+    
     return slots
   }
 
   // Check availability for selected date
   const checkAvailability = React.useCallback(async (selectedDate: Date) => {
-    if (!selectedDate || !selectedEquipment?.googleCalendarId) return
+    if (!selectedDate || !selectedEquipment?.googleCalendarId || !bookingSettings) return
 
     setIsLoadingSlots(true)
     try {
-      // Set time range for the entire day
+      // Set time range based on operating hours
       const startOfDay = new Date(selectedDate)
-      startOfDay.setHours(0, 0, 0, 0)
+      const startHour = Math.floor(bookingSettings.operatingHoursStart / 60)
+      const startMinute = bookingSettings.operatingHoursStart % 60
+      startOfDay.setHours(startHour, startMinute, 0, 0)
       
       const endOfDay = new Date(selectedDate)
-      endOfDay.setHours(23, 59, 59, 999)
+      const endHour = Math.floor(bookingSettings.operatingHoursEnd / 60)
+      const endMinute = bookingSettings.operatingHoursEnd % 60
+      endOfDay.setHours(endHour, endMinute, 59, 999)
 
       const result = await checkCalendarFreeBusy({
         data: {
@@ -135,15 +168,15 @@ export function NewBookingPage() {
     } finally {
       setIsLoadingSlots(false)
     }
-  }, [selectedEquipment?.googleCalendarId])
+  }, [selectedEquipment?.googleCalendarId, bookingSettings])
 
-  // Load availability when date or equipment changes
+  // Load availability when date, equipment, or settings change
   React.useEffect(() => {
-    if (date && selectedEquipment) {
+    if (date && selectedEquipment && bookingSettings) {
       setSelectedSlots([])
       checkAvailability(date)
     }
-  }, [date, selectedEquipment, checkAvailability])
+  }, [date, selectedEquipment, bookingSettings, checkAvailability])
 
   // Handle time slot selection (allow multiple consecutive slots)
   const handleSlotClick = (time: string) => {
@@ -346,7 +379,12 @@ export function NewBookingPage() {
                 </div>
                 <div className="no-scrollbar inset-y-0 right-0 flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6 md:absolute md:max-h-none md:w-64 md:border-t-0 md:border-l">
                   <div className="text-sm font-medium text-gray-700 mb-2">
-                    Available Times (30min slots)
+                    Available Times
+                    {bookingSettings && (
+                      <div className="text-xs font-normal text-muted-foreground mt-1">
+                        Operating hours: {minutesToTime(bookingSettings.operatingHoursStart)} - {minutesToTime(bookingSettings.operatingHoursEnd)}
+                      </div>
+                    )}
                   </div>
                   {isLoadingSlots ? (
                     <div className="flex items-center justify-center py-8">
@@ -463,6 +501,12 @@ export function NewBookingPage() {
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
+              {bookingSettings?.globalBookingNote && (
+                <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md mb-2">
+                  <p className="font-medium mb-1">Important:</p>
+                  <p>{bookingSettings.globalBookingNote}</p>
+                </div>
+              )}
               <Textarea
                 id="notes"
                 placeholder="Add any notes about your booking..."

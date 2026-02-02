@@ -1,6 +1,6 @@
-import { SectionCards } from './section-cards'
-import { ChartAreaInteractive } from './chart-area-interactive'
-import { DataTable } from './data-table'
+import { SectionCards } from './components/section-cards'
+import { ChartAreaInteractive } from './components/chart-area-interactive'
+import { DataTable } from './components/data-table'
 
 interface DashboardPageProps {
   user?: {

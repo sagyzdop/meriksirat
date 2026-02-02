@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Page } from '@/components/bookings/index/page'
+import { Page } from '@/components/bookings/index'
 import { getUserBookingsFn } from '@/lib/booking'
 
 export const Route = createFileRoute('/_authenticated/bookings/')({

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useEquipmentStore } from "./store";
+import { useEquipmentStore } from "./components/store";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ControlsBar } from "./components/controls-bar";
 import { EquipmentGrid } from "./components/equipment-grid";

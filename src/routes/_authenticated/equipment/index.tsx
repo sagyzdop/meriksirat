@@ -1,6 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Page } from '@/components/equipment/index/page'
+import { Page } from '@/components/equipment/index'
 
 export const Route = createFileRoute('/_authenticated/equipment/')({
-  component: Page,
+  component: RouteComponent,
 })
+
+function RouteComponent() {
+  return <Page />
+}

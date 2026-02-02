@@ -12,7 +12,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { deleteCategoryFn } from '@/lib/admin'
 import { toast } from 'sonner'
-import { CategoryWithCount } from '../page'
+import { CategoryWithCount } from '..'
 import { AlertTriangle } from 'lucide-react'
 
 interface DeleteCategoryDialogProps {

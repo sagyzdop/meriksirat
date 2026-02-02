@@ -6,7 +6,7 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import { getUserFn } from '@/lib/user'
-import { authClient } from '@/lib/auth-client'
+import { authClient } from '@/lib/auth/auth-client'
 import { AppSidebar } from '@/components/root/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { SiteHeader } from '@/components/root/site-header'

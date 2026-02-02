@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { checkCalendarFreeBusy } from "@/lib/google-caledar"
+import { checkCalendarFreeBusy } from "@/lib/google/google-caledar"
 import { handleBookingAndCalendar } from "@/lib/booking"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"

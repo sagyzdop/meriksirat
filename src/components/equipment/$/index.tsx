@@ -1,7 +1,7 @@
 import { useParams, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getEquipmentByIdFn, type EquipmentWithCategory } from '@/lib/equipment'
-import { EquipmentDetail } from './equipment-detail-page'
+import { EquipmentDetail } from './components/equipment-detail-page'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Calendar } from 'lucide-react'

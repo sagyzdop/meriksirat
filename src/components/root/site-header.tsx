@@ -30,12 +30,16 @@ export function SiteHeader({ onLogout }: { onLogout?: () => void }) {
         
       case 'admin':
         if (segments.length === 1) return 'Admin'
-        if (segments[1] === 'users') return 'Users'
-        if (segments[1] === 'settings') return 'Settings'
+        if (segments[1] === 'dashboard') return 'Admin Dashboard'
+        if (segments[1] === 'users') return 'User Management'
+        if (segments[1] === 'equipment') return 'Equipment Management'
+        if (segments[1] === 'categories') return 'Category Management'
+        if (segments[1] === 'bookings') return 'Booking Oversight'
+        if (segments[1] === 'settings') return 'Admin Settings'
         return 'Admin'
         
       case 'profile':
-        return 'Profile'
+        return 'My Profile'
         
       case 'faq':
         return 'FAQ'

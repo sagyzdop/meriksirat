@@ -5,7 +5,7 @@ import { eq, and, gt } from 'drizzle-orm'
 import { user, telegramToken } from '@/db/schema'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth/auth'
 import { nanoid } from 'nanoid'
 
 /**

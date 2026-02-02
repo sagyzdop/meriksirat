@@ -1,7 +1,7 @@
 
 import { bookingColumns } from "./components/booking-columns"
 import { BookingDataTable } from "./components/booking-data-table"
-import { BookingWithEquipment } from "@/lib/booking-types"
+import { BookingWithEquipment } from "@/lib/booking/types"
 
 interface PageProps {
   bookings: BookingWithEquipment[]

@@ -9,7 +9,7 @@ import {
 export const getUserFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth')
+    const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')

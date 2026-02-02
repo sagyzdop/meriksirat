@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Page } from '@/components/dashboard/page'
-import { getSessionFn } from '@/lib/session'
+import { Page } from '@/components/dashboard'
+import { getSessionFn } from '@/lib/auth/session'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: RouteComponent,

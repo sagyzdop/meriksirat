@@ -19,7 +19,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { getSessionFn } from '@/lib/session'
+import { getSessionFn } from '@/lib/auth/session'
 import { getUserFn } from '@/lib/user'
 import { Link } from '@tanstack/react-router'
 import { NavMain } from './nav-main'
@@ -40,11 +40,6 @@ const data = {
     },
   ],
   navSecondary: [
-    {
-      title: 'Settings',
-      url: '/settings',
-      icon: IconSettings,
-    },
     {
       title: 'FAQ',
       url: '/faq',
@@ -76,6 +71,11 @@ const data = {
       title: 'Booking Oversight',
       url: '/admin/bookings',
       icon: IconCalendar,
+    },
+    {
+      title: 'Admin Settings',
+      url: '/admin/settings',
+      icon: IconSettings,
     },
   ],
 }

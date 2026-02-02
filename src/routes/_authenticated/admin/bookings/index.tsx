@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Page } from '@/components/admin/bookings/index/page'
-import { getAdminBookingsFn } from '@/lib/booking/functions'
+import { Page } from '@/components/admin/bookings/index'
+import { getAdminBookingsFn } from '@/lib/booking/functions/admin-bookings'
 import { z } from 'zod'
 
 const searchSchema = z.object({

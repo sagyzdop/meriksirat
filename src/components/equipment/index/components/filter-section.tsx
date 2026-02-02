@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Filter } from "lucide-react";
-import { useEquipmentStore } from "../store";
+import { useEquipmentStore } from "./store";
 
 export function FilterSection() {
   const {

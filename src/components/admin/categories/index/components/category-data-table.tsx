@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { MoreHorizontal, Edit, Trash2, ArrowUpDown, GripVertical } from "lucide-react"
-import { CategoryWithCount } from "../page"
+import { CategoryWithCount } from ".."
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'

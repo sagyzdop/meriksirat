@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ArrowUpDown, Calendar, Clock, MoreHorizontal, Eye, MessageCircle } from "lucide-react"
-import { BookingWithEquipment } from "@/lib/booking-types"
+import { BookingWithEquipment } from "@/lib/booking/types"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import { createTelegramBotLink, canReturnBooking, getReturnButtonText, TELEGRAM_BOT_CONFIG } from "@/lib/telegram/client-utils"
@@ -53,8 +53,8 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
     header: "Booking ID",
     cell: ({ row }) => (
       <Link 
-        to="/bookings/$" 
-        params={{ _splat: row.getValue("id").toString() }}
+        to="/bookings/$bookingId" 
+        params={{ bookingId: row.getValue("id").toString() }}
         className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
       >
         #{row.getValue("id")}
@@ -231,15 +231,23 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link 
-                to="/bookings/$" 
-                params={{ _splat: booking.id.toString() }}
+                to="/bookings/$bookingId" 
+                params={{ bookingId: booking.id.toString() }}
                 className="flex items-center gap-2"
               >
                 <Eye className="h-4 w-4" />
                 View details
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Edit booking</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link 
+                to="/bookings/$bookingId/edit" 
+                params={{ bookingId: booking.id.toString() }}
+                className="flex items-center gap-2"
+              >
+                Edit booking
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem className="text-destructive">
               Cancel booking
             </DropdownMenuItem>

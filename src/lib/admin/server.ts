@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers'
-import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth/auth'
 import { db } from '@/db'
 import { user } from '@/db/schema'
 import { eq } from 'drizzle-orm'
