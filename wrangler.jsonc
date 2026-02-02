@@ -13,7 +13,7 @@
 		{
 			"binding": "meriksirat_d1",
 			"database_name": "meriksirat",
-			"database_id": "ffa4f17b-6c91-4f3e-a645-e04be7e93233",
+			"database_id": "33d58061-8c68-4dda-a98c-2638a6975edc",
 		},
 	],
 	"r2_buckets": [
@@ -29,7 +29,7 @@
 	"kv_namespaces": [
 		{
 			"binding": "meriksirat_kv",
-			"id": "71c56e7141dc4918968e8608ddf51000"
+			"id": "af581732fe484f5aa188c9814a1ea4dd"
 		}
 	],
 	/**
