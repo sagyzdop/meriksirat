@@ -4,7 +4,7 @@
  * Handles logging booking activities to Telegram channels for audit and notification purposes.
  */
 
-import { Telegram } from 'telegraf'
+import { TelegramAPI } from './api'
 import { env } from 'cloudflare:workers'
 import type { BookingLogData } from './types'
 import { 
@@ -53,12 +53,12 @@ function formatBookingLogMessage(data: BookingLogData): string {
 /**
  * Sends a booking activity log to the Telegram channel
  * 
- * @param telegram - Telegraf Telegram API instance
+ * @param telegram - Telegram API instance
  * @param channelId - Telegram channel ID (from TELEGRAM_CLUB_CHANNEL_ID)
  * @param logData - Booking activity data
  */
 export async function logBookingActivity(
-  telegram: Telegram,
+  telegram: TelegramAPI,
   channelId: string,
   logData: BookingLogData
 ): Promise<void> {
@@ -112,10 +112,12 @@ export async function logBookingActivityById(
 
     const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
     
+    const userName = [bookingDetails.userFirstName, bookingDetails.userLastName].filter(Boolean).join(' ') || bookingDetails.userEmail
+    
     await logBookingActivity(telegram, env.TELEGRAM_CLUB_CHANNEL_ID!, {
       bookingId: bookingDetails.bookingId,
       userId: bookingDetails.userId,
-      userName: bookingDetails.userName || bookingDetails.userEmail,
+      userName,
       equipmentName: bookingDetails.equipmentName,
       action,
       startTime: bookingDetails.startTime,

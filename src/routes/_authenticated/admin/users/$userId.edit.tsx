@@ -2,10 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getAdminUserByIdFn, getUserFn } from '@/lib/user'
 import { Page } from '@/components/admin/users/$.edit'
 
-export const Route = createFileRoute('/_authenticated/admin/users/$/edit')({
+export const Route = createFileRoute('/_authenticated/admin/users/$userId/edit')({
   component: RouteComponent,
   loader: async ({ params }) => {
-    const userId = params._splat
+    const userId = params.userId
     if (!userId) {
       throw new Error('User ID is required')
     }

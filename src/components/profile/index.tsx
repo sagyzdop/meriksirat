@@ -23,12 +23,14 @@ export function Page({ user }: ProfilePageProps) {
   return (
     <PageContainer>
       <PageHeader title="Profile" />
-      <Section spacing="compact">
-        <ProfileHeader user={user} />
-      </Section>
-      <Section spacing="compact">
-        <ProfileContent user={user} />
-      </Section>
+      <div className="space-y-6">
+        <Section spacing="compact">
+          <ProfileHeader user={user} />
+        </Section>
+        <Section>
+          <ProfileContent user={user} />
+        </Section>
+      </div>
     </PageContainer>
   );
 }

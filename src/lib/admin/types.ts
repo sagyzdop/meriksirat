@@ -34,8 +34,8 @@ export const UpdateCategorySchema = CreateCategorySchema.extend({
   categoryId: z.number(),
 })
 
-export const DeleteCategorySchema = z.object({ 
-  categoryId: z.number() 
+export const DeleteCategorySchema = z.object({
+  categoryId: z.number()
 })
 
 export const UpdateCategorySortOrderSchema = z.object({
@@ -43,4 +43,9 @@ export const UpdateCategorySortOrderSchema = z.object({
     id: z.number(),
     sortOrder: z.number()
   }))
+})
+
+export const CategorySortSchema = z.object({
+  sortBy: z.enum(['name', 'sortOrder', 'equipmentCount']).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
 })

@@ -4,20 +4,10 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ArrowUpDown, Calendar, Clock, MoreHorizontal, Eye, MessageCircle } from "lucide-react"
+import { ArrowUpDown, Calendar, Clock, Pencil } from "lucide-react"
 import { BookingWithEquipment } from "@/lib/booking/types"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
-import { createTelegramBotLink, canReturnBooking, getReturnButtonText, TELEGRAM_BOT_CONFIG } from "@/lib/telegram/client-utils"
-import { BookingDetailDialog } from "./booking-detail-dialog"
 import { CancelBookingDialog } from "./cancel-booking-dialog"
 
 const statusConfig = {
@@ -28,7 +18,8 @@ const statusConfig = {
   overdue: { label: "Overdue", variant: "destructive" as const },
 }
 
-export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
+export function getBookingColumns(): ColumnDef<BookingWithEquipment>[] {
+  return [
   {
     id: "select",
     header: ({ table }) => (
@@ -53,27 +44,14 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
   },
   {
     accessorKey: "id",
-    header: "Booking ID",
+    header: "ID",
     cell: ({ row }) => {
       const id = row.getValue("id") as number
-      const booking = row.original
-      const [showDetailDialog, setShowDetailDialog] = React.useState(false)
       
       return (
-        <>
-          <button
-            onClick={() => setShowDetailDialog(true)}
-            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-          >
-            #{id}
-          </button>
-          
-          <BookingDetailDialog
-            booking={booking}
-            open={showDetailDialog}
-            onOpenChange={setShowDetailDialog}
-          />
-        </>
+        <span className="font-medium">
+          #{id}
+        </span>
       )
     },
   },
@@ -83,7 +61,7 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Equipment
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -95,7 +73,7 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
         <div className="flex flex-col">
           <span className="font-medium">{equipment?.modelName}</span>
           {equipment?.description && (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground line-clamp-1">
               {equipment.description}
             </span>
           )}
@@ -108,7 +86,7 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         <Calendar className="mr-2 h-4 w-4" />
         Start Time
@@ -136,7 +114,7 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         <Clock className="mr-2 h-4 w-4" />
         End Time
@@ -160,6 +138,33 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
     },
   },
   {
+    accessorKey: "createdAt",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={column.getToggleSortingHandler()}
+      >
+        Created
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const createdAt = row.getValue("createdAt") as Date
+      if (!createdAt) return <span className="text-muted-foreground">No date</span>
+      
+      return (
+        <div className="flex flex-col">
+          <span className="font-medium">
+            {format(new Date(createdAt), "MMM dd, yyyy")}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {format(new Date(createdAt), "HH:mm")}
+          </span>
+        </div>
+      )
+    },
+  },
+  {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
@@ -177,106 +182,40 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
     },
   },
   {
-    accessorKey: "userEventDetails",
-    header: "Notes",
-    cell: ({ row }) => {
-      const notes = row.getValue("userEventDetails") as string | null
-      return (
-        <div className="max-w-[200px] truncate">
-          {notes || <span className="text-muted-foreground">No notes</span>}
-        </div>
-      )
-    },
-  },
-  {
-    id: "telegram_return",
-    header: "Return",
-    cell: ({ row }) => {
-      const booking = row.original
-      
-      // Only show return button for active bookings
-      if (!canReturnBooking(booking.status)) {
-        return null
-      }
-
-      const telegramLink = createTelegramBotLink(TELEGRAM_BOT_CONFIG.botUsername)
-      
-      return (
-        <Button
-          variant="outline"
-          size="sm"
-          asChild
-          className="flex items-center gap-2"
-        >
-          <a 
-            href={telegramLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Open Telegram bot to return equipment. Send /end_booking command."
-          >
-            <MessageCircle className="h-4 w-4" />
-            {getReturnButtonText(booking.status)}
-          </a>
-        </Button>
-      )
-    },
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
     id: "actions",
+    header: "",
     enableHiding: false,
     cell: ({ row }) => {
       const booking = row.original
-      const [showDetailDialog, setShowDetailDialog] = React.useState(false)
       const [showCancelDialog, setShowCancelDialog] = React.useState(false)
+      const canCancel = booking.status === "booked" || booking.status === "active"
 
       return (
         <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(booking.id.toString())}
+          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+            <Button 
+              size="sm" 
+              variant="outline"
+              asChild
+            >
+              <Link 
+                to="/bookings/$bookingId/edit" 
+                params={{ bookingId: booking.id.toString() }}
               >
-                Copy booking ID
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowDetailDialog(true)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View details
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link 
-                  to="/bookings/$bookingId/edit" 
-                  params={{ bookingId: booking.id.toString() }}
-                  className="flex items-center gap-2"
-                >
-                  Edit booking
-                </Link>
-              </DropdownMenuItem>
-              {(booking.status === "booked" || booking.status === "active") && (
-                <DropdownMenuItem 
-                  className="text-destructive"
-                  onClick={() => setShowCancelDialog(true)}
-                >
-                  Cancel booking
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <BookingDetailDialog
-            booking={booking}
-            open={showDetailDialog}
-            onOpenChange={setShowDetailDialog}
-          />
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Link>
+            </Button>
+            {canCancel && (
+              <Button 
+                size="sm" 
+                variant="destructive"
+                onClick={() => setShowCancelDialog(true)}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
 
           <CancelBookingDialog
             booking={booking}
@@ -286,5 +225,7 @@ export const bookingColumns: ColumnDef<BookingWithEquipment>[] = [
         </>
       )
     },
+    size: 180,
   },
 ]
+}

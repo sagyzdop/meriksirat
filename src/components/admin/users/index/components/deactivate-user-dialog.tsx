@@ -48,8 +48,9 @@ export function DeactivateUserDialog({
       if (onConfirm) {
         await onConfirm(user.id)
       }
+      const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
       toast.success("User deactivated successfully", {
-        description: `${user.name || user.email} has been deactivated.`
+        description: `${displayName} has been deactivated.`
       })
       onOpenChange(false)
     } catch (error) {
@@ -61,7 +62,7 @@ export function DeactivateUserDialog({
     }
   }
 
-  const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email || 'this user'
+  const displayName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email || 'this user'
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

@@ -38,7 +38,6 @@ export interface AdminBookingWithDetails {
   } | null
   user: {
     id: string
-    name: string
     email: string
     firstName: string | null
     lastName: string | null
@@ -57,8 +56,10 @@ export const BookingFiltersSchema = z.object({
   equipmentId: z.coerce.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  page: z.number().min(1).optional().default(1),
-  limit: z.number().min(1).max(100).optional().default(20),
+  page: z.coerce.number().min(1).optional().default(1),
+  limit: z.coerce.number().min(1).max(100).optional().default(20),
+  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt']).optional().default('startTime'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
 export type BookingFilters = z.infer<typeof BookingFiltersSchema>

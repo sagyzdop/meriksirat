@@ -4,16 +4,9 @@
  * Handles inline keyboard button clicks during equipment return flow.
  */
 
-import { Context } from 'telegraf'
-import { env } from 'cloudflare:workers'
+import type { BotContext } from '../context'
 import { getSession, setSession } from '../kv-session'
-
-/**
- * Extended Telegraf context with Cloudflare environment bindings
- */
-interface BotContext extends Context {
-  env: typeof env
-}
+import { withKeyboard } from '../server-utils'
 
 /**
  * Handles inline keyboard button clicks (callback queries)
@@ -46,13 +39,19 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
     // Extract callback data (button identifier)
     const callbackData = ctx.callbackQuery.data
     
+    // Validate callback data exists
+    if (!callbackData) {
+      await ctx.answerCbQuery('Invalid selection')
+      return
+    }
+    
     // Retrieve session from KV storage
     const session = await getSession(ctx.env.meriksirat_kv, chatId)
     
     // Validate session exists and is in correct state
     if (!session || session.step !== 'awaiting_item_selection') {
       await ctx.answerCbQuery('Session expired or invalid')
-      await ctx.reply('Please use /end_booking first.')
+      await ctx.reply('Please use /end_booking first.', withKeyboard())
       return
     }
     
@@ -111,6 +110,6 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
     }
     
     // Send user-friendly error message
-    await ctx.reply('Error processing selection. Please try again.')
+    await ctx.reply('Error processing selection. Please try again.', withKeyboard())
   }
 }

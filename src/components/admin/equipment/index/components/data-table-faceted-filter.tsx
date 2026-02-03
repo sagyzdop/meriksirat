@@ -1,5 +1,5 @@
 import * as React from "react"
-import { IconCheck, IconPlus } from "@tabler/icons-react"
+import { Check, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -43,7 +43,7 @@ export function DataTableFacetedFilter({
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 border-dashed">
-          <IconPlus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 h-4 w-4" />
           {title}
           {selectedSet.size > 0 && (
             <>
@@ -110,7 +110,7 @@ export function DataTableFacetedFilter({
                           : "opacity-50 [&_svg]:invisible"
                       )}
                     >
-                      <IconCheck className={cn("h-4 w-4")} />
+                      <Check className={cn("h-4 w-4")} />
                     </div>
                     {option.icon && (
                       <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />

@@ -1,11 +1,9 @@
 import * as React from "react"
-import { addDays, format } from "date-fns"
-import { CheckCircle, Loader2 } from "lucide-react"
+import { Loader2, ExternalLink } from "lucide-react"
 import { useRouter, useSearch, Link } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -16,17 +14,12 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { checkCalendarFreeBusy } from "@/lib/google/google-caledar"
 import { handleBookingAndCalendar } from "@/lib/booking"
 import { getEquipmentByIdFn, type EquipmentWithCategory } from "@/lib/equipment"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
 import { Spinner } from "@/components/ui/spinner"
-
-interface TimeSlot {
-  time: string
-  available: boolean
-}
+import { TimeSlotPicker, getBookingTimesFromSlots } from "@/components/shared/time-slot-picker"
+import { format } from "date-fns"
 
 export function NewBookingPage() {
   const router = useRouter()
@@ -37,11 +30,8 @@ export function NewBookingPage() {
   const [isLoadingEquipment, setIsLoadingEquipment] = React.useState(false)
   
   // Booking state
-  const [date, setDate] = React.useState<Date | undefined>(new Date())
-  const [month, setMonth] = React.useState<Date>(new Date())
   const [selectedSlots, setSelectedSlots] = React.useState<string[]>([])
-  const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([])
-  const [isLoadingSlots, setIsLoadingSlots] = React.useState(false)
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>()
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [notes, setNotes] = React.useState("")
   const [isBooking, setIsBooking] = React.useState(false)
@@ -70,119 +60,15 @@ export function NewBookingPage() {
     }
   }
 
-  // Generate all possible time slots (24/7, 30-minute increments)
-  const generateTimeSlots = (): string[] => {
-    const slots: string[] = []
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        slots.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`)
-      }
-    }
-    return slots
-  }
-
-  // Check availability for selected date
-  const checkAvailability = React.useCallback(async (selectedDate: Date) => {
-    if (!selectedDate || !selectedEquipment?.googleCalendarId) return
-
-    setIsLoadingSlots(true)
-    try {
-      // Set time range for the entire day
-      const startOfDay = new Date(selectedDate)
-      startOfDay.setHours(0, 0, 0, 0)
-      
-      const endOfDay = new Date(selectedDate)
-      endOfDay.setHours(23, 59, 59, 999)
-
-      const result = await checkCalendarFreeBusy({
-        data: {
-          calendarId: selectedEquipment.googleCalendarId,
-          timeMin: startOfDay.toISOString(),
-          timeMax: endOfDay.toISOString(),
-        },
-      })
-
-      const busySlots = result.busy || []
-      const allSlots = generateTimeSlots()
-
-      // Check each slot against busy periods
-      const slotsWithAvailability: TimeSlot[] = allSlots.map((time) => {
-        const [hour, minute] = time.split(":").map(Number)
-        const slotStart = new Date(selectedDate)
-        slotStart.setHours(hour, minute, 0, 0)
-        
-        const slotEnd = new Date(slotStart)
-        slotEnd.setMinutes(slotEnd.getMinutes() + 30)
-
-        // Check if this slot overlaps with any busy period
-        const isAvailable = !busySlots.some((busy: any) => {
-          const busyStart = new Date(busy.start)
-          const busyEnd = new Date(busy.end)
-          return (
-            (slotStart >= busyStart && slotStart < busyEnd) ||
-            (slotEnd > busyStart && slotEnd <= busyEnd) ||
-            (slotStart <= busyStart && slotEnd >= busyEnd)
-          )
-        })
-
-        return { time, available: isAvailable }
-      })
-
-      setTimeSlots(slotsWithAvailability)
-    } catch (error) {
-      console.error("Failed to check availability:", error)
-      toast.error("Failed to load availability")
-    } finally {
-      setIsLoadingSlots(false)
-    }
-  }, [selectedEquipment?.googleCalendarId])
-
-  // Load availability when date or equipment changes
-  React.useEffect(() => {
-    if (date && selectedEquipment) {
-      setSelectedSlots([])
-      checkAvailability(date)
-    }
-  }, [date, selectedEquipment, checkAvailability])
-
-  // Handle time slot selection (allow multiple consecutive slots)
-  const handleSlotClick = (time: string) => {
-    const slot = timeSlots.find((s) => s.time === time)
-    if (!slot?.available) return
-
-    setSelectedSlots((prev) => {
-      if (prev.includes(time)) {
-        return prev.filter((t) => t !== time)
-      } else {
-        return [...prev, time].sort()
-      }
-    })
-  }
-
-  // Calculate start and end times from selected slots
-  const getBookingTimes = () => {
-    if (selectedSlots.length === 0 || !date) return null
-
-    const sortedSlots = [...selectedSlots].sort()
-    const firstSlot = sortedSlots[0]
-    const lastSlot = sortedSlots[sortedSlots.length - 1]
-
-    const [startHour, startMinute] = firstSlot.split(":").map(Number)
-    const [endHour, endMinute] = lastSlot.split(":").map(Number)
-
-    const startTime = new Date(date)
-    startTime.setHours(startHour, startMinute, 0, 0)
-
-    const endTime = new Date(date)
-    endTime.setHours(endHour, endMinute + 30, 0, 0)
-
-    return { startTime, endTime }
+  const handleSlotsChange = (slots: string[], date: Date | undefined) => {
+    setSelectedSlots(slots)
+    setSelectedDate(date)
   }
 
   const handleBooking = async () => {
     if (!selectedEquipment) return
     
-    const times = getBookingTimes()
+    const times = getBookingTimesFromSlots(selectedSlots, selectedDate)
     if (!times) return
 
     setIsBooking(true)
@@ -211,7 +97,7 @@ export function NewBookingPage() {
     }
   }
 
-  const bookingTimes = getBookingTimes()
+  const bookingTimes = getBookingTimesFromSlots(selectedSlots, selectedDate)
 
   if (isLoadingEquipment) {
     return (
@@ -240,28 +126,43 @@ export function NewBookingPage() {
           </div>
           
           {selectedEquipment ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  {selectedEquipment.imagePath && (
-                    <img 
-                      src={`/api/images/${selectedEquipment.imagePath}`} 
-                      alt={selectedEquipment.modelName}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
-                  )}
-                  <div>
-                    <h3 className="font-semibold">{selectedEquipment.modelName}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedEquipment.category?.name}
-                    </p>
-                    {selectedEquipment.description && (
-                      <p className="text-sm mt-1">{selectedEquipment.description}</p>
-                    )}
+            <Link to={`/equipment/${selectedEquipment.id}`} className="block">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-6">
+                    <div className="relative flex-shrink-0">
+                      {selectedEquipment.imagePath ? (
+                        <img 
+                          src={`/api/images/${selectedEquipment.imagePath}`} 
+                          alt={selectedEquipment.modelName}
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                          <span className="text-muted-foreground text-xs">No image</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold mb-1">{selectedEquipment.modelName}</h3>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {selectedEquipment.category?.name}
+                          </p>
+                          {selectedEquipment.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {selectedEquipment.description}
+                            </p>
+                          )}
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ) : (
             <Card>
               <CardContent className="pt-6">
@@ -280,16 +181,12 @@ export function NewBookingPage() {
         {selectedEquipment && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Equipment Calendar</h2>
-            <Card>
-              <CardContent className="pt-6">
-                <iframe
-                  src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=${encodeURIComponent(selectedEquipment.googleCalendarId)}&color=%237986cb`}
-                  className="w-full h-[600px] border rounded-lg"
-                  style={{ borderWidth: 1 }}
-                  allowFullScreen
-                ></iframe>
-              </CardContent>
-            </Card>
+            <iframe
+              src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=${encodeURIComponent(selectedEquipment.googleCalendarId)}&color=%237986cb`}
+              className="w-full h-[600px] border rounded-lg"
+              style={{ borderWidth: 1 }}
+              allowFullScreen
+            ></iframe>
           </div>
         )}
 
@@ -297,116 +194,19 @@ export function NewBookingPage() {
         {selectedEquipment && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Select Date & Time</h2>
-            <Card className="gap-0 p-0">
-              <CardContent className="relative p-0 md:pr-64">
-                <div className="p-6 flex flex-col items-center gap-4">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    month={month}
-                    onMonthChange={setMonth}
-                    disabled={(date) => {
-                      const today = new Date()
-                      today.setHours(0, 0, 0, 0)
-                      return date < today
-                    }}
-                    showOutsideDays={false}
-                    className="bg-transparent p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
-                    formatters={{
-                      formatWeekdayName: (date) => {
-                        return date.toLocaleString("en-US", { weekday: "short" })
-                      },
-                    }}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const today = new Date()
-                        setDate(today)
-                        setMonth(today)
-                      }}
-                    >
-                      Today
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const tomorrow = addDays(new Date(), 1)
-                        setDate(tomorrow)
-                        setMonth(tomorrow)
-                      }}
-                    >
-                      Tomorrow
-                    </Button>
-                  </div>
-                </div>
-                <div className="no-scrollbar inset-y-0 right-0 flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6 md:absolute md:max-h-none md:w-64 md:border-t-0 md:border-l">
-                  <div className="text-sm font-medium text-gray-700 mb-2">
-                    Available Times (30min slots)
-                  </div>
-                  {isLoadingSlots ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                    </div>
-                  ) : (
-                    <div className="grid gap-1">
-                      {timeSlots.map((slot) => (
-                        <Button
-                          key={slot.time}
-                          variant={selectedSlots.includes(slot.time) ? "default" : "outline"}
-                          onClick={() => handleSlotClick(slot.time)}
-                          disabled={!slot.available}
-                          className={cn(
-                            "w-full shadow-none text-xs h-8",
-                            !slot.available && "opacity-40 cursor-not-allowed"
-                          )}
-                          size="sm"
-                        >
-                          {slot.time}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4 border-t px-6 !py-5 md:flex-row">
-                <div className="text-sm flex-1">
-                  {bookingTimes ? (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>
-                        Booking for{" "}
-                        <span className="font-medium">
-                          {date?.toLocaleDateString("en-US", {
-                            weekday: "long",
-                            day: "numeric",
-                            month: "long",
-                          })}
-                        </span>
-                        {" "}from <span className="font-medium">{format(bookingTimes.startTime, "HH:mm")}</span>
-                        {" "}to <span className="font-medium">{format(bookingTimes.endTime, "HH:mm")}</span>
-                        {" "}({selectedSlots.length} slots)
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-gray-500">
-                      Select one or more consecutive time slots to book this equipment.
-                    </span>
-                  )}
-                </div>
-                <Button
-                  disabled={selectedSlots.length === 0}
-                  onClick={() => setIsDialogOpen(true)}
-                  className="w-full md:ml-auto md:w-auto"
-                >
-                  Book Equipment
-                </Button>
-              </CardFooter>
-            </Card>
+            <TimeSlotPicker
+              googleCalendarId={selectedEquipment.googleCalendarId}
+              onSlotsChange={handleSlotsChange}
+            />
+            <div className="flex justify-end">
+              <Button
+                disabled={selectedSlots.length === 0}
+                onClick={() => setIsDialogOpen(true)}
+                className="w-full md:w-auto"
+              >
+                Book Equipment
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -435,7 +235,7 @@ export function NewBookingPage() {
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>
                   <span className="font-medium">Date:</span>{" "}
-                  {date?.toLocaleDateString("en-US", {
+                  {selectedDate?.toLocaleDateString("en-US", {
                     weekday: "long",
                     year: "numeric",
                     month: "long",

@@ -23,7 +23,7 @@
 			"binding": "meriksirat_r2",
 		},
 	],
-	"main": "@tanstack/react-start/server-entry",
+	"main": "./server.ts",
 	"observability": {
 		"enabled": true,
 	},
@@ -33,6 +33,17 @@
 			"id": "af581732fe484f5aa188c9814a1ea4dd"
 		}
 	],
+	/**
+   * Cron Triggers
+   * Scheduled tasks that run at specified intervals
+   * Runs every 5 minutes to check for bookings that need status updates
+   * https://developers.cloudflare.com/workers/configuration/cron-triggers/
+   */
+	"triggers": {
+		"crons": [
+			"*/5 * * * *"
+		]
+	},
 	/**
    * Smart Placement
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

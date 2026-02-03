@@ -21,7 +21,7 @@ export const getEquipmentFn = createServerFn({
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, gte, lte, like, or, sql } = await import('drizzle-orm')
+    const { eq, and, gte, lte, like, or, sql, asc, desc } = await import('drizzle-orm')
     
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({
@@ -79,6 +79,17 @@ export const getEquipmentFn = createServerFn({
     const totalPages = Math.ceil(total / data.limit)
     const offset = (data.page - 1) * data.limit
 
+    // Apply sorting
+    const sortColumn = {
+      modelName: equipment.modelName,
+      category: category.name,
+      requiredClearanceLevel: equipment.requiredClearanceLevel,
+      isActive: equipment.isActive,
+      createdAt: equipment.createdAt,
+    }[data.sortBy]
+    
+    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
+
     // Get paginated equipment list
     const equipmentList = await database
       .select({
@@ -102,7 +113,7 @@ export const getEquipmentFn = createServerFn({
       .from(equipment)
       .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(whereClause)
-      .orderBy(equipment.modelName)
+      .orderBy(orderBy)
       .limit(data.limit)
       .offset(offset)
 
@@ -490,7 +501,7 @@ export const getAdminEquipmentFn = createServerFn({
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, or, gte, lte, like, sql } = await import('drizzle-orm')
+    const { eq, and, or, gte, lte, like, sql, asc, desc } = await import('drizzle-orm')
     
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -543,6 +554,17 @@ export const getAdminEquipmentFn = createServerFn({
     const totalPages = Math.ceil(total / data.limit)
     const offset = (data.page - 1) * data.limit
 
+    // Apply sorting
+    const sortColumn = {
+      modelName: equipment.modelName,
+      category: category.name,
+      requiredClearanceLevel: equipment.requiredClearanceLevel,
+      isActive: equipment.isActive,
+      createdAt: equipment.createdAt,
+    }[data.sortBy]
+    
+    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
+
     // Get paginated equipment list
     const equipmentList = await database
       .select({
@@ -566,7 +588,7 @@ export const getAdminEquipmentFn = createServerFn({
       .from(equipment)
       .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(whereClause)
-      .orderBy(equipment.modelName)
+      .orderBy(orderBy)
       .limit(data.limit)
       .offset(offset)
 

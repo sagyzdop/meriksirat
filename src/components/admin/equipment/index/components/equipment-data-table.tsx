@@ -8,9 +8,6 @@ import {
   getCoreRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
 import { useNavigate } from "@tanstack/react-router"
@@ -81,54 +78,79 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  
+  // Controlled sorting state - sync with URL params
+  const [sorting, setSorting] = React.useState<SortingState>([{
+    id: filters.sortBy,
+    desc: filters.sortOrder === 'desc'
+  }])
 
   // Get unique categories from the data for filtering
   const categoryOptions = React.useMemo(() => {
-    const uniqueCategories = new Map<string, string>()
+    const uniqueCategories = new Map<string, { name: string; sortOrder: number }>()
     
     data.forEach(equipment => {
       if (equipment.category) {
-        uniqueCategories.set(equipment.categoryId!.toString(), equipment.category.name)
+        uniqueCategories.set(equipment.categoryId!.toString(), {
+          name: equipment.category.name,
+          sortOrder: equipment.category.sortOrder ?? 0
+        })
       }
     })
     
-    // Add uncategorized option if there are items without categories
+    // Convert to array and sort by sortOrder
+    const sortedCategories = Array.from(uniqueCategories.entries())
+      .map(([value, data]) => ({
+        value,
+        label: data.name,
+        sortOrder: data.sortOrder
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+    
+    // Add uncategorized option at the end if there are items without categories
     const hasUncategorized = data.some(equipment => !equipment.category)
     if (hasUncategorized) {
-      uniqueCategories.set("null", "Uncategorized")
+      sortedCategories.push({
+        value: "null",
+        label: "Uncategorized",
+        sortOrder: Number.MAX_SAFE_INTEGER
+      })
     }
     
-    return Array.from(uniqueCategories.entries()).map(([value, label]) => ({
-      value,
-      label,
-    }))
+    return sortedCategories.map(({ value, label }) => ({ value, label }))
   }, [data])
 
-  // Initialize filters from URL params
+  // Sync sorting state with URL params when they change
   React.useEffect(() => {
-    const initialFilters: ColumnFiltersState = []
-    
-    if (filters.categoryId) {
-      initialFilters.push({ id: "category", value: [filters.categoryId.toString()] })
-    }
-    
-    if (filters.isActive !== undefined) {
-      initialFilters.push({ id: "isActive", value: [filters.isActive.toString()] })
-    }
-    
-    if (filters.searchQuery) {
-      initialFilters.push({ id: "modelName", value: filters.searchQuery })
-    }
-    
-    setColumnFilters(initialFilters)
-    
-    // Set initial sorting
     setSorting([{
       id: filters.sortBy,
       desc: filters.sortOrder === 'desc'
     }])
-  }, [filters])
+  }, [filters.sortBy, filters.sortOrder])
+
+  // Handle sorting changes - navigate to update URL
+  const handleSortingChange = React.useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+    // Get the current sorting state from URL params (source of truth)
+    const currentSorting: SortingState = [{
+      id: filters.sortBy,
+      desc: filters.sortOrder === 'desc'
+    }]
+    
+    const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
+    
+    if (newSorting.length > 0) {
+      const sort = newSorting[0]
+      navigate({
+        to: '.',
+        search: (prev) => ({
+          ...prev,
+          sortBy: sort.id as any,
+          sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
+          page: 1,
+        }),
+      })
+    }
+  }, [filters.sortBy, filters.sortOrder, navigate])
 
   const table = useReactTable({
     data,
@@ -148,14 +170,12 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
     manualSorting: true,
     manualFiltering: true,
     enableRowSelection: true,
+    enableSortingRemoval: false,
     onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
@@ -222,24 +242,6 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
       search: { ...filters, limit: newPageSize, page: 1 },
     })
   }, [filters, navigate])
-
-  // Handle sorting changes
-  React.useEffect(() => {
-    if (sorting.length > 0) {
-      const sort = sorting[0]
-      const newFilters = {
-        ...filters,
-        sortBy: sort.id as any,
-        sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
-        page: 1, // Reset to first page
-      }
-      
-      navigate({
-        to: '/admin/equipment',
-        search: newFilters,
-      })
-    }
-  }, [sorting])
 
   const isFiltered = filters.categoryId || filters.isActive !== undefined || filters.searchQuery
 

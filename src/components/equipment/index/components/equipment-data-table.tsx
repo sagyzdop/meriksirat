@@ -23,91 +23,43 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Equipment } from "./types"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
-import { createUserColumns } from "./user-columns"
 import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: 'user' | 'manager' | 'admin' | null
-  clearanceLevel: number | null
-  status: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated' | null
-  firstName: string | null
-  lastName: string | null
-  createdAt: Date
-  updatedAt: Date
-}
 
 interface Pagination {
   page: number
   limit: number
-  totalCount: number
+  total: number
   totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
 }
 
 interface Filters {
-  role?: 'user' | 'manager' | 'admin'
-  status?: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated'
-  clearanceLevel?: number
-  search?: string
+  categoryId?: number
+  searchQuery?: string
   page: number
   limit: number
-  sortBy: 'firstName' | 'lastName' | 'email' | 'role' | 'status' | 'clearanceLevel' | 'createdAt'
+  sortBy: 'modelName' | 'category' | 'requiredClearanceLevel' | 'isActive' | 'createdAt'
   sortOrder: 'asc' | 'desc'
 }
 
-interface UserDataTableProps {
-  columns?: ColumnDef<User>[]
-  data: User[]
+interface EquipmentDataTableProps {
+  columns: ColumnDef<Equipment>[]
+  data: Equipment[]
   pagination: Pagination
   filters: Filters
+  categoryOptions: { value: string; label: string }[]
 }
 
-const roleOptions = [
-  { value: "user", label: "User" },
-  { value: "manager", label: "Manager" },
-  { value: "admin", label: "Admin" },
-]
-
-const statusOptions = [
-  { value: "Active", label: "Active" },
-  { value: "Inactive", label: "Inactive" },
-  { value: "On Probation", label: "On Probation" },
-  { value: "Board", label: "Board" },
-  { value: "Ex-Board", label: "Ex-Board" },
-  { value: "Roommate", label: "Roommate" },
-  { value: "Ex-Roommate", label: "Ex-Roommate" },
-  { value: "Graduated", label: "Graduated" },
-]
-
-const clearanceLevelOptions = [
-  { value: "1", label: "Level 1" },
-  { value: "2", label: "Level 2" },
-  { value: "3", label: "Level 3" },
-  { value: "4", label: "Level 4" },
-  { value: "5", label: "Level 5" },
-]
-
-export function UserDataTable({ 
-  columns: providedColumns, 
-  data, 
-  pagination, 
-  filters
-}: UserDataTableProps) {
+export function EquipmentDataTable({ columns, data, pagination, filters, categoryOptions }: EquipmentDataTableProps) {
   const navigate = useNavigate()
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -118,12 +70,6 @@ export function UserDataTable({
     id: filters.sortBy,
     desc: filters.sortOrder === 'desc'
   }])
-
-  // Create columns
-  const columns = React.useMemo(
-    () => providedColumns || createUserColumns(),
-    [providedColumns]
-  )
 
   // Sync sorting state with URL params when they change
   React.useEffect(() => {
@@ -185,18 +131,25 @@ export function UserDataTable({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
+  const handleRowClick = (equipmentId: number) => {
+    navigate({
+      to: "/equipment/$",
+      params: { _splat: equipmentId.toString() }
+    })
+  }
+
   // Handle search input changes
   const handleSearchChange = React.useCallback((value: string) => {
     const newFilters = { ...filters }
     if (value) {
-      newFilters.search = value
+      newFilters.searchQuery = value
     } else {
-      delete newFilters.search
+      delete newFilters.searchQuery
     }
     newFilters.page = 1 // Reset to first page
     
     navigate({
-      to: '/admin/users',
+      to: '/equipment',
       search: newFilters,
     })
   }, [filters, navigate])
@@ -205,30 +158,23 @@ export function UserDataTable({
   const handleFilterChange = React.useCallback((filterId: string, value: string[] | undefined) => {
     const newFilters = { ...filters }
     
-    if (filterId === 'role') {
+    if (filterId === 'category') {
       if (value && value.length > 0) {
-        newFilters.role = value[0] as any
+        const categoryId = value[0] === "null" ? undefined : parseInt(value[0])
+        if (categoryId) {
+          newFilters.categoryId = categoryId
+        } else {
+          delete newFilters.categoryId
+        }
       } else {
-        delete newFilters.role
-      }
-    } else if (filterId === 'status') {
-      if (value && value.length > 0) {
-        newFilters.status = value[0] as any
-      } else {
-        delete newFilters.status
-      }
-    } else if (filterId === 'clearanceLevel') {
-      if (value && value.length > 0) {
-        newFilters.clearanceLevel = parseInt(value[0])
-      } else {
-        delete newFilters.clearanceLevel
+        delete newFilters.categoryId
       }
     }
     
     newFilters.page = 1 // Reset to first page
     
     navigate({
-      to: '/admin/users',
+      to: '/equipment',
       search: newFilters,
     })
   }, [filters, navigate])
@@ -236,7 +182,7 @@ export function UserDataTable({
   // Handle pagination changes
   const handlePageChange = React.useCallback((newPage: number) => {
     navigate({
-      to: '/admin/users',
+      to: '/equipment',
       search: { ...filters, page: newPage },
     })
   }, [filters, navigate])
@@ -244,20 +190,20 @@ export function UserDataTable({
   // Handle page size changes
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     navigate({
-      to: '/admin/users',
+      to: '/equipment',
       search: { ...filters, limit: newPageSize, page: 1 },
     })
   }, [filters, navigate])
 
-  const isFiltered = filters.role || filters.status || filters.clearanceLevel || filters.search
+  const isFiltered = filters.categoryId || filters.searchQuery
 
   const clearAllFilters = React.useCallback(() => {
     navigate({
-      to: '/admin/users',
+      to: '/equipment',
       search: {
         page: 1,
         limit: filters.limit,
-        sortBy: 'firstName',
+        sortBy: 'modelName',
         sortOrder: 'asc',
       },
     })
@@ -265,34 +211,24 @@ export function UserDataTable({
 
   return (
     <div className="space-y-4">
-      {/* Filters - Responsive layout */}
+      {/* Filters */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-1">
           <Input
-            placeholder="Search users by name or email..."
-            value={filters.search || ""}
+            placeholder="Search equipment..."
+            value={filters.searchQuery || ""}
             onChange={(event) => handleSearchChange(event.target.value)}
             className="h-8 w-full sm:w-[200px] lg:w-[300px]"
           />
           <div className="flex flex-wrap gap-2">
-            <DataTableFacetedFilter
-              title="Role"
-              options={roleOptions}
-              selectedValues={filters.role ? [filters.role] : []}
-              onSelectionChange={(values) => handleFilterChange('role', values)}
-            />
-            <DataTableFacetedFilter
-              title="Status"
-              options={statusOptions}
-              selectedValues={filters.status ? [filters.status] : []}
-              onSelectionChange={(values) => handleFilterChange('status', values)}
-            />
-            <DataTableFacetedFilter
-              title="Clearance Level"
-              options={clearanceLevelOptions}
-              selectedValues={filters.clearanceLevel ? [filters.clearanceLevel.toString()] : []}
-              onSelectionChange={(values) => handleFilterChange('clearanceLevel', values)}
-            />
+            {categoryOptions.length > 0 && (
+              <DataTableFacetedFilter
+                title="Category"
+                options={categoryOptions}
+                selectedValues={filters.categoryId ? [filters.categoryId.toString()] : []}
+                onSelectionChange={(values) => handleFilterChange('category', values)}
+              />
+            )}
             {isFiltered && (
               <Button
                 variant="ghost"
@@ -305,35 +241,9 @@ export function UserDataTable({
             )}
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
-              Columns
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
       
-      {/* Table with horizontal scroll on small screens */}
+      {/* Table */}
       <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
@@ -341,7 +251,7 @@ export function UserDataTable({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableHead key={header.id} className="whitespace-nowrap h-12">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -360,9 +270,11 @@ export function UserDataTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={() => handleRowClick(row.original.id)}
+                  className="cursor-pointer h-16"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableCell key={cell.id} className="whitespace-nowrap py-3">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -377,7 +289,7 @@ export function UserDataTable({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No equipment found.
                 </TableCell>
               </TableRow>
             )}
@@ -385,11 +297,11 @@ export function UserDataTable({
         </Table>
       </div>
       
-      {/* Pagination - Responsive layout */}
+      {/* Pagination */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {pagination.totalCount} row(s) selected.
+          {pagination.total} row(s) selected.
         </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">

@@ -1,4 +1,4 @@
-import { Context } from 'telegraf'
+import type { BotContext } from '../context'
 import { env } from 'cloudflare:workers'
 import { db } from '@/db'
 import { eq, and, gt } from 'drizzle-orm'
@@ -6,14 +6,7 @@ import { user, telegramToken } from '@/db/schema'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '@/lib/auth/auth'
-import { nanoid } from 'nanoid'
-
-/**
- * Extended Telegraf context with Cloudflare environment bindings
- */
-interface BotContext extends Context {
-  env: typeof env
-}
+import { withKeyboard } from '../server-utils'
 
 /**
  * Handles the /start command for Telegram account linking (deeplink flow)
@@ -33,20 +26,36 @@ interface BotContext extends Context {
  */
 export async function handleStart(ctx: BotContext): Promise<void> {
   try {
+    console.log('/start command received', {
+      chatId: ctx.chat?.id,
+      username: ctx.from?.username,
+      timestamp: new Date().toISOString()
+    })
+    
     // Ensure we have a message and chat
     if (!ctx.message || !ctx.chat) {
+      console.warn('/start: Missing message or chat context')
       return
     }
     
     // Extract command args from message text
     // Format: /start {token} or just /start
-    const messageText = 'text' in ctx.message ? ctx.message.text : ''
+    const messageText = ('text' in ctx.message ? ctx.message.text : '') || ''
     const args = messageText.split(' ')
     const token = args[1] // Token is the second element after /start
     
-    // If no token provided, send welcome message
+    console.log('/start: Parsed command', {
+      messageText,
+      hasToken: !!token,
+      argsLength: args.length
+    })
+    
+    // If no token provided, send welcome message with keyboard
     if (!token) {
-      await ctx.reply('Welcome! Please use the link from the web app to connect your account.')
+      await ctx.reply(
+        'Welcome! Please use the link from the web app to connect your account.',
+        withKeyboard()
+      )
       return
     }
     
@@ -92,8 +101,11 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       .delete(telegramToken)
       .where(eq(telegramToken.token, token))
     
-    // Send success confirmation
-    await ctx.reply('Telegram linked ✅')
+    // Send success confirmation with persistent keyboard
+    await ctx.reply(
+      'Telegram linked ✅\n\nYou can now use the menu below to interact with the bot.',
+      withKeyboard()
+    )
     
   } catch (error) {
     // Log error with context for debugging

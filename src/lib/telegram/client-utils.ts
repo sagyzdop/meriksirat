@@ -47,15 +47,5 @@ export function getReturnButtonText(status: string): string {
   }
 }
 
-/**
- * Configuration for the Telegram bot (client-safe version)
- * These values should be passed from server-side when needed
- */
-export const TELEGRAM_BOT_CONFIG = {
-  // Default bot username - should be overridden with actual value from server
-  botUsername: 'your_equipment_bot',
-  enabled: true, // Default to enabled, server can override
-}
-
 // Re-export types and constants for convenience
 export { BOOKING_STATUS, type BookingStatus } from './types'

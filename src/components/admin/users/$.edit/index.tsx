@@ -107,7 +107,7 @@ export function Page({ targetUser, currentUser, userId }: PageProps) {
             User Information
           </CardTitle>
           <CardDescription>
-            Editing user: {targetUser.name || `${targetUser.firstName} ${targetUser.lastName}`} ({targetUser.email})
+            Editing user: {`${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email} ({targetUser.email})
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

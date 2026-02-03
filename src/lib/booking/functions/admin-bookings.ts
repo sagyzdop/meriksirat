@@ -21,7 +21,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, equipment, user } = await import('@/db/schema')
-    const { eq, and, or, gte, lt, like, sql, desc } = await import('drizzle-orm')
+    const { eq, and, or, gte, lt, like, sql, desc, asc } = await import('drizzle-orm')
     
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -80,6 +80,16 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     const totalPages = Math.ceil(total / data.limit)
     const offset = (data.page - 1) * data.limit
 
+    // Apply sorting
+    const sortColumn = {
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      status: booking.status,
+      createdAt: booking.createdAt,
+    }[data.sortBy]
+    
+    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : desc(booking.startTime)
+
     // Get paginated bookings list with user and equipment details
     const bookingsList = await database
       .select({
@@ -101,7 +111,6 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
         },
         user: {
           id: user.id,
-          name: user.name,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -111,7 +120,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
       .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
       .leftJoin(user, eq(booking.userId, user.id))
       .where(whereClause)
-      .orderBy(desc(booking.startTime))
+      .orderBy(orderBy)
       .limit(data.limit)
       .offset(offset)
 
@@ -168,7 +177,6 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
         },
         user: {
           id: user.id,
-          name: user.name,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,

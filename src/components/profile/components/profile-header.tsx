@@ -14,8 +14,8 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
     month: 'long',
   });
 
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.name;
-  const initials = [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join('').toUpperCase() || user.name[0]?.toUpperCase() || 'U';
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
+  const initials = [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join('').toUpperCase() || user.email[0]?.toUpperCase() || 'U';
 
   const statusVariant = user.status === 'Active' ? 'default' : 
                        user.status === 'Inactive' ? 'secondary' : 

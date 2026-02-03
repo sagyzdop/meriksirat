@@ -52,12 +52,21 @@ export function DeleteBookingDialog({
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the booking
-            for {booking.user?.name || "Unknown User"} and remove the data from the
+            for {booking.user ? `${booking.user.firstName || ""} ${booking.user.lastName || ""}`.trim() || "Unknown User" : "Unknown User"} and remove the data from the
             system.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel 
+            disabled={isDeleting}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onOpenChange(false)
+            }}
+          >
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             disabled={isDeleting}

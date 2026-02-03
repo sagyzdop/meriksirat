@@ -94,7 +94,8 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     
     // Apply sorting
     const sortColumn = {
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       role: user.role,
       status: user.status,
@@ -102,13 +103,12 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
       createdAt: user.createdAt,
     }[data.sortBy]
     
-    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(user.name)
+    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(user.firstName)
     
     // Build the main query
     const usersQuery = database
       .select({
         id: user.id,
-        name: user.name,
         email: user.email,
         role: user.role,
         clearanceLevel: user.clearanceLevel,
@@ -242,7 +242,6 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
     const updatedUser = await database
       .select({
         id: user.id,
-        name: user.name,
         email: user.email,
         role: user.role,
         clearanceLevel: user.clearanceLevel,
@@ -282,7 +281,6 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
     const userData = await database
       .select({
         id: user.id,
-        name: user.name,
         email: user.email,
         role: user.role,
         clearanceLevel: user.clearanceLevel,
@@ -336,10 +334,6 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
     
     // Build update object with only provided fields
     const updateData: Partial<typeof user.$inferInsert> = {}
-    
-    if (data.name !== undefined) {
-      updateData.name = data.name
-    }
     
     if (data.firstName !== undefined) {
       updateData.firstName = data.firstName

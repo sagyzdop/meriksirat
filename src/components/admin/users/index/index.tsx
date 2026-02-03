@@ -32,7 +32,7 @@ interface Filters {
   search?: string
   page: number
   limit: number
-  sortBy: 'name' | 'email' | 'role' | 'status' | 'clearanceLevel' | 'createdAt'
+  sortBy: 'firstName' | 'lastName' | 'email' | 'role' | 'status' | 'clearanceLevel' | 'createdAt'
   sortOrder: 'asc' | 'desc'
 }
 

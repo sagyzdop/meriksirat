@@ -15,6 +15,13 @@
       "when": 1770055998697,
       "tag": "0001_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1738598400000,
+      "tag": "0002_seed_categories_equipment",
+      "breakpoints": true
     }
   ]
 }

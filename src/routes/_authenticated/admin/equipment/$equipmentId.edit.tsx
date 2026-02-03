@@ -2,10 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getAdminEquipmentByIdFn, getCategoriesFn } from '@/lib/equipment'
 import { Page } from '@/components/admin/equipment/$.edit'
 
-export const Route = createFileRoute('/_authenticated/admin/equipment/$/edit')({
+export const Route = createFileRoute('/_authenticated/admin/equipment/$equipmentId/edit')({
   component: RouteComponent,
   loader: async ({ params }) => {
-    const equipmentId = parseInt(params._splat)
+    const equipmentId = parseInt(params.equipmentId)
     if (!equipmentId || isNaN(equipmentId)) {
       throw new Error('Equipment ID is required')
     }

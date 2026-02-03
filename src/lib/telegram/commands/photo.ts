@@ -4,21 +4,14 @@
  * Handles photo messages for equipment return flow.
  */
 
-import { Context } from 'telegraf'
-import { env } from 'cloudflare:workers'
+import type { BotContext } from '../context'
 import { getSession, deleteSession } from '../kv-session'
 import { db } from '@/db'
 import { booking, user, equipment } from '@/db/schema'
 import { inArray, eq } from 'drizzle-orm'
 import { notifyAdmins } from '../admin'
 import { logBookingActivity } from '../logging'
-
-/**
- * Extended Telegraf context with Cloudflare environment bindings
- */
-interface BotContext extends Context {
-  env: typeof env
-}
+import { withKeyboard } from '../server-utils'
 
 /**
  * Handles photo messages for equipment return flow
@@ -88,7 +81,8 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       const bookingDetails = await database
         .select({
           bookingId: booking.id,
-          userName: user.name,
+          userFirstName: user.firstName,
+          userLastName: user.lastName,
           equipmentName: equipment.modelName,
         })
         .from(booking)
@@ -102,7 +96,7 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       }
       
       // Build notification data
-      const userName = bookingDetails[0].userName
+      const userName = [bookingDetails[0].userFirstName, bookingDetails[0].userLastName].filter(Boolean).join(' ') || 'Unknown User'
       
       // Deduplicate equipment names using Set
       const uniqueEquipmentNames = [...new Set(bookingDetails.map(b => b.equipmentName))]
@@ -142,7 +136,10 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       }
       
       // Reply with confirmation message to user
-      await ctx.reply(`Return logged for ${itemCount} item(s). Summary sent to admins.`)
+      await ctx.reply(
+        `Return logged for ${itemCount} item(s). Summary sent to admins.`,
+        withKeyboard()
+      )
       
       // Delete session after successful completion
       await deleteSession(ctx.env.meriksirat_kv, chatId)
@@ -157,7 +154,10 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       })
       
       // Send error message to user
-      await ctx.reply('❌ Error processing return. Please try again.')
+      await ctx.reply(
+        '❌ Error processing return. Please try again.',
+        withKeyboard()
+      )
       
       // Preserve session for retry (don't delete)
       return

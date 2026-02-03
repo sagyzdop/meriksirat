@@ -10,7 +10,7 @@ import { FieldDescription, FieldGroup } from '@/components/ui/field'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import DatePicker from './components/date-picker'
+import DatePicker from '@/components/shared/date-picker'
 import { useState } from 'react'
 
 const updateOnboardingSchema = z.object({

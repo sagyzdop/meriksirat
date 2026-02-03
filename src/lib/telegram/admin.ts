@@ -7,7 +7,7 @@
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, and, isNotNull } from 'drizzle-orm'
 import * as schema from '@/db/schema'
-import { Telegram } from 'telegraf'
+import { TelegramAPI } from './api'
 import type { AdminNotification } from './types'
 
 /**

@@ -1,287 +1,207 @@
-Welcome to your new TanStack app!
+# Meriksirat - Equipment Booking Management System
 
-# Getting Started
+A modern, full-stack equipment booking and management platform built for clubs and organizations. Meriksirat streamlines equipment reservations with real-time availability tracking, Google Calendar integration, and Telegram bot notifications.
 
-To run this application:
+## Features
+
+### For Members
+- **Equipment Catalog**: Browse available equipment with real-time availability status
+- **Smart Booking System**: Book equipment with time slot selection and conflict detection
+- **Google Calendar Integration**: View equipment availability directly from Google Calendar
+- **Telegram Bot**: Receive notifications, check status, and manage bookings via Telegram
+- **Pickup Confirmation**: 30-minute window to confirm equipment pickup
+- **Direct Handover**: Transfer equipment directly to the next user without returning to locker
+- **Partial Returns**: Return some items while keeping others with automatic grace periods
+- **Booking History**: Track all your past and current bookings
+
+### For Administrators
+- **Dashboard**: Overview of bookings, equipment usage, and system statistics
+- **Equipment Management**: Add, edit, and manage equipment with categories and clearance levels
+- **User Management**: Control user access, roles, and clearance levels
+- **Booking Oversight**: Monitor all bookings, handle overdue equipment, and manage conflicts
+- **Settings**: Configure operating hours, booking limits, and global notifications
+
+### Technical Features
+- **Clearance Levels**: Restrict high-end equipment to authorized users
+- **Overdue Tracking**: Automatic alerts for late returns
+- **Photo Verification**: Timestamped photos required for equipment returns
+- **Multi-item Bookings**: Book multiple pieces of equipment with independent time slots
+- **Booking Extensions**: Extend bookings by 30 minutes if no conflicts exist
+
+## Tech Stack
+
+- **Frontend**: React 19, TanStack Router, TanStack Query
+- **UI**: Tailwind CSS 4, shadcn/ui, Radix UI
+- **Backend**: Cloudflare Workers (serverless)
+- **Database**: Cloudflare D1 (SQLite), Drizzle ORM
+- **Storage**: Cloudflare R2 (object storage for images)
+- **Cache**: Cloudflare KV
+- **Authentication**: Better Auth with Google OAuth
+- **Calendar**: Google Calendar API
+- **Notifications**: Telegram Bot API
+- **Build Tool**: Vite
+- **Deployment**: Cloudflare Workers
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Cloudflare account
+- Google Cloud project with Calendar API enabled
+- Telegram Bot Token
+- Service account credentials for Google Calendar
+
+### Installation
 
 ```bash
+# Install dependencies
 npm install
-npm run start
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your credentials
+
+# Generate database migrations
+npm run db:generate
+
+# Apply migrations locally
+npm run db:migrate-local
+
+# Start development server
+npm run dev
 ```
 
-# Building For Production
+The app will be available at `http://localhost:3000`
 
-To build this application for production:
+### Environment Variables
 
-```bash
-npm run build
+Create a `.env` file with the following:
+
+```env
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Google Calendar Service Account
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
+GOOGLE_PRIVATE_KEY=your_private_key
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+
+# Better Auth
+BETTER_AUTH_SECRET=your_secret_key
+BETTER_AUTH_URL=http://localhost:3000
 ```
 
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+## Development
 
 ```bash
+# Start development server with Wrangler
+npm run dev
+
+# Start Vite dev server only
+npm run dev:vite
+
+# Run tests
 npm run test
+
+# Lint code
+npm run lint
+
+# Format code
+npm run format
 ```
 
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from '@tanstack/react-router'
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import { Link } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
-
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-const peopleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/people',
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json() as Promise<{
-      results: {
-        name: string
-      }[]
-    }>
-  },
-  component: () => {
-    const data = peopleRoute.useLoaderData()
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    )
-  },
-})
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-### React-Query
-
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
-
-First add your dependencies:
+## Database Management
 
 ```bash
-npm install @tanstack/react-query @tanstack/react-query-devtools
+# Generate new migration
+npm run db:generate
+
+# Apply migrations locally
+npm run db:migrate-local
+
+# Apply migrations to production
+npm run db:migrate-remote
 ```
 
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
-
-```tsx
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
-// ...
-
-const queryClient = new QueryClient()
-
-// ...
-
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement)
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  )
-}
-```
-
-You can also add TanStack Query Devtools to the root route (optional).
-
-```tsx
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from '@tanstack/react-query'
-
-import './App.css'
-
-function App() {
-  const { data } = useQuery({
-    queryKey: ['people'],
-    queryFn: () =>
-      fetch('https://swapi.dev/api/people')
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
-  })
-
-  return (
-    <div>
-      <ul>
-        {data.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-export default App
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
+## Deployment
 
 ```bash
-npm install @tanstack/store
+# Build and deploy to Cloudflare Workers
+npm run deploy
 ```
 
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
+### Cloudflare Resources
 
-```tsx
-import { useStore } from '@tanstack/react-store'
-import { Store } from '@tanstack/store'
-import './App.css'
+The app uses the following Cloudflare resources:
+- **D1 Database**: `meriksirat` - stores all application data
+- **R2 Bucket**: `meriksirat` - stores equipment images and return photos
+- **KV Namespace**: `meriksirat_kv` - caches session data and Telegram state
+- **Cron Triggers**: Runs every 5 minutes to check booking statuses
 
-const countStore = new Store(0)
+## Project Structure
 
-function App() {
-  const count = useStore(countStore)
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-    </div>
-  )
-}
+```
+src/
+├── components/          # React components
+│   ├── admin/          # Admin dashboard components
+│   ├── bookings/       # Booking management
+│   ├── equipment/      # Equipment catalog
+│   ├── profile/        # User profile
+│   ├── ui/             # shadcn/ui components
+│   └── shared/         # Shared components
+├── db/                 # Database schema and config
+├── lib/                # Business logic
+│   ├── auth/          # Authentication
+│   ├── booking/       # Booking functions
+│   ├── equipment/     # Equipment functions
+│   ├── telegram/      # Telegram bot
+│   └── google/        # Google Calendar integration
+├── routes/            # TanStack Router routes
+└── styles.css         # Global styles
 
-export default App
+migrations/            # Database migrations
+public/               # Static assets
 ```
 
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
+## Key Workflows
 
-Let's check this out by doubling the count using derived state.
+### Booking Equipment
+1. Browse equipment catalog
+2. Select equipment and view calendar
+3. Choose date and time slots
+4. Confirm booking with optional notes
+5. Receive Telegram notification
+6. Confirm pickup within 30 minutes of start time
 
-```tsx
-import { useStore } from '@tanstack/react-store'
-import { Store, Derived } from '@tanstack/store'
-import './App.css'
+### Returning Equipment
+1. Go to active bookings
+2. Click "End Booking"
+3. Upload photo of equipment
+4. Confirm return
+5. Photo sent to admins for verification
 
-const countStore = new Store(0)
+### Equipment Handover
+1. Initiate handover from active booking
+2. Next user receives notification
+3. Both users confirm handover
+4. Complete equipment condition checklist
 
-const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
-  deps: [countStore],
-})
-doubledStore.mount()
+## Telegram Bot Commands
 
-function App() {
-  const count = useStore(countStore)
-  const doubledCount = useStore(doubledStore)
+- `/start` - Link your Telegram account
+- `/status` - Check equipment availability
+- `/mybookings` - View your active bookings
+- `/handover` - Transfer equipment to another user
+- `/end_booking` - Return equipment
 
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-      <div>Doubled - {doubledCount}</div>
-    </div>
-  )
-}
+## Contributing
 
-export default App
-```
+This is a private project for club use. For feature requests or bug reports, contact the administrators.
 
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
+## License
 
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
-
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+Private - All rights reserved

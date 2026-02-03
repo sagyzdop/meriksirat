@@ -1,14 +1,14 @@
 import * as React from 'react'
 import {
-  IconHelp,
-  IconInnerShadowTop,
-  IconSettings,
-  IconCamera,
-  IconShield,
-  IconUsers,
-  IconTags,
-  IconCalendar
-} from '@tabler/icons-react'
+  HelpCircle,
+  Layers,
+  Settings,
+  Camera,
+  ShieldCheck,
+  Users,
+  Tags,
+  Calendar
+} from 'lucide-react'
 
 import {
   Sidebar,
@@ -18,10 +18,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { getSessionFn } from '@/lib/auth/session'
-import { getUserFn } from '@/lib/user'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { NavMain } from './nav-main'
 import { NavUser } from './nav-user'
 import { NavSecondary } from './nav-secondary'
@@ -31,86 +31,90 @@ const data = {
     {
       title: 'Equipment Booking',
       url: '/equipment',
-      icon: IconCamera,
+      icon: Camera,
     },
     {
       title: 'My Bookings',
       url: '/bookings',
-      icon: IconCamera,
+      icon: Calendar,
     },
   ],
   navSecondary: [
     {
       title: 'FAQ',
       url: '/faq',
-      icon: IconHelp,
+      icon: HelpCircle,
     },
   ],
   navAdmin: [
     {
       title: 'Admin Dashboard',
       url: '/admin/dashboard',
-      icon: IconShield,
+      icon: ShieldCheck,
     },
     {
       title: 'User Management',
       url: '/admin/users',
-      icon: IconUsers,
+      icon: Users,
     },
     {
       title: 'Equipment Management',
       url: '/admin/equipment',
-      icon: IconCamera,
+      icon: Camera,
     },
     {
       title: 'Category Management',
       url: '/admin/categories',
-      icon: IconTags,
+      icon: Tags,
     },
     {
       title: 'Booking Oversight',
       url: '/admin/bookings',
-      icon: IconCalendar,
+      icon: Calendar,
     },
     {
       title: 'Admin Settings',
       url: '/admin/settings',
-      icon: IconSettings,
+      icon: Settings,
     },
   ],
 }
 
-export function AppSidebar({ onLogout, ...props }: React.ComponentProps<typeof Sidebar> & { onLogout?: () => void }) {
+export function AppSidebar({ user: userData, onLogout, ...props }: React.ComponentProps<typeof Sidebar> & { 
+  user?: any;
+  onLogout?: () => void;
+}) {
   const [user, setUser] = React.useState<{
     id: string;
     name: string;
     email: string;
     image?: string | null;
   } | null>(null);
-  const [userData, setUserData] = React.useState<{
-    id: string;
-    name: string;
-    email: string;
-    role: 'user' | 'manager' | 'admin' | null;
-    clearanceLevel: number | null;
-    status: string | null;
-    onboardingComplete: boolean | null;
-  } | null>(null);
+
+  const { isMobile, setOpenMobile } = useSidebar()
+  const router = useRouter()
 
   React.useEffect(() => {
     getSessionFn().then(session => {
       setUser(session?.user || null);
     });
-    
-    getUserFn().then(userData => {
-      setUserData(userData || null);
-    });
   }, []);
 
-  const displayUser = user ? {
-    name: user.name,
-    email: user.email,
-    avatar: user.image || '/avatars/default.jpg',
+  // Close mobile sidebar on navigation
+  React.useEffect(() => {
+    if (!isMobile) return
+    
+    const unsubscribe = router.subscribe('onBeforeLoad', () => {
+      setOpenMobile(false)
+    })
+    
+    return unsubscribe
+  }, [isMobile, router, setOpenMobile])
+
+  const displayUser = userData ? {
+    name: [userData.firstName, userData.lastName].filter(Boolean).join(' ') || userData.email,
+    email: userData.email,
+    avatar: userData.image || user?.image || '/avatars/default.jpg',
   } : {
     name: 'Loading...',
     email: '',
@@ -130,7 +134,7 @@ export function AppSidebar({ onLogout, ...props }: React.ComponentProps<typeof S
               className="data-[slot=sidebar-menu-button]:p-1.5!"
               aria-label="Go to equipment page">
               <Link to="/equipment">
-                <IconInnerShadowTop className="size-5!" aria-hidden="true" />
+                <Layers className="size-5!" aria-hidden="true" />
                 <span className="text-base font-semibold">MerikSirat</span>
               </Link>
             </SidebarMenuButton>
@@ -142,7 +146,12 @@ export function AppSidebar({ onLogout, ...props }: React.ComponentProps<typeof S
         {hasAdminAccess && (
           <NavSecondary items={data.navAdmin} />
         )}
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <div className="mt-auto">
+          <div className="px-4 py-2 text-xs text-muted-foreground">
+            Made by <a href="https://sagyzdop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">sagyzdop</a>
+          </div>
+          <NavSecondary items={data.navSecondary} />
+        </div>
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={displayUser} onLogout={onLogout} />

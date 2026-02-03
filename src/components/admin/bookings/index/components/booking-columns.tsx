@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Calendar, AlertCircle, Trash } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Edit, Calendar, AlertCircle, Trash } from "lucide-react"
 import { format, isPast } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
@@ -60,12 +60,12 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
         return <span className="text-muted-foreground">Unknown User</span>
       }
       
-      const displayName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'No name'
+      const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'No name'
       
       return (
-        <div className="flex flex-col">
-          <span className="font-medium">{displayName}</span>
-          <span className="text-sm text-muted-foreground font-mono">
+        <div className="flex flex-col max-w-[200px]">
+          <span className="font-medium truncate">{displayName}</span>
+          <span className="text-sm text-muted-foreground font-mono truncate">
             {user.email}
           </span>
         </div>
@@ -96,11 +96,12 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     },
   },
   {
-    accessorKey: "startTime",
+    id: "startTime",
+    accessorFn: (row) => row.startTime,
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Start Time
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -123,11 +124,12 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     },
   },
   {
-    accessorKey: "endTime",
+    id: "endTime",
+    accessorFn: (row) => row.endTime,
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         End Time
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -161,11 +163,12 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     },
   },
   {
-    accessorKey: "status",
+    id: "status",
+    accessorFn: (row) => row.status,
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Status
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -194,11 +197,12 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     },
   },
   {
-    accessorKey: "createdAt",
+    id: "createdAt",
+    accessorFn: (row) => row.createdAt,
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Created
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -261,16 +265,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
                   Edit booking
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link 
-                  to="/bookings/$" 
-                  params={{ _splat: booking.id.toString() }}
-                  className="flex items-center"
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  View details
-                </Link>
-              </DropdownMenuItem>
+
               {booking.equipment?.id && (
                 <DropdownMenuItem asChild>
                   <Link 

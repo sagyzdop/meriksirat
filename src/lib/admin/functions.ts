@@ -1,11 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type { AdminStats } from './types'
-import { 
-  CreateCategorySchema, 
+import {
+  CreateCategorySchema,
   UpdateCategorySchema,
   DeleteCategorySchema,
-  UpdateCategorySortOrderSchema
+  UpdateCategorySortOrderSchema,
+  CategorySortSchema
 } from './types'
 
 /**
@@ -20,40 +21,40 @@ export const getAdminStatsFn = createServerFn({ method: 'GET' })
     const { db } = await import('@/db')
     const { user, equipment, booking } = await import('@/db/schema')
     const { eq, count } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Get total users count
     const totalUsersResult = await database
       .select({ count: count() })
       .from(user)
-    
+
     // Get total equipment count (active only)
     const totalEquipmentResult = await database
       .select({ count: count() })
       .from(equipment)
       .where(eq(equipment.isActive, true))
-    
+
     // Get total bookings count
     const totalBookingsResult = await database
       .select({ count: count() })
       .from(booking)
-    
+
     // Get active bookings count
     const activeBookingsResult = await database
       .select({ count: count() })
       .from(booking)
       .where(eq(booking.status, 'active'))
-    
+
     // Get overdue bookings count
     const overdueBookingsResult = await database
       .select({ count: count() })
       .from(booking)
       .where(eq(booking.status, 'overdue'))
-    
+
     return {
       totalUsers: totalUsersResult[0]?.count || 0,
       totalEquipment: totalEquipmentResult[0]?.count || 0,
@@ -76,23 +77,23 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Check if category name already exists
     const existingCategory = await database
       .select({ id: category.id })
       .from(category)
       .where(eq(category.name, data.name))
       .get()
-    
+
     if (existingCategory) {
       throw new Error('Category name already exists')
     }
-    
+
     const result = await database
       .insert(category)
       .values({
@@ -101,7 +102,7 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
         sortOrder: data.sortOrder,
       })
       .returning({ id: category.id })
-    
+
     return { categoryId: result[0]?.id }
   })
 
@@ -118,23 +119,23 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Check if category exists
     const existingCategory = await database
       .select({ id: category.id })
       .from(category)
       .where(eq(category.id, data.categoryId))
       .get()
-    
+
     if (!existingCategory) {
       throw new Error('Category not found')
     }
-    
+
     // Check if new name conflicts with existing category (excluding current one)
     if (data.name) {
       const nameConflict = await database
@@ -142,12 +143,12 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
         .from(category)
         .where(eq(category.name, data.name))
         .get()
-      
+
       if (nameConflict && nameConflict.id !== data.categoryId) {
         throw new Error('Category name already exists')
       }
     }
-    
+
     await database
       .update(category)
       .set({
@@ -156,7 +157,7 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
         sortOrder: data.sortOrder,
       })
       .where(eq(category.id, data.categoryId))
-    
+
     return { success: true }
   })
 
@@ -173,30 +174,30 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { category, equipment } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Check if category exists
     const categoryToDelete = await database
       .select({ id: category.id, name: category.name })
       .from(category)
       .where(eq(category.id, data.categoryId))
       .get()
-    
+
     if (!categoryToDelete) {
       throw new Error('Category not found')
     }
-    
+
     // Find or create "Uncategorized" category
     let uncategorizedCategory = await database
       .select({ id: category.id })
       .from(category)
       .where(eq(category.name, 'Uncategorized'))
       .get()
-    
+
     if (!uncategorizedCategory) {
       const result = await database
         .insert(category)
@@ -206,25 +207,25 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
           sortOrder: 999,
         })
         .returning({ id: category.id })
-      
+
       uncategorizedCategory = { id: result[0]?.id }
     }
-    
+
     if (!uncategorizedCategory?.id) {
       throw new Error('Failed to create or find Uncategorized category')
     }
-    
+
     // Reassign all equipment from the category to be deleted to "Uncategorized"
     await database
       .update(equipment)
       .set({ categoryId: uncategorizedCategory.id })
       .where(eq(equipment.categoryId, data.categoryId))
-    
+
     // Delete the category
     await database
       .delete(category)
       .where(eq(category.id, data.categoryId))
-    
+
     return { success: true }
   })
 
@@ -233,19 +234,39 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
  * Used for category management interface
  */
 export const getCategoriesWithCountFn = createServerFn({ method: 'GET' })
-  .handler(async () => {
+  .inputValidator(CategorySortSchema.optional())
+  .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('./server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { category, equipment } = await import('@/db/schema')
-    const { eq, sql } = await import('drizzle-orm')
-    
+    const { eq, sql, asc, desc } = await import('drizzle-orm')
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
+    let orderByClause = [asc(category.sortOrder), asc(category.name)];
+
+    if (data?.sortBy) {
+      const direction = data.order === 'desc' ? desc : asc;
+
+      switch (data.sortBy) {
+        case 'name':
+          orderByClause = [direction(category.name)];
+          break;
+        case 'sortOrder':
+          orderByClause = [direction(category.sortOrder)];
+          break;
+        case 'equipmentCount':
+          // For aggregated columns, we might need a raw sql reference or alias
+          orderByClause = [direction(sql`count(${equipment.id})`)];
+          break;
+      }
+    }
+
     const categories = await database
       .select({
         id: category.id,
@@ -259,8 +280,8 @@ export const getCategoriesWithCountFn = createServerFn({ method: 'GET' })
       .from(category)
       .leftJoin(equipment, eq(category.id, equipment.categoryId))
       .groupBy(category.id)
-      .orderBy(category.sortOrder, category.name)
-    
+      .orderBy(...orderByClause)
+
     // Ensure sortOrder is never null by providing default value
     return categories.map(cat => ({
       ...cat,
@@ -281,12 +302,12 @@ export const updateCategorySortOrderFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Update each category's sort order
     for (const update of data.categoryUpdates) {
       await database
@@ -294,6 +315,6 @@ export const updateCategorySortOrderFn = createServerFn({ method: 'POST' })
         .set({ sortOrder: update.sortOrder })
         .where(eq(category.id, update.id))
     }
-    
+
     return { success: true }
   })

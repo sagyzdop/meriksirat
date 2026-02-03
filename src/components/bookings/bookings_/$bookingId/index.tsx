@@ -1,16 +1,11 @@
-import { useNavigate } from '@tanstack/react-router'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useState } from 'react'
+import { useNavigate, Link } from '@tanstack/react-router'
+import * as React from 'react'
 import { updateBookingFn, cancelBookingFn } from '@/lib/booking'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
+import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Save, Calendar, Package, AlertCircle, Clock, Trash2 } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ArrowLeft, Loader2, ExternalLink, Trash2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,22 +18,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { format } from 'date-fns'
-import { Input } from '@/components/ui/input'
-
-const editBookingSchema = z.object({
-  startTime: z.string().min(1, 'Start time is required'),
-  endTime: z.string().min(1, 'End time is required'),
-  notes: z.string().optional(),
-}).refine((data) => {
-  const start = new Date(data.startTime)
-  const end = new Date(data.endTime)
-  return end > start
-}, {
-  message: 'End time must be after start time',
-  path: ['endTime'],
-})
-
-type EditBookingForm = z.infer<typeof editBookingSchema>
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
+import { TimeSlotPicker, getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 
 interface PageProps {
   booking: any
@@ -47,43 +29,66 @@ interface PageProps {
 
 export function Page({ booking, bookingId }: PageProps) {
   const navigate = useNavigate()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isCancelling, setIsCancelling] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isCancelling, setIsCancelling] = React.useState(false)
 
-  const form = useForm<EditBookingForm>({
-    resolver: zodResolver(editBookingSchema),
-    defaultValues: {
-      startTime: format(new Date(booking.startTime), "yyyy-MM-dd'T'HH:mm"),
-      endTime: format(new Date(booking.endTime), "yyyy-MM-dd'T'HH:mm"),
-      notes: booking.userEventDetails || '',
-    },
-  })
+  // Time slot selection state
+  const [selectedSlots, setSelectedSlots] = React.useState<string[]>([])
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>()
+  const [notes, setNotes] = React.useState(booking.userEventDetails || '')
 
-  const onSubmit = async (data: EditBookingForm) => {
+  // Calculate initial slots from booking times
+  const getInitialSlots = () => {
+    const startTime = new Date(booking.startTime)
+    const endTime = new Date(booking.endTime)
+    
+    const slots: string[] = []
+    const current = new Date(startTime)
+    
+    while (current < endTime) {
+      const timeStr = `${current.getHours().toString().padStart(2, "0")}:${current.getMinutes().toString().padStart(2, "0")}`
+      slots.push(timeStr)
+      current.setMinutes(current.getMinutes() + 30)
+    }
+    
+    return slots
+  }
+
+  const initialSlots = React.useMemo(() => getInitialSlots(), [booking.startTime, booking.endTime])
+
+  const handleSlotsChange = (slots: string[], date: Date | undefined) => {
+    setSelectedSlots(slots)
+    setSelectedDate(date)
+  }
+
+  const onSubmit = async () => {
+    const times = getBookingTimesFromSlots(selectedSlots, selectedDate)
+    if (!times) {
+      toast.error('Please select at least one time slot')
+      return
+    }
+
     setIsSubmitting(true)
-    setError(null)
-    setSuccess(null)
 
     try {
       await updateBookingFn({
         data: {
           bookingId,
-          startTime: new Date(data.startTime).toISOString(),
-          endTime: new Date(data.endTime).toISOString(),
-          notes: data.notes,
+          startTime: times.startTime.toISOString(),
+          endTime: times.endTime.toISOString(),
+          notes: notes || undefined,
         },
       })
 
-      setSuccess('Booking updated successfully! Calendar has been synchronized.')
+      toast.success('Booking updated successfully!')
       
       setTimeout(() => {
         navigate({ to: '/bookings' })
       }, 1500)
     } catch (error) {
       console.error('Failed to update booking:', error)
-      setError(error instanceof Error ? error.message : 'Failed to update booking. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update booking. Please try again.'
+      toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
@@ -91,22 +96,21 @@ export function Page({ booking, bookingId }: PageProps) {
 
   const handleCancel = async () => {
     setIsCancelling(true)
-    setError(null)
-    setSuccess(null)
 
     try {
       await cancelBookingFn({
         data: { bookingId }
       })
 
-      setSuccess('Booking cancelled successfully!')
+      toast.success('Booking cancelled successfully!')
       
       setTimeout(() => {
         navigate({ to: '/bookings' })
       }, 1500)
     } catch (error) {
       console.error('Failed to cancel booking:', error)
-      setError(error instanceof Error ? error.message : 'Failed to cancel booking. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to cancel booking. Please try again.'
+      toast.error(errorMessage)
     } finally {
       setIsCancelling(false)
     }
@@ -137,270 +141,227 @@ export function Page({ booking, bookingId }: PageProps) {
   const canCancel = booking.status !== 'cancelled' && booking.status !== 'returned'
 
   return (
-    <div className="h-full flex-1 flex-col gap-6 p-4 sm:gap-8 sm:p-8 md:flex">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleBack}
-            className="flex items-center gap-2 w-fit"
+            className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Bookings
+            Back
           </Button>
-          <div className="flex flex-col gap-1">
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Edit Booking</h2>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Update your booking details and schedule
+          <div>
+            <h1 className="text-3xl font-bold">Edit Booking</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Booking ID: #{booking.id} • Created {format(new Date(booking.createdAt), 'PPP')}
             </p>
           </div>
         </div>
-      </div>
 
-      {!canEdit && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            This booking cannot be edited because it has been {booking.status}. You can only edit bookings that are booked or active.
-          </AlertDescription>
-        </Alert>
-      )}
+        {/* Booking Status */}
+        {!canEdit && (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="pt-6">
+              <p className="text-sm text-yellow-800">
+                This booking cannot be edited because it has been <strong>{booking.status}</strong>. 
+                You can only edit bookings that are booked or active.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Booking Information
-          </CardTitle>
-          <CardDescription>
-            Booking ID: #{booking.id}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Package className="h-4 w-4" />
-              Equipment Information
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm pl-6">
-              <div>
-                <span className="font-medium">Model:</span>
-                <span className="ml-2 text-muted-foreground">{booking.equipment?.modelName || 'Unknown'}</span>
-              </div>
-              <div>
-                <span className="font-medium">Equipment ID:</span>
-                <span className="ml-2 font-mono text-muted-foreground">{booking.equipmentId}</span>
-              </div>
-            </div>
-            {booking.equipment?.description && (
-              <div className="text-sm text-muted-foreground pl-6">
-                {booking.equipment.description}
-              </div>
-            )}
+        {/* Equipment Details */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Equipment Details</h2>
+            <Badge variant={getStatusBadgeVariant(booking.status)}>
+              {booking.status.toUpperCase()}
+            </Badge>
           </div>
+          
+          <Link to="/equipment/$" params={{ _splat: booking.equipmentId.toString() }} className="block">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-6">
+                  <div className="relative flex-shrink-0">
+                    {booking.equipment?.imagePath ? (
+                      <img 
+                        src={`/api/images/${booking.equipment.imagePath}`} 
+                        alt={booking.equipment.modelName}
+                        className="w-24 h-24 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                        <span className="text-muted-foreground text-xs">No image</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-1">{booking.equipment?.modelName || 'Unknown Equipment'}</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {booking.equipment?.category?.name || 'Uncategorized'}
+                        </p>
+                        {booking.equipment?.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {booking.equipment.description}
+                          </p>
+                        )}
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Clock className="h-4 w-4" />
-              Current Schedule
+        {/* Current Booking Details */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Current Booking</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="font-medium">Start Time:</span>
+              <p className="text-muted-foreground mt-1">
+                {format(new Date(booking.startTime), 'PPP p')}
+              </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm pl-6">
-              <div>
-                <span className="font-medium">Start Time:</span>
-                <span className="ml-2 text-muted-foreground">
-                  {format(new Date(booking.startTime), 'PPP p')}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium">End Time:</span>
-                <span className="ml-2 text-muted-foreground">
-                  {format(new Date(booking.endTime), 'PPP p')}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium">Status:</span>
-                <Badge variant={getStatusBadgeVariant(booking.status)} className="ml-2">
-                  {booking.status.toUpperCase()}
-                </Badge>
-              </div>
-              <div>
-                <span className="font-medium">Created:</span>
-                <span className="ml-2 text-muted-foreground">
-                  {format(new Date(booking.createdAt), 'PPP')}
-                </span>
-              </div>
+            <div>
+              <span className="font-medium">End Time:</span>
+              <p className="text-muted-foreground mt-1">
+                {format(new Date(booking.endTime), 'PPP p')}
+              </p>
             </div>
           </div>
-
           {booking.userEventDetails && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Current Notes</div>
-              <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md whitespace-pre-wrap">
+            <div className="mt-4 pt-4 border-t">
+              <span className="font-medium text-sm">Current Notes:</span>
+              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                 {booking.userEventDetails}
-              </div>
+              </p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Update Booking</CardTitle>
-          <CardDescription>
-            Modify your booking schedule and notes. Changes will be synchronized with Google Calendar.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          disabled={isSubmitting || !canEdit}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        When you plan to pick up the equipment
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        {/* Equipment Calendar */}
+        {booking.equipment?.googleCalendarId && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Equipment Calendar</h2>
+            <iframe
+              src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=${encodeURIComponent(booking.equipment.googleCalendarId)}&color=%237986cb`}
+              className="w-full h-[600px] border rounded-lg"
+              style={{ borderWidth: 1 }}
+              allowFullScreen
+            ></iframe>
+          </div>
+        )}
 
-                <FormField
-                  control={form.control}
-                  name="endTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="datetime-local"
-                          {...field}
-                          disabled={isSubmitting || !canEdit}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        When you plan to return the equipment
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+        {/* Date & Time Selection */}
+        {canEdit && booking.equipment?.googleCalendarId && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Update Date & Time</h2>
+            <TimeSlotPicker
+              googleCalendarId={booking.equipment.googleCalendarId}
+              initialDate={new Date(booking.startTime)}
+              initialSlots={initialSlots}
+              excludeBookingPeriod={{
+                start: booking.startTime,
+                end: booking.endTime,
+              }}
+              onSlotsChange={handleSlotsChange}
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Add any notes about your booking (optional)..."
-                        className="min-h-[120px]"
-                        {...field}
-                        disabled={isSubmitting || !canEdit}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Additional information about your booking
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        {/* Notes Section */}
+        {canEdit && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Update Notes</h2>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Add any notes about your booking..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                disabled={isSubmitting}
               />
+            </div>
+          </div>
+        )}
 
-              <Alert>
-                <Calendar className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Calendar Synchronization:</strong> When you update this booking, the changes will be 
-                  automatically synchronized with Google Calendar.
-                </AlertDescription>
-              </Alert>
+        {/* Action Buttons */}
+        {canEdit && (
+          <div className="flex flex-col sm:flex-row gap-4 justify-between">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                onClick={onSubmit}
+                disabled={isSubmitting || selectedSlots.length === 0}
+                className="w-full sm:w-auto"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={isSubmitting}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+            </div>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {success && (
-                <Alert className="border-green-200 bg-green-50 text-green-800">
-                  <AlertDescription>{success}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            {canCancel && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
                   <Button
-                    type="submit"
-                    disabled={isSubmitting || !canEdit}
+                    variant="destructive"
+                    disabled={isSubmitting || isCancelling}
                     className="flex items-center gap-2 w-full sm:w-auto"
                   >
-                    <Save className="h-4 w-4" />
-                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                    <Trash2 className="h-4 w-4" />
+                    {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleBack}
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-
-                {canCancel && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        disabled={isSubmitting || isCancelling}
-                        className="flex items-center gap-2 w-full sm:w-auto"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to cancel this booking? This action cannot be undone.
-                          The calendar event will be deleted.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isCancelling}>No, keep it</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleCancel}
-                          disabled={isCancelling}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {isCancelling ? 'Cancelling...' : 'Yes, cancel booking'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to cancel this booking? This action cannot be undone.
+                      The calendar event will be deleted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isCancelling}>No, keep it</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCancel}
+                      disabled={isCancelling}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isCancelling ? 'Cancelling...' : 'Yes, cancel booking'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

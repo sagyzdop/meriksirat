@@ -2,10 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getAdminBookingByIdFn } from '@/lib/booking'
 import { Page } from '@/components/admin/bookings/$.edit'
 
-export const Route = createFileRoute('/_authenticated/admin/bookings/$/edit')({
+export const Route = createFileRoute('/_authenticated/admin/bookings/$bookingId/edit')({
   component: RouteComponent,
   loader: async ({ params }) => {
-    const bookingId = params._splat
+    const bookingId = params.bookingId
     if (!bookingId) {
       throw new Error('Booking ID is required')
     }

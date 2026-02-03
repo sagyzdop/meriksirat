@@ -1,17 +1,10 @@
-import { Context, Markup } from 'telegraf'
-import { env } from 'cloudflare:workers'
+import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and } from 'drizzle-orm'
 import { user, booking, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { BOOKING_STATUS } from '../types'
-
-/**
- * Extended Telegraf context with Cloudflare environment bindings
- */
-interface BotContext extends Context {
-  env: typeof env
-}
+import { withKeyboard } from '../server-utils'
 
 /**
  * Handles the /end_booking command to initiate equipment return flow
@@ -51,7 +44,10 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
     
     // If user not found, they need to link their account first
     if (!userRecord) {
-      await ctx.reply('Please link your account via /start first.')
+      await ctx.reply(
+        'Please link your account via /start first.',
+        withKeyboard()
+      )
       return
     }
     
@@ -81,7 +77,10 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
     
     // If no active bookings found, inform user
     if (activeBookings.length === 0) {
-      await ctx.reply('You have no active bookings to return.')
+      await ctx.reply(
+        'You have no active bookings to return.',
+        withKeyboard()
+      )
       return
     }
     
@@ -98,7 +97,10 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
         createdAt: Date.now(),
       })
       
-      await ctx.reply('Please send a photo of the equipment to confirm its condition.')
+      await ctx.reply(
+        'Please send a photo of the equipment to confirm its condition.',
+        withKeyboard()
+      )
       return
     }
     
@@ -111,20 +113,32 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
     })
     
     // Build inline keyboard with equipment model names
-    const buttons = activeBookings.map(b => 
-      Markup.button.callback(
-        b.equipment.modelName,
-        `select_${b.id}`
-      )
-    )
+    const buttons = activeBookings.map(b => ({
+      text: b.equipment.modelName,
+      callback_data: `select_${b.id}`
+    }))
     
     // Add "Return All Items" button
-    buttons.push(Markup.button.callback('Return All Items', 'select_all'))
+    buttons.push({
+      text: 'Return All Items',
+      callback_data: 'select_all'
+    })
     
     // Send keyboard message (2 buttons per row for better UX)
     await ctx.reply(
       'Select which items to return:',
-      Markup.inlineKeyboard(buttons, { columns: 2 })
+      {
+        reply_markup: {
+          inline_keyboard: [
+            buttons.slice(0, 2),
+            ...buttons.slice(2).reduce((acc: any[], btn, i) => {
+              if (i % 2 === 0) acc.push([btn])
+              else acc[acc.length - 1].push(btn)
+              return acc
+            }, [])
+          ]
+        }
+      }
     )
     
   } catch (error) {

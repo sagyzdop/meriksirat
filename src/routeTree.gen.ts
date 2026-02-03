@@ -32,9 +32,9 @@ import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings/index'
 import { Route as AuthenticatedBookingsBookingIdEditRouteImport } from './routes/_authenticated/bookings_/$bookingId/edit'
 import { Route as AuthenticatedAdminEquipmentNewRouteImport } from './routes/_authenticated/admin/equipment/new'
-import { Route as AuthenticatedAdminUsersSplatEditRouteImport } from './routes/_authenticated/admin/users/$.edit'
-import { Route as AuthenticatedAdminEquipmentSplatEditRouteImport } from './routes/_authenticated/admin/equipment/$.edit'
-import { Route as AuthenticatedAdminBookingsSplatEditRouteImport } from './routes/_authenticated/admin/bookings/$.edit'
+import { Route as AuthenticatedAdminUsersUserIdEditRouteImport } from './routes/_authenticated/admin/users/$userId.edit'
+import { Route as AuthenticatedAdminEquipmentEquipmentIdEditRouteImport } from './routes/_authenticated/admin/equipment/$equipmentId.edit'
+import { Route as AuthenticatedAdminBookingsBookingIdEditRouteImport } from './routes/_authenticated/admin/bookings/$bookingId.edit'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -163,22 +163,22 @@ const AuthenticatedAdminEquipmentNewRoute =
     path: '/equipment/new',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminUsersSplatEditRoute =
-  AuthenticatedAdminUsersSplatEditRouteImport.update({
-    id: '/users/$/edit',
-    path: '/users/$/edit',
+const AuthenticatedAdminUsersUserIdEditRoute =
+  AuthenticatedAdminUsersUserIdEditRouteImport.update({
+    id: '/users/$userId/edit',
+    path: '/users/$userId/edit',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminEquipmentSplatEditRoute =
-  AuthenticatedAdminEquipmentSplatEditRouteImport.update({
-    id: '/equipment/$/edit',
-    path: '/equipment/$/edit',
+const AuthenticatedAdminEquipmentEquipmentIdEditRoute =
+  AuthenticatedAdminEquipmentEquipmentIdEditRouteImport.update({
+    id: '/equipment/$equipmentId/edit',
+    path: '/equipment/$equipmentId/edit',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminBookingsSplatEditRoute =
-  AuthenticatedAdminBookingsSplatEditRouteImport.update({
-    id: '/bookings/$/edit',
-    path: '/bookings/$/edit',
+const AuthenticatedAdminBookingsBookingIdEditRoute =
+  AuthenticatedAdminBookingsBookingIdEditRouteImport.update({
+    id: '/bookings/$bookingId/edit',
+    path: '/bookings/$bookingId/edit',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 
@@ -205,9 +205,9 @@ export interface FileRoutesByFullPath {
   '/admin/equipment/': typeof AuthenticatedAdminEquipmentIndexRoute
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/bookings/$bookingId/': typeof AuthenticatedBookingsBookingIdIndexRoute
-  '/admin/bookings/$/edit': typeof AuthenticatedAdminBookingsSplatEditRoute
-  '/admin/equipment/$/edit': typeof AuthenticatedAdminEquipmentSplatEditRoute
-  '/admin/users/$/edit': typeof AuthenticatedAdminUsersSplatEditRoute
+  '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
+  '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
+  '/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -232,9 +232,9 @@ export interface FileRoutesByTo {
   '/admin/equipment': typeof AuthenticatedAdminEquipmentIndexRoute
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/bookings/$bookingId': typeof AuthenticatedBookingsBookingIdIndexRoute
-  '/admin/bookings/$/edit': typeof AuthenticatedAdminBookingsSplatEditRoute
-  '/admin/equipment/$/edit': typeof AuthenticatedAdminEquipmentSplatEditRoute
-  '/admin/users/$/edit': typeof AuthenticatedAdminUsersSplatEditRoute
+  '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
+  '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
+  '/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -261,9 +261,9 @@ export interface FileRoutesById {
   '/_authenticated/admin/equipment/': typeof AuthenticatedAdminEquipmentIndexRoute
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/bookings/$bookingId/': typeof AuthenticatedBookingsBookingIdIndexRoute
-  '/_authenticated/admin/bookings/$/edit': typeof AuthenticatedAdminBookingsSplatEditRoute
-  '/_authenticated/admin/equipment/$/edit': typeof AuthenticatedAdminEquipmentSplatEditRoute
-  '/_authenticated/admin/users/$/edit': typeof AuthenticatedAdminUsersSplatEditRoute
+  '/_authenticated/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
+  '/_authenticated/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
+  '/_authenticated/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -290,9 +290,9 @@ export interface FileRouteTypes {
     | '/admin/equipment/'
     | '/admin/users/'
     | '/bookings/$bookingId/'
-    | '/admin/bookings/$/edit'
-    | '/admin/equipment/$/edit'
-    | '/admin/users/$/edit'
+    | '/admin/bookings/$bookingId/edit'
+    | '/admin/equipment/$equipmentId/edit'
+    | '/admin/users/$userId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -317,9 +317,9 @@ export interface FileRouteTypes {
     | '/admin/equipment'
     | '/admin/users'
     | '/bookings/$bookingId'
-    | '/admin/bookings/$/edit'
-    | '/admin/equipment/$/edit'
-    | '/admin/users/$/edit'
+    | '/admin/bookings/$bookingId/edit'
+    | '/admin/equipment/$equipmentId/edit'
+    | '/admin/users/$userId/edit'
   id:
     | '__root__'
     | '/'
@@ -345,9 +345,9 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/equipment/'
     | '/_authenticated/admin/users/'
     | '/_authenticated/bookings/$bookingId/'
-    | '/_authenticated/admin/bookings/$/edit'
-    | '/_authenticated/admin/equipment/$/edit'
-    | '/_authenticated/admin/users/$/edit'
+    | '/_authenticated/admin/bookings/$bookingId/edit'
+    | '/_authenticated/admin/equipment/$equipmentId/edit'
+    | '/_authenticated/admin/users/$userId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -523,25 +523,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEquipmentNewRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/users/$/edit': {
-      id: '/_authenticated/admin/users/$/edit'
-      path: '/users/$/edit'
-      fullPath: '/admin/users/$/edit'
-      preLoaderRoute: typeof AuthenticatedAdminUsersSplatEditRouteImport
+    '/_authenticated/admin/users/$userId/edit': {
+      id: '/_authenticated/admin/users/$userId/edit'
+      path: '/users/$userId/edit'
+      fullPath: '/admin/users/$userId/edit'
+      preLoaderRoute: typeof AuthenticatedAdminUsersUserIdEditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/equipment/$/edit': {
-      id: '/_authenticated/admin/equipment/$/edit'
-      path: '/equipment/$/edit'
-      fullPath: '/admin/equipment/$/edit'
-      preLoaderRoute: typeof AuthenticatedAdminEquipmentSplatEditRouteImport
+    '/_authenticated/admin/equipment/$equipmentId/edit': {
+      id: '/_authenticated/admin/equipment/$equipmentId/edit'
+      path: '/equipment/$equipmentId/edit'
+      fullPath: '/admin/equipment/$equipmentId/edit'
+      preLoaderRoute: typeof AuthenticatedAdminEquipmentEquipmentIdEditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/bookings/$/edit': {
-      id: '/_authenticated/admin/bookings/$/edit'
-      path: '/bookings/$/edit'
-      fullPath: '/admin/bookings/$/edit'
-      preLoaderRoute: typeof AuthenticatedAdminBookingsSplatEditRouteImport
+    '/_authenticated/admin/bookings/$bookingId/edit': {
+      id: '/_authenticated/admin/bookings/$bookingId/edit'
+      path: '/bookings/$bookingId/edit'
+      fullPath: '/admin/bookings/$bookingId/edit'
+      preLoaderRoute: typeof AuthenticatedAdminBookingsBookingIdEditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
   }
@@ -555,9 +555,9 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCategoriesIndexRoute: typeof AuthenticatedAdminCategoriesIndexRoute
   AuthenticatedAdminEquipmentIndexRoute: typeof AuthenticatedAdminEquipmentIndexRoute
   AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
-  AuthenticatedAdminBookingsSplatEditRoute: typeof AuthenticatedAdminBookingsSplatEditRoute
-  AuthenticatedAdminEquipmentSplatEditRoute: typeof AuthenticatedAdminEquipmentSplatEditRoute
-  AuthenticatedAdminUsersSplatEditRoute: typeof AuthenticatedAdminUsersSplatEditRoute
+  AuthenticatedAdminBookingsBookingIdEditRoute: typeof AuthenticatedAdminBookingsBookingIdEditRoute
+  AuthenticatedAdminEquipmentEquipmentIdEditRoute: typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
+  AuthenticatedAdminUsersUserIdEditRoute: typeof AuthenticatedAdminUsersUserIdEditRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -569,11 +569,12 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminCategoriesIndexRoute,
   AuthenticatedAdminEquipmentIndexRoute: AuthenticatedAdminEquipmentIndexRoute,
   AuthenticatedAdminUsersIndexRoute: AuthenticatedAdminUsersIndexRoute,
-  AuthenticatedAdminBookingsSplatEditRoute:
-    AuthenticatedAdminBookingsSplatEditRoute,
-  AuthenticatedAdminEquipmentSplatEditRoute:
-    AuthenticatedAdminEquipmentSplatEditRoute,
-  AuthenticatedAdminUsersSplatEditRoute: AuthenticatedAdminUsersSplatEditRoute,
+  AuthenticatedAdminBookingsBookingIdEditRoute:
+    AuthenticatedAdminBookingsBookingIdEditRoute,
+  AuthenticatedAdminEquipmentEquipmentIdEditRoute:
+    AuthenticatedAdminEquipmentEquipmentIdEditRoute,
+  AuthenticatedAdminUsersUserIdEditRoute:
+    AuthenticatedAdminUsersUserIdEditRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =

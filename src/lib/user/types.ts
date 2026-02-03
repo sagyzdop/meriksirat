@@ -3,7 +3,6 @@ import { z } from 'zod'
 // User Profile Types
 export interface UserProfile {
   id: string;
-  name: string;
   email: string;
   emailVerified: boolean;
   image: string | null;
@@ -45,8 +44,8 @@ export const AdminUserFiltersSchema = z.object({
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(10),
   sortBy: z
-    .enum(['name', 'email', 'role', 'status', 'clearanceLevel', 'createdAt'])
-    .default('name'),
+    .enum(['firstName', 'lastName', 'email', 'role', 'status', 'clearanceLevel', 'createdAt'])
+    .default('firstName'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
 })
 
@@ -76,12 +75,11 @@ export const GetUserByIdSchema = z.object({
 
 // User Profile Update Schema (for users updating their own profile)
 export const UpdateUserProfileSchema = z.object({
-  name: z.string().min(1).optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   instagramUsername: z.string().optional(),
   birthday: z.string().optional(),
   major: z.string().optional(),
   graduationYear: z.number().min(1900).max(2100).optional(),
-  image: z.string().optional(),
+  nuId: z.number().optional(),
 })

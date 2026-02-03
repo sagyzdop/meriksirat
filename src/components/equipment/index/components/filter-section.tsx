@@ -55,7 +55,9 @@ export function FilterSection() {
               All Categories
             </label>
           </div>
-          {categories.map((category) => (
+          {[...categories]
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            .map((category) => (
             <div key={category.id} className="flex items-center space-x-2">
               <Checkbox
                 id={`category-${category.id}`}

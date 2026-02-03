@@ -5,6 +5,8 @@ import { CategoryDataTable } from './components/category-data-table'
 import { CreateCategoryDialog } from './components/create-category-dialog'
 import { EditCategoryDialog } from './components/edit-category-dialog'
 import { DeleteCategoryDialog } from './components/delete-category-dialog'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 
 export interface CategoryWithCount {
   id: number
@@ -18,9 +20,11 @@ export interface CategoryWithCount {
 
 interface PageProps {
   categories: CategoryWithCount[]
+  sortBy?: 'name' | 'sortOrder' | 'equipmentCount'
+  order?: 'asc' | 'desc'
 }
 
-export function Page({ categories }: PageProps) {
+export function Page({ categories, sortBy, order }: PageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -43,28 +47,32 @@ export function Page({ categories }: PageProps) {
     setSelectedCategory(null)
   }
 
-  return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Category Management</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Manage equipment categories and their organization
-          </p>
-        </div>
-        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Category
-        </Button>
-      </div>
+  const description = categories.length > 0
+    ? `Managing ${categories.length} categor${categories.length === 1 ? 'y' : 'ies'}`
+    : "No categories found"
 
-      <CategoryDataTable 
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Manage Categories"
+        description={description}
+        actions={
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Category
+          </Button>
+        }
+      />
+
+      <CategoryDataTable
         categories={categories}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        sortBy={sortBy}
+        order={order}
       />
 
-      <CreateCategoryDialog 
+      <CreateCategoryDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onClose={handleCloseDialogs}
@@ -72,14 +80,14 @@ export function Page({ categories }: PageProps) {
 
       {selectedCategory && (
         <>
-          <EditCategoryDialog 
+          <EditCategoryDialog
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
             onClose={handleCloseDialogs}
             category={selectedCategory}
           />
 
-          <DeleteCategoryDialog 
+          <DeleteCategoryDialog
             open={deleteDialogOpen}
             onOpenChange={setDeleteDialogOpen}
             onClose={handleCloseDialogs}
@@ -87,6 +95,6 @@ export function Page({ categories }: PageProps) {
           />
         </>
       )}
-    </div>
+    </PageContainer>
   )
 }

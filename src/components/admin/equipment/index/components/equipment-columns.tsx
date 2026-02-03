@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2, Calendar } from "lucide-react"
-import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import { EquipmentWithCategory } from "@/lib/equipment"
 
@@ -40,6 +39,7 @@ export const createEquipmentColumns = (
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
+        onClick={(e) => e.stopPropagation()}
       />
     ),
     cell: ({ row }) => (
@@ -47,6 +47,7 @@ export const createEquipmentColumns = (
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Select row"
+        onClick={(e) => e.stopPropagation()}
       />
     ),
     enableSorting: false,
@@ -58,7 +59,7 @@ export const createEquipmentColumns = (
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Model Name
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -80,11 +81,12 @@ export const createEquipmentColumns = (
     },
   },
   {
-    accessorKey: "category",
+    id: "category",
+    accessorFn: (row) => row.category?.name || "Uncategorized",
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Category
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -99,22 +101,18 @@ export const createEquipmentColumns = (
         </Badge>
       )
     },
-    sortingFn: (rowA, rowB) => {
-      const categoryA = rowA.original.category?.name || "Uncategorized"
-      const categoryB = rowB.original.category?.name || "Uncategorized"
-      return categoryA.localeCompare(categoryB)
-    },
     filterFn: (row, id, value) => {
       const categoryId = row.original.categoryId
       return value.includes(categoryId?.toString() || "null")
     },
   },
   {
-    accessorKey: "requiredClearanceLevel",
+    id: "requiredClearanceLevel",
+    accessorFn: (row) => row.requiredClearanceLevel,
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Clearance Level
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -133,11 +131,12 @@ export const createEquipmentColumns = (
     },
   },
   {
-    accessorKey: "isActive",
+    id: "isActive",
+    accessorFn: (row) => row.isActive,
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Status
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -185,31 +184,27 @@ export const createEquipmentColumns = (
     },
   },
   {
-    accessorKey: "createdAt",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Created
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
+    id: "edit",
+    header: "",
+    enableHiding: false,
     cell: ({ row }) => {
-      const createdAt = row.getValue("createdAt") as Date | null
-      if (!createdAt) return <span className="text-muted-foreground">No date</span>
-      
+      const equipment = row.original
+
       return (
-        <div className="flex flex-col">
-          <span className="font-medium">
-            {format(new Date(createdAt), "MMM dd, yyyy")}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {format(new Date(createdAt), "HH:mm")}
-          </span>
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button asChild size="sm" variant="outline">
+            <Link 
+              to="/admin/equipment/$equipmentId/edit" 
+              params={{ equipmentId: equipment.id.toString() }}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Link>
+          </Button>
         </div>
       )
     },
+    size: 100,
   },
   {
     id: "actions",

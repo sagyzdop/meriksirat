@@ -13,7 +13,6 @@ import {
 import { ArrowUpDown, MoreHorizontal, Eye, Edit, Shield, UserX } from "lucide-react"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
-import type { EditUserFormData } from "./edit-user-dialog"
 
 interface User {
   id: string
@@ -77,11 +76,12 @@ export const createUserColumns = (
     enableHiding: false,
   },
   {
-    accessorKey: "name",
+    id: "firstName", // Use id instead of accessorKey to match backend sortBy
+    accessorFn: (row) => `${row.firstName || ''} ${row.lastName || ''}`.trim(),
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Name
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -89,14 +89,14 @@ export const createUserColumns = (
     ),
     cell: ({ row }) => {
       const user = row.original
-      const displayName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'No name'
+      const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'No name'
       
       return (
         <div className="flex flex-col">
           <span className="font-medium">{displayName}</span>
-          {user.firstName && user.lastName && user.name !== `${user.firstName} ${user.lastName}` && (
+          {user.email && (
             <span className="text-sm text-muted-foreground">
-              {user.firstName} {user.lastName}
+              {user.email}
             </span>
           )}
         </div>
@@ -108,7 +108,7 @@ export const createUserColumns = (
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Email
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -128,7 +128,7 @@ export const createUserColumns = (
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Role
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -158,7 +158,7 @@ export const createUserColumns = (
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Clearance
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -181,7 +181,7 @@ export const createUserColumns = (
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Status
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -209,7 +209,7 @@ export const createUserColumns = (
     header: ({ column }) => (
       <Button
         variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        onClick={column.getToggleSortingHandler()}
       >
         Created
         <ArrowUpDown className="ml-2 h-4 w-4" />

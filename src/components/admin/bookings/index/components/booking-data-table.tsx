@@ -8,9 +8,6 @@ import {
   getCoreRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
 import { useNavigate } from "@tanstack/react-router"
@@ -42,7 +39,8 @@ import { DataTableFacetedFilter } from "./data-table-faceted-filter"
 import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar } from "lucide-react"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
-import { isPast } from "date-fns"
+import { isPast, format as formatDate } from "date-fns"
+import { DatePicker } from "@/components/ui/date-picker"
 
 interface Pagination {
   page: number
@@ -86,7 +84,12 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  
+  // Controlled sorting state - sync with URL params
+  const [sorting, setSorting] = React.useState<SortingState>([{
+    id: filters.sortBy,
+    desc: filters.sortOrder === 'desc'
+  }])
 
   // Count overdue bookings in current data
   const overdueCount = React.useMemo(() => {
@@ -96,26 +99,37 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
     ).length
   }, [data])
 
-  // Initialize filters from URL params
+  // Sync sorting state with URL params when they change
   React.useEffect(() => {
-    const initialFilters: ColumnFiltersState = []
-    
-    if (filters.status) {
-      initialFilters.push({ id: "status", value: [filters.status] })
-    }
-    
-    if (filters.search) {
-      initialFilters.push({ id: "search", value: filters.search })
-    }
-    
-    setColumnFilters(initialFilters)
-    
-    // Set initial sorting
     setSorting([{
       id: filters.sortBy,
       desc: filters.sortOrder === 'desc'
     }])
-  }, [filters])
+  }, [filters.sortBy, filters.sortOrder])
+
+  // Handle sorting changes - navigate to update URL
+  const handleSortingChange = React.useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+    // Get the current sorting state from URL params (source of truth)
+    const currentSorting: SortingState = [{
+      id: filters.sortBy,
+      desc: filters.sortOrder === 'desc'
+    }]
+    
+    const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
+    
+    if (newSorting.length > 0) {
+      const sort = newSorting[0]
+      navigate({
+        to: '.',
+        search: (prev) => ({
+          ...prev,
+          sortBy: sort.id as any,
+          sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
+          page: 1,
+        }),
+      })
+    }
+  }, [filters.sortBy, filters.sortOrder, navigate])
 
   const table = useReactTable({
     data,
@@ -135,14 +149,12 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
     manualSorting: true,
     manualFiltering: true,
     enableRowSelection: true,
+    enableSortingRemoval: false,
     onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
@@ -184,11 +196,11 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
   }, [filters, navigate])
 
   // Handle date range filters
-  const handleDateFilterChange = React.useCallback((type: 'startDate' | 'endDate', value: string) => {
+  const handleDateFilterChange = React.useCallback((type: 'startDate' | 'endDate', value: Date | undefined) => {
     const newFilters = { ...filters }
     
     if (value) {
-      newFilters[type] = value
+      newFilters[type] = formatDate(value, 'yyyy-MM-dd')
     } else {
       delete newFilters[type]
     }
@@ -216,24 +228,6 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
       search: { ...filters, limit: newPageSize, page: 1 },
     })
   }, [filters, navigate])
-
-  // Handle sorting changes
-  React.useEffect(() => {
-    if (sorting.length > 0) {
-      const sort = sorting[0]
-      const newFilters = {
-        ...filters,
-        sortBy: sort.id as any,
-        sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
-        page: 1, // Reset to first page
-      }
-      
-      navigate({
-        to: '/admin/bookings',
-        search: newFilters,
-      })
-    }
-  }, [sorting])
 
   const isFiltered = filters.status || filters.search || filters.startDate || filters.endDate
 
@@ -279,20 +273,18 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
               onSelectionChange={(values) => handleFilterChange('status', values)}
             />
             <div className="flex flex-wrap items-center gap-2">
-              <Input
-                type="date"
+              <DatePicker
+                date={filters.startDate ? new Date(filters.startDate) : undefined}
+                onSelect={(date) => handleDateFilterChange('startDate', date)}
                 placeholder="Start date"
-                value={filters.startDate || ""}
-                onChange={(event) => handleDateFilterChange('startDate', event.target.value)}
-                className="h-8 w-full sm:w-[150px]"
+                className="w-full sm:w-[150px]"
               />
               <span className="text-sm text-muted-foreground">to</span>
-              <Input
-                type="date"
+              <DatePicker
+                date={filters.endDate ? new Date(filters.endDate) : undefined}
+                onSelect={(date) => handleDateFilterChange('endDate', date)}
                 placeholder="End date"
-                value={filters.endDate || ""}
-                onChange={(event) => handleDateFilterChange('endDate', event.target.value)}
-                className="h-8 w-full sm:w-[150px]"
+                className="w-full sm:w-[150px]"
               />
             </div>
             {isFiltered && (

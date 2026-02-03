@@ -32,7 +32,7 @@ export function PageContainer({
   return (
     <div
       className={cn(
-        'container mx-auto',
+        'container mx-auto flex flex-col min-w-0 w-full',
         'px-4 py-8 md:px-6 lg:px-8',
         maxWidthClasses[maxWidth],
         className

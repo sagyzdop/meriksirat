@@ -1,4 +1,8 @@
 export { FilterSection } from './filter-section'
 export { EquipmentCard } from './equipment-card'
+export { EquipmentListCard } from './equipment-list-card'
 export { ControlsBar } from './controls-bar'
 export { EquipmentGrid } from './equipment-grid'
+export { EquipmentDataTable } from './equipment-data-table'
+export { getEquipmentColumns } from './equipment-columns'
+export { DataTableFacetedFilter } from './data-table-faceted-filter'

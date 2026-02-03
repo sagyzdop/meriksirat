@@ -3,9 +3,6 @@ import { BookingDataTable } from "./components/booking-data-table"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import { Link } from "@tanstack/react-router"
 
 interface Pagination {
   page: number
@@ -45,14 +42,6 @@ export function Page({ bookings, pagination, filters }: PageProps) {
       <PageHeader 
         title="Manage Bookings"
         description={description}
-        actions={
-          <Button asChild>
-            <Link to="/admin/bookings/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Booking
-            </Link>
-          </Button>
-        }
       />
       <BookingDataTable 
         data={bookings} 

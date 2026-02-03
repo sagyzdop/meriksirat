@@ -1,18 +1,43 @@
 
-import { bookingColumns } from "./components/booking-columns"
+import { getBookingColumns } from "./components/booking-columns"
 import { BookingDataTable } from "./components/booking-data-table"
 import { BookingWithEquipment } from "@/lib/booking/types"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 
-interface PageProps {
-  bookings: BookingWithEquipment[]
+interface Pagination {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
 }
 
-export function Page({ bookings }: PageProps) {
-  const description = bookings.length > 0 
-    ? `You have ${bookings.length} booking${bookings.length === 1 ? '' : 's'}`
+interface Filters {
+  status?: 'booked' | 'active' | 'returned' | 'cancelled' | 'overdue'
+  equipmentId?: number
+  startDate?: string
+  endDate?: string
+  page: number
+  limit: number
+  sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt'
+  sortOrder: 'asc' | 'desc'
+}
+
+interface PageProps {
+  bookings: BookingWithEquipment[]
+  pagination: Pagination
+  filters: Filters
+  telegramBotUsername: string
+}
+
+export function Page({ bookings, pagination, filters, telegramBotUsername }: PageProps) {
+  const description = pagination.total > 0 
+    ? `You have ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
     : "No bookings found"
+
+  const columns = getBookingColumns()
 
   return (
     <PageContainer>
@@ -20,7 +45,13 @@ export function Page({ bookings }: PageProps) {
         title="My Bookings"
         description={description}
       />
-      <BookingDataTable data={bookings} columns={bookingColumns} />
+      <BookingDataTable 
+        data={bookings}
+        pagination={pagination}
+        filters={filters}
+        columns={columns}
+        telegramBotUsername={telegramBotUsername}
+      />
     </PageContainer>
   )
 }

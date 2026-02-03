@@ -13,6 +13,15 @@ import {
 } from '../types'
 
 /**
+ * Get Telegram bot username from environment
+ */
+export const getTelegramBotUsernameFn = createServerFn({ method: 'GET' })
+  .handler(async () => {
+    const { env } = await import('cloudflare:workers')
+    return env.TELEGRAM_BOT_USERNAME
+  })
+
+/**
  * bookingFlow: performs a full booking + calendar event creation in a single server function.
  * Uses the master account to create events in equipment-specific calendars with user as attendee.
  */
@@ -168,7 +177,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, equipment } = await import('@/db/schema')
-    const { eq, and, sql } = await import('drizzle-orm')
+    const { eq, and, sql, asc, desc } = await import('drizzle-orm')
     
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({ headers })
@@ -212,6 +221,16 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
     const totalPages = Math.ceil(total / data.limit)
     const offset = (data.page - 1) * data.limit
 
+    // Apply sorting
+    const sortColumn = {
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      status: booking.status,
+      createdAt: booking.createdAt,
+    }[data.sortBy]
+    
+    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : desc(booking.startTime)
+
     // Get paginated bookings list
     const bookingsList = await database
       .select({
@@ -235,7 +254,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
       .from(booking)
       .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
       .where(whereClause)
-      .orderBy(booking.startTime)
+      .orderBy(orderBy)
       .limit(data.limit)
       .offset(offset)
 
@@ -290,6 +309,7 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
           modelName: equipment.modelName,
           description: equipment.description,
           categoryId: equipment.categoryId,
+          googleCalendarId: equipment.googleCalendarId,
         },
       })
       .from(booking)

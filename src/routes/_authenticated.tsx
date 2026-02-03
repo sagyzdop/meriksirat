@@ -31,6 +31,7 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
   const router = useRouter()
+  const { user } = Route.useRouteContext()
 
   const handleLogout = async () => {
     await authClient.signOut()
@@ -40,10 +41,10 @@ function AuthenticatedLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar onLogout={handleLogout} />
-      <SidebarInset>
-        <SiteHeader onLogout={handleLogout} />
-        <div className="flex flex-col flex-1 px-4 py-8">
+      <AppSidebar user={user} onLogout={handleLogout} />
+      <SidebarInset className="min-w-0">
+        <SiteHeader />
+        <div className="flex flex-col flex-1 px-4 py-8 min-w-0">
           <Outlet />
         </div>
       </SidebarInset>

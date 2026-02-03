@@ -10,7 +10,7 @@ const searchSchema = z.object({
   search: z.string().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(10),
-  sortBy: z.enum(['name', 'email', 'role', 'status', 'clearanceLevel', 'createdAt']).default('name'),
+  sortBy: z.enum(['firstName', 'lastName', 'email', 'role', 'status', 'clearanceLevel', 'createdAt']).default('firstName'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
 })
 

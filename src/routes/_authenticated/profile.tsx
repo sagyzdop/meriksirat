@@ -6,7 +6,9 @@ export const Route = createFileRoute('/_authenticated/profile')({
   component: RouteComponent,
   loader: async () => {
     const user = await getUserFn();
-    return { user: user || undefined };
+    return { 
+      user: user || undefined,
+    };
   },
 })
 

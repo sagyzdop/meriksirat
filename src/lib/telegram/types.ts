@@ -5,6 +5,62 @@
  * This file is safe for both client and server-side imports.
  */
 
+// ============================================================================
+// TELEGRAM BOT API TYPES
+// Based on https://core.telegram.org/bots/api
+// ============================================================================
+
+export interface Update {
+  update_id: number
+  message?: Message
+  callback_query?: CallbackQuery
+}
+
+export interface Message {
+  message_id: number
+  from?: User
+  chat: Chat
+  date: number
+  text?: string
+  photo?: PhotoSize[]
+}
+
+export interface CallbackQuery {
+  id: string
+  from: User
+  message?: Message
+  data?: string
+}
+
+export interface User {
+  id: number
+  is_bot: boolean
+  first_name: string
+  last_name?: string
+  username?: string
+}
+
+export interface Chat {
+  id: number
+  type: 'private' | 'group' | 'supergroup' | 'channel'
+  title?: string
+  username?: string
+  first_name?: string
+  last_name?: string
+}
+
+export interface PhotoSize {
+  file_id: string
+  file_unique_id: string
+  width: number
+  height: number
+  file_size?: number
+}
+
+// ============================================================================
+// APPLICATION TYPES
+// ============================================================================
+
 /**
  * Booking status constants
  */
