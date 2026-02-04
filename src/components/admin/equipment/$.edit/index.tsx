@@ -134,8 +134,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
             }
           })
           setSuccess(`Equipment "${data.modelName}" updated successfully with new image!`)
-        } catch (uploadError) {
-          console.error('Image upload failed:', uploadError)
+        } catch {
           setSuccess(`Equipment "${data.modelName}" updated successfully, but image upload failed. You can try uploading the image again.`)
         } finally {
           setIsUploadingImage(false)
@@ -148,7 +147,6 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
         navigate({ to: '/admin/equipment' })
       }, 1500)
     } catch (error) {
-      console.error('Failed to update equipment:', error)
       setError(error instanceof Error ? error.message : 'Failed to update equipment. Please try again.')
     } finally {
       setIsSubmitting(false)
@@ -179,7 +177,6 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
         }, 1500)
       }
     } catch (error) {
-      console.error('Failed to delete equipment:', error)
       setError(error instanceof Error ? error.message : 'Failed to delete equipment. Please try again.')
     } finally {
       setIsDeleting(false)

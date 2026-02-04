@@ -11,6 +11,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { useNavigate } from "@tanstack/react-router"
+import { useDebounce } from "@/hooks/use-debounce"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
+import { DataTableLoading } from "@/components/data-table/data-table-loading"
 import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { EquipmentWithCategory } from "@/lib/equipment"
 
@@ -49,11 +51,11 @@ interface Pagination {
 }
 
 interface Filters {
-  categoryId?: number
+  categoryIds?: number[]
   searchQuery?: string
   minClearanceLevel?: number
   maxClearanceLevel?: number
-  isActive?: boolean
+  isActive?: boolean[]
   page: number
   limit: number
   sortBy: 'modelName' | 'category' | 'requiredClearanceLevel' | 'isActive' | 'createdAt'
@@ -63,8 +65,10 @@ interface Filters {
 interface EquipmentDataTableProps {
   columns: ColumnDef<EquipmentWithCategory>[]
   data: EquipmentWithCategory[]
+  categories: { id: number; name: string; sortOrder: number | null }[]
   pagination: Pagination
   filters: Filters
+  isLoading?: boolean
 }
 
 // Static filter options - in a real app, categories would be fetched from the server
@@ -73,52 +77,65 @@ const statusOptions = [
   { value: "false", label: "Inactive" },
 ]
 
-export function EquipmentDataTable({ columns, data, pagination, filters }: EquipmentDataTableProps) {
+export function EquipmentDataTable({ columns, data, categories, pagination, filters, isLoading = false }: EquipmentDataTableProps) {
   const navigate = useNavigate()
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  
+  const searchQueryValue = filters.searchQuery || ""
+  const [localSearchValue, setLocalSearchValue] = React.useState(searchQueryValue)
+  const debouncedSearchValue = useDebounce(localSearchValue, 300)
+  const filtersRef = React.useRef(filters)
+
+  React.useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
+
+  // Trigger search change when debounced value changes
+  React.useEffect(() => {
+    if (debouncedSearchValue === searchQueryValue) return
+    const currentFilters = filtersRef.current
+    navigate({
+      to: '.',
+      search: {
+        ...currentFilters,
+        searchQuery: debouncedSearchValue || undefined,
+        page: 1,
+      },
+    })
+  }, [debouncedSearchValue, searchQueryValue, navigate])
+
+  // Update local value when searchQuery prop changes (e.g., on page navigation)
+  React.useEffect(() => {
+    setLocalSearchValue(searchQueryValue)
+  }, [searchQueryValue])
+
   // Controlled sorting state - sync with URL params
   const [sorting, setSorting] = React.useState<SortingState>([{
     id: filters.sortBy,
     desc: filters.sortOrder === 'desc'
   }])
 
-  // Get unique categories from the data for filtering
+  // Get category options for filtering from pre-fetched categories
   const categoryOptions = React.useMemo(() => {
-    const uniqueCategories = new Map<string, { name: string; sortOrder: number }>()
-    
-    data.forEach(equipment => {
-      if (equipment.category) {
-        uniqueCategories.set(equipment.categoryId!.toString(), {
-          name: equipment.category.name,
-          sortOrder: equipment.category.sortOrder ?? 0
-        })
-      }
-    })
-    
-    // Convert to array and sort by sortOrder
-    const sortedCategories = Array.from(uniqueCategories.entries())
-      .map(([value, data]) => ({
-        value,
-        label: data.name,
-        sortOrder: data.sortOrder
-      }))
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-    
-    // Add uncategorized option at the end if there are items without categories
+    const options = categories.map(cat => ({
+      value: cat.id.toString(),
+      label: cat.name,
+      sortOrder: cat.sortOrder ?? 0
+    })).sort((a, b) => a.sortOrder - b.sortOrder)
+
+    // Add uncategorized option if there's any equipment without category
     const hasUncategorized = data.some(equipment => !equipment.category)
     if (hasUncategorized) {
-      sortedCategories.push({
+      options.push({
         value: "null",
         label: "Uncategorized",
         sortOrder: Number.MAX_SAFE_INTEGER
       })
     }
-    
-    return sortedCategories.map(({ value, label }) => ({ value, label }))
-  }, [data])
+
+    return options.map(({ value, label }) => ({ value, label }))
+  }, [categories, data])
 
   // Sync sorting state with URL params when they change
   React.useEffect(() => {
@@ -135,22 +152,22 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
       id: filters.sortBy,
       desc: filters.sortOrder === 'desc'
     }]
-    
+
     const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
-    
+
     if (newSorting.length > 0) {
       const sort = newSorting[0]
       navigate({
         to: '.',
-        search: (prev) => ({
-          ...prev,
+        search: {
+          ...filters,
           sortBy: sort.id as any,
-          sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
+          sortOrder: sort.desc ? 'desc' : 'asc',
           page: 1,
-        }),
+        },
       })
     }
-  }, [filters.sortBy, filters.sortOrder, navigate])
+  }, [filters, navigate])
 
   const table = useReactTable({
     data,
@@ -180,57 +197,32 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
-  // Handle search input changes
-  const handleSearchChange = React.useCallback((value: string) => {
-    const newFilters = { ...filters }
-    if (value) {
-      newFilters.searchQuery = value
-    } else {
-      delete newFilters.searchQuery
-    }
-    newFilters.page = 1 // Reset to first page
-    
-    navigate({
-      to: '/admin/equipment',
-      search: newFilters,
-    })
-  }, [filters, navigate])
-
   // Handle filter changes
   const handleFilterChange = React.useCallback((filterId: string, value: string[] | undefined) => {
-    const newFilters = { ...filters }
-    
+    const newFilters = { ...filters };
+
     if (filterId === 'category') {
-      if (value && value.length > 0) {
-        const categoryId = value[0] === "null" ? undefined : parseInt(value[0])
-        if (categoryId) {
-          newFilters.categoryId = categoryId
-        } else {
-          delete newFilters.categoryId
-        }
-      } else {
-        delete newFilters.categoryId
-      }
+      const categoryIds = value && value.length > 0
+        ? value.filter(v => v !== "null").map(v => parseInt(v))
+        : undefined
+      newFilters.categoryIds = categoryIds && categoryIds.length > 0 ? categoryIds : undefined
     } else if (filterId === 'isActive') {
-      if (value && value.length > 0) {
-        newFilters.isActive = value[0] === "true"
-      } else {
-        delete newFilters.isActive
-      }
+      newFilters.isActive = (value && value.length > 0) ? value.map(v => v === "true") : undefined
     }
-    
-    newFilters.page = 1 // Reset to first page
-    
+
     navigate({
-      to: '/admin/equipment',
-      search: newFilters,
+      to: '.',
+      search: {
+        ...newFilters,
+        page: 1,
+      },
     })
   }, [filters, navigate])
 
   // Handle pagination changes
   const handlePageChange = React.useCallback((newPage: number) => {
     navigate({
-      to: '/admin/equipment',
+      to: '.',
       search: { ...filters, page: newPage },
     })
   }, [filters, navigate])
@@ -238,16 +230,16 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
   // Handle page size changes
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     navigate({
-      to: '/admin/equipment',
+      to: '.',
       search: { ...filters, limit: newPageSize, page: 1 },
     })
   }, [filters, navigate])
 
-  const isFiltered = filters.categoryId || filters.isActive !== undefined || filters.searchQuery
+  const isFiltered = (filters.categoryIds && filters.categoryIds.length > 0) || (filters.isActive && filters.isActive.length > 0) || filters.searchQuery
 
   const clearAllFilters = React.useCallback(() => {
     navigate({
-      to: '/admin/equipment',
+      to: '.',
       search: {
         page: 1,
         limit: filters.limit,
@@ -264,8 +256,8 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-1">
           <Input
             placeholder="Search equipment by name or description..."
-            value={filters.searchQuery || ""}
-            onChange={(event) => handleSearchChange(event.target.value)}
+            value={localSearchValue}
+            onChange={(event) => setLocalSearchValue(event.target.value)}
             className="h-8 w-full sm:w-[200px] lg:w-[300px]"
           />
           <div className="flex flex-wrap gap-2">
@@ -273,14 +265,14 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
               <DataTableFacetedFilter
                 title="Category"
                 options={categoryOptions}
-                selectedValues={filters.categoryId ? [filters.categoryId.toString()] : []}
+                selectedValues={filters.categoryIds ? filters.categoryIds.map(id => id.toString()) : []}
                 onSelectionChange={(values) => handleFilterChange('category', values)}
               />
             )}
             <DataTableFacetedFilter
               title="Status"
               options={statusOptions}
-              selectedValues={filters.isActive !== undefined ? [filters.isActive.toString()] : []}
+              selectedValues={filters.isActive ? filters.isActive.map(v => v.toString()) : []}
               onSelectionChange={(values) => handleFilterChange('isActive', values)}
             />
             {isFiltered && (
@@ -324,9 +316,10 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
           </DropdownMenu>
         </div>
       </div>
-      
+
       {/* Table with horizontal scroll on small screens */}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="relative rounded-md border overflow-x-auto">
+        {isLoading && <DataTableLoading />}
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -337,9 +330,9 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -376,7 +369,7 @@ export function EquipmentDataTable({ columns, data, pagination, filters }: Equip
           </TableBody>
         </Table>
       </div>
-      
+
       {/* Pagination - Responsive layout */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">

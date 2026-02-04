@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ArrowUpDown, MoreHorizontal, Edit, Calendar, AlertCircle, Trash } from "lucide-react"
 import { format, isPast } from "date-fns"
-import { Link } from "@tanstack/react-router"
+import { Link, useRouter } from "@tanstack/react-router"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
 import { DeleteBookingDialog } from "./delete-booking-dialog"
@@ -55,13 +55,13 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     cell: ({ row }) => {
       const booking = row.original
       const user = booking.user
-      
+
       if (!user) {
         return <span className="text-muted-foreground">Unknown User</span>
       }
-      
+
       const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'No name'
-      
+
       return (
         <div className="flex flex-col max-w-[200px]">
           <span className="font-medium truncate">{displayName}</span>
@@ -78,11 +78,11 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     cell: ({ row }) => {
       const booking = row.original
       const equipment = booking.equipment
-      
+
       if (!equipment) {
         return <span className="text-muted-foreground">Unknown Equipment</span>
       }
-      
+
       return (
         <div className="flex flex-col">
           <span className="font-medium">{equipment.modelName}</span>
@@ -110,7 +110,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     cell: ({ row }) => {
       const startTime = row.getValue("startTime") as Date
       if (!startTime) return <span className="text-muted-foreground">No date</span>
-      
+
       return (
         <div className="flex flex-col">
           <span className="font-medium">
@@ -139,10 +139,10 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
       const booking = row.original
       const endTime = row.getValue("endTime") as Date
       if (!endTime) return <span className="text-muted-foreground">No date</span>
-      
-      const isOverdue = isPast(new Date(endTime)) && 
+
+      const isOverdue = isPast(new Date(endTime)) &&
         (booking.status === 'booked' || booking.status === 'active')
-      
+
       return (
         <div className="flex flex-col">
           <span className={cn(
@@ -177,14 +177,14 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     cell: ({ row }) => {
       const booking = row.original
       const status = row.getValue("status") as keyof typeof statusConfig
-      
+
       // Check if booking is actually overdue (past end time and not returned/cancelled)
-      const isOverdue = isPast(new Date(booking.endTime)) && 
+      const isOverdue = isPast(new Date(booking.endTime)) &&
         (status === 'booked' || status === 'active')
-      
+
       const displayStatus = isOverdue ? 'overdue' : status
       const config = statusConfig[displayStatus] || statusConfig.booked
-      
+
       return (
         <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
           {isOverdue && <AlertCircle className="h-3 w-3" />}
@@ -211,7 +211,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     cell: ({ row }) => {
       const createdAt = row.getValue("createdAt") as Date
       if (!createdAt) return <span className="text-muted-foreground">No date</span>
-      
+
       return (
         <div className="flex flex-col">
           <span className="font-medium">
@@ -230,6 +230,8 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     cell: ({ row }) => {
       const booking = row.original
       const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+      const router = useRouter()
+
 
       return (
         <>
@@ -256,8 +258,8 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link 
-                  to="/admin/bookings/$bookingId/edit" 
+                <Link
+                  to="/admin/bookings/$bookingId/edit"
                   params={{ bookingId: booking.id.toString() }}
                   className="flex items-center"
                 >
@@ -268,8 +270,8 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
 
               {booking.equipment?.id && (
                 <DropdownMenuItem asChild>
-                  <Link 
-                    to="/equipment/$" 
+                  <Link
+                    to="/equipment/$"
                     params={{ _splat: booking.equipment.id.toString() }}
                     className="flex items-center"
                   >
@@ -294,9 +296,9 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
             open={deleteDialogOpen}
             onOpenChange={setDeleteDialogOpen}
             onSuccess={() => {
-              // Refresh the page or update the data
-              window.location.reload()
+              router.invalidate()
             }}
+
           />
         </>
       )

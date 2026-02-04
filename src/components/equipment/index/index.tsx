@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { LayoutGrid, Table2 } from "lucide-react";
@@ -7,6 +8,8 @@ import { getEquipmentColumns } from "./components/equipment-columns";
 import { EquipmentDataTable } from "./components/equipment-data-table";
 import { EquipmentGrid } from "./components/equipment-grid";
 import { Equipment } from "./components/types";
+import { EquipmentToolbar } from "./components/equipment-toolbar";
+import { EquipmentPagination } from "./components/equipment-pagination";
 
 
 interface Pagination {
@@ -19,7 +22,7 @@ interface Pagination {
 }
 
 interface Filters {
-  categoryId?: number
+  categoryIds?: number[]
   searchQuery?: string
   page: number
   limit: number
@@ -30,47 +33,28 @@ interface Filters {
 
 interface PageProps {
   equipment: Equipment[]
+  categories: { id: number; name: string; sortOrder: number | null }[]
   pagination: Pagination
   filters: Filters
   onViewModeChange: (mode: 'table' | 'grid') => void
+  isLoading?: boolean
 }
 
-export function Page({ equipment, pagination, filters, onViewModeChange }: PageProps) {
+export function Page({ equipment, categories, pagination, filters, onViewModeChange, isLoading = false }: PageProps) {
+  const navigate = useNavigate()
 
   // Get category options for filtering
   const categoryOptions = useMemo(() => {
-    const uniqueCategories = new Map<string, { name: string; sortOrder: number }>();
+    const options = categories.map(cat => ({
+      value: cat.id.toString(),
+      label: cat.name,
+      sortOrder: cat.sortOrder ?? 0
+    })).sort((a, b) => a.sortOrder - b.sortOrder);
 
-    equipment.forEach(eq => {
-      if (eq.category) {
-        uniqueCategories.set(eq.categoryId!.toString(), {
-          name: eq.category.name,
-          sortOrder: eq.category.sortOrder ?? 0
-        });
-      }
-    });
-
-    // Convert to array and sort by sortOrder
-    const sortedCategories = Array.from(uniqueCategories.entries())
-      .map(([value, data]) => ({
-        value,
-        label: data.name,
-        sortOrder: data.sortOrder
-      }))
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-
-    // Add uncategorized option at the end if there are items without categories
-    const hasUncategorized = equipment.some(eq => !eq.category);
-    if (hasUncategorized) {
-      sortedCategories.push({
-        value: "null",
-        label: "Uncategorized",
-        sortOrder: Number.MAX_SAFE_INTEGER
-      });
-    }
-
-    return sortedCategories.map(({ value, label }) => ({ value, label }));
-  }, [equipment]);
+    // Add uncategorized option if there's any equipment without category
+    // (Optional: handle this if needed, but categories usually covers everything)
+    return options.map(({ value, label }) => ({ value, label }));
+  }, [categories]);
 
   // Get columns for table view
   const columns = useMemo(() => getEquipmentColumns(), []);
@@ -82,8 +66,61 @@ export function Page({ equipment, pagination, filters, onViewModeChange }: PageP
     ? `Showing ${equipment.length} of ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
     : "No equipment found"
 
+  const handleSearchChange = (value: string) => {
+    navigate({
+      to: '.',
+      search: {
+        ...filters,
+        searchQuery: value || undefined,
+        page: 1,
+      },
+    })
+  }
+
+  const handleCategoryChange = (values: string[] | undefined) => {
+    const categoryIds = values && values.length > 0
+      ? values.filter(v => v !== "null").map(v => parseInt(v))
+      : undefined
+
+    navigate({
+      to: '.',
+      search: {
+        ...filters,
+        categoryIds: categoryIds && categoryIds.length > 0 ? categoryIds : undefined,
+        page: 1,
+      },
+    })
+  }
+
+  const handleReset = () => {
+    navigate({
+      to: '.',
+      search: {
+        page: 1,
+        limit: filters.limit,
+        sortBy: 'modelName',
+        sortOrder: 'asc',
+        viewMode: filters.viewMode
+      },
+    })
+  }
+
+  const handlePageChange = (newPage: number) => {
+    navigate({
+      to: '.',
+      search: { ...filters, page: newPage },
+    })
+  }
+
+  const handleLimitChange = (newLimit: number) => {
+    navigate({
+      to: '.',
+      search: { ...filters, limit: newLimit, page: 1 },
+    })
+  }
+
   return (
-    <PageContainer>
+    <PageContainer className="space-y-6">
       <PageHeader
         title="Equipment"
         description={description}
@@ -111,6 +148,15 @@ export function Page({ equipment, pagination, filters, onViewModeChange }: PageP
         }
       />
 
+      <EquipmentToolbar
+        searchQuery={filters.searchQuery}
+        onSearchChange={handleSearchChange}
+        categoryOptions={categoryOptions}
+        categoryIds={filters.categoryIds}
+        onCategoryChange={handleCategoryChange}
+        onReset={handleReset}
+      />
+
       {/* Table View */}
       {viewMode === "table" && (
         <EquipmentDataTable
@@ -118,7 +164,7 @@ export function Page({ equipment, pagination, filters, onViewModeChange }: PageP
           data={equipment}
           pagination={pagination}
           filters={filters}
-          categoryOptions={categoryOptions}
+          isLoading={isLoading}
         />
       )}
 
@@ -127,9 +173,21 @@ export function Page({ equipment, pagination, filters, onViewModeChange }: PageP
         <EquipmentGrid
           equipment={equipment}
           viewMode="grid"
-          hasActiveFilters={!!filters.categoryId || !!filters.searchQuery}
+          hasActiveFilters={(filters.categoryIds && filters.categoryIds.length > 0) || !!filters.searchQuery}
+          isLoading={isLoading}
+          className="pt-6"
         />
       )}
+
+      <EquipmentPagination
+        page={pagination.page}
+        limit={pagination.limit}
+        total={pagination.total}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+      />
     </PageContainer>
   );
 }
+

@@ -84,8 +84,7 @@ export function EquipmentFormDialog({
       if (result) {
         setCategories(result)
       }
-    } catch (error) {
-      console.error("Failed to load categories:", error)
+    } catch {
       toast.error("Failed to load categories")
     } finally {
       setIsLoadingCategories(false)
@@ -153,7 +152,6 @@ export function EquipmentFormDialog({
       form.reset()
       router.invalidate()
     } catch (error) {
-      console.error("Failed to save equipment:", error)
       toast.error(
         error instanceof Error ? error.message : "Failed to save equipment"
       )

@@ -17,9 +17,10 @@ import { Label } from "@/components/ui/label";
 export function FilterSection() {
   const {
     categories,
-    selectedCategoryId,
+    selectedCategoryIds,
     selectedAvailability,
-    setSelectedCategoryId,
+    toggleCategoryId,
+    setSelectedCategoryIds,
     setSelectedAvailability,
     clearFilters,
   } = useEquipmentStore();
@@ -27,8 +28,8 @@ export function FilterSection() {
   const isMobile = useIsMobile();
 
   // Count active filters
-  const activeFilterCount = 
-    (selectedCategoryId ? 1 : 0) + 
+  const activeFilterCount =
+    selectedCategoryIds.length +
     (selectedAvailability !== 'all' ? 1 : 0);
 
   const hasActiveFilters = activeFilterCount > 0;
@@ -38,14 +39,14 @@ export function FilterSection() {
     <div className="space-y-6">
       {/* Category Filter */}
       <div className="space-y-4">
-        <Label className="text-sm font-semibold">Category</Label>
+        <Label className="text-sm font-semibold">Categories</Label>
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="category-all"
-              checked={selectedCategoryId === ""}
+              checked={selectedCategoryIds.length === 0}
               onCheckedChange={(checked) => {
-                if (checked) setSelectedCategoryId("");
+                if (checked) setSelectedCategoryIds([]);
               }}
             />
             <label
@@ -58,22 +59,20 @@ export function FilterSection() {
           {[...categories]
             .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
             .map((category) => (
-            <div key={category.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={`category-${category.id}`}
-                checked={selectedCategoryId === category.id.toString()}
-                onCheckedChange={(checked) => {
-                  if (checked) setSelectedCategoryId(category.id.toString());
-                }}
-              />
-              <label
-                htmlFor={`category-${category.id}`}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                {category.name}
-              </label>
-            </div>
-          ))}
+              <div key={category.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`category-${category.id}`}
+                  checked={selectedCategoryIds.includes(category.id.toString())}
+                  onCheckedChange={() => toggleCategoryId(category.id.toString())}
+                />
+                <label
+                  htmlFor={`category-${category.id}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  {category.name}
+                </label>
+              </div>
+            ))}
         </div>
       </div>
 

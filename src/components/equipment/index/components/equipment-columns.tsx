@@ -24,11 +24,11 @@ export function getEquipmentColumns(): ColumnDef<Equipment>[] {
         const imageUrl = equipment.imagePath ? `/api/images/${equipment.imagePath}` : placeholderImage
         
         return (
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center min-w-12">
             <img
               src={imageUrl}
               alt={equipment.modelName}
-              className="h-12 w-12 rounded-md object-cover"
+              className="h-12 w-12 rounded-md object-cover shrink-0"
               onError={(e) => {
                 e.currentTarget.src = placeholderImage
               }}

@@ -159,24 +159,31 @@ export const telegramLinkTokenRelations = relations(
 
 // Equipment Catalog Releated Tables
 
-export const equipment = sqliteTable('equipment', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  modelName: text('model_name').notNull(),
-  shortName: text('short_name'),
-  description: text('description'),
-  categoryId: integer('category_id').references(() => category.id),
-  googleCalendarId: text('gcal_id').notNull().unique(), // Dedicated Google calendar per equipment
-  requiredClearanceLevel: integer('required_clearance_level').default(1),
-  imagePath: text('image_path'), // R2 path: equipment-images/{id}.jpg
-  isActive: integer('is_active', { mode: 'boolean' }).default(true),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-})
+export const equipment = sqliteTable(
+  'equipment',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    modelName: text('model_name').notNull(),
+    shortName: text('short_name'),
+    description: text('description'),
+    categoryId: integer('category_id').references(() => category.id),
+    googleCalendarId: text('gcal_id').notNull().unique(), // Dedicated Google calendar per equipment
+    requiredClearanceLevel: integer('required_clearance_level').default(1),
+    imagePath: text('image_path'), // R2 path: equipment-images/{id}.jpg
+    isActive: integer('is_active', { mode: 'boolean' }).default(true),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('equipment_categoryId_idx').on(table.categoryId),
+    index('equipment_isActive_idx').on(table.isActive),
+  ]
+)
 
 export const equipmentRelations = relations(equipment, ({ one, many }) => ({
   category: one(category, {
@@ -206,31 +213,41 @@ export const categoryRelations = relations(category, ({ many }) => ({
 
 // Bookings Table
 
-export const booking = sqliteTable('booking', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: text('user_id')
-    .notNull()
-    .references(() => user.id),
-  equipmentId: integer('equipment_id')
-    .notNull()
-    .references(() => equipment.id),
-  startTime: integer('start_time', { mode: 'timestamp_ms' }).notNull(),
-  endTime: integer('end_time', { mode: 'timestamp_ms' }).notNull(),
-  status: text('status', {
-    enum: ['booked', 'active', 'returned', 'cancelled', 'overdue'],
-  })
-    .notNull()
-    .default('booked'),
-  googleCalendarEventId: text('gcal_event_id'), // Google Calendar event ID
-  userEventDetails: text('user_event_details'), // User-provided booking notes
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-})
+export const booking = sqliteTable(
+  'booking',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id),
+    equipmentId: integer('equipment_id')
+      .notNull()
+      .references(() => equipment.id),
+    startTime: integer('start_time', { mode: 'timestamp_ms' }).notNull(),
+    endTime: integer('end_time', { mode: 'timestamp_ms' }).notNull(),
+    status: text('status', {
+      enum: ['booked', 'active', 'returned', 'cancelled', 'overdue'],
+    })
+      .notNull()
+      .default('booked'),
+    googleCalendarEventId: text('gcal_event_id'), // Google Calendar event ID
+    userEventDetails: text('user_event_details'), // User-provided booking notes
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('booking_userId_idx').on(table.userId),
+    index('booking_equipmentId_idx').on(table.equipmentId),
+    index('booking_status_idx').on(table.status),
+    index('booking_startTime_idx').on(table.startTime),
+    index('booking_endTime_idx').on(table.endTime),
+  ]
+)
 
 export const bookingRelations = relations(booking, ({ one }) => ({
   user: one(user, {

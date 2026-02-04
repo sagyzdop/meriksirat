@@ -82,7 +82,7 @@ export interface BookingLogData {
   userId: string
   userName: string
   equipmentName: string
-  action: 'created' | 'updated' | 'cancelled' | 'returned'
+  action: 'created' | 'updated' | 'cancelled' | 'returned' | 'deleted'
   startTime?: Date
   endTime?: Date
   notes?: string | null

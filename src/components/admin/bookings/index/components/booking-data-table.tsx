@@ -13,7 +13,6 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -36,11 +35,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
-import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
-import { isPast, format as formatDate } from "date-fns"
-import { DatePicker } from "@/components/ui/date-picker"
+import { isPast } from "date-fns"
 
 interface Pagination {
   page: number
@@ -52,12 +50,7 @@ interface Pagination {
 }
 
 interface Filters {
-  status?: 'booked' | 'active' | 'returned' | 'cancelled' | 'overdue'
-  userId?: string
-  equipmentId?: number
-  startDate?: string
-  endDate?: string
-  search?: string
+  status?: string[]
   page: number
   limit: number
   sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt'
@@ -84,7 +77,7 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  
+
   // Controlled sorting state - sync with URL params
   const [sorting, setSorting] = React.useState<SortingState>([{
     id: filters.sortBy,
@@ -93,8 +86,8 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
 
   // Count overdue bookings in current data
   const overdueCount = React.useMemo(() => {
-    return data.filter(booking => 
-      isPast(new Date(booking.endTime)) && 
+    return data.filter(booking =>
+      isPast(new Date(booking.endTime)) &&
       (booking.status === 'booked' || booking.status === 'active')
     ).length
   }, [data])
@@ -114,22 +107,22 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
       id: filters.sortBy,
       desc: filters.sortOrder === 'desc'
     }]
-    
+
     const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
-    
+
     if (newSorting.length > 0) {
       const sort = newSorting[0]
       navigate({
         to: '.',
-        search: (prev) => ({
-          ...prev,
+        search: {
+          ...filters,
           sortBy: sort.id as any,
-          sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
+          sortOrder: sort.desc ? 'desc' : 'asc',
           page: 1,
-        }),
+        },
       })
     }
-  }, [filters.sortBy, filters.sortOrder, navigate])
+  }, [filters, navigate])
 
   const table = useReactTable({
     data,
@@ -159,64 +152,28 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
-  // Handle search input changes
-  const handleSearchChange = React.useCallback((value: string) => {
-    const newFilters = { ...filters }
-    if (value) {
-      newFilters.search = value
-    } else {
-      delete newFilters.search
-    }
-    newFilters.page = 1 // Reset to first page
-    
-    navigate({
-      to: '/admin/bookings',
-      search: newFilters,
-    })
-  }, [filters, navigate])
+
 
   // Handle filter changes
   const handleFilterChange = React.useCallback((filterId: string, values: string[] | undefined) => {
-    const newFilters = { ...filters }
-    
     if (filterId === 'status') {
-      if (values && values.length > 0) {
-        newFilters.status = values[0] as any
-      } else {
-        delete newFilters.status
-      }
+      navigate({
+        to: '.',
+        search: {
+          ...filters,
+          status: (values && values.length > 0) ? values : undefined,
+          page: 1,
+        },
+      })
     }
-    
-    newFilters.page = 1 // Reset to first page
-    
-    navigate({
-      to: '/admin/bookings',
-      search: newFilters,
-    })
   }, [filters, navigate])
 
-  // Handle date range filters
-  const handleDateFilterChange = React.useCallback((type: 'startDate' | 'endDate', value: Date | undefined) => {
-    const newFilters = { ...filters }
-    
-    if (value) {
-      newFilters[type] = formatDate(value, 'yyyy-MM-dd')
-    } else {
-      delete newFilters[type]
-    }
-    
-    newFilters.page = 1 // Reset to first page
-    
-    navigate({
-      to: '/admin/bookings',
-      search: newFilters,
-    })
-  }, [filters, navigate])
+
 
   // Handle pagination changes
   const handlePageChange = React.useCallback((newPage: number) => {
     navigate({
-      to: '/admin/bookings',
+      to: '.',
       search: { ...filters, page: newPage },
     })
   }, [filters, navigate])
@@ -224,16 +181,16 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
   // Handle page size changes
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     navigate({
-      to: '/admin/bookings',
+      to: '.',
       search: { ...filters, limit: newPageSize, page: 1 },
     })
   }, [filters, navigate])
 
-  const isFiltered = filters.status || filters.search || filters.startDate || filters.endDate
+  const isFiltered = !!filters.status
 
   const clearAllFilters = React.useCallback(() => {
     navigate({
-      to: '/admin/bookings',
+      to: '.',
       search: {
         page: 1,
         limit: filters.limit,
@@ -248,45 +205,26 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
       {overdueCount > 0 && (
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-destructive" />
+            <div className="h-5 w-5 bg-destructive rounded-full flex items-center justify-center">
+              <span className="text-[10px] text-white font-bold">!</span>
+            </div>
             <p className="text-sm font-medium text-destructive">
               {overdueCount} overdue booking{overdueCount === 1 ? '' : 's'} detected on this page
             </p>
           </div>
         </div>
       )}
-      
+
       {/* Filters - Responsive layout */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-1">
-          <Input
-            placeholder="Search by user, email, or equipment..."
-            value={filters.search || ""}
-            onChange={(event) => handleSearchChange(event.target.value)}
-            className="h-8 w-full sm:w-[200px] lg:w-[300px]"
-          />
           <div className="flex flex-wrap gap-2">
             <DataTableFacetedFilter
               title="Status"
               options={statusOptions}
-              selectedValues={filters.status ? [filters.status] : []}
+              selectedValues={filters.status || []}
               onSelectionChange={(values) => handleFilterChange('status', values)}
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <DatePicker
-                date={filters.startDate ? new Date(filters.startDate) : undefined}
-                onSelect={(date) => handleDateFilterChange('startDate', date)}
-                placeholder="Start date"
-                className="w-full sm:w-[150px]"
-              />
-              <span className="text-sm text-muted-foreground">to</span>
-              <DatePicker
-                date={filters.endDate ? new Date(filters.endDate) : undefined}
-                onSelect={(date) => handleDateFilterChange('endDate', date)}
-                placeholder="End date"
-                className="w-full sm:w-[150px]"
-              />
-            </div>
             {isFiltered && (
               <Button
                 variant="ghost"
@@ -326,7 +264,7 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      
+
       {/* Table with horizontal scroll on small screens */}
       <div className="rounded-md border overflow-x-auto">
         <Table>
@@ -339,9 +277,9 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -352,9 +290,9 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
                 const booking = row.original
-                const isOverdue = isPast(new Date(booking.endTime)) && 
+                const isOverdue = isPast(new Date(booking.endTime)) &&
                   (booking.status === 'booked' || booking.status === 'active')
-                
+
                 return (
                   <TableRow
                     key={row.id}
@@ -387,7 +325,7 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
           </TableBody>
         </Table>
       </div>
-      
+
       {/* Pagination - Responsive layout */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">

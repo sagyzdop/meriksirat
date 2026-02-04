@@ -60,7 +60,6 @@ export function Page({ booking, bookingId }: PageProps) {
         navigate({ to: '/admin/bookings' })
       }, 2000)
     } catch (error) {
-      console.error('Failed to update booking:', error)
       setError(error instanceof Error ? error.message : 'Failed to update booking. Please try again.')
     } finally {
       setIsSubmitting(false)

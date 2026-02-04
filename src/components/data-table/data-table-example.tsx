@@ -130,9 +130,6 @@ export function DataTableExample() {
             </CardContent>
           </Card>
         )}
-        onRowClick={(equipment) => {
-          console.log("Clicked equipment:", equipment.id)
-        }}
       />
 
       {/* Example 3: Loading state */}

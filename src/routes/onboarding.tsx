@@ -7,7 +7,7 @@ export const Route = createFileRoute('/onboarding')({
     const user = await getUserFn()
 
     if (user?.onboardingComplete) {
-      throw redirect({ to: '/dashboard' })
+      throw redirect({ to: '/equipment' })
     }
   },
   component: RouteComponent,

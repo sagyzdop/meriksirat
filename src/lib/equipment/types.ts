@@ -21,11 +21,11 @@ export interface EquipmentWithCategory {
 }
 
 export const EquipmentFiltersSchema = z.object({
-  categoryId: z.coerce.number().optional(),
+  categoryIds: z.array(z.coerce.number()).optional(),
   searchQuery: z.string().optional(),
   minClearanceLevel: z.coerce.number().optional(),
   maxClearanceLevel: z.coerce.number().optional(),
-  isActive: z.boolean().optional().default(true),
+  isActive: z.array(z.boolean()).optional(),
   // Pagination
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(20),
@@ -66,8 +66,8 @@ export const UpdateEquipmentSchema = CreateEquipmentSchema.extend({
   equipmentId: z.number(), // equipmentId is always required
 })
 
-export const DeleteEquipmentSchema = z.object({ 
-  equipmentId: z.number() 
+export const DeleteEquipmentSchema = z.object({
+  equipmentId: z.number()
 })
 
 export const UploadEquipmentImageSchema = z.object({

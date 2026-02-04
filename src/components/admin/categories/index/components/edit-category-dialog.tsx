@@ -66,8 +66,6 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
       // Refresh the page data
       router.invalidate()
     } catch (error) {
-      console.error('Failed to update category:', error)
-      
       if (error instanceof Error) {
         if (error.message.includes('already exists')) {
           setErrors({ name: 'A category with this name already exists' })

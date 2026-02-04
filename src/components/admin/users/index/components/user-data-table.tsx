@@ -10,7 +10,7 @@ import {
   getFacetedUniqueValues,
   useReactTable,
 } from "@tanstack/react-table"
-import { useNavigate } from "@tanstack/react-router"
+import { useNavigate, useRouter } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,20 +37,10 @@ import {
 } from "@/components/ui/select"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
 import { createUserColumns } from "./user-columns"
-import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Shield } from "lucide-react"
+import { BulkEditClearanceDialog } from "./bulk-edit-clearance-dialog"
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: 'user' | 'manager' | 'admin' | null
-  clearanceLevel: number | null
-  status: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated' | null
-  firstName: string | null
-  lastName: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+import { User } from "@/lib/user/types"
 
 interface Pagination {
   page: number
@@ -60,9 +50,9 @@ interface Pagination {
 }
 
 interface Filters {
-  role?: 'user' | 'manager' | 'admin'
-  status?: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated'
-  clearanceLevel?: number
+  role?: string[]
+  status?: string[]
+  clearanceLevel?: number[]
   search?: string
   page: number
   limit: number
@@ -94,25 +84,24 @@ const statusOptions = [
   { value: "Graduated", label: "Graduated" },
 ]
 
-const clearanceLevelOptions = [
-  { value: "1", label: "Level 1" },
-  { value: "2", label: "Level 2" },
-  { value: "3", label: "Level 3" },
-  { value: "4", label: "Level 4" },
-  { value: "5", label: "Level 5" },
-]
+const clearanceLevelOptions = [...Array(10)].map((_, i) => ({
+  value: (i + 1).toString(),
+  label: `Level ${i + 1}`,
+}))
 
-export function UserDataTable({ 
-  columns: providedColumns, 
-  data, 
-  pagination, 
+export function UserDataTable({
+  columns: providedColumns,
+  data,
+  pagination,
   filters
 }: UserDataTableProps) {
   const navigate = useNavigate()
+  const router = useRouter()
   const [rowSelection, setRowSelection] = React.useState({})
+  const [bulkEditClearanceOpen, setBulkEditClearanceOpen] = React.useState(false)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  
+
   // Controlled sorting state - sync with URL params
   const [sorting, setSorting] = React.useState<SortingState>([{
     id: filters.sortBy,
@@ -140,22 +129,22 @@ export function UserDataTable({
       id: filters.sortBy,
       desc: filters.sortOrder === 'desc'
     }]
-    
+
     const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
-    
+
     if (newSorting.length > 0) {
       const sort = newSorting[0]
       navigate({
         to: '.',
-        search: (prev) => ({
-          ...prev,
+        search: {
+          ...filters,
           sortBy: sort.id as any,
-          sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
+          sortOrder: sort.desc ? 'desc' : 'asc',
           page: 1,
-        }),
+        },
       })
     }
-  }, [filters.sortBy, filters.sortOrder, navigate])
+  }, [filters, navigate])
 
   const table = useReactTable({
     data,
@@ -187,56 +176,43 @@ export function UserDataTable({
 
   // Handle search input changes
   const handleSearchChange = React.useCallback((value: string) => {
-    const newFilters = { ...filters }
-    if (value) {
-      newFilters.search = value
-    } else {
-      delete newFilters.search
-    }
-    newFilters.page = 1 // Reset to first page
-    
     navigate({
-      to: '/admin/users',
-      search: newFilters,
+      to: '.',
+      search: {
+        ...filters,
+        search: value || undefined,
+        page: 1,
+      },
     })
   }, [filters, navigate])
 
   // Handle filter changes
   const handleFilterChange = React.useCallback((filterId: string, value: string[] | undefined) => {
-    const newFilters = { ...filters }
-    
-    if (filterId === 'role') {
-      if (value && value.length > 0) {
-        newFilters.role = value[0] as any
-      } else {
-        delete newFilters.role
-      }
-    } else if (filterId === 'status') {
-      if (value && value.length > 0) {
-        newFilters.status = value[0] as any
-      } else {
-        delete newFilters.status
-      }
+    if (filterId === 'role' || filterId === 'status') {
+      navigate({
+        to: '.',
+        search: {
+          ...filters,
+          [filterId]: (value && value.length > 0) ? value : undefined,
+          page: 1,
+        },
+      })
     } else if (filterId === 'clearanceLevel') {
-      if (value && value.length > 0) {
-        newFilters.clearanceLevel = parseInt(value[0])
-      } else {
-        delete newFilters.clearanceLevel
-      }
+      navigate({
+        to: '.',
+        search: {
+          ...filters,
+          clearanceLevel: (value && value.length > 0) ? value.map(Number) : undefined,
+          page: 1,
+        },
+      })
     }
-    
-    newFilters.page = 1 // Reset to first page
-    
-    navigate({
-      to: '/admin/users',
-      search: newFilters,
-    })
   }, [filters, navigate])
 
   // Handle pagination changes
   const handlePageChange = React.useCallback((newPage: number) => {
     navigate({
-      to: '/admin/users',
+      to: '.',
       search: { ...filters, page: newPage },
     })
   }, [filters, navigate])
@@ -244,16 +220,16 @@ export function UserDataTable({
   // Handle page size changes
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     navigate({
-      to: '/admin/users',
+      to: '.',
       search: { ...filters, limit: newPageSize, page: 1 },
     })
   }, [filters, navigate])
 
-  const isFiltered = filters.role || filters.status || filters.clearanceLevel || filters.search
+  const isFiltered = (filters.role && filters.role.length > 0) || (filters.status && filters.status.length > 0) || (filters.clearanceLevel && filters.clearanceLevel.length > 0) || filters.search
 
   const clearAllFilters = React.useCallback(() => {
     navigate({
-      to: '/admin/users',
+      to: '.',
       search: {
         page: 1,
         limit: filters.limit,
@@ -262,6 +238,10 @@ export function UserDataTable({
       },
     })
   }, [filters.limit, navigate])
+
+  const selectedUserIds = React.useMemo(() => {
+    return Object.keys(rowSelection).map(index => data[parseInt(index)]?.id).filter(Boolean)
+  }, [rowSelection, data])
 
   return (
     <div className="space-y-4">
@@ -278,19 +258,19 @@ export function UserDataTable({
             <DataTableFacetedFilter
               title="Role"
               options={roleOptions}
-              selectedValues={filters.role ? [filters.role] : []}
+              selectedValues={filters.role || []}
               onSelectionChange={(values) => handleFilterChange('role', values)}
             />
             <DataTableFacetedFilter
               title="Status"
               options={statusOptions}
-              selectedValues={filters.status ? [filters.status] : []}
+              selectedValues={filters.status || []}
               onSelectionChange={(values) => handleFilterChange('status', values)}
             />
             <DataTableFacetedFilter
               title="Clearance Level"
               options={clearanceLevelOptions}
-              selectedValues={filters.clearanceLevel ? [filters.clearanceLevel.toString()] : []}
+              selectedValues={filters.clearanceLevel ? filters.clearanceLevel.map(String) : []}
               onSelectionChange={(values) => handleFilterChange('clearanceLevel', values)}
             />
             {isFiltered && (
@@ -305,34 +285,47 @@ export function UserDataTable({
             )}
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
-              Columns
+        <div className="flex items-center gap-2">
+          {selectedUserIds.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 border-dashed"
+              onClick={() => setBulkEditClearanceOpen(true)}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Edit Clearance ({selectedUserIds.length})
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-      
+
       {/* Table with horizontal scroll on small screens */}
       <div className="rounded-md border overflow-x-auto">
         <Table>
@@ -345,9 +338,9 @@ export function UserDataTable({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -384,11 +377,11 @@ export function UserDataTable({
           </TableBody>
         </Table>
       </div>
-      
+
       {/* Pagination - Responsive layout */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {selectedUserIds.length} of{" "}
           {pagination.totalCount} row(s) selected.
         </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
@@ -455,6 +448,16 @@ export function UserDataTable({
           </div>
         </div>
       </div>
+
+      <BulkEditClearanceDialog
+        userIds={selectedUserIds}
+        open={bulkEditClearanceOpen}
+        onOpenChange={setBulkEditClearanceOpen}
+        onSuccess={() => {
+          table.resetRowSelection()
+          router.invalidate()
+        }}
+      />
     </div>
   )
 }

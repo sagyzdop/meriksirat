@@ -62,7 +62,7 @@ export function Page({ targetUser, currentUser, userId }: PageProps) {
       })
 
       setSuccess('User updated successfully!')
-      
+
       setTimeout(() => {
         navigate({ to: '/admin/users' })
       }, 1500)
@@ -176,14 +176,14 @@ export function Page({ targetUser, currentUser, userId }: PageProps) {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="user">User</SelectItem>
-                          <SelectItem 
-                            value="manager" 
+                          <SelectItem
+                            value="manager"
                             disabled={!canAssignElevatedRoles}
                           >
                             Manager {!canAssignElevatedRoles && '(Admin Only)'}
                           </SelectItem>
-                          <SelectItem 
-                            value="admin" 
+                          <SelectItem
+                            value="admin"
                             disabled={!canAssignElevatedRoles}
                           >
                             Admin {!canAssignElevatedRoles && '(Admin Only)'}
@@ -201,17 +201,24 @@ export function Page({ targetUser, currentUser, userId }: PageProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Clearance Level</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="10"
-                          placeholder="Enter clearance level (1-10)"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value?.toString()}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select clearance level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {[...Array(10)].map((_, i) => (
+                            <SelectItem key={i} value={(i + 1).toString()}>
+                              {i + 1}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

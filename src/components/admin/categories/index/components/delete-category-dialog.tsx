@@ -45,8 +45,6 @@ export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: 
       // Refresh the page data
       router.invalidate()
     } catch (error) {
-      console.error('Failed to delete category:', error)
-      
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
           toast.error('Category not found')

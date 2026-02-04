@@ -26,12 +26,6 @@ import { withKeyboard } from '../server-utils'
  */
 export async function handleStart(ctx: BotContext): Promise<void> {
   try {
-    console.log('/start command received', {
-      chatId: ctx.chat?.id,
-      username: ctx.from?.username,
-      timestamp: new Date().toISOString()
-    })
-    
     // Ensure we have a message and chat
     if (!ctx.message || !ctx.chat) {
       console.warn('/start: Missing message or chat context')
@@ -43,12 +37,6 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     const messageText = ('text' in ctx.message ? ctx.message.text : '') || ''
     const args = messageText.split(' ')
     const token = args[1] // Token is the second element after /start
-    
-    console.log('/start: Parsed command', {
-      messageText,
-      hasToken: !!token,
-      argsLength: args.length
-    })
     
     // If no token provided, send welcome message with keyboard
     if (!token) {

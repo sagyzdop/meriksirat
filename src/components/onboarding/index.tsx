@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { GalleryVerticalEnd, ExternalLink } from 'lucide-react'
 import { updateUserOnboardingFn, completeTelegramOnboardingFn, getTelegramLinkUrlFn } from '@/lib/auth/onboarding'
 import { cn } from '@/lib/utils'
@@ -32,12 +32,12 @@ export function Page({
   ...props
 }: React.ComponentProps<'div'>) {
   const navigate = useNavigate()
+  const router = useRouter()
   const [step, setStep] = useState<OnboardingStep>('profile')
   const [telegramUrl, setTelegramUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isCheckingTelegram, setIsCheckingTelegram] = useState(false)
-  const [isDevelopment, setIsDevelopment] = useState(false)
-  
+
   const form = useForm<OnboardingForm>({
     resolver: zodResolver(updateOnboardingSchema),
     mode: 'onBlur', // Show validation on blur
@@ -67,18 +67,27 @@ export function Page({
           graduationYear: parseInt(data.graduationYear),
         }
       })
-      
+
       if (result.needsTelegramLink) {
         setStep('telegram')
         // Generate telegram link token
         const tokenResult = await getTelegramLinkUrlFn()
+
+        // Auto-skip in development
+        if (tokenResult.isDevelopment) {
+          await completeTelegramOnboardingFn({ data: { skipTelegram: true } })
+          await router.invalidate() // Invalidate to refresh session
+          await navigate({ to: '/equipment' })
+          return
+        }
+
         if (tokenResult.alreadyLinked) {
           // User already has telegram linked, complete onboarding
           await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
+          await router.invalidate()
           navigate({ to: '/equipment' })
         } else {
           setTelegramUrl(tokenResult.url)
-          setIsDevelopment(tokenResult.isDevelopment)
         }
       }
     } catch (error) {
@@ -90,7 +99,7 @@ export function Page({
   const handleTelegramLink = () => {
     if (telegramUrl) {
       window.open(telegramUrl, '_blank')
-      
+
       // Start checking if telegram is linked
       setIsCheckingTelegram(true)
       checkTelegramStatus()
@@ -100,21 +109,11 @@ export function Page({
   const checkTelegramStatus = async () => {
     try {
       await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
+      await router.invalidate()
       navigate({ to: '/equipment' })
     } catch (error) {
       // Not linked yet, check again in 3 seconds
       setTimeout(checkTelegramStatus, 3000)
-    }
-  }
-
-  const handleSkipTelegram = async () => {
-    // For development when webhook isn't set up
-    try {
-      await completeTelegramOnboardingFn({ data: { skipTelegram: true } })
-      navigate({ to: '/equipment' })
-    } catch (error) {
-      console.error('Skip failed:', error)
-      setError('Unable to skip telegram linking. Please contact support.')
     }
   }
 
@@ -142,32 +141,18 @@ export function Page({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button 
-              onClick={handleTelegramLink} 
+            <Button
+              onClick={handleTelegramLink}
               className="w-full"
               disabled={!telegramUrl || isCheckingTelegram}
             >
               <ExternalLink className="mr-2 h-4 w-4" />
               {isCheckingTelegram ? 'Waiting for Telegram...' : 'Open Telegram Bot'}
             </Button>
-            
+
             {isCheckingTelegram && (
               <div className="text-center text-sm text-muted-foreground space-y-2">
-                <p>1. Click the link above to open Telegram</p>
-                <p>2. Send /start command to the bot</p>
-                <p>3. We'll automatically continue once linked...</p>
-                {isDevelopment && (
-                  <div className="mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleSkipTelegram}
-                      className="text-xs"
-                    >
-                      Skip for now (Development)
-                    </Button>
-                  </div>
-                )}
+                <p>We'll automatically continue once linked...</p>
               </div>
             )}
 
@@ -249,9 +234,9 @@ export function Page({
                 <FormItem>
                   <FormLabel>NU ID</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="Enter your NU ID" 
+                    <Input
+                      type="number"
+                      placeholder="Enter your NU ID"
                       {...field}
                       onChange={(e) => field.onChange(e.target.value)}
                     />
@@ -280,9 +265,9 @@ export function Page({
                 <FormItem>
                   <FormLabel>Graduation Year</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="Enter your graduation year" 
+                    <Input
+                      type="number"
+                      placeholder="Enter your graduation year"
                       {...field}
                       onChange={(e) => field.onChange(e.target.value)}
                     />

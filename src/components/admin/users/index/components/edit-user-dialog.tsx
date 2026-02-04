@@ -29,18 +29,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: 'user' | 'manager' | 'admin' | null
-  clearanceLevel: number | null
-  status: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated' | null
-  firstName: string | null
-  lastName: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+import { User } from "@/lib/user/types"
 
 interface EditUserDialogProps {
   user: User | null
@@ -54,7 +43,7 @@ const editUserSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
   role: z.enum(['user', 'manager', 'admin']),
-  clearanceLevel: z.number().min(0).max(10).nullable(),
+  clearanceLevel: z.number().min(1).max(10).nullable(),
 })
 
 export type EditUserFormData = z.infer<typeof editUserSchema>
@@ -200,20 +189,25 @@ export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDia
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Clearance Level</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={field.value ?? ''}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? null : parseInt(e.target.value, 10)
-                        field.onChange(value)
-                      }}
-                      disabled={form.formState.isSubmitting}
-                      placeholder="0-10"
-                    />
-                  </FormControl>
+                  <Select
+                    onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
+                    value={field.value?.toString() ?? "none"}
+                    disabled={form.formState.isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select clearance level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {[...Array(10)].map((_, i) => (
+                        <SelectItem key={i} value={(i + 1).toString()}>
+                          {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

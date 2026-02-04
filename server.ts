@@ -29,9 +29,6 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<void> {
-    console.log('Cron trigger fired at:', new Date(controller.scheduledTime).toISOString())
-    console.log('Cron pattern:', controller.cron)
-
     // Run all status update and reminder functions in parallel
     ctx.waitUntil(
       Promise.all([
@@ -86,8 +83,6 @@ async function updateActiveBookings(env: Env): Promise<void> {
         )
       )
 
-    console.log(`Found ${activeBookings.length} bookings to mark as active`)
-
     for (const activeBooking of activeBookings) {
       try {
         const activeNote = `[System]: Automatically marked as active on ${now.toISOString()}`
@@ -103,8 +98,6 @@ async function updateActiveBookings(env: Env): Promise<void> {
             updatedAt: now,
           })
           .where(eq(booking.id, activeBooking.id))
-
-        console.log(`Updated booking ${activeBooking.id} to active`)
 
         if (activeBooking.googleCalendarEventId && activeBooking.equipment?.googleCalendarId) {
           const event = {
@@ -190,8 +183,6 @@ async function sendBookingReminders(env: Env): Promise<void> {
         )
       )
 
-    console.log(`Found ${upcomingBookings.length} bookings to send reminders for`)
-
     // Get bot token from environment
     const botToken = process.env.TELEGRAM_BOT_TOKEN
     if (!botToken) {
@@ -205,7 +196,6 @@ async function sendBookingReminders(env: Env): Promise<void> {
       try {
         // Skip if user doesn't have Telegram linked
         if (!upcomingBooking.user?.telegramChatId) {
-          console.log(`Skipping reminder for booking ${upcomingBooking.id}: user has no Telegram linked`)
           continue
         }
 
@@ -220,7 +210,6 @@ async function sendBookingReminders(env: Env): Promise<void> {
           notes: upcomingBooking.userEventDetails,
         })
 
-        console.log(`Sent reminder for booking ${upcomingBooking.id} to user ${upcomingBooking.userId}`)
       } catch (error) {
         console.error(`Failed to send reminder for booking ${upcomingBooking.id}:`, error)
       }
@@ -275,8 +264,6 @@ async function updateOverdueBookings(env: Env): Promise<void> {
         )
       )
 
-    console.log(`Found ${overdueBookings.length} bookings to mark as overdue`)
-
     for (const overdueBooking of overdueBookings) {
       try {
         const overdueNote = `[System]: Automatically marked as overdue on ${now.toISOString()}`
@@ -292,8 +279,6 @@ async function updateOverdueBookings(env: Env): Promise<void> {
             updatedAt: now,
           })
           .where(eq(booking.id, overdueBooking.id))
-
-        console.log(`Updated booking ${overdueBooking.id} to overdue`)
 
         if (overdueBooking.googleCalendarEventId && overdueBooking.equipment?.googleCalendarId) {
           const event = {

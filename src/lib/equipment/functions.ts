@@ -10,8 +10,8 @@ import {
   UploadEquipmentImageSchema
 } from './types'
 
-export const getEquipmentFn = createServerFn({ 
-  method: 'GET' 
+export const getEquipmentFn = createServerFn({
+  method: 'GET'
 })
   .inputValidator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
@@ -21,8 +21,8 @@ export const getEquipmentFn = createServerFn({
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, gte, lte, like, or, sql, asc, desc } = await import('drizzle-orm')
-    
+    const { eq, and, gte, lte, like, or, sql, asc, desc, inArray } = await import('drizzle-orm')
+
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({
       headers,
@@ -34,16 +34,23 @@ export const getEquipmentFn = createServerFn({
 
     const database = db(env.meriksirat_d1 as D1Database)
     const userClearanceLevel = await getUserClearanceLevel(session.user.id)
-    
+
     // Build where conditions
     const conditions = [
-      eq(equipment.isActive, data.isActive),
       lte(equipment.requiredClearanceLevel, userClearanceLevel)
     ]
 
+    // Add active status filter
+    if (data.isActive && data.isActive.length > 0) {
+      conditions.push(inArray(equipment.isActive, data.isActive))
+    } else {
+      // Default to showing only active equipment for users if no filter is applied
+      conditions.push(eq(equipment.isActive, true))
+    }
+
     // Add category filter
-    if (data.categoryId) {
-      conditions.push(eq(equipment.categoryId, data.categoryId))
+    if (data.categoryIds && data.categoryIds.length > 0) {
+      conditions.push(inArray(equipment.categoryId, data.categoryIds))
     }
 
     // Add search query filter
@@ -87,7 +94,7 @@ export const getEquipmentFn = createServerFn({
       isActive: equipment.isActive,
       createdAt: equipment.createdAt,
     }[data.sortBy]
-    
+
     const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
 
     // Get paginated equipment list
@@ -132,8 +139,8 @@ export const getEquipmentFn = createServerFn({
     return response
   })
 
-export const getEquipmentByIdFn = createServerFn({ 
-  method: 'GET' 
+export const getEquipmentByIdFn = createServerFn({
+  method: 'GET'
 })
   .inputValidator(z.object({ equipmentId: z.coerce.number() }))
   .handler(async ({ data }) => {
@@ -144,7 +151,7 @@ export const getEquipmentByIdFn = createServerFn({
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
     const { eq, and, lte } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({
       headers,
@@ -197,7 +204,7 @@ export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { category } = await import('@/db/schema')
-    
+
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({
       headers,
@@ -232,34 +239,34 @@ export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Check if Google Calendar ID already exists
     const existingEquipment = await database
       .select({ id: equipment.id })
       .from(equipment)
       .where(eq(equipment.googleCalendarId, data.googleCalendarId))
       .get()
-    
+
     if (existingEquipment) {
       throw new Error('Google Calendar ID already exists. Each equipment must have a unique calendar.')
     }
-    
+
     // Verify category exists
     const categoryExists = await database
       .select({ id: category.id })
       .from(category)
       .where(eq(category.id, data.categoryId))
       .get()
-    
+
     if (!categoryExists) {
       throw new Error('Selected category does not exist')
     }
-    
+
     const result = await database
       .insert(equipment)
       .values({
@@ -273,7 +280,7 @@ export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
         isActive: true,
       })
       .returning({ id: equipment.id })
-    
+
     return { equipmentId: result[0]?.id }
   })
 
@@ -290,23 +297,23 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
     const { eq, and, ne } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Check if equipment exists
     const existingEquipment = await database
       .select({ id: equipment.id, googleCalendarId: equipment.googleCalendarId })
       .from(equipment)
       .where(eq(equipment.id, data.equipmentId))
       .get()
-    
+
     if (!existingEquipment) {
       throw new Error('Equipment not found')
     }
-    
+
     // Check Google Calendar ID uniqueness if it's being updated
     if (data.googleCalendarId && data.googleCalendarId !== existingEquipment.googleCalendarId) {
       const calendarIdConflict = await database
@@ -319,12 +326,12 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
           )
         )
         .get()
-      
+
       if (calendarIdConflict) {
         throw new Error('Google Calendar ID already exists. Each equipment must have a unique calendar.')
       }
     }
-    
+
     // Verify category exists if it's being updated
     if (data.categoryId) {
       const categoryExists = await database
@@ -332,12 +339,12 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
         .from(category)
         .where(eq(category.id, data.categoryId))
         .get()
-      
+
       if (!categoryExists) {
         throw new Error('Selected category does not exist')
       }
     }
-    
+
     // Build update object with only provided fields
     const updateData: any = {}
     if (data.modelName !== undefined) updateData.modelName = data.modelName
@@ -348,12 +355,12 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
     if (data.requiredClearanceLevel !== undefined) updateData.requiredClearanceLevel = data.requiredClearanceLevel
     if (data.imagePath !== undefined) updateData.imagePath = data.imagePath
     if (data.isActive !== undefined) updateData.isActive = data.isActive
-    
+
     await database
       .update(equipment)
       .set(updateData)
       .where(eq(equipment.id, data.equipmentId))
-    
+
     return { success: true }
   })
 
@@ -370,27 +377,27 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { equipment, booking } = await import('@/db/schema')
     const { eq, and, or, sql } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Check if equipment exists
     const equipmentToDelete = await database
-      .select({ 
-        id: equipment.id, 
+      .select({
+        id: equipment.id,
         modelName: equipment.modelName,
-        isActive: equipment.isActive 
+        isActive: equipment.isActive
       })
       .from(equipment)
       .where(eq(equipment.id, data.equipmentId))
       .get()
-    
+
     if (!equipmentToDelete) {
       throw new Error('Equipment not found')
     }
-    
+
     // Check for active bookings
     const activeBookings = await database
       .select({ count: sql<number>`count(*)` })
@@ -405,21 +412,21 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
           )!
         )
       )
-    
+
     const hasActiveBookings = (activeBookings[0]?.count || 0) > 0
-    
+
     if (hasActiveBookings) {
       // Mark as inactive instead of deleting
       await database
         .update(equipment)
-        .set({ 
+        .set({
           isActive: false,
           updatedAt: new Date()
         })
         .where(eq(equipment.id, data.equipmentId))
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         action: 'deactivated',
         message: `Equipment "${equipmentToDelete.modelName}" has been marked as inactive due to active bookings. It will no longer be available for new bookings.`
       }
@@ -428,9 +435,9 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
       await database
         .delete(equipment)
         .where(eq(equipment.id, data.equipmentId))
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         action: 'deleted',
         message: `Equipment "${equipmentToDelete.modelName}" has been permanently deleted.`
       }
@@ -441,8 +448,8 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
  * Get equipment by ID for admin management (Admin only)
  * Returns equipment regardless of clearance level or active status
  */
-export const getAdminEquipmentByIdFn = createServerFn({ 
-  method: 'GET' 
+export const getAdminEquipmentByIdFn = createServerFn({
+  method: 'GET'
 })
   .inputValidator(z.object({ equipmentId: z.number() }))
   .handler(async ({ data }) => {
@@ -452,7 +459,7 @@ export const getAdminEquipmentByIdFn = createServerFn({
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
 
@@ -489,36 +496,34 @@ export const getAdminEquipmentByIdFn = createServerFn({
  * Get all equipment for admin management (Admin only)
  * Returns all equipment regardless of clearance level or active status
  */
-export const getAdminEquipmentFn = createServerFn({ 
-  method: 'GET' 
+export const getAdminEquipmentFn = createServerFn({
+  method: 'GET'
 })
-  .inputValidator(EquipmentFiltersSchema.extend({
-    isActive: z.boolean().optional(), // Allow filtering by active status for admin
-  }))
+  .inputValidator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, or, gte, lte, like, sql, asc, desc } = await import('drizzle-orm')
-    
+    const { eq, and, or, gte, lte, like, sql, asc, desc, inArray } = await import('drizzle-orm')
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Build where conditions (no clearance level restriction for admins)
     const conditions = []
 
     // Add active status filter (optional for admins)
-    if (data.isActive !== undefined) {
-      conditions.push(eq(equipment.isActive, data.isActive))
+    if (data.isActive && data.isActive.length > 0) {
+      conditions.push(inArray(equipment.isActive, data.isActive))
     }
 
     // Add category filter
-    if (data.categoryId) {
-      conditions.push(eq(equipment.categoryId, data.categoryId))
+    if (data.categoryIds && data.categoryIds.length > 0) {
+      conditions.push(inArray(equipment.categoryId, data.categoryIds))
     }
 
     // Add search query filter
@@ -562,7 +567,7 @@ export const getAdminEquipmentFn = createServerFn({
       isActive: equipment.isActive,
       createdAt: equipment.createdAt,
     }[data.sortBy]
-    
+
     const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
 
     // Get paginated equipment list
@@ -620,70 +625,70 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { equipment } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     if (!allowedTypes.includes(data.contentType)) {
       throw new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.')
     }
-    
+
     // Decode base64 image data
     const base64Data = data.imageData.split(',')[1] || data.imageData
     const imageBuffer = Buffer.from(base64Data, 'base64')
-    
+
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024 // 5MB
     if (imageBuffer.length > maxSize) {
       throw new Error('File size too large. Maximum size is 5MB.')
     }
-    
+
     // Check if equipment exists
     const equipmentExists = await database
       .select({ id: equipment.id })
       .from(equipment)
       .where(eq(equipment.id, data.equipmentId))
       .get()
-    
+
     if (!equipmentExists) {
       throw new Error('Equipment not found')
     }
-    
+
     try {
       // Generate unique filename
       const fileExtension = data.contentType.split('/')[1]
       const fileName = `equipment-images/${data.equipmentId}-${Date.now()}.${fileExtension}`
-      
+
       // Upload to Cloudflare R2
       const r2Response = await env.meriksirat_r2.put(fileName, imageBuffer, {
         httpMetadata: {
           contentType: data.contentType,
         },
       })
-      
+
       if (!r2Response) {
         throw new Error('Failed to upload image to storage')
       }
-      
+
       // Update equipment record with image path
       await database
         .update(equipment)
-        .set({ 
+        .set({
           imagePath: fileName,
           updatedAt: new Date()
         })
         .where(eq(equipment.id, data.equipmentId))
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         imagePath: fileName,
         message: 'Image uploaded successfully'
       }
-      
+
     } catch (error) {
       console.error('Image upload error:', error)
       throw new Error(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`)

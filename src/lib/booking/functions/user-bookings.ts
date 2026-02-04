@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import type { 
-  BookingWithEquipment, 
+import type {
+  BookingWithEquipment,
   PaginatedBookingsResponse,
 } from '../types'
 import {
@@ -36,7 +36,7 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { getEquipmentCalendarId, retry } = await import('../server')
-    
+
     const { equipmentId, startTime, endTime, notes } = data
 
     const headers = getRequestHeaders()
@@ -111,7 +111,7 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
       `User: ${userEmail}`,
       `Notes: ${notes || 'No additional notes'}`
     ]
-    
+
     if (globalNote && globalNote.trim()) {
       descriptionParts.push('', '---', globalNote)
     }
@@ -154,7 +154,7 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
 
     // Update booking with calendar event ID
     await database.update(booking)
-      .set({ googleCalendarEventId: gCalEventId, updatedAt: new Date() }) 
+      .set({ googleCalendarEventId: gCalEventId, updatedAt: new Date() })
       .where(eq(booking.id, bookingId))
 
     // Log booking creation to Telegram channel
@@ -176,9 +176,9 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
     const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, equipment } = await import('@/db/schema')
-    const { eq, and, sql, asc, desc } = await import('drizzle-orm')
-    
+    const { booking, equipment, category } = await import('@/db/schema')
+    const { eq, and, sql, asc, desc, inArray } = await import('drizzle-orm')
+
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({ headers })
 
@@ -192,8 +192,8 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
     // Build where conditions
     const conditions = [eq(booking.userId, userId)]
 
-    if (data.status) {
-      conditions.push(eq(booking.status, data.status))
+    if (data.status && data.status.length > 0) {
+      conditions.push(inArray(booking.status, data.status))
     }
 
     if (data.equipmentId) {
@@ -210,15 +210,6 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
 
     const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions)
 
-    // Get total count for pagination
-    const totalCountResult = await database
-      .select({ count: sql<number>`count(*)` })
-      .from(booking)
-      .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
-      .where(whereClause)
-
-    const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / data.limit)
     const offset = (data.page - 1) * data.limit
 
     // Apply sorting
@@ -227,12 +218,19 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
       endTime: booking.endTime,
       status: booking.status,
       createdAt: booking.createdAt,
+      equipment: equipment.modelName,
     }[data.sortBy]
-    
+
     const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : desc(booking.startTime)
 
+    // Get total count for pagination - join not needed for count here
+    const countQuery = database
+      .select({ count: sql<number>`count(*)` })
+      .from(booking)
+      .where(whereClause)
+
     // Get paginated bookings list
-    const bookingsList = await database
+    const bookingsQuery = database
       .select({
         id: booking.id,
         userId: booking.userId,
@@ -244,22 +242,57 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
         userEventDetails: booking.userEventDetails,
         createdAt: booking.createdAt,
         updatedAt: booking.updatedAt,
-        equipment: {
-          id: equipment.id,
-          modelName: equipment.modelName,
-          description: equipment.description,
-          categoryId: equipment.categoryId,
-        },
+        equipmentId_val: equipment.id,
+        equipmentModelName: equipment.modelName,
+        equipmentDescription: equipment.description,
+        equipmentCategoryId: equipment.categoryId,
+        equipmentImagePath: equipment.imagePath,
+        equipmentGoogleCalendarId: equipment.googleCalendarId,
+        categoryPathId: category.id,
+        categoryName: category.name,
       })
       .from(booking)
       .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
+      .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(whereClause)
       .orderBy(orderBy)
       .limit(data.limit)
       .offset(offset)
 
+    // Execute queries in parallel
+    const [totalCountResult, bookingsList] = await Promise.all([
+      countQuery,
+      bookingsQuery
+    ])
+
+    const total = totalCountResult[0]?.count || 0
+    const totalPages = Math.ceil(total / data.limit)
+
     const response: PaginatedBookingsResponse = {
-      data: bookingsList as BookingWithEquipment[],
+      data: bookingsList.map(item => ({
+        id: item.id,
+        userId: item.userId,
+        equipmentId: item.equipmentId,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        status: item.status,
+        googleCalendarEventId: item.googleCalendarEventId,
+        userEventDetails: item.userEventDetails,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        equipment: item.equipmentId_val ? {
+          id: item.equipmentId_val,
+          modelName: item.equipmentModelName!,
+          description: item.equipmentDescription,
+          categoryId: item.equipmentCategoryId,
+          googleCalendarId: item.equipmentGoogleCalendarId!,
+          imagePath: item.equipmentImagePath,
+          category: item.categoryPathId ? {
+            id: item.categoryPathId,
+            name: item.categoryName!,
+          } : null,
+        } : null,
+      })) as BookingWithEquipment[],
       pagination: {
         page: data.page,
         limit: data.limit,
@@ -279,9 +312,9 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
     const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, equipment } = await import('@/db/schema')
+    const { booking, equipment, category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({ headers })
 
@@ -304,20 +337,46 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
         userEventDetails: booking.userEventDetails,
         createdAt: booking.createdAt,
         updatedAt: booking.updatedAt,
-        equipment: {
-          id: equipment.id,
-          modelName: equipment.modelName,
-          description: equipment.description,
-          categoryId: equipment.categoryId,
-          googleCalendarId: equipment.googleCalendarId,
-        },
+        equipmentId_val: equipment.id,
+        equipmentModelName: equipment.modelName,
+        equipmentDescription: equipment.description,
+        equipmentCategoryId: equipment.categoryId,
+        equipmentGoogleCalendarId: equipment.googleCalendarId,
+        equipmentImagePath: equipment.imagePath,
+        categoryPathId: category.id,
+        categoryName: category.name,
       })
       .from(booking)
       .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
+      .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(eq(booking.id, data.bookingId))
       .limit(1)
 
-    const result = bookingItem[0] as BookingWithEquipment | undefined
+    const rawResult = bookingItem[0]
+    const result: BookingWithEquipment | undefined = rawResult ? {
+      id: rawResult.id,
+      userId: rawResult.userId,
+      equipmentId: rawResult.equipmentId,
+      startTime: rawResult.startTime,
+      endTime: rawResult.endTime,
+      status: rawResult.status,
+      googleCalendarEventId: rawResult.googleCalendarEventId,
+      userEventDetails: rawResult.userEventDetails,
+      createdAt: rawResult.createdAt,
+      updatedAt: rawResult.updatedAt,
+      equipment: rawResult.equipmentId_val ? {
+        id: rawResult.equipmentId_val,
+        modelName: rawResult.equipmentModelName!,
+        description: rawResult.equipmentDescription,
+        categoryId: rawResult.equipmentCategoryId,
+        googleCalendarId: rawResult.equipmentGoogleCalendarId!,
+        imagePath: rawResult.equipmentImagePath,
+        category: rawResult.categoryPathId ? {
+          id: rawResult.categoryPathId,
+          name: rawResult.categoryName!,
+        } : null,
+      } : null,
+    } : undefined
 
     // Only return booking if it belongs to the current user
     if (result && result.userId !== userId) {
@@ -338,7 +397,7 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { getEquipmentCalendarId } = await import('../server')
-    
+
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({ headers })
 
@@ -379,7 +438,7 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
     // Update booking status to cancelled
     await database
       .update(booking)
-      .set({ 
+      .set({
         status: 'cancelled',
         updatedAt: new Date()
       })
@@ -398,7 +457,7 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
     // Delete the calendar event if it exists
     if (bookingData.googleCalendarEventId) {
       const equipmentCalendarId = await getEquipmentCalendarId(bookingData.equipmentId)
-      
+
       if (equipmentCalendarId) {
         try {
           await deleteCalendarEvent({
@@ -427,7 +486,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { getEquipmentCalendarId } = await import('../server')
-    
+
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({ headers })
 
@@ -476,7 +535,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     // If times are changing, check availability
     if (data.startTime || data.endTime) {
       const equipmentCalendarId = await getEquipmentCalendarId(bookingData.equipmentId)
-      
+
       if (equipmentCalendarId) {
         const freeBusyResult = await checkCalendarFreeBusy({
           data: {
@@ -519,7 +578,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     // Update calendar event if it exists
     if (bookingData.googleCalendarEventId) {
       const equipmentCalendarId = await getEquipmentCalendarId(bookingData.equipmentId)
-      
+
       if (equipmentCalendarId) {
         const equipmentData = await database
           .select({ modelName: equipment.modelName })
@@ -541,7 +600,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
           `User: ${userEmail}`,
           `Notes: ${newNotes || 'No additional notes'}`
         ]
-        
+
         if (globalNote && globalNote.trim()) {
           descriptionParts.push('', '---', globalNote)
         }

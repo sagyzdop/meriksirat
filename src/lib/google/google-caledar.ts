@@ -47,9 +47,7 @@ export const createCalendarEvent = createServerFn({ method: 'POST' })
   .inputValidator((d: any) => d)
   .handler(async ({ data }) => {
     const { equipmentCalendarId, event, userEmail } = data
-    
-    console.log('Creating calendar event for calendar:', equipmentCalendarId)
-    
+
     const accessToken = await getGoogleAccessToken()
     
     const eventWithAttendee = {
@@ -79,8 +77,7 @@ export const createCalendarEvent = createServerFn({ method: 'POST' })
     }
     
     const createdEvent = await response.json() as any
-    console.log('Created event response:', JSON.stringify(createdEvent, null, 2))
-    
+
     return { success: true, eventId: createdEvent.id, event: createdEvent }
   })
 

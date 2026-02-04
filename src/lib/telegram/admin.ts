@@ -53,10 +53,6 @@ export async function notifyAdmins(
   // Format caption with return details
   const caption = `Return from ${notification.userName}\nItems: ${notification.equipmentNames}\nCount: ${notification.itemCount}`
   
-  // Track notification success
-  let successCount = 0
-  const totalCount = admins.length
-  
   // Notify each admin individually
   for (const admin of admins) {
     try {
@@ -64,9 +60,6 @@ export async function notifyAdmins(
       await telegram.sendPhoto(admin.telegramChatId!, notification.photoFileId, {
         caption,
       })
-      
-      console.log(`Notified admin ${admin.name}`)
-      successCount++
     } catch (error) {
       // Log error with admin context but continue to next admin
       console.error(`Failed to notify admin ${admin.name}:`, {
@@ -77,6 +70,4 @@ export async function notifyAdmins(
     }
   }
   
-  // Log summary of notification results
-  console.log(`Notified ${successCount}/${totalCount} admins`)
 }

@@ -15,13 +15,13 @@ interface Pagination {
 }
 
 interface Filters {
-  status?: 'booked' | 'active' | 'returned' | 'cancelled' | 'overdue'
+  status?: string[]
   equipmentId?: number
   startDate?: string
   endDate?: string
   page: number
   limit: number
-  sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt'
+  sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt' | 'equipment'
   sortOrder: 'asc' | 'desc'
 }
 
@@ -33,7 +33,7 @@ interface PageProps {
 }
 
 export function Page({ bookings, pagination, filters, telegramBotUsername }: PageProps) {
-  const description = pagination.total > 0 
+  const description = pagination.total > 0
     ? `You have ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
     : "No bookings found"
 
@@ -41,11 +41,11 @@ export function Page({ bookings, pagination, filters, telegramBotUsername }: Pag
 
   return (
     <PageContainer>
-      <PageHeader 
+      <PageHeader
         title="My Bookings"
         description={description}
       />
-      <BookingDataTable 
+      <BookingDataTable
         data={bookings}
         pagination={pagination}
         filters={filters}

@@ -6,7 +6,6 @@ import {
   UpdateCategorySchema,
   DeleteCategorySchema,
   UpdateCategorySortOrderSchema,
-  CategorySortSchema
 } from './types'
 
 /**
@@ -234,38 +233,18 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
  * Used for category management interface
  */
 export const getCategoriesWithCountFn = createServerFn({ method: 'GET' })
-  .inputValidator(CategorySortSchema.optional())
-  .handler(async ({ data }) => {
+  .handler(async () => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('./server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { category, equipment } = await import('@/db/schema')
-    const { eq, sql, asc, desc } = await import('drizzle-orm')
+    const { eq, sql } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
 
     const database = db(env.meriksirat_d1 as D1Database)
-
-    let orderByClause = [asc(category.sortOrder), asc(category.name)];
-
-    if (data?.sortBy) {
-      const direction = data.order === 'desc' ? desc : asc;
-
-      switch (data.sortBy) {
-        case 'name':
-          orderByClause = [direction(category.name)];
-          break;
-        case 'sortOrder':
-          orderByClause = [direction(category.sortOrder)];
-          break;
-        case 'equipmentCount':
-          // For aggregated columns, we might need a raw sql reference or alias
-          orderByClause = [direction(sql`count(${equipment.id})`)];
-          break;
-      }
-    }
 
     const categories = await database
       .select({
@@ -280,7 +259,7 @@ export const getCategoriesWithCountFn = createServerFn({ method: 'GET' })
       .from(category)
       .leftJoin(equipment, eq(category.id, equipment.categoryId))
       .groupBy(category.id)
-      .orderBy(...orderByClause)
+      .orderBy(category.sortOrder, category.name)
 
     // Ensure sortOrder is never null by providing default value
     return categories.map(cat => ({

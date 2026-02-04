@@ -50,13 +50,13 @@ interface Pagination {
 }
 
 interface Filters {
-  status?: 'booked' | 'active' | 'returned' | 'cancelled' | 'overdue'
+  status?: string[]
   equipmentId?: number
   startDate?: string
   endDate?: string
   page: number
   limit: number
-  sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt'
+  sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt' | 'equipment'
   sortOrder: 'asc' | 'desc'
 }
 
@@ -81,7 +81,7 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  
+
   // Controlled sorting state - sync with URL params
   const [sorting, setSorting] = React.useState<SortingState>([{
     id: filters.sortBy,
@@ -103,27 +103,27 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
       id: filters.sortBy,
       desc: filters.sortOrder === 'desc'
     }]
-    
+
     const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
-    
+
     if (newSorting.length > 0) {
       const sort = newSorting[0]
       navigate({
         to: '.',
-        search: (prev) => ({
-          ...prev,
+        search: {
+          ...filters,
           sortBy: sort.id as any,
-          sortOrder: sort.desc ? 'desc' as const : 'asc' as const,
+          sortOrder: sort.desc ? 'desc' : 'asc',
           page: 1,
-        }),
+        },
       })
     }
-  }, [filters.sortBy, filters.sortOrder, navigate])
+  }, [filters, navigate])
 
   const handleRowClick = (bookingId: number) => {
-    navigate({ 
-      to: "/bookings/$bookingId", 
-      params: { bookingId: bookingId.toString() } 
+    navigate({
+      to: "/bookings/$bookingId",
+      params: { bookingId: bookingId.toString() }
     })
   }
 
@@ -157,28 +157,22 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
 
   // Handle filter changes
   const handleFilterChange = React.useCallback((filterId: string, values: string[] | undefined) => {
-    const newFilters = { ...filters }
-    
     if (filterId === 'status') {
-      if (values && values.length > 0) {
-        newFilters.status = values[0] as any
-      } else {
-        delete newFilters.status
-      }
+      navigate({
+        to: '.',
+        search: {
+          ...filters,
+          status: (values && values.length > 0) ? values : undefined,
+          page: 1,
+        },
+      })
     }
-    
-    newFilters.page = 1 // Reset to first page
-    
-    navigate({
-      to: '/bookings',
-      search: newFilters,
-    })
   }, [filters, navigate])
 
   // Handle pagination changes
   const handlePageChange = React.useCallback((newPage: number) => {
     navigate({
-      to: '/bookings',
+      to: '.',
       search: { ...filters, page: newPage },
     })
   }, [filters, navigate])
@@ -186,16 +180,16 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
   // Handle page size changes
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     navigate({
-      to: '/bookings',
+      to: '.',
       search: { ...filters, limit: newPageSize, page: 1 },
     })
   }, [filters, navigate])
 
-  const isFiltered = filters.status
+  const isFiltered = filters.status && filters.status.length > 0
 
   const clearAllFilters = () => {
     navigate({
-      to: '/bookings',
+      to: '.',
       search: {
         page: 1,
         limit: filters.limit,
@@ -214,7 +208,7 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
             <DataTableFacetedFilter
               title="Status"
               options={statusOptions}
-              selectedValues={filters.status ? [filters.status] : []}
+              selectedValues={filters.status || []}
               onSelectionChange={(values) => handleFilterChange('status', values)}
             />
             {isFiltered && (
@@ -229,19 +223,19 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button
             variant="default"
             size="sm"
-            className="h-8"
+            className="h-8 w-full sm:w-auto"
             asChild
           >
-            <a 
+            <a
               href={createTelegramBotLink(telegramBotUsername)}
               target="_blank"
               rel="noopener noreferrer"
               title="Open Telegram bot to return equipment. Send /end_booking command."
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2"
             >
               <MessageCircle className="h-4 w-4" />
               Return Equipment
@@ -275,7 +269,7 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
           </DropdownMenu>
         </div>
       </div>
-      
+
       {/* Table with horizontal scroll on small screens */}
       <div className="rounded-md border">
         <div className="overflow-x-auto">
@@ -289,9 +283,9 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     )
                   })}
@@ -331,7 +325,7 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
           </Table>
         </div>
       </div>
-      
+
       {/* Pagination - Responsive layout */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">

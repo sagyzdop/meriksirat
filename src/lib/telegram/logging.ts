@@ -7,46 +7,49 @@
 import { TelegramAPI } from './api'
 import { env } from 'cloudflare:workers'
 import type { BookingLogData } from './types'
-import { 
-  createTelegramForLogging, 
-  isTelegramLoggingEnabled, 
-  getBookingDetailsForLogging 
+import {
+  createTelegramForLogging,
+  isTelegramLoggingEnabled,
+  getBookingDetailsForLogging
 } from './server-utils'
 
 const ACTION_EMOJIS = {
   created: '📅',
   updated: '✏️',
   cancelled: '❌',
-  returned: '✅'
+  returned: '✅',
+  deleted: '🗑️'
 } as const
 
 function formatBookingLogMessage(data: BookingLogData): string {
   const { action, bookingId, userName, equipmentName, startTime, endTime, notes, previousStatus, newStatus } = data
-  
+
   const emoji = ACTION_EMOJIS[action]
-  const actionText = action.charAt(0).toUpperCase() + action.slice(1)
-  
-  let message = `${emoji} **Booking ${actionText}**\n\n`
-  message += `📋 **Booking ID:** #${bookingId}\n`
-  message += `👤 **User:** ${userName}\n`
-  message += `🔧 **Equipment:** ${equipmentName}\n`
+  const actionText = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase()
+
+  let message = ''
   
   if (startTime && endTime) {
-    message += `📅 **Period:** ${startTime.toLocaleDateString()} ${startTime.toLocaleTimeString()} - ${endTime.toLocaleDateString()} ${endTime.toLocaleTimeString()}\n`
+    const date = startTime.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+    const timeStart = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    const timeEnd = endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    message = `${emoji} **${equipmentName} ID#${bookingId} was ${actionText} for ${date} from ${timeStart} to ${timeEnd} by ${userName}**\n\n`
+  } else {
+    message = `${emoji} **Booking ID#${bookingId} was ${actionText}**\n\n`
+    message += `🔧 **Equipment:** ${equipmentName}\n`
+    message += `👤 **User:** ${userName}\n\n`
   }
-  
+
   if (action === 'updated' && previousStatus && newStatus) {
     message += `🔄 **Status:** ${previousStatus} → ${newStatus}\n`
   } else if (newStatus) {
     message += `📊 **Status:** ${newStatus}\n`
   }
-  
+
   if (notes) {
     message += `📝 **Notes:** ${notes}\n`
   }
-  
-  message += `\n⏰ ${new Date().toLocaleString()}`
-  
+
   return message
 }
 
@@ -67,15 +70,13 @@ export async function logBookingActivity(
       console.warn('TELEGRAM_CLUB_CHANNEL_ID not configured, skipping booking log')
       return
     }
-    
+
     const message = formatBookingLogMessage(logData)
-    
+
     await telegram.sendMessage(channelId, message, {
       parse_mode: 'Markdown',
       disable_web_page_preview: true
     } as any)
-    
-    console.log(`Booking activity logged to channel: ${logData.action} for booking #${logData.bookingId}`)
   } catch (error) {
     console.error('Failed to log booking activity to Telegram channel:', {
       bookingId: logData.bookingId,
@@ -111,9 +112,9 @@ export async function logBookingActivityById(
     }
 
     const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
-    
+
     const userName = [bookingDetails.userFirstName, bookingDetails.userLastName].filter(Boolean).join(' ') || bookingDetails.userEmail
-    
+
     await logBookingActivity(telegram, env.TELEGRAM_CLUB_CHANNEL_ID!, {
       bookingId: bookingDetails.bookingId,
       userId: bookingDetails.userId,
@@ -174,7 +175,7 @@ export async function logMultipleBookingStatusChanges(
       change.newStatus,
       change.action
     )
-    
+
     // Small delay between messages to avoid rate limiting
     await new Promise(resolve => setTimeout(resolve, 100))
   }

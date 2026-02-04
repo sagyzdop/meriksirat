@@ -15,41 +15,69 @@ export async function checkAdminPermission(
   requiredRoles: ('admin' | 'manager')[]
 ): Promise<AdminUser> {
   const session = await auth.api.getSession({ headers })
-  
+
   if (!session?.user) {
     console.warn('Unauthorized admin access attempt: No session')
     throw new Error('Unauthorized: No session')
   }
 
-  const database = db(env.meriksirat_d1 as D1Database)
-  const userData = await database
-    .select({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      clearanceLevel: user.clearanceLevel,
-      status: user.status,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .get()
+  // If session already has the required data, use it to avoid a DB hit
+  // session.user in better-auth typically contains the user table fields
+  const userFromSession = session.user as any;
+  const hasRequiredFields =
+    userFromSession.role !== undefined &&
+    userFromSession.clearanceLevel !== undefined &&
+    userFromSession.status !== undefined;
 
-  if (!userData) {
-    console.warn(`Unauthorized admin access attempt: User ${session.user.id} not found in database`)
-    throw new Error('Unauthorized: User not found')
+  let userData: AdminUser;
+
+  if (hasRequiredFields) {
+    userData = {
+      id: userFromSession.id,
+      name: userFromSession.name,
+      email: userFromSession.email,
+      role: userFromSession.role,
+      clearanceLevel: userFromSession.clearanceLevel,
+      status: userFromSession.status,
+      firstName: userFromSession.firstName,
+      lastName: userFromSession.lastName,
+      createdAt: new Date(userFromSession.createdAt),
+      updatedAt: new Date(userFromSession.updatedAt),
+    };
+  } else {
+    // Fallback to DB if session is incomplete (unlikely with better-auth default config)
+    const database = db(env.meriksirat_d1 as D1Database)
+    const dbUser = await database
+      .select({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        clearanceLevel: user.clearanceLevel,
+        status: user.status,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get()
+
+    if (!dbUser) {
+      console.warn(`Unauthorized admin access attempt: User ${session.user.id} not found in database`)
+      throw new Error('Unauthorized: User not found')
+    }
+    userData = dbUser as AdminUser;
   }
 
   const hasPermission = requiredRoles.includes(userData.role as 'admin' | 'manager')
-  
+
   if (!hasPermission) {
     // Log unauthorized access attempt for security auditing
     console.warn(`Unauthorized admin access attempt by user ${userData.id} (${userData.email}) with role ${userData.role}. Required roles: ${requiredRoles.join(', ')}`)
     throw new Error('Insufficient permissions')
   }
-  
-  return userData as AdminUser
+
+  return userData
 }

@@ -16,6 +16,12 @@ export interface BookingWithEquipment {
     modelName: string
     description: string | null
     categoryId: number | null
+    imagePath: string | null
+    googleCalendarId: string
+    category: {
+      id: number
+      name: string
+    } | null
   } | null
 }
 
@@ -35,6 +41,12 @@ export interface AdminBookingWithDetails {
     modelName: string
     description: string | null
     categoryId: number | null
+    imagePath: string | null
+    googleCalendarId: string
+    category: {
+      id: number
+      name: string
+    } | null
   } | null
   user: {
     id: string
@@ -52,13 +64,13 @@ export const BookingInputSchema = z.object({
 })
 
 export const BookingFiltersSchema = z.object({
-  status: z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']).optional(),
+  status: z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue'])).optional(),
   equipmentId: z.coerce.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(20),
-  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt']).optional().default('startTime'),
+  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment']).optional().default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
@@ -90,15 +102,10 @@ export interface PaginatedAdminBookingsResponse {
 
 // Admin booking oversight schemas
 export const AdminBookingFiltersSchema = z.object({
-  status: z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']).optional(),
-  userId: z.string().optional(),
-  equipmentId: z.coerce.number().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  search: z.string().optional(), // Search by user name/email or equipment name
+  status: z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue'])).optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(20),
-  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt']).optional().default('startTime'),
+  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment', 'user']).optional().default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
@@ -106,6 +113,8 @@ export const UpdateBookingStatusAdminSchema = z.object({
   bookingId: z.coerce.number(),
   status: z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']),
   notes: z.string().optional(), // Admin notes will be stored in userEventDetails for now
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
 })
 
 export const UpdateBookingSchema = z.object({
@@ -115,10 +124,15 @@ export const UpdateBookingSchema = z.object({
   notes: z.string().optional(),
 })
 
-export const CancelBookingSchema = z.object({ 
-  bookingId: z.coerce.number() 
+export const CancelBookingSchema = z.object({
+  bookingId: z.coerce.number()
 })
 
-export const GetBookingByIdSchema = z.object({ 
-  bookingId: z.coerce.number() 
+export const GetBookingByIdSchema = z.object({
+  bookingId: z.coerce.number()
 })
+
+export const DeleteBookingSchema = z.object({
+  bookingId: z.coerce.number()
+})
+

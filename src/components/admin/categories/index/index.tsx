@@ -20,11 +20,9 @@ export interface CategoryWithCount {
 
 interface PageProps {
   categories: CategoryWithCount[]
-  sortBy?: 'name' | 'sortOrder' | 'equipmentCount'
-  order?: 'asc' | 'desc'
 }
 
-export function Page({ categories, sortBy, order }: PageProps) {
+export function Page({ categories }: PageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -68,8 +66,6 @@ export function Page({ categories, sortBy, order }: PageProps) {
         categories={categories}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        sortBy={sortBy}
-        order={order}
       />
 
       <CreateCategoryDialog

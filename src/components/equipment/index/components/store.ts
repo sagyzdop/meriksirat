@@ -7,20 +7,21 @@ interface EquipmentStore {
   equipment: Equipment[];
   categories: Category[];
   filteredEquipment: Equipment[];
-  selectedCategoryId: string;
+  selectedCategoryIds: string[];
   selectedAvailability: 'all' | 'available' | 'unavailable';
   searchQuery: string;
   isLoading: boolean;
   error: string | null;
   viewMode: string;
-  
+
   // Pagination
   currentPage: number;
   totalPages: number;
   totalItems: number;
 
   // Actions
-  setSelectedCategoryId: (categoryId: string) => void;
+  toggleCategoryId: (categoryId: string) => void;
+  setSelectedCategoryIds: (categoryIds: string[]) => void;
   setSelectedAvailability: (availability: 'all' | 'available' | 'unavailable') => void;
   setSearchQuery: (query: string) => void;
   setViewMode: (mode: string) => void;
@@ -36,12 +37,12 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
   equipment: [],
   categories: [],
   filteredEquipment: [],
-  selectedCategoryId: "",
+  selectedCategoryIds: [],
   selectedAvailability: "all",
   searchQuery: "",
   isLoading: false,
   error: null,
-  viewMode: typeof window !== 'undefined' 
+  viewMode: typeof window !== 'undefined'
     ? localStorage.getItem('equipment-view-mode') || 'grid'
     : 'grid',
   currentPage: 1,
@@ -49,8 +50,18 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
   totalItems: 0,
 
   // Actions
-  setSelectedCategoryId: (categoryId) => {
-    set({ selectedCategoryId: categoryId, currentPage: 1 });
+  toggleCategoryId: (categoryId) => {
+    const { selectedCategoryIds } = get();
+    const newCategoryIds = selectedCategoryIds.includes(categoryId)
+      ? selectedCategoryIds.filter(id => id !== categoryId)
+      : [...selectedCategoryIds, categoryId];
+
+    set({ selectedCategoryIds: newCategoryIds, currentPage: 1 });
+    get().loadEquipment();
+  },
+
+  setSelectedCategoryIds: (categoryIds) => {
+    set({ selectedCategoryIds: categoryIds, currentPage: 1 });
     get().loadEquipment();
   },
 
@@ -78,17 +89,17 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
   },
 
   clearFilters: () => {
-    set({ 
-      selectedCategoryId: "", 
+    set({
+      selectedCategoryIds: [],
       selectedAvailability: "all",
       searchQuery: "",
-      currentPage: 1 
+      currentPage: 1
     });
     get().loadEquipment();
   },
 
   loadEquipment: async () => {
-    const { selectedCategoryId, selectedAvailability, searchQuery, currentPage } = get();
+    const { selectedCategoryIds, selectedAvailability, searchQuery, currentPage } = get();
     set({ isLoading: true, error: null });
 
     try {
@@ -97,6 +108,7 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
         limit: 20,
         sortBy: 'modelName',
         sortOrder: 'asc',
+        isActive: true, // Default to true
       };
 
       // Apply availability filter
@@ -107,8 +119,8 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
       }
       // If 'all', don't set isActive filter
 
-      if (selectedCategoryId) {
-        filters.categoryId = parseInt(selectedCategoryId, 10);
+      if (selectedCategoryIds.length > 0) {
+        filters.categoryIds = selectedCategoryIds.map(id => parseInt(id, 10));
       }
 
       if (searchQuery.trim()) {
@@ -116,7 +128,7 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
       }
 
       const response = await getEquipmentFn({ data: filters });
-      
+
       if (response) {
         set({
           equipment: response.data,
@@ -126,21 +138,20 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
           isLoading: false,
         });
       } else {
-        set({ 
-          equipment: [], 
-          filteredEquipment: [], 
-          totalPages: 1, 
-          totalItems: 0, 
-          isLoading: false 
+        set({
+          equipment: [],
+          filteredEquipment: [],
+          totalPages: 1,
+          totalItems: 0,
+          isLoading: false
         });
       }
-    } catch (error) {
-      console.error("Failed to load equipment:", error);
+    } catch {
       // Don't show error for empty database, just show empty state
       set({
-        equipment: [], 
-        filteredEquipment: [], 
-        totalPages: 1, 
+        equipment: [],
+        filteredEquipment: [],
+        totalPages: 1,
         totalItems: 0,
         isLoading: false,
       });
@@ -153,8 +164,7 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
       if (categories) {
         set({ categories });
       }
-    } catch (error) {
-      console.error("Failed to load categories:", error);
+    } catch {
     }
   },
 

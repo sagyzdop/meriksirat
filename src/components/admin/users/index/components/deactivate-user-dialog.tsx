@@ -12,18 +12,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: 'user' | 'manager' | 'admin' | null
-  clearanceLevel: number | null
-  status: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated' | null
-  firstName: string | null
-  lastName: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+import { User } from "@/lib/user/types"
 
 interface DeactivateUserDialogProps {
   user: User | null
@@ -32,11 +21,11 @@ interface DeactivateUserDialogProps {
   onConfirm?: (userId: string) => Promise<void>
 }
 
-export function DeactivateUserDialog({ 
-  user, 
-  open, 
-  onOpenChange, 
-  onConfirm 
+export function DeactivateUserDialog({
+  user,
+  open,
+  onOpenChange,
+  onConfirm
 }: DeactivateUserDialogProps) {
   const [isDeactivating, setIsDeactivating] = useState(false)
 

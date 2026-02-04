@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
+import { deleteBookingAdminFn } from "@/lib/booking/functions/admin-bookings"
+
 
 interface DeleteBookingDialogProps {
   booking: AdminBookingWithDetails
@@ -30,9 +32,8 @@ export function DeleteBookingDialog({
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      // TODO: Implement actual API call to delete booking
-      // await deleteBooking(booking.id)
-      
+      await deleteBookingAdminFn({ data: { bookingId: booking.id } })
+
       toast.success("Booking deleted successfully")
       onOpenChange(false)
       onSuccess?.()
@@ -44,6 +45,7 @@ export function DeleteBookingDialog({
       setIsDeleting(false)
     }
   }
+
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -57,7 +59,7 @@ export function DeleteBookingDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel 
+          <AlertDialogCancel
             disabled={isDeleting}
             onClick={(e) => {
               e.preventDefault()

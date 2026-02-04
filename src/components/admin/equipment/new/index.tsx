@@ -117,8 +117,7 @@ export function Page({ categories }: PageProps) {
             }
           })
           imagePath = uploadResult?.imagePath
-        } catch (uploadError) {
-          console.error('Image upload failed:', uploadError)
+        } catch {
           setError('Equipment created successfully, but image upload failed. You can add an image later by editing the equipment.')
         } finally {
           setIsUploadingImage(false)
@@ -131,7 +130,6 @@ export function Page({ categories }: PageProps) {
         navigate({ to: '/admin/equipment' })
       }, 1500)
     } catch (error) {
-      console.error('Failed to create equipment:', error)
       setError(error instanceof Error ? error.message : 'Failed to create equipment. Please try again.')
     } finally {
       setIsSubmitting(false)

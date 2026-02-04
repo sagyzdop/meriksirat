@@ -36,12 +36,7 @@ export const Route = createFileRoute('/api/telegram')({
 
           // Parse Telegram update
           const update = await request.json() as Update
-          
-          console.log('Received update:', {
-            updateId: update.update_id,
-            type: Object.keys(update).filter(k => k !== 'update_id')[0]
-          })
-          
+
           // Create Telegram API client
           const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)
           

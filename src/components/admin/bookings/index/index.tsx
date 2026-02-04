@@ -14,12 +14,7 @@ interface Pagination {
 }
 
 interface Filters {
-  status?: 'booked' | 'active' | 'returned' | 'cancelled' | 'overdue'
-  userId?: string
-  equipmentId?: number
-  startDate?: string
-  endDate?: string
-  search?: string
+  status?: string[]
   page: number
   limit: number
   sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt'
@@ -33,19 +28,19 @@ interface PageProps {
 }
 
 export function Page({ bookings, pagination, filters }: PageProps) {
-  const description = pagination.total > 0 
+  const description = pagination.total > 0
     ? `Managing ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
     : "No bookings found"
 
   return (
     <PageContainer>
-      <PageHeader 
+      <PageHeader
         title="Manage Bookings"
         description={description}
       />
-      <BookingDataTable 
-        data={bookings} 
-        columns={bookingColumns} 
+      <BookingDataTable
+        data={bookings}
+        columns={bookingColumns}
         pagination={pagination}
         filters={filters}
       />

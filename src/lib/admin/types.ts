@@ -44,8 +44,3 @@ export const UpdateCategorySortOrderSchema = z.object({
     sortOrder: z.number()
   }))
 })
-
-export const CategorySortSchema = z.object({
-  sortBy: z.enum(['name', 'sortOrder', 'equipmentCount']).optional(),
-  order: z.enum(['asc', 'desc']).optional(),
-})

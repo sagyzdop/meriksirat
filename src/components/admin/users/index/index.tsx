@@ -4,19 +4,10 @@ import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { useState } from "react"
 import { DeactivateUserDialog } from "./components/deactivate-user-dialog"
+import { updateUserAdminFn } from "@/lib/user"
+import { useRouter } from "@tanstack/react-router"
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: 'user' | 'manager' | 'admin' | null
-  clearanceLevel: number | null
-  status: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated' | null
-  firstName: string | null
-  lastName: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+import { User } from "@/lib/user/types"
 
 interface Pagination {
   page: number
@@ -26,9 +17,9 @@ interface Pagination {
 }
 
 interface Filters {
-  role?: 'user' | 'manager' | 'admin'
-  status?: 'Active' | 'Inactive' | 'On Probation' | 'Board' | 'Ex-Board' | 'Roommate' | 'Ex-Roommate' | 'Graduated'
-  clearanceLevel?: number
+  role?: string[]
+  status?: string[]
+  clearanceLevel?: number[]
   search?: string
   page: number
   limit: number
@@ -45,8 +36,9 @@ interface PageProps {
 export function Page({ users, pagination, filters }: PageProps) {
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const router = useRouter()
 
-  const description = pagination.totalCount > 0 
+  const description = pagination.totalCount > 0
     ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
     : "No users found"
 
@@ -55,16 +47,26 @@ export function Page({ users, pagination, filters }: PageProps) {
     setDeactivateDialogOpen(true)
   }
 
-  const columns = createUserColumns(undefined, handleDeactivateUser)
+  const handleConfirmDeactivation = async (userId: string) => {
+    await updateUserAdminFn({
+      data: {
+        userId,
+        status: 'Inactive'
+      }
+    })
+    await router.invalidate()
+  }
+
+  const columns = createUserColumns(handleDeactivateUser)
 
   return (
     <PageContainer>
-      <PageHeader 
+      <PageHeader
         title="Manage Users"
         description={description}
       />
-      <UserDataTable 
-        data={users} 
+      <UserDataTable
+        data={users}
         columns={columns}
         pagination={pagination}
         filters={filters}
@@ -74,6 +76,7 @@ export function Page({ users, pagination, filters }: PageProps) {
         open={deactivateDialogOpen}
         onOpenChange={setDeactivateDialogOpen}
         user={selectedUser}
+        onConfirm={handleConfirmDeactivation}
       />
     </PageContainer>
   )

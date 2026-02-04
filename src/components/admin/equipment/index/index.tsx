@@ -20,11 +20,11 @@ interface Pagination {
 }
 
 interface Filters {
-  categoryId?: number
+  categoryIds?: number[]
   searchQuery?: string
   minClearanceLevel?: number
   maxClearanceLevel?: number
-  isActive?: boolean
+  isActive?: boolean[]
   page: number
   limit: number
   sortBy: 'modelName' | 'category' | 'requiredClearanceLevel' | 'isActive' | 'createdAt'
@@ -33,11 +33,13 @@ interface Filters {
 
 interface PageProps {
   equipment: EquipmentWithCategory[]
+  categories: { id: number; name: string; sortOrder: number | null }[]
   pagination: Pagination
   filters: Filters
+  isLoading?: boolean
 }
 
-export function Page({ equipment, pagination, filters }: PageProps) {
+export function Page({ equipment, categories, pagination, filters, isLoading = false }: PageProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentWithCategory | null>(null)
 
@@ -46,15 +48,15 @@ export function Page({ equipment, pagination, filters }: PageProps) {
     setDeleteDialogOpen(true)
   }
 
-  const columns = createEquipmentColumns(() => {}, handleDeleteEquipment)
+  const columns = createEquipmentColumns(() => { }, handleDeleteEquipment)
 
-  const description = pagination.total > 0 
+  const description = pagination.total > 0
     ? `Managing ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
     : "No equipment found"
 
   return (
     <PageContainer>
-      <PageHeader 
+      <PageHeader
         title="Manage Equipment"
         description={description}
         actions={
@@ -66,11 +68,13 @@ export function Page({ equipment, pagination, filters }: PageProps) {
           </Button>
         }
       />
-      <EquipmentDataTable 
-        data={equipment} 
-        columns={columns} 
+      <EquipmentDataTable
+        data={equipment}
+        categories={categories}
+        columns={columns}
         pagination={pagination}
         filters={filters}
+        isLoading={isLoading}
       />
 
       <EquipmentDeleteDialog

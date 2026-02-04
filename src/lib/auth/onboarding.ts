@@ -15,7 +15,7 @@ const updateOnboardingSchema = z.object({
     instagramUsername: z.string().optional(),
     nuId: z.number().int().positive('NU ID must be a positive number'),
     major: z.string().min(1, 'Major is required'),
-    graduationYear: z.number().int().min(2020).max(2030, 'Graduation year must be between 2020 and 2030'),
+    graduationYear: z.number().int().min(2010).max(3000, 'Graduation year must be between 2010 and 3000'),
 })
 
 export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
@@ -113,10 +113,10 @@ export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' })
         // Import the telegram function only on server side
         const { getTelegramLinkUrl } = await import('@/lib/telegram/commands/start')
         const result = await getTelegramLinkUrl()
-        
+
         return {
             alreadyLinked: false,
             url: result.url,
-            isDevelopment: env.NODE_ENV === 'development'
+            isDevelopment: process.env.DEV === 'true'
         }
     })

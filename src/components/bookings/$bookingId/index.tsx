@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, ArrowLeft, Clock, MapPin, User } from "lucide-react";
+import { CalendarDays, ArrowLeft, Clock, MapPin, User, ExternalLink } from "lucide-react";
 import type { BookingWithEquipment } from "@/lib/booking/types";
 import { cancelBookingFn } from "@/lib/booking";
 import { format } from "date-fns";
@@ -36,7 +36,7 @@ export function Page({ booking }: PageProps) {
   const router = useRouter();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  
+
   const statusInfo = statusConfig[booking.status as keyof typeof statusConfig] || statusConfig.reserved;
   const startDate = new Date(booking.startTime);
   const endDate = new Date(booking.endTime);
@@ -80,24 +80,57 @@ export function Page({ booking }: PageProps) {
         </div>
 
         {/* Equipment Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Equipment Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg">{booking.equipment?.modelName || 'Unknown Equipment'}</h3>
-                {booking.equipment?.description && (
-                  <p className="text-muted-foreground">{booking.equipment.description}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Equipment Details
+          </h2>
+          {booking.equipment ? (
+            <Link to="/equipment/$" params={{ "_splat": booking.equipment.id.toString() }} className="block">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-6">
+                    <div className="relative flex-shrink-0">
+                      {booking.equipment.imagePath ? (
+                        <img
+                          src={`/api/images/${booking.equipment.imagePath}`}
+                          alt={booking.equipment.modelName}
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                          <span className="text-muted-foreground text-xs">No image</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold mb-1">{booking.equipment.modelName}</h3>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {booking.equipment.category?.name}
+                          </p>
+                          {booking.equipment.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {booking.equipment.description}
+                            </p>
+                          )}
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ) : (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Equipment details not available</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Booking Details Grid */}
         <div className="grid gap-6 md:grid-cols-2">
@@ -122,7 +155,7 @@ export function Page({ booking }: PageProps) {
                     <div className="text-sm text-muted-foreground">{format(startDate, "HH:mm")}</div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -155,7 +188,7 @@ export function Page({ booking }: PageProps) {
                     <div className="font-medium">{format(new Date(booking.createdAt), "MMM dd, yyyy")}</div>
                   </div>
                 </div>
-                
+
                 {booking.googleCalendarEventId && (
                   <div>
                     <span className="text-sm text-muted-foreground">Calendar Event</span>
@@ -193,8 +226,8 @@ export function Page({ booking }: PageProps) {
                 <CardTitle>Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link 
-                  to="/bookings/$bookingId/edit" 
+                <Link
+                  to="/bookings/$bookingId/edit"
                   params={{ bookingId: booking.id.toString() }}
                 >
                   <Button variant="outline" className="w-full">
@@ -202,8 +235,8 @@ export function Page({ booking }: PageProps) {
                   </Button>
                 </Link>
                 {booking.status === 'reserved' && (
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     className="w-full"
                     onClick={() => setShowCancelDialog(true)}
                   >

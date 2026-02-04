@@ -46,7 +46,6 @@ export function EquipmentDeleteDialog({
       onOpenChange(false)
       router.invalidate()
     } catch (error) {
-      console.error("Failed to delete equipment:", error)
       toast.error(
         error instanceof Error ? error.message : "Failed to delete equipment"
       )
