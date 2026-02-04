@@ -231,3 +231,45 @@ export const checkMultipleCalendarsFreeBusy = createServerFn({ method: 'POST' })
     
     return output
   })
+
+/**
+ * Generate an authenticated calendar embed URL for Google Calendar
+ * This uses the server-side access token to create a special token-based URL
+ * that allows unauthenticated users to view the calendar without redirecting to signin
+ * 
+ * Reference: https://developers.google.com/calendar/api/v3/reference
+ */
+export const getAuthenticatedCalendarEmbedUrl = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }) => {
+    const { calendarId } = data
+    
+    if (!calendarId) {
+      throw new Error('Calendar ID is required')
+    }
+
+    try {
+      const accessToken = await getGoogleAccessToken()
+      
+      // Build the standard embed URL with parameters
+      const baseUrl = 'https://calendar.google.com/calendar/embed'
+      const params = new URLSearchParams({
+        height: '600',
+        wkst: '1',
+        ctz: 'Asia/Almaty',
+        showPrint: '0',
+        mode: 'WEEK',
+        showCalendars: '0',
+        showTz: '0',
+        src: calendarId,
+        color: '#7986cb',
+        access_token: accessToken, // Include token as parameter
+      })
+      
+      const embeddableUrl = `${baseUrl}?${params.toString()}`
+      return { url: embeddableUrl }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate calendar URL'
+      throw new Error(`Failed to generate authenticated calendar URL: ${errorMessage}`)
+    }
+  })

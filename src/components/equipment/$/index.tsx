@@ -1,16 +1,20 @@
 import { useParams, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getEquipmentByIdFn, type EquipmentWithCategory } from '@/lib/equipment'
+import { getAuthenticatedCalendarEmbedUrl } from '@/lib/google/google-caledar'
 import { EquipmentDetail } from './components/equipment-detail-page'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Calendar } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function Page() {
     const { _splat: equipmentId } = useParams({ strict: false })
     const [equipment, setEquipment] = useState<EquipmentWithCategory | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [calendarUrl, setCalendarUrl] = useState<string | null>(null)
+    const [isLoadingCalendar, setIsLoadingCalendar] = useState(false)
 
     useEffect(() => {
         async function loadEquipment() {
@@ -48,6 +52,27 @@ export function Page() {
 
         loadEquipment()
     }, [equipmentId])
+
+    useEffect(() => {
+        async function loadCalendarUrl() {
+            if (!equipment?.googleCalendarId) return
+            
+            setIsLoadingCalendar(true)
+            try {
+                const result = await getAuthenticatedCalendarEmbedUrl({
+                    data: { calendarId: equipment.googleCalendarId },
+                })
+                setCalendarUrl(result.url)
+            } catch (err) {
+                console.error('Failed to load calendar:', err)
+                toast.error('Failed to load calendar view')
+            } finally {
+                setIsLoadingCalendar(false)
+            }
+        }
+
+        loadCalendarUrl()
+    }, [equipment?.googleCalendarId])
 
     if (isLoading) {
         return (
@@ -90,12 +115,22 @@ export function Page() {
                 {/* Calendar View */}
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Equipment Calendar</h3>
-                    <iframe
-                        src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=${encodeURIComponent(equipment.googleCalendarId)}&color=%237986cb`}
-                        className="w-full h-[600px] border rounded-lg"
-                        style={{ borderWidth: 1 }}
-                        allowFullScreen
-                    ></iframe>
+                    {isLoadingCalendar ? (
+                        <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
+                            <Spinner className="h-8 w-8" />
+                        </div>
+                    ) : calendarUrl ? (
+                        <iframe
+                            src={calendarUrl}
+                            className="w-full h-[600px] border rounded-lg"
+                            style={{ borderWidth: 1 }}
+                            allowFullScreen
+                        ></iframe>
+                    ) : (
+                        <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
+                            <p className="text-muted-foreground">Failed to load calendar</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

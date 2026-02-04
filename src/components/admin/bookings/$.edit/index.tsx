@@ -2,8 +2,9 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { updateBookingStatusAdminFn } from '@/lib/booking'
+import { getAuthenticatedCalendarEmbedUrl } from '@/lib/google/google-caledar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
@@ -13,7 +14,9 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Save, Calendar, User, AlertCircle, ExternalLink } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import { TimeSlotPicker, getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
+import { Spinner } from '@/components/ui/spinner'
 
 const editBookingSchema = z.object({
   status: z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']),
@@ -32,6 +35,8 @@ export function Page({ booking, bookingId }: PageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [calendarUrl, setCalendarUrl] = useState<string | null>(null)
+  const [isLoadingCalendar, setIsLoadingCalendar] = useState(false)
 
   const getInitialSlots = () => {
     const startTime = new Date(booking.startTime)
@@ -55,6 +60,27 @@ export function Page({ booking, bookingId }: PageProps) {
   const initialSlots = useMemo(() => getInitialSlots(), [booking.startTime, booking.endTime])
   const [selectedSlots, setSelectedSlots] = useState<string[]>(initialSlots)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date(booking.startTime))
+
+  useEffect(() => {
+    async function loadCalendarUrl() {
+      if (!booking.equipment?.googleCalendarId) return
+      
+      setIsLoadingCalendar(true)
+      try {
+        const result = await getAuthenticatedCalendarEmbedUrl({
+          data: { calendarId: booking.equipment.googleCalendarId },
+        })
+        setCalendarUrl(result.url)
+      } catch (err) {
+        console.error('Failed to load calendar:', err)
+        toast.error('Failed to load calendar view')
+      } finally {
+        setIsLoadingCalendar(false)
+      }
+    }
+
+    loadCalendarUrl()
+  }, [booking.equipment?.googleCalendarId])
 
   const form = useForm<EditBookingForm>({
     resolver: zodResolver(editBookingSchema),
@@ -298,12 +324,22 @@ export function Page({ booking, bookingId }: PageProps) {
         {hasCalendar && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Equipment Calendar</h2>
-            <iframe
-              src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=${encodeURIComponent(booking.equipment!.googleCalendarId)}&color=%237986cb`}
-              className="w-full h-[600px] border rounded-lg"
-              style={{ borderWidth: 1 }}
-              allowFullScreen
-            ></iframe>
+            {isLoadingCalendar ? (
+              <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
+                <Spinner className="h-8 w-8" />
+              </div>
+            ) : calendarUrl ? (
+              <iframe
+                src={calendarUrl}
+                className="w-full h-[600px] border rounded-lg"
+                style={{ borderWidth: 1 }}
+                allowFullScreen
+              ></iframe>
+            ) : (
+              <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
+                <p className="text-muted-foreground">Failed to load calendar</p>
+              </div>
+            )}
           </div>
         )}
 

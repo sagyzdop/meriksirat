@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { handleBookingAndCalendar } from "@/lib/booking"
 import { getEquipmentByIdFn, type EquipmentWithCategory } from "@/lib/equipment"
+import { getAuthenticatedCalendarEmbedUrl } from "@/lib/google/google-caledar"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { TimeSlotPicker, getBookingTimesFromSlots } from "@/components/shared/time-slot-picker"
@@ -28,6 +29,8 @@ export function NewBookingPage() {
   // Equipment selection state
   const [selectedEquipment, setSelectedEquipment] = React.useState<EquipmentWithCategory | null>(null)
   const [isLoadingEquipment, setIsLoadingEquipment] = React.useState(false)
+  const [calendarUrl, setCalendarUrl] = React.useState<string | null>(null)
+  const [isLoadingCalendar, setIsLoadingCalendar] = React.useState(false)
   
   // Booking state
   const [selectedSlots, setSelectedSlots] = React.useState<string[]>([])
@@ -43,6 +46,13 @@ export function NewBookingPage() {
     }
   }, [searchParams.equipmentId])
 
+  // Load calendar URL when equipment changes
+  React.useEffect(() => {
+    if (selectedEquipment?.googleCalendarId) {
+      loadCalendarUrl(selectedEquipment.googleCalendarId)
+    }
+  }, [selectedEquipment?.googleCalendarId])
+
   const loadEquipment = async (equipmentId: number) => {
     setIsLoadingEquipment(true)
     try {
@@ -57,6 +67,21 @@ export function NewBookingPage() {
       toast.error("Failed to load equipment")
     } finally {
       setIsLoadingEquipment(false)
+    }
+  }
+
+  const loadCalendarUrl = async (calendarId: string) => {
+    setIsLoadingCalendar(true)
+    try {
+      const result = await getAuthenticatedCalendarEmbedUrl({
+        data: { calendarId },
+      })
+      setCalendarUrl(result.url)
+    } catch (error) {
+      console.error("Failed to load calendar:", error)
+      toast.error("Failed to load calendar view")
+    } finally {
+      setIsLoadingCalendar(false)
     }
   }
 
@@ -126,7 +151,7 @@ export function NewBookingPage() {
           </div>
           
           {selectedEquipment ? (
-            <Link to={`/equipment/${selectedEquipment.id}`} className="block">
+            <Link to="/equipment/$" params={{ _splat: selectedEquipment.id.toString() }} className="block">
               <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-6">
@@ -181,12 +206,22 @@ export function NewBookingPage() {
         {selectedEquipment && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Equipment Calendar</h2>
-            <iframe
-              src={`https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FAlmaty&showPrint=0&mode=WEEK&showCalendars=0&showTz=0&src=${encodeURIComponent(selectedEquipment.googleCalendarId)}&color=%237986cb`}
-              className="w-full h-[600px] border rounded-lg"
-              style={{ borderWidth: 1 }}
-              allowFullScreen
-            ></iframe>
+            {isLoadingCalendar ? (
+              <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
+                <Spinner className="h-8 w-8" />
+              </div>
+            ) : calendarUrl ? (
+              <iframe
+                src={calendarUrl}
+                className="w-full h-[600px] border rounded-lg"
+                style={{ borderWidth: 1 }}
+                allowFullScreen
+              ></iframe>
+            ) : (
+              <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
+                <p className="text-muted-foreground">Failed to load calendar</p>
+              </div>
+            )}
           </div>
         )}
 
