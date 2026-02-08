@@ -2,14 +2,17 @@ import { Link } from '@tanstack/react-router';
 import { Calendar, Shield, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Equipment } from "./types";
 
 interface EquipmentListCardProps {
   equipment: Equipment;
+  isSelected?: boolean;
+  onToggleSelect?: (equipmentId: number) => void;
 }
 
-export function EquipmentListCard({ equipment }: EquipmentListCardProps) {
+export function EquipmentListCard({ equipment, isSelected = false, onToggleSelect }: EquipmentListCardProps) {
   const placeholderImage = "/equipment-placeholder.svg";
   const imageUrl = equipment.imagePath ? `/api/images/${equipment.imagePath}` : placeholderImage;
   
@@ -18,10 +21,22 @@ export function EquipmentListCard({ equipment }: EquipmentListCardProps) {
   const availabilityVariant = isAvailable ? "default" : "secondary";
   
   return (
-    <Card className="group transition-all hover:shadow-md">
-      <CardContent className="flex gap-4 p-4">
+    <Card className={`group transition-all hover:shadow-md${isSelected ? " ring-2 ring-primary/40" : ""}`}>
+      <CardContent className="relative flex gap-4 p-4">
         {/* Image */}
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+          {onToggleSelect && (
+            <div
+              className="absolute left-2 top-2 z-10 rounded-md bg-background/90 p-1 shadow"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect(equipment.id)}
+                aria-label="Select equipment"
+              />
+            </div>
+          )}
           <img
             src={imageUrl}
             alt={equipment.modelName}
@@ -68,7 +83,7 @@ export function EquipmentListCard({ equipment }: EquipmentListCardProps) {
         {/* Action */}
         <div className="flex shrink-0 items-center">
           <Button asChild size="sm" disabled={!isAvailable}>
-            <Link to="/equipment/$" params={{ _splat: equipment.id.toString() }}>
+            <Link to="/bookings/new" search={{ equipmentId: equipment.id }}>
               <Calendar className="mr-2 h-4 w-4" />
               {isAvailable ? "Book" : "View"}
             </Link>

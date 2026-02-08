@@ -63,6 +63,13 @@ export const BookingInputSchema = z.object({
   notes: z.string().optional(),
 })
 
+export const MultiBookingInputSchema = z.object({
+  equipmentIds: z.array(z.coerce.number()).min(1),
+  startTime: z.string(),
+  endTime: z.string(),
+  notes: z.string().optional(),
+})
+
 export const BookingFiltersSchema = z.object({
   status: z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue'])).optional(),
   equipmentId: z.coerce.number().optional(),
@@ -122,6 +129,18 @@ export const UpdateBookingSchema = z.object({
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   notes: z.string().optional(),
+})
+
+export const BulkUpdateBookingTimeSchema = z.object({
+  bookingIds: z.array(z.coerce.number()).min(1),
+  startTime: z.string(),
+  endTime: z.string(),
+})
+
+export const BulkUpdateBookingTimeAdminSchema = z.object({
+  bookingIds: z.array(z.coerce.number()).min(1),
+  startTime: z.string(),
+  endTime: z.string(),
 })
 
 export const CancelBookingSchema = z.object({

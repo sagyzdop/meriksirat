@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { handleBookingAndCalendar } from "@/lib/booking"
+import { handleBookingAndCalendar, handleMultiBookingAndCalendar } from "@/lib/booking"
 import { getEquipmentByIdFn, type EquipmentWithCategory } from "@/lib/equipment"
 import { GoogleCalendarView } from "@/components/shared/event-calendar/google-calendar-view"
+import type { EventColor } from "@/components/shared/event-calendar"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { TimeSlotPicker, getBookingTimesFromSlots } from "@/components/shared/time-slot-picker"
@@ -24,10 +25,10 @@ import { format } from "date-fns"
 
 export function NewBookingPage() {
   const router = useRouter()
-  const searchParams = useSearch({ strict: false }) as { equipmentId?: number }
+  const searchParams = useSearch({ strict: false }) as { equipmentId?: number; equipmentIds?: number[] }
   
   // Equipment selection state
-  const [selectedEquipment, setSelectedEquipment] = React.useState<EquipmentWithCategory | null>(null)
+  const [selectedEquipment, setSelectedEquipment] = React.useState<EquipmentWithCategory[]>([])
   const [isLoadingEquipment, setIsLoadingEquipment] = React.useState(false)
   
   // Booking state
@@ -38,21 +39,35 @@ export function NewBookingPage() {
   const [isBooking, setIsBooking] = React.useState(false)
 
   // Load equipment if equipmentId is provided in URL
-  React.useEffect(() => {
-    if (searchParams.equipmentId) {
-      loadEquipment(searchParams.equipmentId)
+  const equipmentIds = React.useMemo(() => {
+    if (searchParams.equipmentIds && searchParams.equipmentIds.length > 0) {
+      return searchParams.equipmentIds
     }
-  }, [searchParams.equipmentId])
+    return searchParams.equipmentId ? [searchParams.equipmentId] : []
+  }, [searchParams.equipmentId, searchParams.equipmentIds])
+
+  React.useEffect(() => {
+    if (equipmentIds.length > 0) {
+      loadEquipment(equipmentIds)
+    } else {
+      setSelectedEquipment([])
+    }
+  }, [equipmentIds])
 
 
-  const loadEquipment = async (equipmentId: number) => {
+  const loadEquipment = async (equipmentIds: number[]) => {
     setIsLoadingEquipment(true)
     try {
-      const equipment = await getEquipmentByIdFn({ data: { equipmentId } })
-      if (equipment) {
-        setSelectedEquipment(equipment)
-      } else {
+      const equipmentList = await Promise.all(
+        equipmentIds.map((equipmentId) => getEquipmentByIdFn({ data: { equipmentId } }))
+      )
+      const validEquipment = equipmentList.filter((item): item is EquipmentWithCategory => Boolean(item))
+
+      if (validEquipment.length === 0) {
+        setSelectedEquipment([])
         toast.error("Equipment not found")
+      } else {
+        setSelectedEquipment(validEquipment)
       }
     } catch (error) {
       console.error("Failed to load equipment:", error)
@@ -69,23 +84,34 @@ export function NewBookingPage() {
   }
 
   const handleBooking = async () => {
-    if (!selectedEquipment) return
+    if (selectedEquipment.length === 0) return
     
     const times = getBookingTimesFromSlots(selectedSlots, selectedDate)
     if (!times) return
 
     setIsBooking(true)
     try {
-      const result = await handleBookingAndCalendar({
-        data: {
-          equipmentId: selectedEquipment.id,
-          startTime: times.startTime.toISOString(),
-          endTime: times.endTime.toISOString(),
-          notes: notes || undefined,
-        },
-      })
-
-      toast.success(`Booking created successfully! Booking ID: #${result.bookingId}`)
+      if (selectedEquipment.length === 1) {
+        const result = await handleBookingAndCalendar({
+          data: {
+            equipmentId: selectedEquipment[0].id,
+            startTime: times.startTime.toISOString(),
+            endTime: times.endTime.toISOString(),
+            notes: notes || undefined,
+          },
+        })
+        toast.success(`Booking created successfully! Booking ID: #${result.bookingId}`)
+      } else {
+        const result = await handleMultiBookingAndCalendar({
+          data: {
+            equipmentIds: selectedEquipment.map((item) => item.id),
+            startTime: times.startTime.toISOString(),
+            endTime: times.endTime.toISOString(),
+            notes: notes || undefined,
+          },
+        })
+        toast.success(`Created ${result.bookingIds.length} bookings successfully!`)
+      }
       setIsDialogOpen(false)
       setSelectedSlots([])
       setNotes("")
@@ -94,17 +120,47 @@ export function NewBookingPage() {
       router.navigate({ to: '/bookings' })
     } catch (error: any) {
       console.error("Booking failed:", error)
-      toast.error(error.message || "Failed to create booking")
+      if (error?.conflicts && Array.isArray(error.conflicts)) {
+        const conflictNames = error.conflicts
+          .map((conflict: { equipmentId: number }) => equipmentNameById.get(conflict.equipmentId) || `Equipment ${conflict.equipmentId}`)
+          .join(", ")
+        toast.error(`Time slot unavailable for: ${conflictNames}`)
+      } else {
+        toast.error(error.message || "Failed to create booking")
+      }
     } finally {
       setIsBooking(false)
     }
   }
 
   const bookingTimes = getBookingTimesFromSlots(selectedSlots, selectedDate)
+  const equipmentNameById = React.useMemo(() => {
+    return new Map(selectedEquipment.map((item) => [item.id, item.modelName]))
+  }, [selectedEquipment])
+
+  const equipmentColorMap = React.useMemo(() => {
+    const palette: EventColor[] = ["sky", "amber", "violet", "rose", "emerald", "orange"]
+    const map: Record<string, EventColor> = {}
+    selectedEquipment.forEach((item, index) => {
+      if (item.googleCalendarId) {
+        map[item.googleCalendarId] = palette[index % palette.length]
+      }
+    })
+    return map
+  }, [selectedEquipment])
+
+  const colorClasses: Record<EventColor, string> = {
+    sky: "bg-sky-500",
+    amber: "bg-amber-500",
+    violet: "bg-violet-500",
+    rose: "bg-rose-500",
+    emerald: "bg-emerald-500",
+    orange: "bg-orange-500",
+  }
 
   if (isLoadingEquipment) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <Spinner className="h-8 w-8" />
       </div>
     )
@@ -121,51 +177,62 @@ export function NewBookingPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Selected Equipment</h2>
-            <Link to="/equipment">
+            <Link to="/equipment" search={{ selectedEquipmentIds: selectedEquipment.map((item) => item.id) }}>
               <Button variant="outline" size="sm">
                 Change Equipment
               </Button>
             </Link>
           </div>
           
-          {selectedEquipment ? (
-            <Link to="/equipment/$" params={{ _splat: selectedEquipment.id.toString() }} className="block">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-6">
-                    <div className="relative flex-shrink-0">
-                      {selectedEquipment.imagePath ? (
-                        <img 
-                          src={`/api/images/${selectedEquipment.imagePath}`} 
-                          alt={selectedEquipment.modelName}
-                          className="w-24 h-24 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                          <span className="text-muted-foreground text-xs">No image</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold mb-1">{selectedEquipment.modelName}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {selectedEquipment.category?.name}
-                          </p>
-                          {selectedEquipment.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {selectedEquipment.description}
-                            </p>
+          {selectedEquipment.length > 0 ? (
+            <div className="grid gap-4">
+              {selectedEquipment.map((item) => (
+                <Link key={item.id} to="/equipment/$" params={{ _splat: item.id.toString() }} className="block">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-6">
+                        <div className="relative shrink-0">
+                          {item.imagePath ? (
+                            <img 
+                              src={`/api/images/${item.imagePath}`} 
+                              alt={item.modelName}
+                              className="w-24 h-24 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                              <span className="text-muted-foreground text-xs">No image</span>
+                            </div>
                           )}
                         </div>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex h-2.5 w-2.5 rounded-full ${colorClasses[equipmentColorMap[item.googleCalendarId] || "sky"]}`}
+                                />
+                                <h3 className="text-lg font-semibold mb-1">
+                                  {item.modelName}
+                                </h3>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {item.category?.name}
+                              </p>
+                              {item.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           ) : (
             <Card>
               <CardContent className="pt-6">
@@ -181,19 +248,36 @@ export function NewBookingPage() {
         </div>
 
         {/* Availability View */}
-        {selectedEquipment && (
+        {selectedEquipment.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Availability</h2>
-            <GoogleCalendarView calendarId={selectedEquipment.googleCalendarId} />
+            <GoogleCalendarView
+              calendarIds={selectedEquipment
+                .map((item) => item.googleCalendarId)
+                .filter((id): id is string => Boolean(id))}
+              colorByCalendarId={equipmentColorMap}
+            />
+            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+              {selectedEquipment.map((item) => (
+                <div key={item.id} className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex h-2.5 w-2.5 rounded-full ${colorClasses[equipmentColorMap[item.googleCalendarId] || "sky"]}`}
+                  />
+                  <span>{item.modelName}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Date & Time Selection */}
-        {selectedEquipment && (
+        {selectedEquipment.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Select Date & Time</h2>
             <TimeSlotPicker
-              googleCalendarId={selectedEquipment.googleCalendarId}
+              googleCalendarIds={selectedEquipment
+                .map((item) => item.googleCalendarId)
+                .filter((id): id is string => Boolean(id))}
               onSlotsChange={handleSlotsChange}
             />
             <div className="flex justify-end">
@@ -223,8 +307,15 @@ export function NewBookingPage() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Equipment</Label>
               <div className="text-sm text-muted-foreground">
-                <p className="font-medium">{selectedEquipment?.modelName}</p>
-                <p>{selectedEquipment?.category?.name}</p>
+                {selectedEquipment.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <span className={`inline-flex h-2.5 w-2.5 rounded-full ${colorClasses[equipmentColorMap[item.googleCalendarId] || "sky"]}`} />
+                    <div>
+                      <p className="font-medium">{item.modelName}</p>
+                      <p>{item.category?.name}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

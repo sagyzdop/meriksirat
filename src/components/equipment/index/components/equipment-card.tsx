@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Calendar, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Card, 
   CardAction,
@@ -14,16 +15,30 @@ import { Equipment } from "./types";
 
 interface EquipmentCardProps {
   equipment: Equipment;
+  isSelected?: boolean;
+  onToggleSelect?: (equipmentId: number) => void;
 }
 
-export function EquipmentCard({ equipment }: EquipmentCardProps) {
+export function EquipmentCard({ equipment, isSelected = false, onToggleSelect }: EquipmentCardProps) {
   const placeholderImage = "/equipment-placeholder.svg";
   const imageUrl = equipment.imagePath ? `/api/images/${equipment.imagePath}` : placeholderImage;
   
   const isAvailable = equipment.isActive !== false;
   
   return (
-    <Card className="group relative mx-auto w-full overflow-hidden pt-0 transition-all hover:shadow-lg">
+    <Card className={`group relative mx-auto w-full overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? " ring-2 ring-primary/40" : ""}`}>
+      {onToggleSelect && (
+        <div
+          className="absolute left-3 top-3 z-10 rounded-md bg-background/90 p-1 shadow"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect(equipment.id)}
+            aria-label="Select equipment"
+          />
+        </div>
+      )}
       {/* Image Section */}
       <img
         src={imageUrl}

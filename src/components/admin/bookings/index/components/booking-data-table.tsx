@@ -10,7 +10,7 @@ import {
   getFacetedUniqueValues,
   useReactTable,
 } from "@tanstack/react-table"
-import { useNavigate } from "@tanstack/react-router"
+import { useNavigate, useRouter } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -39,6 +39,8 @@ import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucid
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
 import { isPast } from "date-fns"
+import { updateBookingsTimeAdminFn } from "@/lib/booking"
+import { BulkChangeTimeDialog } from "@/components/bookings/components/bulk-change-time-dialog"
 
 interface Pagination {
   page: number
@@ -74,7 +76,9 @@ const statusOptions = [
 
 export function BookingDataTable({ columns, data, pagination, filters }: BookingDataTableProps) {
   const navigate = useNavigate()
+  const router = useRouter()
   const [rowSelection, setRowSelection] = React.useState({})
+  const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
 
@@ -188,6 +192,28 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
 
   const isFiltered = !!filters.status
 
+  const selectedBookings = React.useMemo(() => {
+    return Object.keys(rowSelection)
+      .map((index) => data[parseInt(index)])
+      .filter(Boolean)
+  }, [rowSelection, data])
+
+  const selectedBookingIds = React.useMemo(() => {
+    return selectedBookings.map((booking) => booking.id)
+  }, [selectedBookings])
+
+  const handleBulkTimeUpdate = async (startTime: string, endTime: string) => {
+    if (selectedBookingIds.length === 0) return
+    await updateBookingsTimeAdminFn({
+      data: {
+        bookingIds: selectedBookingIds,
+        startTime,
+        endTime,
+      },
+    })
+    await router.invalidate()
+  }
+
   const clearAllFilters = React.useCallback(() => {
     navigate({
       to: '.',
@@ -237,33 +263,51 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
             )}
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
-              Columns
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-full sm:w-auto"
+            disabled={selectedBookingIds.length === 0}
+            onClick={() => setBulkDialogOpen(true)}
+          >
+            Change Time
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
+
+      <BulkChangeTimeDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        bookings={selectedBookings}
+        onConfirm={handleBulkTimeUpdate}
+      />
 
       {/* Table with horizontal scroll on small screens */}
       <div className="rounded-md border overflow-x-auto">
@@ -339,7 +383,7 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
               value={`${pagination.limit}`}
               onValueChange={(value) => handlePageSizeChange(Number(value))}
             >
-              <SelectTrigger className="h-8 w-[70px]">
+              <SelectTrigger className="h-8 w-17.5">
                 <SelectValue placeholder={pagination.limit} />
               </SelectTrigger>
               <SelectContent side="top">
@@ -352,7 +396,7 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
             </Select>
           </div>
           <div className="flex items-center justify-between sm:justify-center gap-2">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            <div className="flex w-25 items-center justify-center text-sm font-medium">
               Page {pagination.page} of {pagination.totalPages}
             </div>
             <div className="flex items-center space-x-2">

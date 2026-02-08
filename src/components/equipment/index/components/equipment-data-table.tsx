@@ -2,6 +2,8 @@ import * as React from "react"
 import {
   ColumnDef,
   ColumnFiltersState,
+  OnChangeFn,
+  RowSelectionState,
   SortingState,
   VisibilityState,
   flexRender,
@@ -12,6 +14,7 @@ import {
 } from "@tanstack/react-table"
 import { useNavigate } from "@tanstack/react-router"
 
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -47,11 +50,26 @@ interface EquipmentDataTableProps {
   pagination: Pagination
   filters: Filters
   isLoading?: boolean
+  rowSelection: RowSelectionState
+  onRowSelectionChange: OnChangeFn<RowSelectionState>
+  selectedCount: number
+  onBookSelected?: () => void
+  onClearSelection?: () => void
 }
 
-export function EquipmentDataTable({ columns, data, pagination, filters, isLoading = false }: EquipmentDataTableProps) {
+export function EquipmentDataTable({
+  columns,
+  data,
+  pagination,
+  filters,
+  isLoading = false,
+  rowSelection,
+  onRowSelectionChange,
+  selectedCount,
+  onBookSelected,
+  onClearSelection,
+}: EquipmentDataTableProps) {
   const navigate = useNavigate()
-  const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
 
@@ -112,7 +130,8 @@ export function EquipmentDataTable({ columns, data, pagination, filters, isLoadi
     manualFiltering: true,
     enableRowSelection: true,
     enableSortingRemoval: false,
-    onRowSelectionChange: setRowSelection,
+    getRowId: (row) => row.id.toString(),
+    onRowSelectionChange,
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -130,8 +149,35 @@ export function EquipmentDataTable({ columns, data, pagination, filters, isLoadi
 
   return (
     <div className="space-y-4">
+      {(onBookSelected || onClearSelection) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm text-muted-foreground">
+            {selectedCount} selected
+          </div>
+          <div className="flex items-center gap-2">
+            {onClearSelection && selectedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClearSelection}
+              >
+                Clear selection
+              </Button>
+            )}
+            {onBookSelected && (
+              <Button
+                size="sm"
+                onClick={onBookSelected}
+                disabled={selectedCount === 0}
+              >
+                Book selected
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
       {/* Table */}
-      <div className="relative rounded-md border overflow-x-auto">
+      <div className="rounded-md border overflow-x-auto">
         {isLoading && <DataTableLoading />}
         <Table>
           <TableHeader>
@@ -142,7 +188,7 @@ export function EquipmentDataTable({ columns, data, pagination, filters, isLoadi
                   return (
                     <TableHead
                       key={header.id}
-                      className={`whitespace-nowrap h-12${isImageColumn ? " w-16 min-w-16" : ""}`}
+                      className={`whitespace-nowrap h-12 [&:has([role=checkbox])]:pl-3${isImageColumn ? " w-16 min-w-16" : ""}`}
                     >
                       {header.isPlaceholder
                         ? null
@@ -170,7 +216,7 @@ export function EquipmentDataTable({ columns, data, pagination, filters, isLoadi
                     return (
                       <TableCell
                         key={cell.id}
-                        className={`whitespace-nowrap py-3${isImageColumn ? " w-[64px] min-w-[64px]" : ""}`}
+                        className={`whitespace-nowrap py-3 [&:has([role=checkbox])]:pl-3${isImageColumn ? " w-16 min-w-16" : ""}`}
                       >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -195,8 +241,7 @@ export function EquipmentDataTable({ columns, data, pagination, filters, isLoadi
         </Table>
       </div>
       <div className="text-sm text-muted-foreground px-2">
-        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-        {pagination.total} row(s) selected.
+        {selectedCount} of {pagination.total} row(s) selected.
       </div>
     </div>
   )

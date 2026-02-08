@@ -13,9 +13,19 @@ interface EquipmentGridProps {
   hasActiveFilters?: boolean;
   isLoading?: boolean;
   className?: string;
+  selectedEquipmentIds?: number[];
+  onToggleSelect?: (equipmentId: number) => void;
 }
 
-export function EquipmentGrid({ equipment, viewMode, hasActiveFilters = false, isLoading = false, className }: EquipmentGridProps) {
+export function EquipmentGrid({
+  equipment,
+  viewMode,
+  hasActiveFilters = false,
+  isLoading = false,
+  className,
+  selectedEquipmentIds,
+  onToggleSelect,
+}: EquipmentGridProps) {
   if (isLoading) {
     if (viewMode === "grid") {
       return (
@@ -95,7 +105,12 @@ export function EquipmentGrid({ equipment, viewMode, hasActiveFilters = false, i
         className={cn(className)}
       >
         {equipment.map((item) => (
-          <EquipmentCard key={item.id} equipment={item} />
+          <EquipmentCard
+            key={item.id}
+            equipment={item}
+            isSelected={selectedEquipmentIds?.includes(item.id) || false}
+            onToggleSelect={onToggleSelect}
+          />
         ))}
       </ContentGrid>
     );
@@ -105,7 +120,12 @@ export function EquipmentGrid({ equipment, viewMode, hasActiveFilters = false, i
   return (
     <div className={cn("grid grid-cols-1 gap-4", className)}>
       {equipment.map((item) => (
-        <EquipmentListCard key={item.id} equipment={item} />
+        <EquipmentListCard
+          key={item.id}
+          equipment={item}
+          isSelected={selectedEquipmentIds?.includes(item.id) || false}
+          onToggleSelect={onToggleSelect}
+        />
       ))}
     </div>
   );

@@ -12,7 +12,9 @@ import {
 } from "@/components/shared/event-calendar"
 
 interface GoogleCalendarViewProps {
-  calendarId: string
+  calendarId?: string
+  calendarIds?: string[]
+  colorByCalendarId?: Record<string, EventColor>
   className?: string
 }
 
@@ -36,7 +38,7 @@ const colorMap: Record<string, EventColor> = {
   "11": "amber",
 }
 
-const toCalendarEvent = (event: any): CalendarEvent | null => {
+const toCalendarEvent = (event: any, colorOverride?: EventColor): CalendarEvent | null => {
   if (!event || event.status === "cancelled") return null
 
   const startValue = event.start?.dateTime ?? event.start?.date
@@ -56,17 +58,23 @@ const toCalendarEvent = (event: any): CalendarEvent | null => {
     start: startDate,
     end: endDate,
     allDay: isAllDay,
-    color: colorMap[event.colorId] || "sky",
+    color: colorOverride || colorMap[event.colorId] || "sky",
   }
 }
 
 export function GoogleCalendarView({
   calendarId,
+  calendarIds,
+  colorByCalendarId,
   className,
 }: GoogleCalendarViewProps) {
   const [range, setRange] = useState<CalendarRange | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const resolvedCalendarIds = useCallback(() => {
+    if (calendarIds && calendarIds.length > 0) return calendarIds
+    return calendarId ? [calendarId] : []
+  }, [calendarId, calendarIds])
 
   const handleRangeChange = useCallback((nextRange: CalendarRange) => {
     setRange((prev) => {
@@ -81,28 +89,33 @@ export function GoogleCalendarView({
   }, [])
 
   useEffect(() => {
-    if (!calendarId || !range) return
+    const calendarIdList = resolvedCalendarIds()
+    if (calendarIdList.length === 0 || !range) return
 
     let cancelled = false
 
     const loadEvents = async () => {
       setIsLoading(true)
       try {
-        const items = await getCalendarEvents({
-          data: {
-            equipmentCalendarId: calendarId,
-            timeMin: range.start.toISOString(),
-            timeMax: range.end.toISOString(),
-          },
-        })
+        const results = await Promise.all(
+          calendarIdList.map(async (id) => {
+            const items = await getCalendarEvents({
+              data: {
+                equipmentCalendarId: id,
+                timeMin: range.start.toISOString(),
+                timeMax: range.end.toISOString(),
+              },
+            })
+            const overrideColor = colorByCalendarId?.[id]
+            return (items || [])
+              .map((item) => toCalendarEvent(item, overrideColor))
+              .filter((item): item is CalendarEvent => Boolean(item))
+          })
+        )
 
         if (cancelled) return
 
-        const mapped = (items || [])
-          .map(toCalendarEvent)
-          .filter((item): item is CalendarEvent => Boolean(item))
-
-        setEvents(mapped)
+        setEvents(results.flat())
       } catch (error) {
         if (!cancelled) {
           console.error("Failed to load calendar events:", error)
@@ -120,7 +133,7 @@ export function GoogleCalendarView({
     return () => {
       cancelled = true
     }
-  }, [calendarId, range])
+  }, [colorByCalendarId, range, resolvedCalendarIds])
 
   if (isLoading && events.length === 0) {
     return (

@@ -8,6 +8,7 @@ import {
   AdminBookingFiltersSchema,
   UpdateBookingStatusAdminSchema,
   GetBookingByIdSchema,
+  BulkUpdateBookingTimeAdminSchema,
   DeleteBookingSchema,
 } from '../types'
 
@@ -427,4 +428,130 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
       .where(eq(booking.id, data.bookingId))
 
     return { success: true }
+  })
+
+export const updateBookingsTimeAdminFn = createServerFn({ method: 'POST' })
+  .inputValidator(BulkUpdateBookingTimeAdminSchema)
+  .handler(async ({ data }) => {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { checkCalendarFreeBusy, updateCalendarEvent } = await import('@/lib/google/google-caledar')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db/index')
+    const { booking, equipment, user, settings } = await import('@/db/schema')
+    const { eq, inArray } = await import('drizzle-orm')
+    const { logBookingActivityById } = await import('@/lib/telegram/logging')
+
+    const headers = getRequestHeaders()
+    const adminUser = await checkAdminPermission(headers, ['admin', 'manager'])
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    const bookingItems = await database
+      .select({
+        id: booking.id,
+        userId: booking.userId,
+        equipmentId: booking.equipmentId,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        status: booking.status,
+        googleCalendarEventId: booking.googleCalendarEventId,
+        userEventDetails: booking.userEventDetails,
+        equipmentCalendarId: equipment.googleCalendarId,
+        equipmentModelName: equipment.modelName,
+        userEmail: user.email,
+      })
+      .from(booking)
+      .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
+      .leftJoin(user, eq(booking.userId, user.id))
+      .where(inArray(booking.id, data.bookingIds))
+
+    if (bookingItems.length !== data.bookingIds.length) {
+      throw new Error('Some bookings were not found')
+    }
+
+    const cancelled = bookingItems.find((item) => item.status === 'cancelled')
+    if (cancelled) {
+      throw new Error('Cannot update a cancelled booking')
+    }
+
+    const conflicts: Array<{ bookingId: number; conflict: { start: string; end: string } }> = []
+
+    for (const bookingItem of bookingItems) {
+      if (!bookingItem.equipmentCalendarId) continue
+      const freeBusyResult = await checkCalendarFreeBusy({
+        data: {
+          calendarId: bookingItem.equipmentCalendarId,
+          timeMin: data.startTime,
+          timeMax: data.endTime,
+        }
+      })
+
+      if (freeBusyResult.busy.length > 0) {
+        conflicts.push({ bookingId: bookingItem.id, conflict: freeBusyResult.busy[0] })
+      }
+    }
+
+    if (conflicts.length > 0) {
+      const err: any = new Error('Requested time conflicts with existing booking(s)')
+      err.conflicts = conflicts
+      throw err
+    }
+
+    const settingsData = await database
+      .select({ globalBookingNote: settings.globalBookingNote })
+      .from(settings)
+      .where(eq(settings.id, 'global'))
+      .get()
+
+    const globalNote = settingsData?.globalBookingNote
+
+    for (const bookingItem of bookingItems) {
+      await database
+        .update(booking)
+        .set({
+          startTime: new Date(data.startTime),
+          endTime: new Date(data.endTime),
+          updatedAt: new Date(),
+        })
+        .where(eq(booking.id, bookingItem.id))
+
+      try {
+        await logBookingActivityById(bookingItem.id, 'updated', {
+          notes: `Admin ${adminUser.email} updated booking time`,
+          newStatus: bookingItem.status
+        })
+      } catch (logError) {
+        console.error('Failed to log booking update:', logError)
+      }
+
+      if (bookingItem.googleCalendarEventId && bookingItem.equipmentCalendarId) {
+        const descriptionParts = [
+          `Booking ID: ${bookingItem.id}`,
+          `User: ${bookingItem.userEmail || 'Unknown user'}`,
+          `Notes: ${bookingItem.userEventDetails || 'No additional notes'}`
+        ]
+
+        if (globalNote && globalNote.trim()) {
+          descriptionParts.push('', '---', globalNote)
+        }
+
+        const event = {
+          summary: `${bookingItem.equipmentModelName || `Equipment ${bookingItem.equipmentId}`} - Booking`,
+          description: descriptionParts.join('\n'),
+          start: { dateTime: data.startTime, timeZone: 'UTC' },
+          end: { dateTime: data.endTime, timeZone: 'UTC' },
+        }
+
+        await updateCalendarEvent({
+          data: {
+            equipmentCalendarId: bookingItem.equipmentCalendarId,
+            eventId: bookingItem.googleCalendarEventId,
+            event,
+            userEmail: bookingItem.userEmail,
+          }
+        })
+      }
+    }
+
+    return { success: true, bookingIds: data.bookingIds }
   })

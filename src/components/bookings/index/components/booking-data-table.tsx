@@ -10,7 +10,7 @@ import {
   getFacetedUniqueValues,
   useReactTable,
 } from "@tanstack/react-table"
-import { useNavigate } from "@tanstack/react-router"
+import { useNavigate, useRouter } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,8 @@ import { BookingWithEquipment } from "@/lib/booking/types"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
 import { X, MessageCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { createTelegramBotLink } from "@/lib/telegram/client-utils"
+import { updateBookingsTimeFn } from "@/lib/booking"
+import { BulkChangeTimeDialog } from "@/components/bookings/components/bulk-change-time-dialog"
 
 interface Pagination {
   page: number
@@ -78,7 +80,9 @@ const statusOptions = [
 
 export function BookingDataTable({ columns, data, pagination, filters, telegramBotUsername }: BookingDataTableProps) {
   const navigate = useNavigate()
+  const router = useRouter()
   const [rowSelection, setRowSelection] = React.useState({})
+  const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
 
@@ -187,6 +191,28 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
 
   const isFiltered = filters.status && filters.status.length > 0
 
+  const selectedBookings = React.useMemo(() => {
+    return Object.keys(rowSelection)
+      .map((index) => data[parseInt(index)])
+      .filter(Boolean)
+  }, [rowSelection, data])
+
+  const selectedBookingIds = React.useMemo(() => {
+    return selectedBookings.map((booking) => booking.id)
+  }, [selectedBookings])
+
+  const handleBulkTimeUpdate = async (startTime: string, endTime: string) => {
+    if (selectedBookingIds.length === 0) return
+    await updateBookingsTimeFn({
+      data: {
+        bookingIds: selectedBookingIds,
+        startTime,
+        endTime,
+      },
+    })
+    await router.invalidate()
+  }
+
   const clearAllFilters = () => {
     navigate({
       to: '.',
@@ -224,6 +250,15 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-full sm:w-auto"
+            disabled={selectedBookingIds.length === 0}
+            onClick={() => setBulkDialogOpen(true)}
+          >
+            Change Time
+          </Button>
           <Button
             variant="default"
             size="sm"
@@ -269,6 +304,13 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
           </DropdownMenu>
         </div>
       </div>
+
+      <BulkChangeTimeDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        bookings={selectedBookings}
+        onConfirm={handleBulkTimeUpdate}
+      />
 
       {/* Table with horizontal scroll on small screens */}
       <div className="rounded-md border">
@@ -339,7 +381,7 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
               value={`${pagination.limit}`}
               onValueChange={(value) => handlePageSizeChange(Number(value))}
             >
-              <SelectTrigger className="h-8 w-[70px]">
+              <SelectTrigger className="h-8 w-17.5">
                 <SelectValue placeholder={pagination.limit} />
               </SelectTrigger>
               <SelectContent side="top">
@@ -352,7 +394,7 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
             </Select>
           </div>
           <div className="flex items-center justify-between sm:justify-center gap-2">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            <div className="flex w-25 items-center justify-center text-sm font-medium">
               Page {pagination.page} of {pagination.totalPages}
             </div>
             <div className="flex items-center space-x-2">

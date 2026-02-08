@@ -103,7 +103,7 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25 max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Edit Category</DialogTitle>
           <DialogDescription>
@@ -112,53 +112,55 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-name">Name *</Label>
-            <Input
-              id="edit-name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter category name"
-              disabled={isLoading}
-              className={errors.name ? 'border-destructive' : ''}
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name}</p>
-            )}
-          </div>
+          <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter category name"
+                disabled={isLoading}
+                className={errors.name ? 'border-destructive' : ''}
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea
-              id="edit-description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Enter category description (optional)"
-              disabled={isLoading}
-              rows={3}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter category description (optional)"
+                disabled={isLoading}
+                rows={3}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-sortOrder">Sort Order</Label>
-            <Input
-              id="edit-sortOrder"
-              type="number"
-              value={formData.sortOrder}
-              onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
-              placeholder="0"
-              disabled={isLoading}
-              min="0"
-            />
-            <p className="text-sm text-muted-foreground">
-              Lower numbers appear first in the list
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-sortOrder">Sort Order</Label>
+              <Input
+                id="edit-sortOrder"
+                type="number"
+                value={formData.sortOrder}
+                onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
+                placeholder="0"
+                disabled={isLoading}
+                min="0"
+              />
+              <p className="text-sm text-muted-foreground">
+                Lower numbers appear first in the list
+              </p>
+            </div>
 
-          <div className="bg-muted/50 p-3 rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              <strong>Equipment Count:</strong> {category.equipmentCount} {category.equipmentCount === 1 ? 'item' : 'items'}
-            </p>
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                <strong>Equipment Count:</strong> {category.equipmentCount} {category.equipmentCount === 1 ? 'item' : 'items'}
+              </p>
+            </div>
           </div>
 
           <DialogFooter>

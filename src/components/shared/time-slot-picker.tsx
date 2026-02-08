@@ -4,7 +4,7 @@ import { CheckCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { checkCalendarFreeBusy } from "@/lib/google/google-caledar"
+import { checkCalendarFreeBusy, checkMultipleCalendarsFreeBusy } from "@/lib/google/google-caledar"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -14,7 +14,8 @@ interface TimeSlot {
 }
 
 interface TimeSlotPickerProps {
-  googleCalendarId: string
+  googleCalendarId?: string
+  googleCalendarIds?: string[]
   initialDate?: Date
   initialSlots?: string[]
   excludeBookingPeriod?: {
@@ -23,20 +24,26 @@ interface TimeSlotPickerProps {
   }
   onSlotsChange?: (slots: string[], date: Date | undefined) => void
   disabled?: boolean
+  layout?: "horizontal" | "vertical"
+  withCard?: boolean
 }
 
 export function TimeSlotPicker({
   googleCalendarId,
+  googleCalendarIds,
   initialDate,
   initialSlots = [],
   excludeBookingPeriod,
   onSlotsChange,
   disabled = false,
+  layout = "horizontal",
+  withCard = true,
 }: TimeSlotPickerProps) {
+  const isVerticalLayout = layout === "vertical"
   const excludeStart = excludeBookingPeriod?.start ?? null
   const excludeEnd = excludeBookingPeriod?.end ?? null
-  const [date, setDate] = React.useState<Date | undefined>(initialDate || new Date())
-  const [month, setMonth] = React.useState<Date>(initialDate || new Date())
+  const [date, setDate] = React.useState<Date | undefined>(initialDate)
+  const [month, setMonth] = React.useState<Date | undefined>(initialDate)
   const [selectedSlots, setSelectedSlots] = React.useState<string[]>(initialSlots)
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([])
   const [isLoadingSlots, setIsLoadingSlots] = React.useState(false)
@@ -56,7 +63,14 @@ export function TimeSlotPicker({
   // Check availability for selected date
   const checkAvailability = React.useCallback(
     async (selectedDate: Date) => {
-      if (!selectedDate || !googleCalendarId) return
+      const resolvedCalendarIds = (googleCalendarIds && googleCalendarIds.length > 0)
+        ? googleCalendarIds
+        : (googleCalendarId ? [googleCalendarId] : [])
+
+      if (!selectedDate || resolvedCalendarIds.length === 0) {
+        setTimeSlots([])
+        return
+      }
 
       setIsLoadingSlots(true)
       try {
@@ -66,15 +80,26 @@ export function TimeSlotPicker({
         const endOfDay = new Date(selectedDate)
         endOfDay.setHours(23, 59, 59, 999)
 
-        const result = await checkCalendarFreeBusy({
-          data: {
-            calendarId: googleCalendarId,
-            timeMin: startOfDay.toISOString(),
-            timeMax: endOfDay.toISOString(),
-          },
-        })
-
-        const busySlots = result.busy || []
+        let busySlots: Array<{ start: string; end: string }> = []
+        if (resolvedCalendarIds.length === 1) {
+          const result = await checkCalendarFreeBusy({
+            data: {
+              calendarId: resolvedCalendarIds[0],
+              timeMin: startOfDay.toISOString(),
+              timeMax: endOfDay.toISOString(),
+            },
+          })
+          busySlots = result.busy || []
+        } else {
+          const result = await checkMultipleCalendarsFreeBusy({
+            data: {
+              equipmentCalendarIds: resolvedCalendarIds,
+              timeMin: startOfDay.toISOString(),
+              timeMax: endOfDay.toISOString(),
+            },
+          })
+          busySlots = resolvedCalendarIds.flatMap((calendarId) => result[calendarId]?.busy || [])
+        }
         const allSlots = generateTimeSlots()
 
         // Check each slot against busy periods
@@ -121,7 +146,7 @@ export function TimeSlotPicker({
         setIsLoadingSlots(false)
       }
     },
-    [googleCalendarId, excludeStart, excludeEnd]
+    [googleCalendarId, googleCalendarIds, excludeStart, excludeEnd]
   )
 
   // Load availability when date changes
@@ -130,6 +155,16 @@ export function TimeSlotPicker({
       checkAvailability(date)
     }
   }, [date, checkAvailability])
+
+  React.useEffect(() => {
+    if (!date) {
+      const today = new Date()
+      setDate(today)
+      setMonth(today)
+    } else if (!month) {
+      setMonth(date)
+    }
+  }, [date, month])
 
   // Notify parent of changes
   React.useEffect(() => {
@@ -190,9 +225,9 @@ export function TimeSlotPicker({
 
   const bookingTimes = getBookingTimes()
 
-  return (
-    <Card className="gap-0 p-0">
-      <CardContent className="relative p-0 md:pr-64">
+  const content = (
+    <>
+      <div className={cn("relative", !isVerticalLayout && "md:pr-64")}>
         <div className="p-6 flex flex-col items-center gap-4">
           <Calendar
             mode="single"
@@ -241,7 +276,13 @@ export function TimeSlotPicker({
             </Button>
           </div>
         </div>
-        <div className="no-scrollbar inset-y-0 right-0 flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6 md:absolute md:max-h-none md:w-64 md:border-t-0 md:border-l">
+        <div
+          className={cn(
+            "no-scrollbar flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6",
+            !isVerticalLayout && "inset-y-0 right-0 md:absolute md:max-h-none md:w-64 md:border-t-0 md:border-l",
+            isVerticalLayout && "md:static md:max-h-72 md:w-full"
+          )}
+        >
           <div className="text-sm font-medium text-gray-700 mb-2">
             Available Times (30min slots)
           </div>
@@ -269,8 +310,8 @@ export function TimeSlotPicker({
             </div>
           )}
         </div>
-      </CardContent>
-      <CardFooter className="flex flex-col gap-4 border-t px-6 py-5! md:flex-row">
+      </div>
+      <div className="flex flex-col gap-4 border-t px-6 py-5! md:flex-row">
         <div className="text-sm flex-1">
           {bookingTimes ? (
             <div className="flex items-center gap-2">
@@ -295,7 +336,17 @@ export function TimeSlotPicker({
             </span>
           )}
         </div>
-      </CardFooter>
+      </div>
+    </>
+  )
+
+  if (!withCard) {
+    return <div className="rounded-lg border bg-card">{content}</div>
+  }
+
+  return (
+    <Card className="gap-0 p-0">
+      <CardContent className="p-0">{content}</CardContent>
     </Card>
   )
 }

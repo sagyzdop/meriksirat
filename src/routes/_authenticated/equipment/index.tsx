@@ -31,7 +31,17 @@ const searchSchema = z.object({
 export const Route = createFileRoute('/_authenticated/equipment/')({
   component: RouteComponent,
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({ search }),
+  loaderDeps: ({ search }) => ({
+    search: {
+      categoryIds: search.categoryIds,
+      searchQuery: search.searchQuery,
+      page: search.page,
+      limit: search.limit,
+      sortBy: search.sortBy,
+      sortOrder: search.sortOrder,
+      viewMode: search.viewMode,
+    },
+  }),
   loader: async ({ deps }) => {
     const search = deps.search
     try {

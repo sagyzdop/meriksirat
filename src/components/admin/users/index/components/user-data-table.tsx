@@ -285,12 +285,12 @@ export function UserDataTable({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {selectedUserIds.length > 0 && (
             <Button
               variant="outline"
               size="sm"
-              className="h-8 border-dashed"
+              className="h-8 w-full border-dashed sm:w-auto"
               onClick={() => setBulkEditClearanceOpen(true)}
             >
               <Shield className="mr-2 h-4 w-4" />
@@ -391,7 +391,7 @@ export function UserDataTable({
               value={`${pagination.limit}`}
               onValueChange={(value) => handlePageSizeChange(Number(value))}
             >
-              <SelectTrigger className="h-8 w-[70px]">
+              <SelectTrigger className="h-8 w-17.5">
                 <SelectValue placeholder={pagination.limit} />
               </SelectTrigger>
               <SelectContent side="top">
@@ -404,7 +404,7 @@ export function UserDataTable({
             </Select>
           </div>
           <div className="flex items-center justify-between sm:justify-center gap-2">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            <div className="flex w-25 items-center justify-center text-sm font-medium">
               Page {pagination.page} of {pagination.totalPages}
             </div>
             <div className="flex items-center space-x-2">

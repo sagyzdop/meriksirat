@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { LayoutGrid, Table2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getEquipmentColumns } from "./components/equipment-columns";
 import { EquipmentDataTable } from "./components/equipment-data-table";
@@ -10,6 +11,7 @@ import { EquipmentGrid } from "./components/equipment-grid";
 import { Equipment } from "./components/types";
 import { EquipmentToolbar } from "./components/equipment-toolbar";
 import { EquipmentPagination } from "./components/equipment-pagination";
+import { useSelection } from "@/hooks/use-selection";
 
 
 interface Pagination {
@@ -42,9 +44,14 @@ interface PageProps {
 
 export function Page({ equipment, categories, pagination, filters, onViewModeChange, isLoading = false }: PageProps) {
   const navigate = useNavigate()
+  const selection = useSelection({
+    items: equipment,
+    getId: (item) => item.id,
+    storageKey: "equipment-selection",
+  })
 
   // Get category options for filtering
-  const categoryOptions = useMemo(() => {
+  const categoryOptions = React.useMemo(() => {
     const options = categories.map(cat => ({
       value: cat.id.toString(),
       label: cat.name,
@@ -57,13 +64,12 @@ export function Page({ equipment, categories, pagination, filters, onViewModeCha
   }, [categories]);
 
   // Get columns for table view
-  const columns = useMemo(() => getEquipmentColumns(), []);
+  const columns = React.useMemo(() => getEquipmentColumns(), []);
 
   // Get view mode from URL or default to table
   const viewMode = filters.viewMode || 'table'
-
   const description = pagination.total > 0
-    ? `Showing ${equipment.length} of ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
+    ? `Showing ${equipment.length} of ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}${selection.selectedIds.length > 0 ? ` • ${selection.selectedIds.length} selected` : ''}`
     : "No equipment found"
 
   const handleSearchChange = (value: string) => {
@@ -119,32 +125,49 @@ export function Page({ equipment, categories, pagination, filters, onViewModeCha
     })
   }
 
+  const handleBookSelected = () => {
+    if (selection.selectedIds.length === 0) return
+    navigate({
+      to: '/bookings/new',
+      search: { equipmentIds: selection.selectedIds },
+    })
+  }
+
   return (
     <PageContainer className="space-y-6">
       <PageHeader
         title="Equipment"
         description={description}
         actions={
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => {
-            if (value) {
-              onViewModeChange(value as 'table' | 'grid')
-            }
-          }}>
-            <ToggleGroupItem
-              value="table"
-              aria-label="Table view"
-              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleBookSelected}
+              disabled={selection.selectedIds.length === 0}
             >
-              <Table2 className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="grid"
-              aria-label="Card view"
-              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
+              Book selected
+            </Button>
+            <ToggleGroup type="single" value={viewMode} onValueChange={(value) => {
+              if (value) {
+                onViewModeChange(value as 'table' | 'grid')
+              }
+            }}>
+              <ToggleGroupItem
+                value="table"
+                aria-label="Table view"
+                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                <Table2 className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="grid"
+                aria-label="Card view"
+                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         }
       />
 
@@ -165,6 +188,11 @@ export function Page({ equipment, categories, pagination, filters, onViewModeCha
           pagination={pagination}
           filters={filters}
           isLoading={isLoading}
+            rowSelection={selection.rowSelection}
+            onRowSelectionChange={selection.onRowSelectionChange}
+            selectedCount={selection.selectedIds.length}
+          onBookSelected={handleBookSelected}
+            onClearSelection={selection.clearSelection}
         />
       )}
 
@@ -176,6 +204,8 @@ export function Page({ equipment, categories, pagination, filters, onViewModeCha
           hasActiveFilters={(filters.categoryIds && filters.categoryIds.length > 0) || !!filters.searchQuery}
           isLoading={isLoading}
           className="pt-6"
+          selectedEquipmentIds={selection.selectedIds}
+          onToggleSelect={selection.toggleSelection}
         />
       )}
 
