@@ -33,6 +33,8 @@ export function TimeSlotPicker({
   onSlotsChange,
   disabled = false,
 }: TimeSlotPickerProps) {
+  const excludeStart = excludeBookingPeriod?.start ?? null
+  const excludeEnd = excludeBookingPeriod?.end ?? null
   const [date, setDate] = React.useState<Date | undefined>(initialDate || new Date())
   const [month, setMonth] = React.useState<Date>(initialDate || new Date())
   const [selectedSlots, setSelectedSlots] = React.useState<string[]>(initialSlots)
@@ -90,12 +92,12 @@ export function TimeSlotPicker({
             const busyEnd = new Date(busy.end)
 
             // Skip the excluded booking period if provided
-            if (excludeBookingPeriod) {
-              const excludeStart = new Date(excludeBookingPeriod.start)
-              const excludeEnd = new Date(excludeBookingPeriod.end)
+            if (excludeStart && excludeEnd) {
+              const excludeStartDate = new Date(excludeStart)
+              const excludeEndDate = new Date(excludeEnd)
               if (
-                busyStart.getTime() === excludeStart.getTime() &&
-                busyEnd.getTime() === excludeEnd.getTime()
+                busyStart.getTime() === excludeStartDate.getTime() &&
+                busyEnd.getTime() === excludeEndDate.getTime()
               ) {
                 return false
               }
@@ -119,7 +121,7 @@ export function TimeSlotPicker({
         setIsLoadingSlots(false)
       }
     },
-    [googleCalendarId, excludeBookingPeriod]
+    [googleCalendarId, excludeStart, excludeEnd]
   )
 
   // Load availability when date changes
@@ -268,7 +270,7 @@ export function TimeSlotPicker({
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col gap-4 border-t px-6 !py-5 md:flex-row">
+      <CardFooter className="flex flex-col gap-4 border-t px-6 py-5! md:flex-row">
         <div className="text-sm flex-1">
           {bookingTimes ? (
             <div className="flex items-center gap-2">

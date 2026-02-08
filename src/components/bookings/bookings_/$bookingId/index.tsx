@@ -1,7 +1,7 @@
 import { useNavigate, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { updateBookingFn, cancelBookingFn } from '@/lib/booking'
-import { getAuthenticatedCalendarEmbedUrl } from '@/lib/google/google-caledar'
+import { GoogleCalendarView } from '@/components/shared/event-calendar/google-calendar-view'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -22,7 +22,6 @@ import { format } from 'date-fns'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { TimeSlotPicker, getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
-import { Spinner } from '@/components/ui/spinner'
 
 interface PageProps {
   booking: any
@@ -33,8 +32,6 @@ export function Page({ booking, bookingId }: PageProps) {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isCancelling, setIsCancelling] = React.useState(false)
-  const [calendarUrl, setCalendarUrl] = React.useState<string | null>(null)
-  const [isLoadingCalendar, setIsLoadingCalendar] = React.useState(false)
 
   // Time slot selection state
   const [selectedSlots, setSelectedSlots] = React.useState<string[]>([])
@@ -60,26 +57,6 @@ export function Page({ booking, bookingId }: PageProps) {
 
   const initialSlots = React.useMemo(() => getInitialSlots(), [booking.startTime, booking.endTime])
 
-  React.useEffect(() => {
-    async function loadCalendarUrl() {
-      if (!booking.equipment?.googleCalendarId) return
-      
-      setIsLoadingCalendar(true)
-      try {
-        const result = await getAuthenticatedCalendarEmbedUrl({
-          data: { calendarId: booking.equipment.googleCalendarId },
-        })
-        setCalendarUrl(result.url)
-      } catch (err) {
-        console.error('Failed to load calendar:', err)
-        toast.error('Failed to load calendar view')
-      } finally {
-        setIsLoadingCalendar(false)
-      }
-    }
-
-    loadCalendarUrl()
-  }, [booking.equipment?.googleCalendarId])
 
   const handleSlotsChange = (slots: string[], date: Date | undefined) => {
     setSelectedSlots(slots)
@@ -274,26 +251,11 @@ export function Page({ booking, bookingId }: PageProps) {
           )}
         </div>
 
-        {/* Equipment Calendar */}
+        {/* Availability */}
         {booking.equipment?.googleCalendarId && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Equipment Calendar</h2>
-            {isLoadingCalendar ? (
-              <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
-                <Spinner className="h-8 w-8" />
-              </div>
-            ) : calendarUrl ? (
-              <iframe
-                src={calendarUrl}
-                className="w-full h-[600px] border rounded-lg"
-                style={{ borderWidth: 1 }}
-                allowFullScreen
-              ></iframe>
-            ) : (
-              <div className="w-full h-[600px] border rounded-lg flex items-center justify-center bg-muted">
-                <p className="text-muted-foreground">Failed to load calendar</p>
-              </div>
-            )}
+            <h2 className="text-xl font-semibold">Availability</h2>
+            <GoogleCalendarView calendarId={booking.equipment.googleCalendarId} />
           </div>
         )}
 
