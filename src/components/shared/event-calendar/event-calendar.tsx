@@ -81,6 +81,7 @@ export function EventCalendar({
   onRangeChange,
 }: EventCalendarProps) {
   const resolvedWeekCellsHeight = weekCellsHeight ?? WeekCellsHeight
+  const [isMounted, setIsMounted] = useState(false)
   const resolvedViews = useMemo<CalendarView[]>(
     () =>
       availableViews && availableViews.length > 0
@@ -95,10 +96,15 @@ export function EventCalendar({
         : resolvedViews[0] || "month",
     [resolvedViews, initialView]
   )
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [view, setView] = useState<CalendarView>(resolvedInitialView)
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+
+  useEffect(() => {
+    setCurrentDate(new Date())
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!resolvedViews.includes(view)) {
@@ -140,6 +146,7 @@ export function EventCalendar({
   }, [isEventDialogOpen, resolvedViews])
 
   useEffect(() => {
+    if (!currentDate) return
     if (!onRangeChange) return
 
     if (view === "month") {
@@ -177,6 +184,7 @@ export function EventCalendar({
   }, [currentDate, onRangeChange, view])
 
   const handlePrevious = () => {
+    if (!currentDate) return
     if (view === "month") {
       setCurrentDate(subMonths(currentDate, 1))
     } else if (view === "week") {
@@ -190,6 +198,7 @@ export function EventCalendar({
   }
 
   const handleNext = () => {
+    if (!currentDate) return
     if (view === "month") {
       setCurrentDate(addMonths(currentDate, 1))
     } else if (view === "week") {
@@ -292,6 +301,7 @@ export function EventCalendar({
   }
 
   const viewTitle = useMemo(() => {
+    if (!currentDate) return null
     if (view === "month") {
       return format(currentDate, "MMMM yyyy")
     } else if (view === "week") {
@@ -330,6 +340,18 @@ export function EventCalendar({
       return format(currentDate, "MMMM yyyy")
     }
   }, [currentDate, view])
+
+  if (!isMounted || !currentDate) {
+    return (
+      <div
+        className={cn(
+          "flex min-h-0 flex-col rounded-lg border",
+          containerClassName
+        )}
+        aria-busy="true"
+      />
+    )
+  }
 
   return (
     <div

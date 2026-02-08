@@ -58,11 +58,12 @@ export function MonthView({
   }, [currentDate])
 
   const weekdays = useMemo(() => {
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
     return Array.from({ length: 7 }).map((_, i) => {
-      const date = addDays(startOfWeek(new Date()), i)
+      const date = addDays(weekStart, i)
       return format(date, "EEE")
     })
-  }, [])
+  }, [currentDate])
 
   const weeks = useMemo(() => {
     const result = []
