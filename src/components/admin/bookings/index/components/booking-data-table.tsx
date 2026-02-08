@@ -140,6 +140,13 @@ export function BookingDataTable({
     }
   }, [filters, navigate])
 
+  const handleRowClick = (bookingId: number) => {
+    navigate({
+      to: "/admin/bookings/$bookingId",
+      params: { bookingId: bookingId.toString() },
+    })
+  }
+
   const table = useReactTable({
     data,
     columns,
@@ -417,7 +424,9 @@ export function BookingDataTable({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                    onClick={() => handleRowClick(row.original.id)}
                     className={cn(
+                      "cursor-pointer",
                       isOverdue && "bg-destructive/5 hover:bg-destructive/10"
                     )}
                   >

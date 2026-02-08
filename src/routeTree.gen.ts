@@ -32,6 +32,7 @@ import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings/index'
 import { Route as AuthenticatedBookingsBookingIdEditRouteImport } from './routes/_authenticated/bookings_/$bookingId/edit'
 import { Route as AuthenticatedAdminEquipmentNewRouteImport } from './routes/_authenticated/admin/equipment/new'
+import { Route as AuthenticatedAdminBookingsBookingIdIndexRouteImport } from './routes/_authenticated/admin/bookings/$bookingId/index'
 import { Route as AuthenticatedAdminUsersUserIdEditRouteImport } from './routes/_authenticated/admin/users/$userId.edit'
 import { Route as AuthenticatedAdminEquipmentEquipmentIdEditRouteImport } from './routes/_authenticated/admin/equipment/$equipmentId.edit'
 import { Route as AuthenticatedAdminBookingsBookingIdEditRouteImport } from './routes/_authenticated/admin/bookings/$bookingId.edit'
@@ -163,6 +164,12 @@ const AuthenticatedAdminEquipmentNewRoute =
     path: '/equipment/new',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBookingsBookingIdIndexRoute =
+  AuthenticatedAdminBookingsBookingIdIndexRouteImport.update({
+    id: '/bookings/$bookingId/',
+    path: '/bookings/$bookingId/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminUsersUserIdEditRoute =
   AuthenticatedAdminUsersUserIdEditRouteImport.update({
     id: '/users/$userId/edit',
@@ -208,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
   '/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
+  '/admin/bookings/$bookingId/': typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -235,6 +243,7 @@ export interface FileRoutesByTo {
   '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
   '/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
+  '/admin/bookings/$bookingId': typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -264,6 +273,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/_authenticated/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
   '/_authenticated/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
+  '/_authenticated/admin/bookings/$bookingId/': typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/admin/bookings/$bookingId/edit'
     | '/admin/equipment/$equipmentId/edit'
     | '/admin/users/$userId/edit'
+    | '/admin/bookings/$bookingId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/admin/bookings/$bookingId/edit'
     | '/admin/equipment/$equipmentId/edit'
     | '/admin/users/$userId/edit'
+    | '/admin/bookings/$bookingId'
   id:
     | '__root__'
     | '/'
@@ -348,6 +360,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/bookings/$bookingId/edit'
     | '/_authenticated/admin/equipment/$equipmentId/edit'
     | '/_authenticated/admin/users/$userId/edit'
+    | '/_authenticated/admin/bookings/$bookingId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -523,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEquipmentNewRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/bookings/$bookingId/': {
+      id: '/_authenticated/admin/bookings/$bookingId/'
+      path: '/bookings/$bookingId'
+      fullPath: '/admin/bookings/$bookingId/'
+      preLoaderRoute: typeof AuthenticatedAdminBookingsBookingIdIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/users/$userId/edit': {
       id: '/_authenticated/admin/users/$userId/edit'
       path: '/users/$userId/edit'
@@ -558,6 +578,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminBookingsBookingIdEditRoute: typeof AuthenticatedAdminBookingsBookingIdEditRoute
   AuthenticatedAdminEquipmentEquipmentIdEditRoute: typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
   AuthenticatedAdminUsersUserIdEditRoute: typeof AuthenticatedAdminUsersUserIdEditRoute
+  AuthenticatedAdminBookingsBookingIdIndexRoute: typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -575,6 +596,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminEquipmentEquipmentIdEditRoute,
   AuthenticatedAdminUsersUserIdEditRoute:
     AuthenticatedAdminUsersUserIdEditRoute,
+  AuthenticatedAdminBookingsBookingIdIndexRoute:
+    AuthenticatedAdminBookingsBookingIdIndexRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =

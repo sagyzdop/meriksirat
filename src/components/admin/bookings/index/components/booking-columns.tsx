@@ -40,11 +40,13 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
       />
     ),
     cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
+      <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      </div>
     ),
     enableSorting: false,
     enableHiding: false,
@@ -234,7 +236,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
 
 
       return (
-        <>
+        <div onClick={(event) => event.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -300,7 +302,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
             }}
 
           />
-        </>
+        </div>
       )
     },
   },
