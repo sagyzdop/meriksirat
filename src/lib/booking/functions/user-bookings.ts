@@ -13,6 +13,51 @@ import {
   BulkUpdateBookingTimeSchema,
   GetBookingByIdSchema,
 } from '../types'
+import { buildEventDescription, formatUserDisplayName } from '@/lib/utils'
+
+type UserIdentity = {
+  firstName?: string | null
+  lastName?: string | null
+  name?: string | null
+  telegramUsername?: string | null
+}
+
+function hasUserIdentity(identity?: UserIdentity | null): boolean {
+  return !!(
+    identity?.firstName ||
+    identity?.lastName ||
+    identity?.name ||
+    identity?.telegramUsername
+  )
+}
+
+async function resolveUserDisplayName(params: {
+  database: any
+  userId: string
+  sessionUser?: UserIdentity | null
+  userTable: any
+  eq: any
+}): Promise<string> {
+  const { database, userId, sessionUser, userTable, eq } = params
+
+  if (hasUserIdentity(sessionUser)) {
+    return formatUserDisplayName(sessionUser || {})
+  }
+
+  const userRecord = await database
+    .select({
+      firstName: userTable.firstName,
+      lastName: userTable.lastName,
+      name: userTable.name,
+      telegramUsername: userTable.telegramUsername
+    })
+    .from(userTable)
+    .where(eq(userTable.id, userId))
+    .get()
+
+  return formatUserDisplayName(userRecord || {})
+}
+
 
 /**
  * Get Telegram bot username from environment
@@ -34,7 +79,7 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
     const { createCalendarEvent, checkCalendarFreeBusy } = await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, equipment } = await import('@/db/schema')
+    const { booking, equipment, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { getEquipmentCalendarId, retry } = await import('../server')
@@ -74,6 +119,13 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
 
     const now = Date.now()
     const database = db(env.meriksirat_d1 as D1Database)
+    const userDisplayName = await resolveUserDisplayName({
+      database,
+      userId,
+      sessionUser: session.user,
+      userTable: user,
+      eq
+    })
 
     // Insert booking record
     const insertResult = await database.insert(booking).values({
@@ -108,19 +160,16 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
       .get()
 
     const globalNote = settingsData?.globalBookingNote
-    const descriptionParts = [
-      `Booking ID: ${bookingId}`,
-      `User: ${userEmail}`,
-      `Notes: ${notes || 'No additional notes'}`
-    ]
-
-    if (globalNote && globalNote.trim()) {
-      descriptionParts.push('', '---', globalNote)
-    }
+    const description = buildEventDescription({
+      bookingId,
+      userDisplayName,
+      notes,
+      globalNote
+    })
 
     const event = {
       summary: `${equipmentData?.modelName || `Equipment ${equipmentId}`} - Booking`,
-      description: descriptionParts.join('\n'),
+      description,
       start: { dateTime: startTime, timeZone: 'UTC' },
       end: { dateTime: endTime, timeZone: 'UTC' },
     }
@@ -179,7 +228,7 @@ export const handleMultiBookingAndCalendar = createServerFn({ method: 'POST' })
     const { createCalendarEvent, checkMultipleCalendarsFreeBusy, deleteCalendarEvent } = await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, equipment, settings } = await import('@/db/schema')
+    const { booking, equipment, settings, user } = await import('@/db/schema')
     const { eq, inArray } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { getEquipmentCalendarId, retry } = await import('../server')
@@ -240,6 +289,13 @@ export const handleMultiBookingAndCalendar = createServerFn({ method: 'POST' })
 
     const database = db(env.meriksirat_d1 as D1Database)
     const now = Date.now()
+    const userDisplayName = await resolveUserDisplayName({
+      database,
+      userId,
+      sessionUser: session.user,
+      userTable: user,
+      eq
+    })
 
     const equipmentData = await database
       .select({ id: equipment.id, modelName: equipment.modelName })
@@ -276,19 +332,16 @@ export const handleMultiBookingAndCalendar = createServerFn({ method: 'POST' })
           throw new Error('Failed to create booking record')
         }
 
-        const descriptionParts = [
-          `Booking ID: ${bookingId}`,
-          `User: ${userEmail}`,
-          `Notes: ${notes || 'No additional notes'}`
-        ]
-
-        if (globalNote && globalNote.trim()) {
-          descriptionParts.push('', '---', globalNote)
-        }
+        const description = buildEventDescription({
+          bookingId,
+          userDisplayName,
+          notes,
+          globalNote
+        })
 
         const event = {
           summary: `${equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`} - Booking`,
-          description: descriptionParts.join('\n'),
+          description,
           start: { dateTime: startTime, timeZone: 'UTC' },
           end: { dateTime: endTime, timeZone: 'UTC' },
         }
@@ -662,7 +715,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     const { checkCalendarFreeBusy, updateCalendarEvent } = await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, equipment } = await import('@/db/schema')
+    const { booking, equipment, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { getEquipmentCalendarId } = await import('../server')
@@ -677,6 +730,13 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     const userId = session.user.id
     const userEmail = session.user.email
     const database = db(env.meriksirat_d1 as D1Database)
+    const userDisplayName = await resolveUserDisplayName({
+      database,
+      userId,
+      sessionUser: session.user,
+      userTable: user,
+      eq
+    })
 
     // Get the booking to verify ownership
     const bookingItem = await database
@@ -775,19 +835,16 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
           .get()
 
         const globalNote = settingsData?.globalBookingNote
-        const descriptionParts = [
-          `Booking ID: ${data.bookingId}`,
-          `User: ${userEmail}`,
-          `Notes: ${newNotes || 'No additional notes'}`
-        ]
-
-        if (globalNote && globalNote.trim()) {
-          descriptionParts.push('', '---', globalNote)
-        }
+        const description = buildEventDescription({
+          bookingId: data.bookingId,
+          userDisplayName,
+          notes: newNotes,
+          globalNote
+        })
 
         const event = {
           summary: `${equipmentData?.modelName || `Equipment ${bookingData.equipmentId}`} - Booking`,
-          description: descriptionParts.join('\n'),
+          description,
           start: { dateTime: newStartTime, timeZone: 'UTC' },
           end: { dateTime: newEndTime, timeZone: 'UTC' },
         }
@@ -817,7 +874,7 @@ export const updateBookingsTimeFn = createServerFn({ method: 'POST' })
     const { checkCalendarFreeBusy, updateCalendarEvent } = await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, equipment, settings } = await import('@/db/schema')
+    const { booking, equipment, settings, user } = await import('@/db/schema')
     const { eq, inArray } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
 
@@ -831,6 +888,13 @@ export const updateBookingsTimeFn = createServerFn({ method: 'POST' })
     const userId = session.user.id
     const userEmail = session.user.email
     const database = db(env.meriksirat_d1 as D1Database)
+    const userDisplayName = await resolveUserDisplayName({
+      database,
+      userId,
+      sessionUser: session.user,
+      userTable: user,
+      eq
+    })
 
     const bookingItems = await database
       .select({
@@ -914,19 +978,16 @@ export const updateBookingsTimeFn = createServerFn({ method: 'POST' })
       }
 
       if (bookingItem.googleCalendarEventId && bookingItem.equipmentCalendarId) {
-        const descriptionParts = [
-          `Booking ID: ${bookingItem.id}`,
-          `User: ${userEmail}`,
-          `Notes: ${bookingItem.userEventDetails || 'No additional notes'}`
-        ]
-
-        if (globalNote && globalNote.trim()) {
-          descriptionParts.push('', '---', globalNote)
-        }
+        const description = buildEventDescription({
+          bookingId: bookingItem.id,
+          userDisplayName,
+          notes: bookingItem.userEventDetails,
+          globalNote
+        })
 
         const event = {
           summary: `${bookingItem.equipmentModelName || `Equipment ${bookingItem.equipmentId}`} - Booking`,
-          description: descriptionParts.join('\n'),
+          description,
           start: { dateTime: data.startTime, timeZone: 'UTC' },
           end: { dateTime: data.endTime, timeZone: 'UTC' },
         }

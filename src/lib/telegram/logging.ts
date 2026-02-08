@@ -12,6 +12,7 @@ import {
   isTelegramLoggingEnabled,
   getBookingDetailsForLogging
 } from './server-utils'
+import { formatUserDisplayName } from '@/lib/utils'
 
 const ACTION_EMOJIS = {
   created: '📅',
@@ -113,7 +114,12 @@ export async function logBookingActivityById(
 
     const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
 
-    const userName = [bookingDetails.userFirstName, bookingDetails.userLastName].filter(Boolean).join(' ') || bookingDetails.userEmail
+    const userName = formatUserDisplayName({
+      firstName: bookingDetails.userFirstName,
+      lastName: bookingDetails.userLastName,
+      name: bookingDetails.userName,
+      telegramUsername: bookingDetails.userTelegramUsername
+    })
 
     await logBookingActivity(telegram, env.TELEGRAM_CLUB_CHANNEL_ID!, {
       bookingId: bookingDetails.bookingId,

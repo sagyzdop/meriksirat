@@ -78,9 +78,11 @@ export async function getBookingDetailsForLogging(bookingId: number) {
       endTime: booking.endTime,
       notes: booking.userEventDetails,
       status: booking.status,
+      userName: user.name,
       userFirstName: user.firstName,
       userLastName: user.lastName,
       userEmail: user.email,
+      userTelegramUsername: user.telegramUsername,
       equipmentName: equipment.modelName,
       equipmentId: equipment.id
     })

@@ -11,6 +11,7 @@ import {
   BulkUpdateBookingTimeAdminSchema,
   DeleteBookingSchema,
 } from '../types'
+import { buildEventDescription, formatUserDisplayName } from '@/lib/utils'
 
 /**
  * Get all bookings with comprehensive filtering and pagination for admin oversight
@@ -128,7 +129,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     const totalPages = Math.ceil(total / data.limit)
 
     const response: PaginatedAdminBookingsResponse = {
-      data: bookingsList as AdminBookingWithDetails[],
+      data: bookingsList as unknown as AdminBookingWithDetails[],
       pagination: {
         page: data.page,
         limit: data.limit,
@@ -220,6 +221,12 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
 
     const headers = getRequestHeaders()
     const adminUser = await checkAdminPermission(headers, ['admin', 'manager'])
+    const adminDisplayName = formatUserDisplayName({
+      firstName: adminUser.firstName,
+      lastName: adminUser.lastName,
+      name: adminUser.name || adminUser.email,
+      telegramUsername: adminUser.telegramUsername
+    })
 
     const database = db(env.meriksirat_d1 as D1Database)
 
@@ -236,6 +243,10 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         userEventDetails: booking.userEventDetails,
         user: {
           email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: user.name,
+          telegramUsername: user.telegramUsername,
         },
         equipment: {
           modelName: equipment.modelName,
@@ -276,7 +287,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
 
     // Update booking status and notes (admin notes will be appended to userEventDetails)
     const updatedNotes = data.notes
-      ? `${bookingData.userEventDetails || ''}\n\n[Admin Note by ${adminUser.email}]: ${data.notes}`.trim()
+      ? `${bookingData.userEventDetails || ''}\n\n[Admin Note by ${adminDisplayName}]: ${data.notes}`.trim()
       : bookingData.userEventDetails
 
     await database
@@ -295,7 +306,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       await logBookingActivityById(data.bookingId, 'updated', {
         previousStatus,
         newStatus: data.status,
-        notes: `Admin ${adminUser.email} changed status from ${previousStatus} to ${data.status}${data.notes ? `. Notes: ${data.notes}` : ''}`
+        notes: `Admin ${adminDisplayName} changed status from ${previousStatus} to ${data.status}${data.notes ? `. Notes: ${data.notes}` : ''}`
       })
     } catch (logError) {
       console.error('Failed to log booking status update:', logError)
@@ -323,20 +334,23 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
             .get()
 
           const globalNote = settingsData?.globalBookingNote
-          const descriptionParts = [
-            `Booking ID: ${data.bookingId}`,
-            `User: ${bookingData.user?.email}`,
-            `Status: ${data.status}`,
-            `Notes: ${updatedNotes || 'No notes'}`
-          ]
-
-          if (globalNote && globalNote.trim()) {
-            descriptionParts.push('', '---', globalNote)
-          }
+          const userDisplayName = formatUserDisplayName({
+            firstName: bookingData.user?.firstName,
+            lastName: bookingData.user?.lastName,
+            name: bookingData.user?.name,
+            telegramUsername: bookingData.user?.telegramUsername
+          })
+          const description = buildEventDescription({
+            bookingId: data.bookingId,
+            userDisplayName,
+            status: data.status,
+            notes: updatedNotes,
+            globalNote
+          })
 
           const event = {
             summary: `${bookingData.equipment.modelName || `Equipment ${bookingData.equipmentId}`} - Booking (${data.status.toUpperCase()})`,
-            description: descriptionParts.join('\n'),
+            description,
             start: { dateTime: newStartTime, timeZone: 'UTC' },
             end: { dateTime: newEndTime, timeZone: 'UTC' },
           }
@@ -443,6 +457,12 @@ export const updateBookingsTimeAdminFn = createServerFn({ method: 'POST' })
 
     const headers = getRequestHeaders()
     const adminUser = await checkAdminPermission(headers, ['admin', 'manager'])
+    const adminDisplayName = formatUserDisplayName({
+      firstName: adminUser.firstName,
+      lastName: adminUser.lastName,
+      name: adminUser.name || adminUser.email,
+      telegramUsername: adminUser.telegramUsername
+    })
 
     const database = db(env.meriksirat_d1 as D1Database)
 
@@ -459,6 +479,10 @@ export const updateBookingsTimeAdminFn = createServerFn({ method: 'POST' })
         equipmentCalendarId: equipment.googleCalendarId,
         equipmentModelName: equipment.modelName,
         userEmail: user.email,
+        userFirstName: user.firstName,
+        userLastName: user.lastName,
+        userName: user.name,
+        userTelegramUsername: user.telegramUsername,
       })
       .from(booking)
       .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
@@ -517,7 +541,7 @@ export const updateBookingsTimeAdminFn = createServerFn({ method: 'POST' })
 
       try {
         await logBookingActivityById(bookingItem.id, 'updated', {
-          notes: `Admin ${adminUser.email} updated booking time`,
+          notes: `Admin ${adminDisplayName} updated booking time`,
           newStatus: bookingItem.status
         })
       } catch (logError) {
@@ -525,19 +549,22 @@ export const updateBookingsTimeAdminFn = createServerFn({ method: 'POST' })
       }
 
       if (bookingItem.googleCalendarEventId && bookingItem.equipmentCalendarId) {
-        const descriptionParts = [
-          `Booking ID: ${bookingItem.id}`,
-          `User: ${bookingItem.userEmail || 'Unknown user'}`,
-          `Notes: ${bookingItem.userEventDetails || 'No additional notes'}`
-        ]
-
-        if (globalNote && globalNote.trim()) {
-          descriptionParts.push('', '---', globalNote)
-        }
+        const userDisplayName = formatUserDisplayName({
+          firstName: bookingItem.userFirstName,
+          lastName: bookingItem.userLastName,
+          name: bookingItem.userName,
+          telegramUsername: bookingItem.userTelegramUsername
+        })
+        const description = buildEventDescription({
+          bookingId: bookingItem.id,
+          userDisplayName,
+          notes: bookingItem.userEventDetails,
+          globalNote
+        })
 
         const event = {
           summary: `${bookingItem.equipmentModelName || `Equipment ${bookingItem.equipmentId}`} - Booking`,
-          description: descriptionParts.join('\n'),
+          description,
           start: { dateTime: data.startTime, timeZone: 'UTC' },
           end: { dateTime: data.endTime, timeZone: 'UTC' },
         }
