@@ -40,8 +40,10 @@ import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucid
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
 import { isPast } from "date-fns"
-import { updateBookingsTimeAdminFn } from "@/lib/booking"
+import { updateBookingStatusAdminFn, updateBookingsTimeAdminFn } from "@/lib/booking"
 import { BulkChangeTimeDialog } from "@/components/bookings/components/bulk-change-time-dialog"
+import { BulkCancelBookingsDialog } from "@/components/bookings/components/bulk-cancel-bookings-dialog"
+import { toast } from "sonner"
 
 interface Pagination {
   page: number
@@ -87,6 +89,8 @@ export function BookingDataTable({
   const router = useRouter()
   const [rowSelection, setRowSelection] = React.useState({})
   const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false)
+  const [bulkCancelOpen, setBulkCancelOpen] = React.useState(false)
+  const [isBulkCancelling, setIsBulkCancelling] = React.useState(false)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
 
@@ -210,6 +214,16 @@ export function BookingDataTable({
     return selectedBookings.map((booking) => booking.id)
   }, [selectedBookings])
 
+  const cancellableBookings = React.useMemo(() => {
+    return selectedBookings.filter((booking) =>
+      booking.status === "booked" || booking.status === "active"
+    )
+  }, [selectedBookings])
+
+  const cancellableBookingIds = React.useMemo(() => {
+    return cancellableBookings.map((booking) => booking.id)
+  }, [cancellableBookings])
+
   const handleBulkTimeUpdate = async (startTime: string, endTime: string) => {
     if (selectedBookingIds.length === 0) return
     await updateBookingsTimeAdminFn({
@@ -220,6 +234,40 @@ export function BookingDataTable({
       },
     })
     await router.invalidate()
+  }
+
+  const handleBulkCancel = async () => {
+    if (cancellableBookingIds.length === 0) return
+
+    setIsBulkCancelling(true)
+    const results = await Promise.allSettled(
+      cancellableBookingIds.map((bookingId) =>
+        updateBookingStatusAdminFn({
+          data: {
+            bookingId,
+            status: "cancelled",
+          },
+        })
+      )
+    )
+
+    const successCount = results.filter((result) => result.status === "fulfilled").length
+    const failedCount = results.length - successCount
+
+    if (successCount > 0) {
+      toast.success(`Cancelled ${successCount} booking${successCount === 1 ? "" : "s"}`)
+      setRowSelection({})
+      await router.invalidate()
+    }
+
+    if (failedCount > 0) {
+      toast.error("Some bookings could not be cancelled", {
+        description: `Failed to cancel ${failedCount} booking${failedCount === 1 ? "" : "s"}.`,
+      })
+    }
+
+    setIsBulkCancelling(false)
+    setBulkCancelOpen(false)
   }
 
   const clearAllFilters = React.useCallback(() => {
@@ -281,6 +329,15 @@ export function BookingDataTable({
           >
             Change Time
           </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8 w-full sm:w-auto"
+            disabled={cancellableBookingIds.length === 0}
+            onClick={() => setBulkCancelOpen(true)}
+          >
+            Cancel Selected
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
@@ -315,6 +372,16 @@ export function BookingDataTable({
         onOpenChange={setBulkDialogOpen}
         bookings={selectedBookings}
         onConfirm={handleBulkTimeUpdate}
+      />
+
+      <BulkCancelBookingsDialog
+        open={bulkCancelOpen}
+        onOpenChange={setBulkCancelOpen}
+        cancellableCount={cancellableBookingIds.length}
+        totalSelectedCount={selectedBookingIds.length}
+        isProcessing={isBulkCancelling}
+        onConfirm={handleBulkCancel}
+        calendarActionText="update their calendar events"
       />
 
       {/* Table with horizontal scroll on small screens */}

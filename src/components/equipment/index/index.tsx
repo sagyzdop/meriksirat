@@ -140,13 +140,6 @@ export function Page({ equipment, categories, pagination, filters, onViewModeCha
         description={description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleBookSelected}
-              disabled={selection.selectedIds.length === 0}
-            >
-              Book selected
-            </Button>
             <ToggleGroup type="single" value={viewMode} onValueChange={(value) => {
               if (value) {
                 onViewModeChange(value as 'table' | 'grid')
@@ -188,11 +181,11 @@ export function Page({ equipment, categories, pagination, filters, onViewModeCha
           pagination={pagination}
           filters={filters}
           isLoading={isLoading}
-            rowSelection={selection.rowSelection}
-            onRowSelectionChange={selection.onRowSelectionChange}
-            selectedCount={selection.selectedIds.length}
+          rowSelection={selection.rowSelection}
+          onRowSelectionChange={selection.onRowSelectionChange}
+          selectedCount={selection.selectedIds.length}
           onBookSelected={handleBookSelected}
-            onClearSelection={selection.clearSelection}
+          onClearSelection={selection.clearSelection}
         />
       )}
 
