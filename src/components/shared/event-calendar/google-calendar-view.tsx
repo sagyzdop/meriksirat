@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
@@ -62,7 +62,7 @@ const toCalendarEvent = (event: any, colorOverride?: EventColor): CalendarEvent 
   }
 }
 
-export function GoogleCalendarView({
+function GoogleCalendarViewBase({
   calendarId,
   calendarIds,
   colorByCalendarId,
@@ -71,7 +71,7 @@ export function GoogleCalendarView({
   const [range, setRange] = useState<CalendarRange | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const resolvedCalendarIds = useCallback(() => {
+  const calendarIdList = useMemo(() => {
     if (calendarIds && calendarIds.length > 0) return calendarIds
     return calendarId ? [calendarId] : []
   }, [calendarId, calendarIds])
@@ -89,7 +89,6 @@ export function GoogleCalendarView({
   }, [])
 
   useEffect(() => {
-    const calendarIdList = resolvedCalendarIds()
     if (calendarIdList.length === 0 || !range) return
 
     let cancelled = false
@@ -133,7 +132,7 @@ export function GoogleCalendarView({
     return () => {
       cancelled = true
     }
-  }, [colorByCalendarId, range, resolvedCalendarIds])
+  }, [calendarIdList, colorByCalendarId, range])
 
   if (isLoading && events.length === 0) {
     return (
@@ -162,3 +161,33 @@ export function GoogleCalendarView({
     </div>
   )
 }
+
+const areEqualProps = (prev: GoogleCalendarViewProps, next: GoogleCalendarViewProps) => {
+  if (prev.className !== next.className) return false
+  if (prev.calendarId !== next.calendarId) return false
+
+  const prevIds = prev.calendarIds
+  const nextIds = next.calendarIds
+  if ((prevIds?.length ?? 0) !== (nextIds?.length ?? 0)) return false
+  if (prevIds && nextIds) {
+    for (let i = 0; i < prevIds.length; i += 1) {
+      if (prevIds[i] !== nextIds[i]) return false
+    }
+  }
+
+  const prevColors = prev.colorByCalendarId
+  const nextColors = next.colorByCalendarId
+  if (!prevColors && !nextColors) return true
+  if (!prevColors || !nextColors) return false
+
+  const prevKeys = Object.keys(prevColors)
+  const nextKeys = Object.keys(nextColors)
+  if (prevKeys.length !== nextKeys.length) return false
+  for (const key of prevKeys) {
+    if (prevColors[key] !== nextColors[key]) return false
+  }
+
+  return true
+}
+
+export const GoogleCalendarView = memo(GoogleCalendarViewBase, areEqualProps)

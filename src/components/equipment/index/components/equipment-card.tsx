@@ -29,7 +29,7 @@ export function EquipmentCard({ equipment, isSelected = false, onToggleSelect }:
     <Card className={`group relative mx-auto w-full overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? " ring-2 ring-primary/40" : ""}`}>
       {onToggleSelect && (
         <div
-          className="absolute left-3 top-3 z-10 rounded-md bg-background/90 p-1 shadow"
+          className="absolute left-3 top-3 z-10 flex items-center rounded-md bg-background/90 p-1 shadow"
           onClick={(event) => event.stopPropagation()}
         >
           <Checkbox
