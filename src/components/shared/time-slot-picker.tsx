@@ -227,8 +227,8 @@ export function TimeSlotPicker({
 
   const content = (
     <>
-      <div className={cn("relative", !isVerticalLayout && "md:pr-64")}>
-        <div className="p-6 flex flex-col items-center gap-4">
+      <div className={cn("relative min-w-0", !isVerticalLayout && "md:pr-64")}>
+        <div className="p-6 flex w-full min-w-0 flex-col items-center gap-4 overflow-hidden">
           <Calendar
             mode="single"
             selected={date}
@@ -242,7 +242,7 @@ export function TimeSlotPicker({
               return date < today
             }}
             showOutsideDays={false}
-            className="bg-transparent p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
+            className="w-full max-w-full bg-transparent p-0 [--cell-size:--spacing(8)] sm:[--cell-size:--spacing(9)] md:[--cell-size:--spacing(12)]"
             formatters={{
               formatWeekdayName: (date) => {
                 return date.toLocaleString("en-US", { weekday: "short" })
