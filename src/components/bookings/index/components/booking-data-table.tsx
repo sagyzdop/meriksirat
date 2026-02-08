@@ -13,7 +13,6 @@ import {
 import { useNavigate, useRouter } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -22,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -68,6 +68,7 @@ interface BookingDataTableProps {
   pagination: Pagination
   filters: Filters
   telegramBotUsername: string
+  isLoading?: boolean
 }
 
 const statusOptions = [
@@ -78,7 +79,14 @@ const statusOptions = [
   { value: "overdue", label: "Overdue" },
 ]
 
-export function BookingDataTable({ columns, data, pagination, filters, telegramBotUsername }: BookingDataTableProps) {
+export function BookingDataTable({
+  columns,
+  data,
+  pagination,
+  filters,
+  telegramBotUsername,
+  isLoading = false,
+}: BookingDataTableProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const [rowSelection, setRowSelection] = React.useState({})
@@ -313,7 +321,8 @@ export function BookingDataTable({ columns, data, pagination, filters, telegramB
       />
 
       {/* Table with horizontal scroll on small screens */}
-      <div className="rounded-md border">
+      <div className="relative rounded-md border">
+        {isLoading && <LoadingOverlay />}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

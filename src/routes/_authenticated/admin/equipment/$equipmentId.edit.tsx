@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { getAdminEquipmentByIdFn, getCategoriesFn } from '@/lib/equipment'
 import { Page } from '@/components/admin/equipment/$.edit'
+import { LoadingOverlay } from '@/components/shared/loading-overlay'
 
 export const Route = createFileRoute('/_authenticated/admin/equipment/$equipmentId/edit')({
   component: RouteComponent,
@@ -35,5 +36,11 @@ export const Route = createFileRoute('/_authenticated/admin/equipment/$equipment
 
 function RouteComponent() {
   const { equipment, categories, equipmentId } = Route.useLoaderData()
-  return <Page equipment={equipment} categories={categories} equipmentId={equipmentId} />
+  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
+  return (
+    <div className="relative">
+      {isLoading && <LoadingOverlay />}
+      <Page equipment={equipment} categories={categories} equipmentId={equipmentId} />
+    </div>
+  )
 }

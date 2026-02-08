@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { DataTableLoading } from "@/components/data-table/data-table-loading"
+import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import { Equipment } from "./types"
 
 interface Pagination {
@@ -177,8 +177,8 @@ export function EquipmentDataTable({
         </div>
       )}
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
-        {isLoading && <DataTableLoading />}
+      <div className="relative rounded-md border overflow-x-auto">
+        {isLoading && <LoadingOverlay />}
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

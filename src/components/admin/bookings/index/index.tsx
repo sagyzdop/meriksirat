@@ -25,9 +25,10 @@ interface PageProps {
   bookings: AdminBookingWithDetails[]
   pagination: Pagination
   filters: Filters
+  isLoading?: boolean
 }
 
-export function Page({ bookings, pagination, filters }: PageProps) {
+export function Page({ bookings, pagination, filters, isLoading = false }: PageProps) {
   const description = pagination.total > 0
     ? `Managing ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
     : "No bookings found"
@@ -43,6 +44,7 @@ export function Page({ bookings, pagination, filters }: PageProps) {
         columns={bookingColumns}
         pagination={pagination}
         filters={filters}
+        isLoading={isLoading}
       />
     </PageContainer>
   )

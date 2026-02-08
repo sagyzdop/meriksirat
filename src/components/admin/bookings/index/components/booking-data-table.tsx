@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -64,6 +65,7 @@ interface BookingDataTableProps {
   data: AdminBookingWithDetails[]
   pagination: Pagination
   filters: Filters
+  isLoading?: boolean
 }
 
 const statusOptions = [
@@ -74,7 +76,13 @@ const statusOptions = [
   { value: "overdue", label: "Overdue" },
 ]
 
-export function BookingDataTable({ columns, data, pagination, filters }: BookingDataTableProps) {
+export function BookingDataTable({
+  columns,
+  data,
+  pagination,
+  filters,
+  isLoading = false,
+}: BookingDataTableProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const [rowSelection, setRowSelection] = React.useState({})
@@ -310,7 +318,8 @@ export function BookingDataTable({ columns, data, pagination, filters }: Booking
       />
 
       {/* Table with horizontal scroll on small screens */}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="relative rounded-md border overflow-x-auto">
+        {isLoading && <LoadingOverlay />}
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

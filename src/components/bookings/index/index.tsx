@@ -30,9 +30,10 @@ interface PageProps {
   pagination: Pagination
   filters: Filters
   telegramBotUsername: string
+  isLoading?: boolean
 }
 
-export function Page({ bookings, pagination, filters, telegramBotUsername }: PageProps) {
+export function Page({ bookings, pagination, filters, telegramBotUsername, isLoading = false }: PageProps) {
   const description = pagination.total > 0
     ? `You have ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
     : "No bookings found"
@@ -51,6 +52,7 @@ export function Page({ bookings, pagination, filters, telegramBotUsername }: Pag
         filters={filters}
         columns={columns}
         telegramBotUsername={telegramBotUsername}
+        isLoading={isLoading}
       />
     </PageContainer>
   )

@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,7 @@ interface CategoryDataTableProps {
   categories: CategoryWithCount[]
   onEdit: (category: CategoryWithCount) => void
   onDelete: (category: CategoryWithCount) => void
+  isLoading?: boolean
 }
 
 // Sortable row component for drag and drop
@@ -125,7 +127,7 @@ function SortableRow({
   )
 }
 
-export function CategoryDataTable({ categories, onEdit, onDelete }: CategoryDataTableProps) {
+export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = false }: CategoryDataTableProps) {
   const router = useRouter()
   const [sortedCategories, setSortedCategories] = React.useState(categories)
   const [isUpdatingSortOrder, setIsUpdatingSortOrder] = React.useState(false)
@@ -222,7 +224,8 @@ export function CategoryDataTable({ categories, onEdit, onDelete }: CategoryData
   return (
     <div className="space-y-4">
       {/* Table with horizontal scroll on small screens */}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="relative rounded-md border overflow-x-auto">
+        {isLoading && <LoadingOverlay />}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

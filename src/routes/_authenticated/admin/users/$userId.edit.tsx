@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { getAdminUserByIdFn, getUserFn } from '@/lib/user'
 import { Page } from '@/components/admin/users/$.edit'
+import { LoadingOverlay } from '@/components/shared/loading-overlay'
 
 export const Route = createFileRoute('/_authenticated/admin/users/$userId/edit')({
   component: RouteComponent,
@@ -39,5 +40,11 @@ export const Route = createFileRoute('/_authenticated/admin/users/$userId/edit')
 
 function RouteComponent() {
   const { targetUser, currentUser, userId } = Route.useLoaderData()
-  return <Page targetUser={targetUser} currentUser={currentUser} userId={userId} />
+  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
+  return (
+    <div className="relative">
+      {isLoading && <LoadingOverlay />}
+      <Page targetUser={targetUser} currentUser={currentUser} userId={userId} />
+    </div>
+  )
 }

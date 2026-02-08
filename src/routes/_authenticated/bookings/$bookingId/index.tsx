@@ -1,7 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { Page } from '@/components/bookings/$bookingId'
 import { getBookingByIdFn } from '@/lib/booking'
 import { z } from 'zod'
+import { LoadingOverlay } from '@/components/shared/loading-overlay'
 
 const BookingDetailSearchSchema = z.object({
   bookingId: z.coerce.number().optional(),
@@ -34,8 +35,12 @@ export const Route = createFileRoute('/_authenticated/bookings/$bookingId/')({
 
 function RouteComponent() {
   const { booking } = Route.useLoaderData()
+  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
   
   return (
-    <Page booking={booking} />
+    <div className="relative">
+      {isLoading && <LoadingOverlay />}
+      <Page booking={booking} />
+    </div>
   )
 }

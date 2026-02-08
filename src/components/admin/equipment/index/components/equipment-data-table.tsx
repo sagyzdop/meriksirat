@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
-import { DataTableLoading } from "@/components/data-table/data-table-loading"
+import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { EquipmentWithCategory } from "@/lib/equipment"
 
@@ -319,7 +319,7 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
 
       {/* Table with horizontal scroll on small screens */}
       <div className="relative rounded-md border overflow-x-auto">
-        {isLoading && <DataTableLoading />}
+        {isLoading && <LoadingOverlay />}
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

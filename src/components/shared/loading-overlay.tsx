@@ -1,12 +1,12 @@
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 
-interface DataTableLoadingProps {
+interface LoadingOverlayProps {
   className?: string
   label?: string
 }
 
-export function DataTableLoading({ className, label = "Loading..." }: DataTableLoadingProps) {
+export function LoadingOverlay({ className, label = "Loading..." }: LoadingOverlayProps) {
   return (
     <div
       className={cn(

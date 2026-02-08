@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { Page } from '@/components/bookings/index'
 import { getUserBookingsFn, getTelegramBotUsernameFn } from '@/lib/booking'
 import { z } from 'zod'
@@ -76,6 +76,7 @@ export const Route = createFileRoute('/_authenticated/bookings/')({
 function RouteComponent() {
   const { bookings, pagination, telegramBotUsername } = Route.useLoaderData()
   const search = Route.useSearch()
+  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
 
   return (
     <Page
@@ -83,6 +84,7 @@ function RouteComponent() {
       pagination={pagination}
       filters={search}
       telegramBotUsername={telegramBotUsername}
+      isLoading={isLoading}
     />
   )
 }

@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { Page } from "@/components/profile";
 import { getUserFn } from '@/lib/user';
+import { LoadingOverlay } from '@/components/shared/loading-overlay';
 
 export const Route = createFileRoute('/_authenticated/profile')({
   component: RouteComponent,
@@ -14,9 +15,11 @@ export const Route = createFileRoute('/_authenticated/profile')({
 
 function RouteComponent() {
   const { user } = Route.useLoaderData();
+  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
   return (
-    <div className="flex-1 space-y-4">
-        <Page user={user} />
+    <div className="relative flex-1 space-y-4">
+      {isLoading && <LoadingOverlay />}
+      <Page user={user} />
     </div>
   )
 }

@@ -20,9 +20,10 @@ export interface CategoryWithCount {
 
 interface PageProps {
   categories: CategoryWithCount[]
+  isLoading?: boolean
 }
 
-export function Page({ categories }: PageProps) {
+export function Page({ categories, isLoading = false }: PageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -66,6 +67,7 @@ export function Page({ categories }: PageProps) {
         categories={categories}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        isLoading={isLoading}
       />
 
       <CreateCategoryDialog

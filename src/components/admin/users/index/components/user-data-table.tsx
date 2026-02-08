@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -65,6 +66,7 @@ interface UserDataTableProps {
   data: User[]
   pagination: Pagination
   filters: Filters
+  isLoading?: boolean
 }
 
 const roleOptions = [
@@ -93,7 +95,8 @@ export function UserDataTable({
   columns: providedColumns,
   data,
   pagination,
-  filters
+  filters,
+  isLoading = false,
 }: UserDataTableProps) {
   const navigate = useNavigate()
   const router = useRouter()
@@ -327,7 +330,8 @@ export function UserDataTable({
       </div>
 
       {/* Table with horizontal scroll on small screens */}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="relative rounded-md border overflow-x-auto">
+        {isLoading && <LoadingOverlay />}
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

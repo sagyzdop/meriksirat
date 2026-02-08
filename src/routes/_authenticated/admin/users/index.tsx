@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { Page } from '@/components/admin/users/index'
 import { getAdminUsersFn } from '@/lib/user'
 import { z } from 'zod'
@@ -103,12 +103,14 @@ export const Route = createFileRoute('/_authenticated/admin/users/')({
 function RouteComponent() {
   const { users, pagination } = Route.useLoaderData()
   const search = Route.useSearch()
+  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
 
   return (
     <Page
       users={users}
       pagination={pagination}
       filters={search}
+      isLoading={isLoading}
     />
   )
 }

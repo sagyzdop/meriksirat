@@ -31,9 +31,10 @@ interface PageProps {
   users: User[]
   pagination: Pagination
   filters: Filters
+  isLoading?: boolean
 }
 
-export function Page({ users, pagination, filters }: PageProps) {
+export function Page({ users, pagination, filters, isLoading = false }: PageProps) {
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const router = useRouter()
@@ -70,6 +71,7 @@ export function Page({ users, pagination, filters }: PageProps) {
         columns={columns}
         pagination={pagination}
         filters={filters}
+        isLoading={isLoading}
       />
 
       <DeactivateUserDialog
