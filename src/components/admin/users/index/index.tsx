@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { useState } from "react"
 import { DeactivateUserDialog } from "./components/deactivate-user-dialog"
 import { updateUserAdminFn } from "@/lib/user"
-import { useRouter } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { User } from "@/lib/user/types"
 
@@ -37,7 +37,7 @@ interface PageProps {
 export function Page({ users, pagination, filters, isLoading = false }: PageProps) {
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const router = useRouter()
+  const queryClient = useQueryClient()
 
   const description = pagination.totalCount > 0
     ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
@@ -55,7 +55,7 @@ export function Page({ users, pagination, filters, isLoading = false }: PageProp
         status: 'Inactive'
       }
     })
-    await router.invalidate()
+    await queryClient.invalidateQueries({ queryKey: ['users'] })
   }
 
   const columns = createUserColumns(handleDeactivateUser)

@@ -32,7 +32,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { createEquipmentAdminFn, updateEquipmentAdminFn, getCategoriesFn } from "@/lib/equipment"
 import { EquipmentWithCategory } from "@/lib/equipment"
-import { useRouter } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 const formSchema = z.object({
   modelName: z.string().min(1, "Model name is required").max(100, "Model name must be at most 100 characters"),
@@ -66,7 +66,7 @@ export function EquipmentFormDialog({
   equipment,
   mode,
 }: EquipmentFormDialogProps) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
 
@@ -150,7 +150,7 @@ export function EquipmentFormDialog({
       
       onOpenChange(false)
       form.reset()
-      router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['equipment'] })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to save equipment"

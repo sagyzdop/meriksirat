@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ArrowUpDown, MoreHorizontal, Edit, Calendar, AlertCircle, Trash } from "lucide-react"
 import { format, isPast } from "date-fns"
-import { Link, useRouter } from "@tanstack/react-router"
+import { Link } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
 import { DeleteBookingDialog } from "./delete-booking-dialog"
@@ -232,7 +233,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     cell: ({ row }) => {
       const booking = row.original
       const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
-      const router = useRouter()
+      const queryClient = useQueryClient()
 
 
       return (
@@ -298,7 +299,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
             open={deleteDialogOpen}
             onOpenChange={setDeleteDialogOpen}
             onSuccess={() => {
-              router.invalidate()
+              queryClient.invalidateQueries({ queryKey: ['bookings'] })
             }}
 
           />

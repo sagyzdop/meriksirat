@@ -17,7 +17,6 @@ export const getEquipmentFn = createServerFn({
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { auth } = await import('@/lib/auth/auth')
-    const { getUserClearanceLevel } = await import('./server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
@@ -33,7 +32,7 @@ export const getEquipmentFn = createServerFn({
     }
 
     const database = db(env.meriksirat_d1 as D1Database)
-    const userClearanceLevel = await getUserClearanceLevel(session.user.id)
+    const userClearanceLevel = (session.user as { clearanceLevel?: number }).clearanceLevel || 1
 
     // Build where conditions
     const conditions = [
@@ -75,16 +74,20 @@ export const getEquipmentFn = createServerFn({
 
     const whereClause = and(...conditions)
 
-    // Get total count for pagination
-    const totalCountResult = await database
-      .select({ count: sql<number>`count(*)` })
-      .from(equipment)
-      .leftJoin(category, eq(equipment.categoryId, category.id))
-      .where(whereClause)
-
-    const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / data.limit)
     const offset = (data.page - 1) * data.limit
+
+    // Get total count for pagination.
+    // Only join category when the search query references category.name.
+    const countQuery = data.searchQuery
+      ? database
+          .select({ count: sql<number>`count(*)` })
+          .from(equipment)
+          .leftJoin(category, eq(equipment.categoryId, category.id))
+          .where(whereClause)
+      : database
+          .select({ count: sql<number>`count(*)` })
+          .from(equipment)
+          .where(whereClause)
 
     // Apply sorting
     const sortColumn = {
@@ -98,7 +101,7 @@ export const getEquipmentFn = createServerFn({
     const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
 
     // Get paginated equipment list
-    const equipmentList = await database
+    const equipmentListQuery = database
       .select({
         id: equipment.id,
         modelName: equipment.modelName,
@@ -124,6 +127,14 @@ export const getEquipmentFn = createServerFn({
       .limit(data.limit)
       .offset(offset)
 
+    const [totalCountResult, equipmentList] = await Promise.all([
+      countQuery,
+      equipmentListQuery,
+    ])
+
+    const total = totalCountResult[0]?.count || 0
+    const totalPages = Math.ceil(total / data.limit)
+
     const response: PaginatedEquipmentResponse = {
       data: equipmentList as EquipmentWithCategory[],
       pagination: {
@@ -146,7 +157,6 @@ export const getEquipmentByIdFn = createServerFn({
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { auth } = await import('@/lib/auth/auth')
-    const { getUserClearanceLevel } = await import('./server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
@@ -162,7 +172,7 @@ export const getEquipmentByIdFn = createServerFn({
     }
 
     const database = db(env.meriksirat_d1 as D1Database)
-    const userClearanceLevel = await getUserClearanceLevel(session.user.id)
+    const userClearanceLevel = (session.user as { clearanceLevel?: number }).clearanceLevel || 1
 
     const equipmentItem = await database
       .select({
@@ -548,16 +558,20 @@ export const getAdminEquipmentFn = createServerFn({
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    // Get total count for pagination
-    const totalCountResult = await database
-      .select({ count: sql<number>`count(*)` })
-      .from(equipment)
-      .leftJoin(category, eq(equipment.categoryId, category.id))
-      .where(whereClause)
-
-    const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / data.limit)
     const offset = (data.page - 1) * data.limit
+
+    // Get total count for pagination.
+    // Only join category when the search query references category.name.
+    const countQuery = data.searchQuery
+      ? database
+          .select({ count: sql<number>`count(*)` })
+          .from(equipment)
+          .leftJoin(category, eq(equipment.categoryId, category.id))
+          .where(whereClause)
+      : database
+          .select({ count: sql<number>`count(*)` })
+          .from(equipment)
+          .where(whereClause)
 
     // Apply sorting
     const sortColumn = {
@@ -571,7 +585,7 @@ export const getAdminEquipmentFn = createServerFn({
     const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
 
     // Get paginated equipment list
-    const equipmentList = await database
+    const equipmentListQuery = database
       .select({
         id: equipment.id,
         modelName: equipment.modelName,
@@ -596,6 +610,14 @@ export const getAdminEquipmentFn = createServerFn({
       .orderBy(orderBy)
       .limit(data.limit)
       .offset(offset)
+
+    const [totalCountResult, equipmentList] = await Promise.all([
+      countQuery,
+      equipmentListQuery,
+    ])
+
+    const total = totalCountResult[0]?.count || 0
+    const totalPages = Math.ceil(total / data.limit)
 
     const response: PaginatedEquipmentResponse = {
       data: equipmentList as EquipmentWithCategory[],

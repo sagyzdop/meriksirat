@@ -62,12 +62,14 @@ export const AdminUserFiltersSchema = z.object({
   clearanceLevel: z.array(z.coerce.number()).optional(),
   search: z.string().optional(),
   page: z.coerce.number().default(1),
-  limit: z.coerce.number().default(10),
+  limit: z.coerce.number().default(50),
   sortBy: z
     .enum(['firstName', 'lastName', 'email', 'role', 'status', 'clearanceLevel', 'createdAt'])
     .default('firstName'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
 })
+
+export type AdminUserFilters = z.infer<typeof AdminUserFiltersSchema>
 
 export const UpdateUserAdminSchema = z.object({
   userId: z.string(),

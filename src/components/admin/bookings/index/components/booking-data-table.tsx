@@ -10,7 +10,8 @@ import {
   getFacetedUniqueValues,
   useReactTable,
 } from "@tanstack/react-table"
-import { useNavigate, useRouter } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -86,7 +87,7 @@ export function BookingDataTable({
   isLoading = false,
 }: BookingDataTableProps) {
   const navigate = useNavigate()
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [rowSelection, setRowSelection] = React.useState({})
   const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false)
   const [bulkCancelOpen, setBulkCancelOpen] = React.useState(false)
@@ -240,7 +241,7 @@ export function BookingDataTable({
         endTime,
       },
     })
-    await router.invalidate()
+    await queryClient.invalidateQueries({ queryKey: ['bookings'] })
   }
 
   const handleBulkCancel = async () => {
@@ -264,7 +265,7 @@ export function BookingDataTable({
     if (successCount > 0) {
       toast.success(`Cancelled ${successCount} booking${successCount === 1 ? "" : "s"}`)
       setRowSelection({})
-      await router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
     }
 
     if (failedCount > 0) {

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { BookingWithEquipment } from "@/lib/booking/types"
 import { toast } from "sonner"
-import { useRouter } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import { cancelBookingFn } from "@/lib/booking"
 
 interface CancelBookingDialogProps {
@@ -27,7 +27,7 @@ export function CancelBookingDialog({
   onOpenChange,
   onSuccess,
 }: CancelBookingDialogProps) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [isLoading, setIsLoading] = React.useState(false)
 
   if (!booking) return null
@@ -43,8 +43,8 @@ export function CancelBookingDialog({
 
       toast.success("Booking cancelled successfully")
       
-      // Refresh the page to update the booking list
-      router.invalidate()
+      // Refresh the bookings list in the background
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
       
       if (onSuccess) {
         onSuccess()

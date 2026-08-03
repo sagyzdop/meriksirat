@@ -1,33 +1,45 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/bookings/index'
-import { getUserBookingsFn, getTelegramBotUsernameFn } from '@/lib/booking'
+import {
+  bookingsQueries,
+  bookingsEmptyResponse,
+  getTelegramBotUsernameFn,
+} from '@/lib/booking'
 import { z } from 'zod'
 
 const searchSchema = z.object({
-  status: z.preprocess((val) => {
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string') {
-      if (val === '') return undefined;
-      // Handle stringified JSON arrays
-      if (val.startsWith('[') && val.endsWith(']')) {
-        try {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) return parsed;
-        } catch (e) {
-          // Fall through to other treatments
+  status: z
+    .preprocess(
+      (val) => {
+        if (Array.isArray(val)) return val
+        if (typeof val === 'string') {
+          if (val === '') return undefined
+          // Handle stringified JSON arrays
+          if (val.startsWith('[') && val.endsWith(']')) {
+            try {
+              const parsed = JSON.parse(val)
+              if (Array.isArray(parsed)) return parsed
+            } catch (e) {
+              // Fall through to other treatments
+            }
+          }
+          if (val.includes(',')) return val.split(',')
+          return [val]
         }
-      }
-      if (val.includes(',')) return val.split(',');
-      return [val];
-    }
-    return val;
-  }, z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']))).optional(),
+        return val
+      },
+      z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']))
+    )
+    .optional(),
   equipmentId: z.coerce.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   page: z.coerce.number().default(1),
-  limit: z.coerce.number().default(20),
-  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment']).default('startTime'),
+  limit: z.coerce.number().default(50),
+  sortBy: z
+    .enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment'])
+    .default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 
@@ -35,56 +47,40 @@ export const Route = createFileRoute('/_authenticated/bookings/')({
   component: RouteComponent,
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => ({ search }),
-  loader: async ({ deps }) => {
-    const search = deps.search
+  loader: async ({ deps, context }) => {
     try {
-      const [bookingsResponse, telegramBotUsername] = await Promise.all([
-        getUserBookingsFn({ data: search }),
-        getTelegramBotUsernameFn(),
-      ])
-
-      return {
-        bookings: bookingsResponse?.data || [],
-        pagination: bookingsResponse?.pagination || {
-          page: 1,
-          limit: 20,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        },
-        telegramBotUsername,
-      }
+      await context.queryClient.ensureQueryData(bookingsQueries.mine(deps.search))
     } catch (error) {
       console.error('Failed to load bookings:', error)
-      return {
-        bookings: [],
-        pagination: {
-          page: 1,
-          limit: 20,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        },
-        telegramBotUsername: '',
-      }
     }
+
+    let telegramBotUsername = ''
+    try {
+      telegramBotUsername = await getTelegramBotUsernameFn()
+    } catch (error) {
+      console.error('Failed to load telegram bot username:', error)
+    }
+
+    return { telegramBotUsername }
   },
 })
 
 function RouteComponent() {
-  const { bookings, pagination, telegramBotUsername } = Route.useLoaderData()
+  const { telegramBotUsername } = Route.useLoaderData()
   const search = Route.useSearch()
-  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
+  const { data, isFetching } = useQuery(bookingsQueries.mine(search))
+  const response = data ?? bookingsEmptyResponse(search)
+  const isRouterPending = useRouterState({
+    select: (state) => state.status === 'pending',
+  })
 
   return (
     <Page
-      bookings={bookings}
-      pagination={pagination}
+      bookings={response.data}
+      pagination={response.pagination}
       filters={search}
       telegramBotUsername={telegramBotUsername}
-      isLoading={isLoading}
+      isLoading={isRouterPending || isFetching}
     />
   )
 }

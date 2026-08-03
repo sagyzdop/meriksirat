@@ -28,7 +28,7 @@ export const EquipmentFiltersSchema = z.object({
   isActive: z.array(z.boolean()).optional(),
   // Pagination
   page: z.coerce.number().min(1).optional().default(1),
-  limit: z.coerce.number().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().min(1).max(100).optional().default(50),
   // Sorting
   sortBy: z.enum(['modelName', 'category', 'requiredClearanceLevel', 'isActive', 'createdAt']).optional().default('modelName'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),

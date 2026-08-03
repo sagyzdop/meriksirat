@@ -7,6 +7,7 @@ import type { AdminBookingWithDetails } from "@/lib/booking/types";
 import { updateBookingStatusAdminFn } from "@/lib/booking";
 import { format, isPast } from "date-fns";
 import { Link, useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ const statusConfig = {
 };
 
 export function Page({ booking }: PageProps) {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -43,6 +45,7 @@ export function Page({ booking }: PageProps) {
         },
       });
       toast.success("Booking cancelled successfully");
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       router.invalidate();
       setShowCancelDialog(false);
     } catch (error) {

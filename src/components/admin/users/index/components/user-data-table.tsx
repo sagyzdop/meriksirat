@@ -10,7 +10,8 @@ import {
   getFacetedUniqueValues,
   useReactTable,
 } from "@tanstack/react-table"
-import { useNavigate, useRouter } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,7 +100,7 @@ export function UserDataTable({
   isLoading = false,
 }: UserDataTableProps) {
   const navigate = useNavigate()
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [rowSelection, setRowSelection] = React.useState({})
   const [bulkEditClearanceOpen, setBulkEditClearanceOpen] = React.useState(false)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -459,7 +460,7 @@ export function UserDataTable({
         onOpenChange={setBulkEditClearanceOpen}
         onSuccess={() => {
           table.resetRowSelection()
-          router.invalidate()
+          queryClient.invalidateQueries({ queryKey: ['users'] })
         }}
       />
     </div>

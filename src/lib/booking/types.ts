@@ -76,7 +76,7 @@ export const BookingFiltersSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   page: z.coerce.number().min(1).optional().default(1),
-  limit: z.coerce.number().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().min(1).max(100).optional().default(50),
   sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment']).optional().default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
@@ -111,10 +111,12 @@ export interface PaginatedAdminBookingsResponse {
 export const AdminBookingFiltersSchema = z.object({
   status: z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue'])).optional(),
   page: z.coerce.number().min(1).optional().default(1),
-  limit: z.coerce.number().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().min(1).max(100).optional().default(50),
   sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment', 'user']).optional().default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
+
+export type AdminBookingFilters = z.infer<typeof AdminBookingFiltersSchema>
 
 export const UpdateBookingStatusAdminSchema = z.object({
   bookingId: z.coerce.number(),

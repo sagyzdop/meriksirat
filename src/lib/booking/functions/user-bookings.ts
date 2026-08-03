@@ -410,7 +410,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, equipment, category } = await import('@/db/schema')
-    const { eq, and, sql, asc, desc, inArray } = await import('drizzle-orm')
+    const { eq, and, gte, lte, sql, asc, desc, inArray } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({ headers })
@@ -434,11 +434,11 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
     }
 
     if (data.startDate) {
-      conditions.push(eq(booking.startTime, new Date(data.startDate)))
+      conditions.push(gte(booking.startTime, new Date(data.startDate)))
     }
 
     if (data.endDate) {
-      conditions.push(eq(booking.endTime, new Date(data.endDate)))
+      conditions.push(lte(booking.endTime, new Date(data.endDate)))
     }
 
     const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions)

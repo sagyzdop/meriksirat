@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { deleteEquipmentAdminFn } from "@/lib/equipment"
 import { EquipmentWithCategory } from "@/lib/equipment"
-import { useRouter } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface EquipmentDeleteDialogProps {
   open: boolean
@@ -25,7 +25,7 @@ export function EquipmentDeleteDialog({
   onOpenChange,
   equipment,
 }: EquipmentDeleteDialogProps) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -44,7 +44,7 @@ export function EquipmentDeleteDialog({
       }
 
       onOpenChange(false)
-      router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['equipment'] })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to delete equipment"

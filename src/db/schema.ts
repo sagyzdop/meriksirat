@@ -1,13 +1,15 @@
 import { relations, sql } from 'drizzle-orm'
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
 
-export const user = sqliteTable('user', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  emailVerified: integer('email_verified', { mode: 'boolean' })
-    .default(false)
-    .notNull(),
+export const user = sqliteTable(
+  'user',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull().unique(),
+    emailVerified: integer('email_verified', { mode: 'boolean' })
+      .default(false)
+      .notNull(),
   image: text('image'),
   // Telegram fields
   telegramChatId: text('telegram_chat_id'),
@@ -45,7 +47,13 @@ export const user = sqliteTable('user', {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-})
+  },
+  (table) => [
+    index('user_role_idx').on(table.role),
+    index('user_status_idx').on(table.status),
+    index('user_clearanceLevel_idx').on(table.clearanceLevel),
+  ]
+)
 
 export const session = sqliteTable(
   'session',
@@ -182,6 +190,7 @@ export const equipment = sqliteTable(
   (table) => [
     index('equipment_categoryId_idx').on(table.categoryId),
     index('equipment_isActive_idx').on(table.isActive),
+    index('equipment_requiredClearanceLevel_idx').on(table.requiredClearanceLevel),
   ]
 )
 

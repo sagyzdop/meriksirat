@@ -1,7 +1,7 @@
 import * as React from "react"
 import { addDays, format } from "date-fns"
 import { CheckCircle, Loader2 } from "lucide-react"
-import { useRouter } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -32,7 +32,7 @@ interface TimeSlot {
 }
 
 export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [date, setDate] = React.useState<Date | undefined>(new Date())
   const [month, setMonth] = React.useState<Date>(new Date())
   const [selectedSlots, setSelectedSlots] = React.useState<string[]>([])
@@ -171,8 +171,8 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
       setSelectedSlots([])
       setNotes("")
       
-      // Invalidate bookings route to refresh the bookings list
-      router.invalidate()
+      // Invalidate bookings query to refresh the bookings list
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
       
       // Refresh availability
       if (date) {

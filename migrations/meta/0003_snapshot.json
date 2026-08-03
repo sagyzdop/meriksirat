@@ -443,6 +443,13 @@
             "is_active"
           ],
           "isUnique": false
+        },
+        "equipment_requiredClearanceLevel_idx": {
+          "name": "equipment_requiredClearanceLevel_idx",
+          "columns": [
+            "required_clearance_level"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -840,6 +847,27 @@
             "nu_id"
           ],
           "isUnique": true
+        },
+        "user_role_idx": {
+          "name": "user_role_idx",
+          "columns": [
+            "role"
+          ],
+          "isUnique": false
+        },
+        "user_status_idx": {
+          "name": "user_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "user_clearanceLevel_idx": {
+          "name": "user_clearanceLevel_idx",
+          "columns": [
+            "clearance_level"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
