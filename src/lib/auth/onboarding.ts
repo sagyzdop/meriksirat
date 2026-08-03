@@ -1,11 +1,6 @@
 
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import { auth } from '@/lib/auth/auth'
-import { db } from '@/db'
-import { user } from '@/db/schema'
-import { eq } from 'drizzle-orm'
-import { env } from 'cloudflare:workers'
 import { z } from 'zod'
 
 const updateOnboardingSchema = z.object({
@@ -22,6 +17,11 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
     .validator(updateOnboardingSchema)
     .handler(async ({ data }) => {
         const headers = getRequestHeaders()
+        const { auth } = await import('@/lib/auth/auth')
+        const { env } = await import('cloudflare:workers')
+        const { db } = await import('@/db')
+        const { user } = await import('@/db/schema')
+        const { eq } = await import('drizzle-orm')
         const session = await auth.api.getSession({
             headers,
         })
@@ -54,6 +54,11 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
     .validator(z.object({ skipTelegram: z.boolean().optional() }))
     .handler(async ({ data }) => {
         const headers = getRequestHeaders()
+        const { auth } = await import('@/lib/auth/auth')
+        const { env } = await import('cloudflare:workers')
+        const { db } = await import('@/db')
+        const { user } = await import('@/db/schema')
+        const { eq } = await import('drizzle-orm')
         const session = await auth.api.getSession({
             headers,
         })
@@ -89,6 +94,11 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
 export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' })
     .handler(async () => {
         const headers = getRequestHeaders()
+        const { auth } = await import('@/lib/auth/auth')
+        const { env } = await import('cloudflare:workers')
+        const { db } = await import('@/db')
+        const { user } = await import('@/db/schema')
+        const { eq } = await import('drizzle-orm')
         const session = await auth.api.getSession({
             headers,
         })

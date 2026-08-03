@@ -9,6 +9,7 @@ import {
   DeleteEquipmentSchema,
   UploadEquipmentImageSchema
 } from './types'
+import { getUserClearanceLevel } from './server'
 
 export const getEquipmentFn = createServerFn({
   method: 'GET'
@@ -32,7 +33,7 @@ export const getEquipmentFn = createServerFn({
     }
 
     const database = db(env.meriksirat_d1 as D1Database)
-    const userClearanceLevel = (session.user as { clearanceLevel?: number }).clearanceLevel || 1
+    const userClearanceLevel = await getUserClearanceLevel(session.user.id)
 
     // Build where conditions
     const conditions = [
@@ -172,7 +173,7 @@ export const getEquipmentByIdFn = createServerFn({
     }
 
     const database = db(env.meriksirat_d1 as D1Database)
-    const userClearanceLevel = (session.user as { clearanceLevel?: number }).clearanceLevel || 1
+    const userClearanceLevel = await getUserClearanceLevel(session.user.id)
 
     const equipmentItem = await database
       .select({
