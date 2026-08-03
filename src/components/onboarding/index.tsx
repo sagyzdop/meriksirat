@@ -69,7 +69,6 @@ export function Page({
       })
 
       if (result.needsTelegramLink) {
-        setStep('telegram')
         // Generate telegram link token
         const tokenResult = await getTelegramLinkUrlFn()
 
@@ -80,6 +79,8 @@ export function Page({
           await navigate({ to: '/equipment' })
           return
         }
+
+        setStep('telegram')
 
         if (tokenResult.alreadyLinked) {
           // User already has telegram linked, complete onboarding

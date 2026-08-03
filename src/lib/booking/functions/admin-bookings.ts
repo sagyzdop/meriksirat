@@ -18,7 +18,7 @@ import { buildEventDescription, formatUserDisplayName } from '@/lib/utils'
  * Includes user and equipment details for administrative management
  */
 export const getAdminBookingsFn = createServerFn({ method: 'GET' })
-  .inputValidator(AdminBookingFiltersSchema)
+  .validator(AdminBookingFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedAdminBookingsResponse> => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
@@ -97,15 +97,15 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
           googleCalendarId: equipment.googleCalendarId,
           category: {
             id: category.id,
-            name: category.name,
-          },
-        },
+            name: category.name as unknown as string,
+          } as any,
+        } as any,
         user: {
           id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-        },
+        } as any,
       })
       .from(booking)
       .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
@@ -148,7 +148,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
  * Includes user and equipment details for administrative management
  */
 export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
-  .inputValidator(GetBookingByIdSchema)
+  .validator(GetBookingByIdSchema)
   .handler(async ({ data }): Promise<AdminBookingWithDetails | null> => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
@@ -182,15 +182,15 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
           googleCalendarId: equipment.googleCalendarId,
           category: {
             id: category.id,
-            name: category.name,
-          },
-        },
+            name: category.name as unknown as string,
+          } as any,
+        } as any,
         user: {
           id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-        },
+        } as any,
       })
       .from(booking)
       .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
@@ -199,7 +199,7 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
       .where(eq(booking.id, data.bookingId))
       .limit(1)
 
-    const result = bookingItem[0] as AdminBookingWithDetails | undefined
+    const result = bookingItem[0] as unknown as AdminBookingWithDetails | undefined
 
     return result || null
   })
@@ -209,7 +209,7 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
  * Includes administrative notes capability and calendar synchronization
  */
 export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateBookingStatusAdminSchema)
+  .validator(UpdateBookingStatusAdminSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { deleteCalendarEvent, updateCalendarEvent, checkCalendarFreeBusy } = await import('@/lib/google/google-caledar')
@@ -377,7 +377,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
  * Also handles Google Calendar event deletion
  */
 export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
-  .inputValidator(DeleteBookingSchema)
+  .validator(DeleteBookingSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { deleteCalendarEvent } = await import('@/lib/google/google-caledar')
@@ -445,7 +445,7 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
   })
 
 export const updateBookingsTimeAdminFn = createServerFn({ method: 'POST' })
-  .inputValidator(BulkUpdateBookingTimeAdminSchema)
+  .validator(BulkUpdateBookingTimeAdminSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { checkCalendarFreeBusy, updateCalendarEvent } = await import('@/lib/google/google-caledar')

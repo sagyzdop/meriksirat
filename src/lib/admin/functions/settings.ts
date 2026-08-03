@@ -60,7 +60,7 @@ export const getSettingsFn = createServerFn({ method: 'GET' })
  * Only updates provided fields, leaves others unchanged
  */
 export const updateSettingsFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateSettingsSchema)
+  .validator(UpdateSettingsSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('../server')
     const { env } = await import('cloudflare:workers')

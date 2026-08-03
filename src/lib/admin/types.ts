@@ -10,6 +10,7 @@ export interface AdminUser {
   status: string
   firstName: string | null
   lastName: string | null
+  telegramUsername: string | null
   createdAt: Date
   updatedAt: Date
 }

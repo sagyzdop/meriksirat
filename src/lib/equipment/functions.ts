@@ -13,7 +13,7 @@ import {
 export const getEquipmentFn = createServerFn({
   method: 'GET'
 })
-  .inputValidator(EquipmentFiltersSchema)
+  .validator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { auth } = await import('@/lib/auth/auth')
@@ -142,7 +142,7 @@ export const getEquipmentFn = createServerFn({
 export const getEquipmentByIdFn = createServerFn({
   method: 'GET'
 })
-  .inputValidator(z.object({ equipmentId: z.coerce.number() }))
+  .validator(z.object({ equipmentId: z.coerce.number() }))
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { auth } = await import('@/lib/auth/auth')
@@ -231,7 +231,7 @@ export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
  * Validates Google Calendar ID uniqueness and admin permissions
  */
 export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
-  .inputValidator(CreateEquipmentSchema)
+  .validator(CreateEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -289,7 +289,7 @@ export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
  * Validates Google Calendar ID uniqueness and admin permissions
  */
 export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateEquipmentSchema)
+  .validator(UpdateEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -369,7 +369,7 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
  * Prevents deletion of equipment with active bookings by marking as inactive instead
  */
 export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
-  .inputValidator(DeleteEquipmentSchema)
+  .validator(DeleteEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -451,7 +451,7 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
 export const getAdminEquipmentByIdFn = createServerFn({
   method: 'GET'
 })
-  .inputValidator(z.object({ equipmentId: z.number() }))
+  .validator(z.object({ equipmentId: z.number() }))
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -499,7 +499,7 @@ export const getAdminEquipmentByIdFn = createServerFn({
 export const getAdminEquipmentFn = createServerFn({
   method: 'GET'
 })
-  .inputValidator(EquipmentFiltersSchema)
+  .validator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -617,7 +617,7 @@ export const getAdminEquipmentFn = createServerFn({
  * Handles image upload and returns the path for storage
  */
 export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
-  .inputValidator(UploadEquipmentImageSchema)
+  .validator(UploadEquipmentImageSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')

@@ -73,7 +73,7 @@ export const getTelegramBotUsernameFn = createServerFn({ method: 'GET' })
  * Uses the master account to create events in equipment-specific calendars with user as attendee.
  */
 export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
-  .inputValidator(BookingInputSchema)
+  .validator(BookingInputSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
     const { createCalendarEvent, checkCalendarFreeBusy } = await import('@/lib/google/google-caledar')
@@ -222,7 +222,7 @@ export const handleBookingAndCalendar = createServerFn({ method: 'POST' })
   })
 
 export const handleMultiBookingAndCalendar = createServerFn({ method: 'POST' })
-  .inputValidator(MultiBookingInputSchema)
+  .validator(MultiBookingInputSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
     const { createCalendarEvent, checkMultipleCalendarsFreeBusy, deleteCalendarEvent } = await import('@/lib/google/google-caledar')
@@ -404,7 +404,7 @@ export const handleMultiBookingAndCalendar = createServerFn({ method: 'POST' })
   })
 
 export const getUserBookingsFn = createServerFn({ method: 'GET' })
-  .inputValidator(BookingFiltersSchema)
+  .validator(BookingFiltersSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
@@ -540,7 +540,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
   })
 
 export const getBookingByIdFn = createServerFn({ method: 'GET' })
-  .inputValidator(GetBookingByIdSchema)
+  .validator(GetBookingByIdSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
@@ -620,7 +620,7 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
   })
 
 export const cancelBookingFn = createServerFn({ method: 'POST' })
-  .inputValidator(CancelBookingSchema)
+  .validator(CancelBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
     const { deleteCalendarEvent } = await import('@/lib/google/google-caledar')
@@ -709,7 +709,7 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
   })
 
 export const updateBookingFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateBookingSchema)
+  .validator(UpdateBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
     const { checkCalendarFreeBusy, updateCalendarEvent } = await import('@/lib/google/google-caledar')
@@ -868,7 +868,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
   })
 
 export const updateBookingsTimeFn = createServerFn({ method: 'POST' })
-  .inputValidator(BulkUpdateBookingTimeSchema)
+  .validator(BulkUpdateBookingTimeSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
     const { checkCalendarFreeBusy, updateCalendarEvent } = await import('@/lib/google/google-caledar')

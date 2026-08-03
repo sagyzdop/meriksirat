@@ -5,11 +5,12 @@ import {
   UpdateUserAdminSchema,
   GetUserByIdSchema,
   UpdateUserProfileSchema,
-  BulkUpdateUserClearanceSchema
+  BulkUpdateUserClearanceSchema,
+  type UserProfile,
 } from './types'
 
 export const getUserFn = createServerFn({ method: 'GET' }).handler(
-  async () => {
+  async (): Promise<UserProfile | null> => {
     // Import server-only code inside handler
     const { auth } = await import('@/lib/auth/auth')
 
@@ -22,10 +23,12 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
       return null
     }
 
+    const sessionUser = session.user as typeof session.user & { onboardingComplete?: boolean | null }
+
     // Optimization: If user is not fully onboarded in the session, check the DB directly.
     // This allows us to catch the status change immediately without waiting for session refresh/expiry,
     // while keeping performance high for fully onboarded users (no extra DB call).
-    if (!session.user.onboardingComplete) {
+    if (!sessionUser.onboardingComplete) {
       const { db } = await import('@/db')
       const { user } = await import('@/db/schema')
       const { eq } = await import('drizzle-orm')
@@ -39,14 +42,14 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
         .get()
       
       if (freshUser) {
-        return freshUser
+        return freshUser as UserProfile
       }
     }
 
     // session.user from better-auth contains the user table data.
     // We return it directly to avoid a redundant database hit on every page load.
     // The session is kept fresh by better-auth.
-    return session.user
+    return session.user as UserProfile
   }
 )
 
@@ -56,7 +59,7 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
  * Includes pagination and sorting functionality
  */
 export const getAdminUsersFn = createServerFn({ method: 'GET' })
-  .inputValidator(AdminUserFiltersSchema)
+  .validator(AdminUserFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -170,7 +173,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
  * Supports updating role, clearance level, status, and profile information
  */
 export const updateUserAdminFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateUserAdminSchema)
+  .validator(UpdateUserAdminSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -262,7 +265,7 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
  * Only admins and managers can perform bulk updates
  */
 export const bulkUpdateUserClearanceFn = createServerFn({ method: 'POST' })
-  .inputValidator(BulkUpdateUserClearanceSchema)
+  .validator(BulkUpdateUserClearanceSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
@@ -292,7 +295,7 @@ export const bulkUpdateUserClearanceFn = createServerFn({ method: 'POST' })
  * Used for user detail views and edit forms
  */
 export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
-  .inputValidator(GetUserByIdSchema)
+  .validator(GetUserByIdSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -342,7 +345,7 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
  * Users can update their personal information but not role/status/clearance
  */
 export const updateUserProfileFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateUserProfileSchema)
+  .validator(UpdateUserProfileSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { auth } = await import('@/lib/auth/auth')

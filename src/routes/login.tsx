@@ -8,7 +8,7 @@ export const Route = createFileRoute('/login')({
 
     if (user) {
       if (user.onboardingComplete) {
-        throw redirect({ to: '/dashboard' })
+        throw redirect({ to: '/equipment' })
       } else {
         throw redirect({ to: '/onboarding' })
       }

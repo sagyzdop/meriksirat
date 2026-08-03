@@ -41,6 +41,7 @@ export async function checkAdminPermission(
       status: userFromSession.status,
       firstName: userFromSession.firstName,
       lastName: userFromSession.lastName,
+      telegramUsername: userFromSession.telegramUsername ?? null,
       createdAt: new Date(userFromSession.createdAt),
       updatedAt: new Date(userFromSession.updatedAt),
     };
@@ -57,6 +58,7 @@ export async function checkAdminPermission(
         firstName: user.firstName,
         lastName: user.lastName,
         name: user.name,
+        telegramUsername: user.telegramUsername,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })

@@ -6,7 +6,7 @@ import { getGoogleAccessToken } from './google-calendar-auth'
  * Reference: https://developers.google.com/calendar/api/v3/reference/freebusy/query
  */
 export const checkCalendarFreeBusy = createServerFn({ method: 'POST' })
-  .inputValidator((d: any) => d)
+  .validator((d: any) => d)
   .handler(async ({ data }) => {
     const { calendarId, timeMin, timeMax } = data
     
@@ -44,7 +44,7 @@ export const checkCalendarFreeBusy = createServerFn({ method: 'POST' })
  * Reference: https://developers.google.com/calendar/api/v3/reference/events/insert
  */
 export const createCalendarEvent = createServerFn({ method: 'POST' })
-  .inputValidator((d: any) => d)
+  .validator((d: any) => d)
   .handler(async ({ data }) => {
     const { equipmentCalendarId, event, userEmail } = data
 
@@ -86,7 +86,7 @@ export const createCalendarEvent = createServerFn({ method: 'POST' })
  * Reference: https://developers.google.com/calendar/api/v3/reference/events/update
  */
 export const updateCalendarEvent = createServerFn({ method: 'POST' })
-  .inputValidator((d: any) => d)
+  .validator((d: any) => d)
   .handler(async ({ data }) => {
     const { equipmentCalendarId, eventId, event, userEmail } = data
     
@@ -126,7 +126,7 @@ export const updateCalendarEvent = createServerFn({ method: 'POST' })
  * Reference: https://developers.google.com/calendar/api/v3/reference/events/delete
  */
 export const deleteCalendarEvent = createServerFn({ method: 'POST' })
-  .inputValidator((d: any) => d)
+  .validator((d: any) => d)
   .handler(async ({ data }) => {
     const { equipmentCalendarId, eventId } = data
     
@@ -155,7 +155,7 @@ export const deleteCalendarEvent = createServerFn({ method: 'POST' })
  * Reference: https://developers.google.com/calendar/api/v3/reference/events/list
  */
 export const getCalendarEvents = createServerFn({ method: 'POST' })
-  .inputValidator((d: any) => d)
+  .validator((d: any) => d)
   .handler(async ({ data }) => {
     const { equipmentCalendarId, timeMin, timeMax, maxResults = 250 } = data
     
@@ -193,7 +193,7 @@ export const getCalendarEvents = createServerFn({ method: 'POST' })
  * Check freeBusy for multiple calendars using REST API
  */
 export const checkMultipleCalendarsFreeBusy = createServerFn({ method: 'POST' })
-  .inputValidator((d: any) => d)
+  .validator((d: any) => d)
   .handler(async ({ data }) => {
     const { equipmentCalendarIds, timeMin, timeMax } = data
     

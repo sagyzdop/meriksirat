@@ -117,6 +117,11 @@ npm run format
 ## Database Management
 
 ```bash
+# Promote your local user to admin for testing admin-only flows.
+wrangler d1 execute meriksirat --local --command "update user set role='admin' where email='you@example.com';"
+```
+
+```bash
 # Generate new migration
 npm run db:generate
 

@@ -68,7 +68,7 @@ export const getAdminStatsFn = createServerFn({ method: 'GET' })
  * Validates category name uniqueness and admin permissions
  */
 export const createCategoryFn = createServerFn({ method: 'POST' })
-  .inputValidator(CreateCategorySchema)
+  .validator(CreateCategorySchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('./server')
@@ -110,7 +110,7 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
  * Validates category name uniqueness and admin permissions
  */
 export const updateCategoryFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateCategorySchema)
+  .validator(UpdateCategorySchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('./server')
@@ -165,7 +165,7 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
  * Reassigns associated equipment to "Uncategorized" category before deletion
  */
 export const deleteCategoryFn = createServerFn({ method: 'POST' })
-  .inputValidator(DeleteCategorySchema)
+  .validator(DeleteCategorySchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('./server')
@@ -273,7 +273,7 @@ export const getCategoriesWithCountFn = createServerFn({ method: 'GET' })
  * Updates multiple categories' sort order in a single transaction
  */
 export const updateCategorySortOrderFn = createServerFn({ method: 'POST' })
-  .inputValidator(UpdateCategorySortOrderSchema)
+  .validator(UpdateCategorySortOrderSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('./server')

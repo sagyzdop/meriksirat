@@ -19,7 +19,7 @@ const updateOnboardingSchema = z.object({
 })
 
 export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
-    .inputValidator(updateOnboardingSchema)
+    .validator(updateOnboardingSchema)
     .handler(async ({ data }) => {
         const headers = getRequestHeaders()
         const session = await auth.api.getSession({
@@ -51,7 +51,7 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
     })
 
 export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
-    .inputValidator(z.object({ skipTelegram: z.boolean().optional() }))
+    .validator(z.object({ skipTelegram: z.boolean().optional() }))
     .handler(async ({ data }) => {
         const headers = getRequestHeaders()
         const session = await auth.api.getSession({
@@ -98,6 +98,7 @@ export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' })
         }
 
         const database = db(env.meriksirat_d1 as D1Database)
+        const isDevelopment = process.env.DEV === 'true'
 
         // Check if user already has telegram linked
         const userData = await database
@@ -107,7 +108,15 @@ export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' })
             .get()
 
         if (userData?.telegramChatId) {
-            return { alreadyLinked: true, url: null, isDevelopment: false }
+            return {
+                alreadyLinked: true,
+                url: null,
+                isDevelopment,
+            }
+        }
+
+        if (isDevelopment) {
+            return { alreadyLinked: false, url: null, isDevelopment: true }
         }
 
         // Import the telegram function only on server side
@@ -117,6 +126,6 @@ export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' })
         return {
             alreadyLinked: false,
             url: result.url,
-            isDevelopment: process.env.DEV === 'true'
+            isDevelopment,
         }
     })
