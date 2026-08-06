@@ -1,9 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
-import type { PaginatedEquipmentResponse, EquipmentWithCategory } from './types'
+import type { PaginatedEquipmentResponse, EquipmentResponse, EquipmentWithCategory } from './types'
 import {
   EquipmentFiltersSchema,
+  AdminEquipmentFiltersSchema,
   CreateEquipmentSchema,
   UpdateEquipmentSchema,
   DeleteEquipmentSchema,
@@ -21,7 +22,7 @@ export const getEquipmentFn = createServerFn({
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, gte, lte, like, or, sql, asc, desc, inArray } = await import('drizzle-orm')
+    const { eq, and, gte, lte, like, or, asc, desc, inArray } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({
@@ -34,6 +35,9 @@ export const getEquipmentFn = createServerFn({
 
     const database = db(env.meriksirat_d1 as D1Database)
     const userClearanceLevel = await getUserClearanceLevel(session.user.id)
+
+    const sortBy = data.sortBy ?? 'modelName'
+    const sortOrder = data.sortOrder ?? 'asc'
 
     // Build where conditions
     const conditions = [
@@ -75,21 +79,6 @@ export const getEquipmentFn = createServerFn({
 
     const whereClause = and(...conditions)
 
-    const offset = (data.page - 1) * data.limit
-
-    // Get total count for pagination.
-    // Only join category when the search query references category.name.
-    const countQuery = data.searchQuery
-      ? database
-          .select({ count: sql<number>`count(*)` })
-          .from(equipment)
-          .leftJoin(category, eq(equipment.categoryId, category.id))
-          .where(whereClause)
-      : database
-          .select({ count: sql<number>`count(*)` })
-          .from(equipment)
-          .where(whereClause)
-
     // Apply sorting
     const sortColumn = {
       modelName: equipment.modelName,
@@ -97,11 +86,10 @@ export const getEquipmentFn = createServerFn({
       requiredClearanceLevel: equipment.requiredClearanceLevel,
       isActive: equipment.isActive,
       createdAt: equipment.createdAt,
-    }[data.sortBy]
+    }[sortBy]
 
-    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
+    const orderBy = sortColumn ? (sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
 
-    // Get paginated equipment list
     const equipmentListQuery = database
       .select({
         id: equipment.id,
@@ -125,27 +113,11 @@ export const getEquipmentFn = createServerFn({
       .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(whereClause)
       .orderBy(orderBy)
-      .limit(data.limit)
-      .offset(offset)
 
-    const [totalCountResult, equipmentList] = await Promise.all([
-      countQuery,
-      equipmentListQuery,
-    ])
+    const equipmentList = await equipmentListQuery
 
-    const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / data.limit)
-
-    const response: PaginatedEquipmentResponse = {
+    const response: EquipmentResponse = {
       data: equipmentList as EquipmentWithCategory[],
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        total,
-        totalPages,
-        hasNext: data.page < totalPages,
-        hasPrev: data.page > 1,
-      }
     }
 
     return response
@@ -510,7 +482,7 @@ export const getAdminEquipmentByIdFn = createServerFn({
 export const getAdminEquipmentFn = createServerFn({
   method: 'GET'
 })
-  .validator(EquipmentFiltersSchema)
+  .validator(AdminEquipmentFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('@/lib/admin/server')
@@ -523,6 +495,12 @@ export const getAdminEquipmentFn = createServerFn({
     await checkAdminPermission(headers, ['admin', 'manager'])
 
     const database = db(env.meriksirat_d1 as D1Database)
+
+    // Normalize defaults since page/limit/sortBy/sortOrder are optional
+    const page = data.page ?? 1
+    const limit = data.limit ?? 50
+    const sortBy = data.sortBy ?? 'modelName'
+    const sortOrder = data.sortOrder ?? 'asc'
 
     // Build where conditions (no clearance level restriction for admins)
     const conditions = []
@@ -559,7 +537,7 @@ export const getAdminEquipmentFn = createServerFn({
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    const offset = (data.page - 1) * data.limit
+    const offset = (page - 1) * limit
 
     // Get total count for pagination.
     // Only join category when the search query references category.name.
@@ -581,9 +559,9 @@ export const getAdminEquipmentFn = createServerFn({
       requiredClearanceLevel: equipment.requiredClearanceLevel,
       isActive: equipment.isActive,
       createdAt: equipment.createdAt,
-    }[data.sortBy]
+    }[sortBy]
 
-    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
+    const orderBy = sortColumn ? (sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
 
     // Get paginated equipment list
     const equipmentListQuery = database
@@ -609,7 +587,7 @@ export const getAdminEquipmentFn = createServerFn({
       .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(whereClause)
       .orderBy(orderBy)
-      .limit(data.limit)
+      .limit(limit)
       .offset(offset)
 
     const [totalCountResult, equipmentList] = await Promise.all([
@@ -618,17 +596,17 @@ export const getAdminEquipmentFn = createServerFn({
     ])
 
     const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / data.limit)
+    const totalPages = Math.ceil(total / limit)
 
     const response: PaginatedEquipmentResponse = {
       data: equipmentList as EquipmentWithCategory[],
       pagination: {
-        page: data.page,
-        limit: data.limit,
+        page,
+        limit,
         total,
         totalPages,
-        hasNext: data.page < totalPages,
-        hasPrev: data.page > 1,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
       }
     }
 

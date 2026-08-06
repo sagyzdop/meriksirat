@@ -1,7 +1,7 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/equipment/index'
-import { equipmentQueries, equipmentEmptyResponse } from '@/lib/equipment'
+import { equipmentQueries, adminEquipmentEmptyResponse } from '@/lib/equipment'
 import { z } from 'zod'
 
 const searchSchema = z.object({
@@ -83,7 +83,7 @@ function RouteComponent() {
     equipmentQueries.adminList(search)
   )
   const { data: categories } = useQuery(equipmentQueries.categories())
-  const response = equipmentResponse ?? equipmentEmptyResponse(search)
+  const response = equipmentResponse ?? adminEquipmentEmptyResponse(search)
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })

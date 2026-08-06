@@ -4,16 +4,25 @@ import {
   getAdminEquipmentFn,
   getCategoriesFn,
 } from './functions'
-import type { EquipmentFilters, PaginatedEquipmentResponse } from './types'
+import type {
+  AdminEquipmentFilters,
+  EquipmentFilters,
+  EquipmentResponse,
+  PaginatedEquipmentResponse,
+} from './types'
 
-export function equipmentEmptyResponse(
-  filters: EquipmentFilters
+export function equipmentEmptyResponse(): EquipmentResponse {
+  return { data: [] }
+}
+
+export function adminEquipmentEmptyResponse(
+  filters: AdminEquipmentFilters
 ): PaginatedEquipmentResponse {
   return {
     data: [],
     pagination: {
-      page: filters.page,
-      limit: filters.limit,
+      page: filters.page ?? 1,
+      limit: filters.limit ?? 50,
       total: 0,
       totalPages: 0,
       hasNext: false,
@@ -26,19 +35,19 @@ export const equipmentQueries = {
   all: ['equipment'] as const,
   lists: () => ['equipment', 'list'] as const,
   adminLists: () => ['equipment', 'admin-list'] as const,
-  list: (filters: EquipmentFilters) =>
+  list: (filters: EquipmentFilters = {}) =>
     queryOptions({
       queryKey: [...equipmentQueries.lists(), filters],
-      queryFn: async (): Promise<PaginatedEquipmentResponse> =>
-        (await getEquipmentFn({ data: filters })) ??
-        equipmentEmptyResponse(filters),
+      staleTime: 60_000,
+      queryFn: async (): Promise<EquipmentResponse> =>
+        (await getEquipmentFn({ data: filters })) ?? equipmentEmptyResponse(),
     }),
-  adminList: (filters: EquipmentFilters) =>
+  adminList: (filters: AdminEquipmentFilters) =>
     queryOptions({
       queryKey: [...equipmentQueries.adminLists(), filters],
       queryFn: async (): Promise<PaginatedEquipmentResponse> =>
         (await getAdminEquipmentFn({ data: filters })) ??
-        equipmentEmptyResponse(filters),
+        adminEquipmentEmptyResponse(filters),
     }),
   categories: () =>
     queryOptions({

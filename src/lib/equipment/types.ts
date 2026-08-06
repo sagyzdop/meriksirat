@@ -26,18 +26,26 @@ export const EquipmentFiltersSchema = z.object({
   minClearanceLevel: z.coerce.number().optional(),
   maxClearanceLevel: z.coerce.number().optional(),
   isActive: z.array(z.boolean()).optional(),
-  // Pagination
-  page: z.coerce.number().min(1).optional().default(1),
-  limit: z.coerce.number().min(1).max(100).optional().default(50),
   // Sorting
-  sortBy: z.enum(['modelName', 'category', 'requiredClearanceLevel', 'isActive', 'createdAt']).optional().default('modelName'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
+  sortBy: z.enum(['modelName', 'category', 'requiredClearanceLevel', 'isActive', 'createdAt']).optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
 })
 
 export type EquipmentFilters = z.infer<typeof EquipmentFiltersSchema>
 
-export interface PaginatedEquipmentResponse {
+export const AdminEquipmentFiltersSchema = EquipmentFiltersSchema.extend({
+  // Pagination
+  page: z.coerce.number().min(1).optional(),
+  limit: z.coerce.number().min(1).max(100).optional(),
+})
+
+export type AdminEquipmentFilters = z.infer<typeof AdminEquipmentFiltersSchema>
+
+export interface EquipmentResponse {
   data: EquipmentWithCategory[]
+}
+
+export interface PaginatedEquipmentResponse extends EquipmentResponse {
   pagination: {
     page: number
     limit: number

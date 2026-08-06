@@ -1,5 +1,4 @@
 import { EquipmentCard } from "./equipment-card";
-import { EquipmentListCard } from "./equipment-list-card";
 import { EquipmentSkeleton } from "./equipment-skeleton";
 import { Equipment } from "./types";
 import { ContentGrid } from "@/components/layout/content-grid";
@@ -9,7 +8,6 @@ import { cn } from "@/lib/utils";
 
 interface EquipmentGridProps {
   equipment: Equipment[];
-  viewMode: string;
   hasActiveFilters?: boolean;
   isLoading?: boolean;
   className?: string;
@@ -19,7 +17,6 @@ interface EquipmentGridProps {
 
 export function EquipmentGrid({
   equipment,
-  viewMode,
   hasActiveFilters = false,
   isLoading = false,
   className,
@@ -27,30 +24,20 @@ export function EquipmentGrid({
   onToggleSelect,
 }: EquipmentGridProps) {
   if (isLoading) {
-    if (viewMode === "grid") {
-      return (
-        <ContentGrid
-          columns={{
-            mobile: 1,
-            tablet: 2,
-            desktop: 4,
-          }}
-          gap={6}
-          className={cn(className)}
-        >
-          {Array.from({ length: 12 }).map((_, index) => (
-            <EquipmentSkeleton key={index} viewMode="grid" />
-          ))}
-        </ContentGrid>
-      );
-    }
-
     return (
-      <div className={cn("grid grid-cols-1 gap-4", className)}>
-        {Array.from({ length: 8 }).map((_, index) => (
-          <EquipmentSkeleton key={index} viewMode="list" />
+      <ContentGrid
+        columns={{
+          mobile: 1,
+          tablet: 2,
+          desktop: 3,
+        }}
+        gap={6}
+        className={cn(className)}
+      >
+        {Array.from({ length: 12 }).map((_, index) => (
+          <EquipmentSkeleton key={index} />
         ))}
-      </div>
+      </ContentGrid>
     );
   }
 
@@ -92,41 +79,24 @@ export function EquipmentGrid({
     );
   }
 
-  // Use ContentGrid for grid view, single column for list view
-  if (viewMode === "grid") {
-    return (
-      <ContentGrid
-        columns={{
-          mobile: 1,
-          tablet: 2,
-          desktop: 4,
-        }}
-        gap={6}
-        className={cn(className)}
-      >
-        {equipment.map((item) => (
-          <EquipmentCard
-            key={item.id}
-            equipment={item}
-            isSelected={selectedEquipmentIds?.includes(item.id) || false}
-            onToggleSelect={onToggleSelect}
-          />
-        ))}
-      </ContentGrid>
-    );
-  }
-
-  // List view - single column with horizontal layout
   return (
-    <div className={cn("grid grid-cols-1 gap-4", className)}>
+    <ContentGrid
+      columns={{
+        mobile: 1,
+        tablet: 2,
+        desktop: 3,
+      }}
+      gap={6}
+      className={cn(className)}
+    >
       {equipment.map((item) => (
-        <EquipmentListCard
+        <EquipmentCard
           key={item.id}
           equipment={item}
           isSelected={selectedEquipmentIds?.includes(item.id) || false}
           onToggleSelect={onToggleSelect}
         />
       ))}
-    </div>
+    </ContentGrid>
   );
 }

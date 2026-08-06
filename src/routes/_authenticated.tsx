@@ -44,7 +44,7 @@ function AuthenticatedLayout() {
       <AppSidebar user={user} onLogout={handleLogout} />
       <SidebarInset className="min-w-0">
         <SiteHeader />
-        <div className="flex flex-col flex-1 px-4 py-8 min-w-0">
+        <div className="flex flex-col flex-1 min-w-0">
           <Outlet />
         </div>
       </SidebarInset>
