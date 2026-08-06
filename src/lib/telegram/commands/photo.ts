@@ -13,6 +13,7 @@ import { notifyAdmins } from '../admin'
 import { logBookingActivity } from '../logging'
 import { withKeyboard } from '../server-utils'
 import { recomputeBookingStatus } from '@/lib/booking/status'
+import { deleteCalendarEvent } from '@/lib/google/google-caledar'
 
 /**
  * Handles photo messages for equipment return flow
@@ -74,6 +75,31 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
           await recomputeBookingStatus(database, bookingId)
         } catch (err) {
           console.error(`Failed to recompute status for booking ${bookingId}:`, err)
+        }
+      }
+
+      // Delete the Google Calendar events for the returned items
+      const eventRows = await database
+        .select({
+          googleCalendarEventId: bookingItem.googleCalendarEventId,
+          equipmentCalendarId: equipment.googleCalendarId,
+        })
+        .from(bookingItem)
+        .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+        .where(inArray(bookingItem.id, selectedItemIds))
+
+      for (const row of eventRows) {
+        if (row.googleCalendarEventId && row.equipmentCalendarId) {
+          try {
+            await deleteCalendarEvent({
+              data: {
+                equipmentCalendarId: row.equipmentCalendarId,
+                eventId: row.googleCalendarEventId,
+              },
+            })
+          } catch (err) {
+            console.error('Failed to delete calendar event for returned item:', err)
+          }
         }
       }
 

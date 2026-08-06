@@ -331,7 +331,7 @@ export function BookingDataTable({
               href={createTelegramBotLink(telegramBotUsername)}
               target="_blank"
               rel="noopener noreferrer"
-              title="Open Telegram bot to return equipment. Send /end_booking command."
+              title="Open Telegram bot to return equipment. Send /return_equipment command."
               className="flex items-center justify-center gap-2"
             >
               <MessageCircle className="h-4 w-4" />

@@ -18,7 +18,7 @@ const faqItems = [
     id: 'telegram-linking',
     question: 'Why do I need to link my Telegram account?',
     answer:
-      'Telegram linking is required for accountability and communication. You\'ll receive notifications about your bookings and can use the /end_booking command through the bot to return equipment with photo verification.',
+      'Telegram linking is required for accountability and communication. You\'ll receive notifications about your bookings and can use the /return_equipment command through the bot to return equipment with photo verification.',
   },
   {
     id: 'making-booking',
@@ -48,13 +48,13 @@ const faqItems = [
     id: 'return-process',
     question: 'How do I return equipment?',
     answer:
-      'Use the /end_booking command in the Telegram bot. If you have multiple active bookings, select which items to return. You\'ll be prompted to send a photo of the equipment as proof of its condition. The photo is timestamped and sent to administrators for verification.',
+      'Use the /return_equipment command in the Telegram bot. If you have multiple active bookings, select which items to return. You\'ll be prompted to send a photo of the equipment as proof of its condition. The photo is timestamped and sent to administrators for verification.',
   },
   {
     id: 'partial-return',
     question: 'Can I return some items while keeping others?',
     answer:
-      'Yes! When using /end_booking in Telegram, you can select specific items to return if you have multiple active bookings. This allows you to return equipment individually as you finish using each item.',
+      'Yes! When using /return_equipment in Telegram, you can select specific items to return if you have multiple active bookings. This allows you to return equipment individually as you finish using each item.',
   },
   {
     id: 'clearance-levels',
@@ -66,7 +66,7 @@ const faqItems = [
     id: 'telegram-commands',
     question: 'What Telegram bot commands are available?',
     answer:
-      'Use /start with the link from your profile to connect your Telegram account. Use /end_booking to return equipment with photo verification. The bot also sends automatic notifications about your bookings.',
+      'Use /start with the link from your profile to connect your Telegram account. Use /my_bookings to see active and upcoming bookings, /cancel_booking to cancel items, and /return_equipment to return equipment with photo verification. The bot also sends automatic notifications about your bookings.',
   },
   {
     id: 'calendar-integration',

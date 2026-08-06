@@ -15,6 +15,8 @@ import type { Update } from '@/lib/telegram/types'
 import { TelegramAPI } from '@/lib/telegram/api'
 import { handleStart } from '@/lib/telegram/commands/start'
 import { handleEndBooking } from '@/lib/telegram/commands/end-booking'
+import { handleListBookings } from '@/lib/telegram/commands/list-bookings'
+import { handleCancelBooking } from '@/lib/telegram/commands/cancel-booking'
 import { handleCallback } from '@/lib/telegram/commands/callback'
 import { handlePhoto } from '@/lib/telegram/commands/photo'
 
@@ -87,8 +89,12 @@ export const Route = createFileRoute('/api/telegram')({
             
             if (text && text.startsWith('/start')) {
               await handleStart(ctx)
-            } else if (text && text.startsWith('/end_booking')) {
+            } else if (text && text.startsWith('/return_equipment')) {
               await handleEndBooking(ctx)
+            } else if (text && text.startsWith('/my_bookings')) {
+              await handleListBookings(ctx)
+            } else if (text && text.startsWith('/cancel_booking')) {
+              await handleCancelBooking(ctx)
             }
           } else if ('callback_query' in update) {
             await handleCallback(ctx)

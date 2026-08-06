@@ -13,7 +13,7 @@ import { BOOKING_STATUS, type BookingStatus } from './types'
 
 /**
  * Creates a simple Telegram bot link that opens the chat with the bot
- * User can then manually send /end_booking command
+ * User can then manually send /return_equipment command
  * 
  * @param botUsername - The Telegram bot username (without @)
  * @returns URL that opens Telegram chat with the bot

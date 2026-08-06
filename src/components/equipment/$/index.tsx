@@ -1,11 +1,9 @@
-import { useParams, Link } from '@tanstack/react-router'
+import { useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getEquipmentByIdFn, type EquipmentWithCategory } from '@/lib/equipment'
 import { GoogleCalendarView } from '@/components/shared/event-calendar/google-calendar-view'
 import { EquipmentDetail } from './components/equipment-detail-page'
 import { Spinner } from '@/components/ui/spinner'
-import { Button } from '@/components/ui/button'
-import { Calendar } from 'lucide-react'
 
 export function Page() {
     const { _splat: equipmentId } = useParams({ strict: false })
@@ -73,23 +71,9 @@ export function Page() {
     return (
         <div className="w-full space-y-8">
             <EquipmentDetail equipment={equipment} />
-            
-            {/* Book Equipment Button */}
+
+            {/* Calendar View */}
             <div className="max-w-7xl mx-auto px-4">
-                <div className="flex justify-center mb-6">
-                    <Link 
-                        to="/bookings/new" 
-                        search={{ equipmentId: equipment.id }}
-                        className="inline-flex"
-                    >
-                        <Button size="lg" className="gap-2">
-                            <Calendar className="h-5 w-5" />
-                            Book This Equipment
-                        </Button>
-                    </Link>
-                </div>
-                
-                {/* Calendar View */}
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Availability</h3>
                     <GoogleCalendarView calendarId={equipment.googleCalendarId} />

@@ -12,6 +12,7 @@
 import type { BotContext } from '../context'
 import { getSession, setSession } from '../kv-session'
 import { withKeyboard } from '../server-utils'
+import { handleCancelCallback } from './cancel-booking'
 import { db } from '@/db'
 import { bookingItem, equipment } from '@/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
@@ -101,9 +102,14 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
 
     const session = await getSession(ctx.env.meriksirat_kv, chatId)
 
+    // Cancel booking flow handles its own callbacks without a session
+    if (await handleCancelCallback(ctx)) {
+      return
+    }
+
     if (!session) {
       await ctx.answerCbQuery('Session expired or invalid')
-      await ctx.reply('Please use /end_booking first.', withKeyboard())
+      await ctx.reply('Please use /return_equipment first.', withKeyboard())
       return
     }
 

@@ -23,7 +23,8 @@ import { eq } from 'drizzle-orm'
  */
 export const STANDARD_KEYBOARD = {
   keyboard: [
-    [{ text: '/end_booking' }],
+    [{ text: '/return_equipment' }],
+    [{ text: '/my_bookings' }, { text: '/cancel_booking' }],
   ],
   resize_keyboard: true,
   persistent: true,

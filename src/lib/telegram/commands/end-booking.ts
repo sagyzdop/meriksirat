@@ -1,6 +1,6 @@
 import type { BotContext } from '../context'
 import { db } from '@/db'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, lt } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { BOOKING_STATUS } from '../types'
@@ -55,6 +55,7 @@ async function fetchReturnableBookings(
     .where(
       and(
         eq(booking.userId, userId),
+        lt(booking.startTime, new Date()),
         inArray(bookingItem.status, [
           BOOKING_STATUS.BOOKED,
           BOOKING_STATUS.ACTIVE,
@@ -124,7 +125,7 @@ async function promptItemSelection(
 }
 
 /**
- * Handles the /end_booking command to initiate equipment return flow
+ * Handles the /return_equipment command to initiate equipment return flow
  *
  * Flow:
  * 1. Verify user is linked to Telegram account

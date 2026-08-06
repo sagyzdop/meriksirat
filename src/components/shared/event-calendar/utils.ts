@@ -1,4 +1,4 @@
-import { isSameDay } from "date-fns"
+import { differenceInHours, isSameDay } from "date-fns"
 
 import type { CalendarEvent, EventColor } from "@/components/shared/event-calendar"
 
@@ -50,7 +50,7 @@ export function getBorderRadiusClasses(
 export function isMultiDayEvent(event: CalendarEvent): boolean {
   const eventStart = new Date(event.start)
   const eventEnd = new Date(event.end)
-  return event.allDay || eventStart.getDate() !== eventEnd.getDate()
+  return event.allDay || differenceInHours(eventEnd, eventStart) >= 24
 }
 
 /**
