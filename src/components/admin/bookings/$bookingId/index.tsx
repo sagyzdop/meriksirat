@@ -21,6 +21,7 @@ const statusConfig = {
   returned: { label: "Returned", variant: "secondary" as const, color: "bg-slate-50 text-slate-700 border-slate-200" },
   cancelled: { label: "Cancelled", variant: "destructive" as const, color: "bg-red-50 text-red-700 border-red-200" },
   overdue: { label: "Overdue", variant: "destructive" as const, color: "bg-red-50 text-red-700 border-red-200" },
+  partially_returned: { label: "Partially Returned", variant: "default" as const, color: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
 export function Page({ booking }: PageProps) {
@@ -31,7 +32,7 @@ export function Page({ booking }: PageProps) {
 
   const startDate = new Date(booking.startTime);
   const endDate = new Date(booking.endTime);
-  const isOverdue = isPast(endDate) && (booking.status === "booked" || booking.status === "active");
+  const isOverdue = isPast(endDate) && (booking.status === "booked" || booking.status === "active" || booking.status === "partially_returned");
   const displayStatus = isOverdue ? "overdue" : booking.status;
   const statusInfo = statusConfig[displayStatus as keyof typeof statusConfig] || statusConfig.booked;
 
@@ -55,7 +56,7 @@ export function Page({ booking }: PageProps) {
     }
   };
 
-  const canCancel = booking.status === "booked" || booking.status === "active";
+  const canCancel = booking.status === "booked" || booking.status === "active" || booking.status === "partially_returned";
 
   return (
     <div className="bg-background min-h-screen p-6">
@@ -85,44 +86,48 @@ export function Page({ booking }: PageProps) {
             <MapPin className="h-5 w-5" />
             Equipment Details
           </h2>
-          {booking.equipment ? (
-            <Link to="/equipment/$" params={{ _splat: booking.equipment.id.toString() }} className="block">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-6">
-                    <div className="relative flex-shrink-0">
-                      {booking.equipment.imagePath ? (
-                        <img
-                          src={`/api/images/${booking.equipment.imagePath}`}
-                          alt={booking.equipment.modelName}
-                          className="w-24 h-24 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                          <span className="text-muted-foreground text-xs">No image</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold mb-1">{booking.equipment.modelName}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {booking.equipment.category?.name}
-                          </p>
-                          {booking.equipment.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {booking.equipment.description}
-                            </p>
+          {booking.items && booking.items.length > 0 ? (
+            <div className="grid gap-4">
+              {booking.items.map((item) => (
+                <Link key={item.id} to="/equipment/$" params={{ _splat: item.equipmentId.toString() }} className="block">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-6">
+                        <div className="relative flex-shrink-0">
+                          {item.equipment?.imagePath ? (
+                            <img
+                              src={`/api/images/${item.equipment.imagePath}`}
+                              alt={item.equipment.modelName}
+                              className="w-24 h-24 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                              <span className="text-muted-foreground text-xs">No image</span>
+                            </div>
                           )}
                         </div>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold mb-1">{item.equipment?.modelName || "Unknown Equipment"}</h3>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {item.equipment?.category?.name || "Uncategorized"}
+                              </p>
+                              {item.equipment?.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {item.equipment.description}
+                                </p>
+                              )}
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           ) : (
             <Card>
               <CardContent className="p-6">
@@ -185,7 +190,7 @@ export function Page({ booking }: PageProps) {
                   </div>
                 </div>
 
-                {booking.googleCalendarEventId && (
+                {booking.items?.some((item) => item.googleCalendarEventId) && (
                   <div>
                     <span className="text-sm text-muted-foreground">Calendar Event</span>
                     <div className="font-medium text-green-600">Synced</div>

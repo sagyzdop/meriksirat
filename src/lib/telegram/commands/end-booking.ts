@@ -1,48 +1,155 @@
 import type { BotContext } from '../context'
 import { db } from '@/db'
-import { eq, and } from 'drizzle-orm'
-import { user, booking, equipment } from '@/db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
+import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { BOOKING_STATUS } from '../types'
 import { withKeyboard } from '../server-utils'
 
+interface BookingWithItems {
+  id: number
+  startTime: Date
+  endTime: Date
+  status: string
+  items: Array<{
+    itemId: number
+    itemStatus: string
+    equipmentName: string
+  }>
+}
+
+/**
+ * Builds a shared inline keyboard helper: 2 buttons per row.
+ */
+function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: string }>) {
+  const rows: Array<Array<{ text: string; callback_data: string }>> = []
+  for (let i = 0; i < buttons.length; i += 2) {
+    rows.push(buttons.slice(i, i + 2))
+  }
+  return { reply_markup: { inline_keyboard: rows } }
+}
+
+/**
+ * Fetch the user's bookings that still have returnable items
+ * (items that are not yet returned or cancelled).
+ */
+async function fetchReturnableBookings(
+  ctx: BotContext,
+  userId: string
+): Promise<BookingWithItems[]> {
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const rows = await database
+    .select({
+      bookingId: booking.id,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      status: booking.status,
+      itemId: bookingItem.id,
+      itemStatus: bookingItem.status,
+      equipmentName: equipment.modelName,
+    })
+    .from(booking)
+    .innerJoin(bookingItem, eq(bookingItem.bookingId, booking.id))
+    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .where(
+      and(
+        eq(booking.userId, userId),
+        inArray(bookingItem.status, [
+          BOOKING_STATUS.BOOKED,
+          BOOKING_STATUS.ACTIVE,
+          BOOKING_STATUS.OVERDUE,
+        ])
+      )
+    )
+    .orderBy(booking.startTime, bookingItem.id)
+
+  const bookingsMap = new Map<number, BookingWithItems>()
+  for (const row of rows) {
+    let entry = bookingsMap.get(row.bookingId)
+    if (!entry) {
+      entry = {
+        id: row.bookingId,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        status: row.status,
+        items: [],
+      }
+      bookingsMap.set(row.bookingId, entry)
+    }
+    entry.items.push({
+      itemId: row.itemId,
+      itemStatus: row.itemStatus,
+      equipmentName: row.equipmentName,
+    })
+  }
+
+  return [...bookingsMap.values()]
+}
+
+/**
+ * Present the item-selection keyboard for a single booking.
+ */
+async function promptItemSelection(
+  ctx: BotContext,
+  chatId: string,
+  userId: string,
+  bookingInfo: BookingWithItems
+): Promise<void> {
+  const returnableItems = bookingInfo.items.filter(
+    (it) => it.itemStatus !== 'returned' && it.itemStatus !== 'cancelled'
+  )
+
+  await setSession(ctx.env.meriksirat_kv, chatId, {
+    step: 'awaiting_item_selection',
+    userId,
+    activeBookingIds: [bookingInfo.id],
+    selectedBookingIds: [bookingInfo.id],
+    createdAt: Date.now(),
+  })
+
+  const buttons = returnableItems.map((it) => ({
+    text: it.equipmentName,
+    callback_data: `item_${it.itemId}`,
+  }))
+  buttons.push({
+    text: 'Return All Items',
+    callback_data: `item_all_${bookingInfo.id}`,
+  })
+
+  await ctx.reply(
+    `Select which items to return for booking #${bookingInfo.id}:`,
+    buildInlineKeyboard(buttons)
+  )
+}
+
 /**
  * Handles the /end_booking command to initiate equipment return flow
- * 
+ *
  * Flow:
  * 1. Verify user is linked to Telegram account
- * 2. Fetch active bookings (status: awaiting_pickup or pending_handover)
- * 3. If no bookings, inform user
- * 4. If bookings found, proceed to session creation (handled in task 3.2)
- * 
- * @param ctx - Telegraf bot context with environment bindings
- * 
- * @example
- * User sends: /end_booking
- * Bot responds: (keyboard with equipment list or photo prompt)
+ * 2. Fetch bookings with returnable items
+ * 3. If a single booking exists, go straight to item selection
+ * 4. If multiple bookings exist, show a booking list to pick from
+ *
+ * @param ctx - Bot context with environment bindings
  */
 export async function handleEndBooking(ctx: BotContext): Promise<void> {
   try {
-    // Ensure we have a message and chat
     if (!ctx.message || !ctx.chat) {
       return
     }
-    
-    // Extract chat ID from Telegram context
+
     const chatId = String(ctx.chat.id)
-    
-    // Initialize database connection
     const database = db(ctx.env.meriksirat_d1 as D1Database)
-    
-    // Query for user by Telegram chat ID
+
     const userRecord = await database
       .select()
       .from(user)
       .where(eq(user.telegramChatId, chatId))
       .limit(1)
       .then(rows => rows[0])
-    
-    // If user not found, they need to link their account first
+
     if (!userRecord) {
       await ctx.reply(
         'Please link your account via /start first.',
@@ -50,107 +157,51 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
       )
       return
     }
-    
-    // Query for active bookings with equipment relations
-    // Active bookings are those with status 'active'
-    const activeBookings = await database
-      .select({
-        id: booking.id,
-        userId: booking.userId,
-        equipmentId: booking.equipmentId,
-        startTime: booking.startTime,
-        endTime: booking.endTime,
-        status: booking.status,
-        equipment: {
-          id: equipment.id,
-          modelName: equipment.modelName,
-        },
-      })
-      .from(booking)
-      .innerJoin(equipment, eq(booking.equipmentId, equipment.id))
-      .where(
-        and(
-          eq(booking.userId, userRecord.id),
-          eq(booking.status, BOOKING_STATUS.ACTIVE)
-        )
-      )
-    
-    // If no active bookings found, inform user
-    if (activeBookings.length === 0) {
+
+    const bookings = await fetchReturnableBookings(ctx, userRecord.id)
+
+    if (bookings.length === 0) {
       await ctx.reply(
         'You have no active bookings to return.',
         withKeyboard()
       )
       return
     }
-    
-    // Create session in KV with initial state
-    const activeBookingIds = activeBookings.map(b => b.id)
-    
-    // If single booking: auto-select and skip to photo request
-    if (activeBookings.length === 1) {
-      await setSession(ctx.env.meriksirat_kv, chatId, {
-        step: 'awaiting_photo',
-        userId: userRecord.id,
-        activeBookingIds,
-        selectedBookingIds: [activeBookings[0].id],
-        createdAt: Date.now(),
-      })
-      
-      await ctx.reply(
-        'Please send a photo of the equipment to confirm its condition.',
-        withKeyboard()
-      )
+
+    const activeBookingIds = bookings.map((b) => b.id)
+
+    // Single booking: skip booking selection and go straight to items
+    if (bookings.length === 1) {
+      await promptItemSelection(ctx, chatId, userRecord.id, bookings[0])
       return
     }
-    
-    // Multiple bookings: create session and show inline keyboard
+
+    // Multiple bookings: ask which booking to return
     await setSession(ctx.env.meriksirat_kv, chatId, {
-      step: 'awaiting_item_selection',
+      step: 'awaiting_booking_selection',
       userId: userRecord.id,
       activeBookingIds,
       createdAt: Date.now(),
     })
-    
-    // Build inline keyboard with equipment model names
-    const buttons = activeBookings.map(b => ({
-      text: b.equipment.modelName,
-      callback_data: `select_${b.id}`
+
+    const buttons = bookings.map((b) => ({
+      text: `#${b.id} — ${b.items.map((it) => it.equipmentName).join(', ')}`,
+      callback_data: `book_${b.id}`,
     }))
-    
-    // Add "Return All Items" button
-    buttons.push({
-      text: 'Return All Items',
-      callback_data: 'select_all'
-    })
-    
-    // Send keyboard message (2 buttons per row for better UX)
+
     await ctx.reply(
-      'Select which items to return:',
-      {
-        reply_markup: {
-          inline_keyboard: [
-            buttons.slice(0, 2),
-            ...buttons.slice(2).reduce((acc: any[], btn, i) => {
-              if (i % 2 === 0) acc.push([btn])
-              else acc[acc.length - 1].push(btn)
-              return acc
-            }, [])
-          ]
-        }
-      }
+      'Select which booking to return:',
+      buildInlineKeyboard(buttons)
     )
-    
+
   } catch (error) {
-    // Log error with context for debugging
     console.error('End booking command error:', {
       chatId: ctx.chat?.id,
       username: ctx.from?.username,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })
-    
-    // Send user-friendly error message
+
     await ctx.reply('Error fetching bookings. Please try again.')
   }
 }

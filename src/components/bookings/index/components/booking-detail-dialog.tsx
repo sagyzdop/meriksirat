@@ -8,13 +8,13 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { BookingWithEquipment } from "@/lib/booking/types"
+import { BookingWithItems } from "@/lib/booking/types"
 import { format } from "date-fns"
 import { Calendar, Clock, FileText, Package, AlertCircle } from "lucide-react"
 import { CancelBookingDialog } from "./cancel-booking-dialog"
 
 interface BookingDetailDialogProps {
-  booking: BookingWithEquipment | null
+  booking: BookingWithItems | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -25,6 +25,7 @@ const statusConfig = {
   returned: { label: "Returned", variant: "secondary" as const },
   cancelled: { label: "Cancelled", variant: "destructive" as const },
   overdue: { label: "Overdue", variant: "destructive" as const },
+  partially_returned: { label: "Partially Returned", variant: "default" as const },
 }
 
 export function BookingDetailDialog({
@@ -36,8 +37,8 @@ export function BookingDetailDialog({
 
   if (!booking) return null
 
-  const status = booking.status as keyof typeof statusConfig
-  const config = statusConfig[status]
+  const status = booking.status as string
+  const config = statusConfig[status as keyof typeof statusConfig] ?? statusConfig.booked
   const canCancel = status === "booked" || status === "active"
 
   return (
@@ -62,12 +63,19 @@ export function BookingDetailDialog({
                 Equipment
               </div>
               <div className="rounded-lg border p-4 space-y-1">
-                <p className="font-medium">{booking.equipment?.modelName}</p>
-                {booking.equipment?.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {booking.equipment.description}
-                  </p>
+                {booking.items.length === 0 && (
+                  <p className="text-muted-foreground text-sm">No items</p>
                 )}
+                {booking.items.map((item) => (
+                  <div key={item.id}>
+                    <p className="font-medium">{item.equipment?.modelName ?? `Equipment ${item.equipmentId}`}</p>
+                    {item.equipment?.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {item.equipment.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -138,7 +146,7 @@ export function BookingDetailDialog({
                     {format(new Date(booking.updatedAt), "MMM dd, yyyy HH:mm")}
                   </span>
                 </div>
-                {booking.googleCalendarEventId && (
+                {booking.items.some((item) => item.googleCalendarEventId) && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Calendar Event:</span>
                     <span className="font-medium">Synced</span>

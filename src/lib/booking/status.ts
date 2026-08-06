@@ -1,0 +1,47 @@
+import type { BookingStatus } from '@/lib/telegram/types'
+
+/**
+ * Derive a parent booking's status from the statuses of its items.
+ *
+ * Rules:
+ * - all items cancelled  -> cancelled
+ * - all items returned   -> returned
+ * - any item overdue     -> overdue
+ * - some items returned  -> partially_returned
+ * - any item active      -> active
+ * - otherwise            -> booked
+ */
+export function deriveParentBookingStatus(itemStatuses: string[]): BookingStatus {
+  if (itemStatuses.length === 0) return 'cancelled'
+
+  const statuses = new Set(itemStatuses)
+  if (statuses.size === 1 && statuses.has('cancelled')) return 'cancelled'
+  if (statuses.size === 1 && statuses.has('returned')) return 'returned'
+  if (statuses.has('overdue')) return 'overdue'
+  if (statuses.has('returned')) return 'partially_returned'
+  if (statuses.has('active')) return 'active'
+  return 'booked'
+}
+
+/**
+ * Recompute and persist a parent booking's status from its items' statuses.
+ * Returns the newly derived status.
+ */
+export async function recomputeBookingStatus(database: any, bookingId: number): Promise<BookingStatus> {
+  const { bookingItem, booking } = await import('@/db/schema')
+  const { eq } = await import('drizzle-orm')
+
+  const itemRows = await database
+    .select({ status: bookingItem.status })
+    .from(bookingItem)
+    .where(eq(bookingItem.bookingId, bookingId))
+
+  const status = deriveParentBookingStatus(itemRows.map((row: { status: string }) => row.status))
+
+  await database
+    .update(booking)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(booking.id, bookingId))
+
+  return status
+}

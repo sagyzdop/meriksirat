@@ -358,7 +358,7 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { equipment, booking } = await import('@/db/schema')
+    const { equipment, booking, bookingItem } = await import('@/db/schema')
     const { eq, and, or, sql } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
@@ -384,14 +384,16 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
     // Check for active bookings
     const activeBookings = await database
       .select({ count: sql<number>`count(*)` })
-      .from(booking)
+      .from(bookingItem)
+      .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
       .where(
         and(
-          eq(booking.equipmentId, data.equipmentId),
+          eq(bookingItem.equipmentId, data.equipmentId),
           or(
             eq(booking.status, 'booked'),
             eq(booking.status, 'active'),
-            eq(booking.status, 'overdue')
+            eq(booking.status, 'overdue'),
+            eq(booking.status, 'partially_returned')
           )!
         )
       )

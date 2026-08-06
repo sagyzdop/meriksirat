@@ -124,13 +124,6 @@ export const verification = sqliteTable(
   (table) => [index('verification_identifier_idx').on(table.identifier)]
 )
 
-export const userRelations = relations(user, ({ many }) => ({
-  sessions: many(session),
-  accounts: many(account),
-  telegramLinkTokens: many(telegramToken),
-  bookings: many(booking),
-}))
-
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
     fields: [session.userId],
@@ -194,14 +187,6 @@ export const equipment = sqliteTable(
   ]
 )
 
-export const equipmentRelations = relations(equipment, ({ one, many }) => ({
-  category: one(category, {
-    fields: [equipment.categoryId],
-    references: [category.id],
-  }),
-  bookings: many(booking),
-}))
-
 export const category = sqliteTable('category', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
@@ -210,15 +195,11 @@ export const category = sqliteTable('category', {
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
 })
-
-export const categoryRelations = relations(category, ({ many }) => ({
-  equipment: many(equipment),
-}))
 
 // Bookings Table
 
@@ -229,17 +210,13 @@ export const booking = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id),
-    equipmentId: integer('equipment_id')
-      .notNull()
-      .references(() => equipment.id),
     startTime: integer('start_time', { mode: 'timestamp_ms' }).notNull(),
     endTime: integer('end_time', { mode: 'timestamp_ms' }).notNull(),
     status: text('status', {
-      enum: ['booked', 'active', 'returned', 'cancelled', 'overdue'],
+      enum: ['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned'],
     })
       .notNull()
       .default('booked'),
-    googleCalendarEventId: text('gcal_event_id'), // Google Calendar event ID
     userEventDetails: text('user_event_details'), // User-provided booking notes
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -251,22 +228,83 @@ export const booking = sqliteTable(
   },
   (table) => [
     index('booking_userId_idx').on(table.userId),
-    index('booking_equipmentId_idx').on(table.equipmentId),
     index('booking_status_idx').on(table.status),
     index('booking_startTime_idx').on(table.startTime),
     index('booking_endTime_idx').on(table.endTime),
   ]
 )
 
-export const bookingRelations = relations(booking, ({ one }) => ({
+export const bookingRelations = relations(booking, ({ one, many }) => ({
   user: one(user, {
     fields: [booking.userId],
     references: [user.id],
   }),
+  items: many(bookingItem),
+}))
+
+// Booking Items Table
+// A booking contains one or more booking items (one per piece of equipment).
+
+export const bookingItem = sqliteTable(
+  'booking_item',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    bookingId: integer('booking_id')
+      .notNull()
+      .references(() => booking.id, { onDelete: 'cascade' }),
+    equipmentId: integer('equipment_id')
+      .notNull()
+      .references(() => equipment.id),
+    status: text('status', {
+      enum: ['booked', 'active', 'returned', 'cancelled', 'overdue'],
+    })
+      .notNull()
+      .default('booked'),
+    googleCalendarEventId: text('gcal_event_id'), // Google Calendar event ID per item
+    returnedAt: integer('returned_at', { mode: 'timestamp_ms' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('booking_item_bookingId_idx').on(table.bookingId),
+    index('booking_item_equipmentId_idx').on(table.equipmentId),
+    index('booking_item_status_idx').on(table.status),
+  ]
+)
+
+export const bookingItemRelations = relations(bookingItem, ({ one }) => ({
+  booking: one(booking, {
+    fields: [bookingItem.bookingId],
+    references: [booking.id],
+  }),
   equipment: one(equipment, {
-    fields: [booking.equipmentId],
+    fields: [bookingItem.equipmentId],
     references: [equipment.id],
   }),
+}))
+
+export const userRelations = relations(user, ({ many }) => ({
+  sessions: many(session),
+  accounts: many(account),
+  telegramLinkTokens: many(telegramToken),
+  bookings: many(booking),
+}))
+
+export const equipmentRelations = relations(equipment, ({ one, many }) => ({
+  category: one(category, {
+    fields: [equipment.categoryId],
+    references: [category.id],
+  }),
+  bookings: many(bookingItem),
+}))
+
+export const categoryRelations = relations(category, ({ many }) => ({
+  equipment: many(equipment),
 }))
 
 export const settings = sqliteTable('settings', {

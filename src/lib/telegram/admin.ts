@@ -15,7 +15,7 @@ import type { AdminNotification } from './types'
  * 
  * @param d1Database - D1 database instance from Cloudflare bindings
  * @param notification - Notification data with photo and return details
- * @param telegram - Telegraf Telegram API instance
+ * @param telegram - TelegramAPI instance
  * 
  * @example
  * ```typescript
@@ -30,7 +30,7 @@ import type { AdminNotification } from './types'
 export async function notifyAdmins(
   d1Database: D1Database,
   notification: AdminNotification,
-  telegram: Telegram
+  telegram: TelegramAPI
 ): Promise<void> {
   // Initialize database connection
   const database = drizzle(d1Database, { schema })

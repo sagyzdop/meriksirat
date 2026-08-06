@@ -25,7 +25,7 @@ const searchSchema = z.object({
         }
         return val
       },
-      z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']))
+      z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned']))
     )
     .optional(),
   page: z.coerce.number().default(1),

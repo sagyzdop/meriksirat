@@ -8,7 +8,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowUpDown, Calendar, Clock } from "lucide-react"
-import { BookingWithEquipment } from "@/lib/booking/types"
+import { BookingWithItems } from "@/lib/booking/types"
 import { format } from "date-fns"
 
 const statusConfig = {
@@ -17,9 +17,10 @@ const statusConfig = {
   returned: { label: "Returned", variant: "secondary" as const },
   cancelled: { label: "Cancelled", variant: "destructive" as const },
   overdue: { label: "Overdue", variant: "destructive" as const },
+  partially_returned: { label: "Partially Returned", variant: "default" as const },
 }
 
-export const bookingHistoryColumns: ColumnDef<BookingWithEquipment>[] = [
+export const bookingHistoryColumns: ColumnDef<BookingWithItems>[] = [
   {
     accessorKey: "id",
     header: "ID",
@@ -30,7 +31,7 @@ export const bookingHistoryColumns: ColumnDef<BookingWithEquipment>[] = [
   },
   {
     id: "equipment",
-    accessorFn: (row) => row.equipment?.modelName,
+    accessorFn: (row) => row.items?.[0]?.equipment?.modelName,
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -41,13 +42,15 @@ export const bookingHistoryColumns: ColumnDef<BookingWithEquipment>[] = [
       </Button>
     ),
     cell: ({ row }) => {
-      const equipment = row.original.equipment
+      const items = row.original.items ?? []
       return (
         <div className="flex flex-col">
-          <span className="font-medium">{equipment?.modelName}</span>
-          {equipment?.description && (
+          <span className="font-medium">
+            {items.map((item) => item.equipment?.modelName).filter(Boolean).join(", ")}
+          </span>
+          {items[0]?.equipment?.description && (
             <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-              {equipment.description}
+              {items[0].equipment.description}
             </span>
           )}
         </div>

@@ -134,10 +134,16 @@ export function Page({ booking, bookingId }: PageProps) {
         return 'destructive'
       case 'overdue':
         return 'destructive'
+      case 'partially_returned':
+        return 'default'
       default:
         return 'secondary'
     }
   }
+
+  const itemCalendarIds = booking.items
+    ?.map((item: any) => item.equipment?.googleCalendarId)
+    .filter((id: string | undefined): id is string => Boolean(id)) ?? []
 
   const canEdit = booking.status === 'booked' || booking.status === 'active'
   const canCancel = booking.status !== 'cancelled' && booking.status !== 'returned'
@@ -185,43 +191,45 @@ export function Page({ booking, bookingId }: PageProps) {
             </Badge>
           </div>
           
-          <Link to="/equipment/$" params={{ _splat: booking.equipmentId.toString() }} className="block">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-6">
-                  <div className="relative flex-shrink-0">
-                    {booking.equipment?.imagePath ? (
-                      <img 
-                        src={`/api/images/${booking.equipment.imagePath}`} 
-                        alt={booking.equipment.modelName}
-                        className="w-24 h-24 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                        <span className="text-muted-foreground text-xs">No image</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold mb-1">{booking.equipment?.modelName || 'Unknown Equipment'}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {booking.equipment?.category?.name || 'Uncategorized'}
-                        </p>
-                        {booking.equipment?.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {booking.equipment.description}
+          {booking.items?.map((item: any) => (
+            <Link key={item.id} to="/equipment/$" params={{ _splat: item.equipmentId.toString() }} className="block">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-6">
+                    <div className="relative flex-shrink-0">
+                      {item.equipment?.imagePath ? (
+                        <img 
+                          src={`/api/images/${item.equipment.imagePath}`} 
+                          alt={item.equipment.modelName}
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                          <span className="text-muted-foreground text-xs">No image</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold mb-1">{item.equipment?.modelName || 'Unknown Equipment'}</h3>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {item.equipment?.category?.name || 'Uncategorized'}
                           </p>
-                        )}
+                          {item.equipment?.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {item.equipment.description}
+                            </p>
+                          )}
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       </div>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
 
         {/* Current Booking Details */}
@@ -252,19 +260,19 @@ export function Page({ booking, bookingId }: PageProps) {
         </div>
 
         {/* Availability */}
-        {booking.equipment?.googleCalendarId && (
+        {itemCalendarIds.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Availability</h2>
-            <GoogleCalendarView calendarId={booking.equipment.googleCalendarId} />
+            <GoogleCalendarView calendarId={itemCalendarIds[0]} />
           </div>
         )}
 
         {/* Date & Time Selection */}
-        {canEdit && booking.equipment?.googleCalendarId && (
+        {canEdit && itemCalendarIds.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Update Date & Time</h2>
             <TimeSlotPicker
-              googleCalendarId={booking.equipment.googleCalendarId}
+              googleCalendarIds={itemCalendarIds}
               initialDate={new Date(booking.startTime)}
               initialSlots={initialSlots}
               excludeBookingPeriod={{

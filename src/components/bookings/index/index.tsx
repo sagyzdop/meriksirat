@@ -1,7 +1,7 @@
 
 import { getBookingColumns } from "./components/booking-columns"
 import { BookingDataTable } from "./components/booking-data-table"
-import { BookingWithEquipment } from "@/lib/booking/types"
+import { BookingWithItems } from "@/lib/booking/types"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 
@@ -26,7 +26,7 @@ interface Filters {
 }
 
 interface PageProps {
-  bookings: BookingWithEquipment[]
+  bookings: BookingWithItems[]
   pagination: Pagination
   filters: Filters
   telegramBotUsername: string

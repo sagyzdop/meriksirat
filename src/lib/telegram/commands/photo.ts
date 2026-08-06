@@ -7,11 +7,12 @@
 import type { BotContext } from '../context'
 import { getSession, deleteSession } from '../kv-session'
 import { db } from '@/db'
-import { booking, user, equipment } from '@/db/schema'
-import { inArray, eq } from 'drizzle-orm'
+import { bookingItem, booking, equipment, user } from '@/db/schema'
+import { eq, inArray } from 'drizzle-orm'
 import { notifyAdmins } from '../admin'
 import { logBookingActivity } from '../logging'
 import { withKeyboard } from '../server-utils'
+import { recomputeBookingStatus } from '@/lib/booking/status'
 
 /**
  * Handles photo messages for equipment return flow
@@ -20,92 +21,86 @@ import { withKeyboard } from '../server-utils'
  * 1. Extract chat ID and photo file_id from the message
  * 2. Retrieve session from KV storage
  * 3. Validate session exists and step is 'awaiting_photo'
- * 4. If validation fails, ignore photo silently
- * 5. Extract selected booking IDs from session
- * 6. (Further processing in task 5.2 and 5.3)
- * 
- * @param ctx - Telegraf bot context with environment bindings
- * 
- * @example
- * User sends: [photo]
- * Bot processes: Updates bookings, notifies admins, confirms to user
+ * 4. Mark the selected booking items as returned
+ * 5. Recompute parent booking statuses
+ * 6. Notify admins and log the return
+ *
+ * @param ctx - Bot context with environment bindings
  */
 export async function handlePhoto(ctx: BotContext): Promise<void> {
   try {
-    // Ensure we have a message with photo and chat
     if (!ctx.message || !('photo' in ctx.message) || !ctx.message.photo || !ctx.chat) {
       return
     }
-    
-    // Extract chat ID from Telegram context
+
     const chatId = String(ctx.chat.id)
-    
-    // Extract photo file_id (use largest size: last element in array)
+
     const photoArray = ctx.message.photo
     if (photoArray.length === 0) {
       return
     }
     const photoFileId = photoArray[photoArray.length - 1].file_id
-    
-    // Retrieve session from KV storage
+
     const session = await getSession(ctx.env.meriksirat_kv, chatId)
-    
-    // If no session or step is not 'awaiting_photo', ignore photo silently
+
     if (!session || session.step !== 'awaiting_photo') {
       return
     }
-    
-    // Extract selected booking IDs from session
+
+    const selectedItemIds = session.selectedItemIds
     const selectedBookingIds = session.selectedBookingIds
-    
-    // Validate we have selected booking IDs
-    if (!selectedBookingIds || selectedBookingIds.length === 0) {
+
+    if (!selectedItemIds || selectedItemIds.length === 0) {
       return
     }
-    
-    // Task 5.2: Process return and update database
+
     try {
-      // Initialize database connection
       const database = db(ctx.env.meriksirat_d1 as D1Database)
-      
-      // Update booking status to 'returned' with current timestamp
+
+      // Mark selected items as returned
       await database
-        .update(booking)
-        .set({ 
+        .update(bookingItem)
+        .set({
           status: 'returned',
-          updatedAt: new Date()
+          returnedAt: new Date(),
+          updatedAt: new Date(),
         })
-        .where(inArray(booking.id, selectedBookingIds))
-      
-      // Query booking details with user and equipment relations for notification
-      const bookingDetails = await database
+        .where(inArray(bookingItem.id, selectedItemIds))
+
+      // Recompute parent booking statuses
+      const touchedBookings = new Set<number>([...(selectedBookingIds ?? [])])
+      for (const bookingId of touchedBookings) {
+        try {
+          await recomputeBookingStatus(database, bookingId)
+        } catch (err) {
+          console.error(`Failed to recompute status for booking ${bookingId}:`, err)
+        }
+      }
+
+      // Query returned item details with equipment and user for notification
+      const itemDetails = await database
         .select({
-          bookingId: booking.id,
+          equipmentName: equipment.modelName,
+          bookingId: bookingItem.bookingId,
           userFirstName: user.firstName,
           userLastName: user.lastName,
-          equipmentName: equipment.modelName,
         })
-        .from(booking)
+        .from(bookingItem)
+        .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+        .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
         .innerJoin(user, eq(booking.userId, user.id))
-        .innerJoin(equipment, eq(booking.equipmentId, equipment.id))
-        .where(inArray(booking.id, selectedBookingIds))
-      
-      // Validate we got booking details
-      if (bookingDetails.length === 0) {
-        throw new Error('No booking details found after update')
+        .where(inArray(bookingItem.id, selectedItemIds))
+
+      if (itemDetails.length === 0) {
+        throw new Error('No item details found after update')
       }
-      
-      // Build notification data
-      const userName = [bookingDetails[0].userFirstName, bookingDetails[0].userLastName].filter(Boolean).join(' ') || 'Unknown User'
-      
-      // Deduplicate equipment names using Set
-      const uniqueEquipmentNames = [...new Set(bookingDetails.map(b => b.equipmentName))]
+
+      const userName = [itemDetails[0].userFirstName, itemDetails[0].userLastName].filter(Boolean).join(' ') || 'Unknown User'
+
+      const uniqueEquipmentNames = [...new Set(itemDetails.map((b) => b.equipmentName))]
       const equipmentNames = uniqueEquipmentNames.join(', ')
-      
-      const itemCount = selectedBookingIds.length
-      
-      // Task 5.3: Send notifications and cleanup
-      
+      const itemCount = selectedItemIds.length
+
       // Send notifications to all admins
       await notifyAdmins(
         ctx.env.meriksirat_d1,
@@ -117,63 +112,53 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
         },
         ctx.telegram
       )
-      
+
       // Log booking return to Telegram channel
       try {
         if (ctx.env.TELEGRAM_CLUB_CHANNEL_ID) {
           await logBookingActivity(ctx.telegram, ctx.env.TELEGRAM_CLUB_CHANNEL_ID, {
-            bookingId: selectedBookingIds[0], // Use first booking ID for the log
+            bookingId: itemDetails[0].bookingId,
             userId: session.userId!,
             userName,
             equipmentName: equipmentNames,
+            equipmentNames: uniqueEquipmentNames,
             action: 'returned',
             newStatus: 'returned'
           })
         }
       } catch (logError) {
         console.error('Failed to log booking return:', logError)
-        // Don't fail the return if logging fails
       }
-      
-      // Reply with confirmation message to user
+
       await ctx.reply(
         `Return logged for ${itemCount} item(s). Summary sent to admins.`,
         withKeyboard()
       )
-      
-      // Delete session after successful completion
+
       await deleteSession(ctx.env.meriksirat_kv, chatId)
-      
+
     } catch (error) {
-      // Log error with context for debugging
       console.error('Return processing error:', {
         chatId,
-        bookingIds: selectedBookingIds,
+        itemIds: selectedItemIds,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       })
-      
-      // Send error message to user
+
       await ctx.reply(
         '❌ Error processing return. Please try again.',
         withKeyboard()
       )
-      
-      // Preserve session for retry (don't delete)
+
       return
     }
-    
+
   } catch (error) {
-    // Log error with context for debugging
     console.error('Photo handler error:', {
       chatId: ctx.chat?.id,
       username: ctx.from?.username,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })
-    
-    // Note: We don't send error messages for photos without valid sessions
-    // Only send error if we had a valid session but processing failed
-    // This will be implemented in task 5.3
   }
 }

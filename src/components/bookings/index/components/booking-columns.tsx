@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowUpDown, Calendar, Clock, Pencil } from "lucide-react"
-import { BookingWithEquipment } from "@/lib/booking/types"
+import { BookingWithItems } from "@/lib/booking/types"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import { CancelBookingDialog } from "./cancel-booking-dialog"
@@ -16,9 +16,10 @@ const statusConfig = {
   returned: { label: "Returned", variant: "secondary" as const },
   cancelled: { label: "Cancelled", variant: "destructive" as const },
   overdue: { label: "Overdue", variant: "destructive" as const },
+  partially_returned: { label: "Partially Returned", variant: "default" as const },
 }
 
-export function getBookingColumns(): ColumnDef<BookingWithEquipment>[] {
+export function getBookingColumns(): ColumnDef<BookingWithItems>[] {
   return [
   {
     id: "select",
@@ -59,7 +60,7 @@ export function getBookingColumns(): ColumnDef<BookingWithEquipment>[] {
   },
   {
     id: "equipment",
-    accessorFn: (row) => row.equipment?.modelName,
+    accessorFn: (row) => row.items[0]?.equipment?.modelName,
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -70,15 +71,15 @@ export function getBookingColumns(): ColumnDef<BookingWithEquipment>[] {
       </Button>
     ),
     cell: ({ row }) => {
-      const equipment = row.original.equipment
+      const items = row.original.items
       return (
-        <div className="flex flex-col">
-          <span className="font-medium">{equipment?.modelName}</span>
-          {equipment?.description && (
-            <span className="text-sm text-muted-foreground line-clamp-1">
-              {equipment.description}
+        <div className="flex flex-col gap-0.5">
+          {items.length === 0 && <span className="text-muted-foreground">—</span>}
+          {items.map((item) => (
+            <span key={item.id} className="font-medium line-clamp-1">
+              {item.equipment?.modelName ?? `Equipment ${item.equipmentId}`}
             </span>
-          )}
+          ))}
         </div>
       )
     },
@@ -170,8 +171,8 @@ export function getBookingColumns(): ColumnDef<BookingWithEquipment>[] {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
-      const status = row.getValue("status") as keyof typeof statusConfig
-      const config = statusConfig[status]
+      const status = row.getValue("status") as string
+      const config = statusConfig[status as keyof typeof statusConfig] ?? statusConfig.booked
       
       return (
         <Badge variant={config.variant}>

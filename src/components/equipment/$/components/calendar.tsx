@@ -17,7 +17,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { checkCalendarFreeBusy } from "@/lib/google/google-caledar"
-import { handleBookingAndCalendar } from "@/lib/booking"
+import { createBookingFn } from "@/lib/booking"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -157,9 +157,9 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
 
     setIsBooking(true)
     try {
-      const result = await handleBookingAndCalendar({
+      const result = await createBookingFn({
         data: {
-          equipmentId,
+          equipmentIds: [equipmentId],
           startTime: times.startTime.toISOString(),
           endTime: times.endTime.toISOString(),
           notes: notes || undefined,

@@ -25,6 +25,7 @@ const statusConfig = {
   returned: { label: "Returned", variant: "secondary" as const },
   cancelled: { label: "Cancelled", variant: "outline" as const },
   overdue: { label: "Overdue", variant: "destructive" as const },
+  partially_returned: { label: "Partially Returned", variant: "default" as const },
 }
 
 export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
@@ -80,18 +81,26 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     header: "Equipment",
     cell: ({ row }) => {
       const booking = row.original
-      const equipment = booking.equipment
+      const items = booking.items ?? []
+      const firstEquipment = items[0]?.equipment
 
-      if (!equipment) {
+      if (!firstEquipment) {
         return <span className="text-muted-foreground">Unknown Equipment</span>
       }
 
       return (
         <div className="flex flex-col">
-          <span className="font-medium">{equipment.modelName}</span>
-          {equipment.description && (
+          <span className="font-medium">
+            {items.map((item) => item.equipment?.modelName).filter(Boolean).join(", ")}
+          </span>
+          {items.length > 1 && (
+            <span className="text-xs text-muted-foreground">
+              {items.length} items
+            </span>
+          )}
+          {firstEquipment.description && (
             <span className="text-sm text-muted-foreground line-clamp-1">
-              {equipment.description}
+              {firstEquipment.description}
             </span>
           )}
         </div>
@@ -144,7 +153,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
       if (!endTime) return <span className="text-muted-foreground">No date</span>
 
       const isOverdue = isPast(new Date(endTime)) &&
-        (booking.status === 'booked' || booking.status === 'active')
+        (booking.status === 'booked' || booking.status === 'active' || booking.status === 'partially_returned')
 
       return (
         <div className="flex flex-col">
@@ -183,7 +192,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
 
       // Check if booking is actually overdue (past end time and not returned/cancelled)
       const isOverdue = isPast(new Date(booking.endTime)) &&
-        (status === 'booked' || status === 'active')
+        (status === 'booked' || status === 'active' || status === 'partially_returned')
 
       const displayStatus = isOverdue ? 'overdue' : status
       const config = statusConfig[displayStatus] || statusConfig.booked
@@ -252,9 +261,12 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
               >
                 Copy booking ID
               </DropdownMenuItem>
-              {booking.googleCalendarEventId && (
+              {booking.items?.some((item) => item.googleCalendarEventId) && (
                 <DropdownMenuItem
-                  onClick={() => navigator.clipboard.writeText(booking.googleCalendarEventId || '')}
+                  onClick={() => {
+                    const eventId = booking.items?.find((item) => item.googleCalendarEventId)?.googleCalendarEventId || ''
+                    navigator.clipboard.writeText(eventId)
+                  }}
                 >
                   Copy calendar event ID
                 </DropdownMenuItem>
@@ -271,11 +283,11 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
                 </Link>
               </DropdownMenuItem>
 
-              {booking.equipment?.id && (
+              {booking.items?.[0]?.equipment && (
                 <DropdownMenuItem asChild>
                   <Link
                     to="/equipment/$"
-                    params={{ _splat: booking.equipment.id.toString() }}
+                    params={{ _splat: booking.items[0].equipment.id.toString() }}
                     className="flex items-center"
                   >
                     <Calendar className="mr-2 h-4 w-4" />

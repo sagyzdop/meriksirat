@@ -29,7 +29,7 @@ const searchSchema = z.object({
         }
         return val
       },
-      z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']))
+      z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned']))
     )
     .optional(),
   equipmentId: z.coerce.number().optional(),

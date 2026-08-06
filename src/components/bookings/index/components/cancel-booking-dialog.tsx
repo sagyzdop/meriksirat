@@ -9,13 +9,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { BookingWithEquipment } from "@/lib/booking/types"
+import { BookingWithItems } from "@/lib/booking/types"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { cancelBookingFn } from "@/lib/booking"
 
 interface CancelBookingDialogProps {
-  booking: BookingWithEquipment | null
+  booking: BookingWithItems | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
@@ -65,8 +65,10 @@ export function CancelBookingDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Cancel Booking?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to cancel this booking for{" "}
-            <strong>{booking.equipment?.modelName}</strong>? This action cannot
+            Are you sure you want to cancel this booking
+            {booking.items.length > 0 && (
+              <> for <strong>{booking.items.map((item) => item.equipment?.modelName ?? `Equipment ${item.equipmentId}`).join(", ")}</strong></>
+            )}? This action cannot
             be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>

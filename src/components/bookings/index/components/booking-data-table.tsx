@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { BookingWithEquipment } from "@/lib/booking/types"
+import { BookingWithItems } from "@/lib/booking/types"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
 import { X, MessageCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { createTelegramBotLink } from "@/lib/telegram/client-utils"
@@ -66,8 +66,8 @@ interface Filters {
 }
 
 interface BookingDataTableProps {
-  columns: ColumnDef<BookingWithEquipment>[]
-  data: BookingWithEquipment[]
+  columns: ColumnDef<BookingWithItems>[]
+  data: BookingWithItems[]
   pagination: Pagination
   filters: Filters
   telegramBotUsername: string
@@ -80,6 +80,7 @@ const statusOptions = [
   { value: "returned", label: "Returned" },
   { value: "cancelled", label: "Cancelled" },
   { value: "overdue", label: "Overdue" },
+  { value: "partially_returned", label: "Partially Returned" },
 ]
 
 export function BookingDataTable({

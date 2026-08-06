@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, ArrowLeft, Clock, MapPin, User, ExternalLink } from "lucide-react";
-import type { BookingWithEquipment } from "@/lib/booking/types";
+import type { BookingWithItems } from "@/lib/booking/types";
 import { cancelBookingFn } from "@/lib/booking";
 import { format } from "date-fns";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -21,16 +21,16 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface PageProps {
-  booking: BookingWithEquipment;
+  booking: BookingWithItems;
 }
 
 const statusConfig = {
-  reserved: { label: "Reserved", variant: "secondary" as const, color: "bg-blue-50 text-blue-700 border-blue-200" },
-  awaiting_pickup: { label: "Awaiting Pickup", variant: "default" as const, color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-  pending_handover: { label: "Pending Handover", variant: "outline" as const, color: "bg-orange-50 text-orange-700 border-orange-200" },
+  booked: { label: "Booked", variant: "secondary" as const, color: "bg-blue-50 text-blue-700 border-blue-200" },
+  active: { label: "Active", variant: "default" as const, color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
   returned: { label: "Returned", variant: "secondary" as const, color: "bg-green-50 text-green-700 border-green-200" },
   cancelled: { label: "Cancelled", variant: "destructive" as const, color: "bg-red-50 text-red-700 border-red-200" },
   overdue: { label: "Overdue", variant: "destructive" as const, color: "bg-red-50 text-red-700 border-red-200" },
+  partially_returned: { label: "Partially Returned", variant: "default" as const, color: "bg-orange-50 text-orange-700 border-orange-200" },
 };
 
 export function Page({ booking }: PageProps) {
@@ -39,9 +39,10 @@ export function Page({ booking }: PageProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  const statusInfo = statusConfig[booking.status as keyof typeof statusConfig] || statusConfig.reserved;
+  const statusInfo = statusConfig[booking.status as keyof typeof statusConfig] ?? statusConfig.booked;
   const startDate = new Date(booking.startTime);
   const endDate = new Date(booking.endTime);
+  const canCancel = booking.status === "booked" || booking.status === "active";
 
   const handleCancelBooking = async () => {
     setIsCancelling(true);
@@ -88,44 +89,50 @@ export function Page({ booking }: PageProps) {
             <MapPin className="h-5 w-5" />
             Equipment Details
           </h2>
-          {booking.equipment ? (
-            <Link to="/equipment/$" params={{ "_splat": booking.equipment.id.toString() }} className="block">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-6">
-                    <div className="relative flex-shrink-0">
-                      {booking.equipment.imagePath ? (
-                        <img
-                          src={`/api/images/${booking.equipment.imagePath}`}
-                          alt={booking.equipment.modelName}
-                          className="w-24 h-24 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                          <span className="text-muted-foreground text-xs">No image</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold mb-1">{booking.equipment.modelName}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {booking.equipment.category?.name}
-                          </p>
-                          {booking.equipment.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {booking.equipment.description}
-                            </p>
+          {booking.items.length > 0 ? (
+            <div className="space-y-3">
+              {booking.items.map((item) => (
+                <Link key={item.id} to="/equipment/$" params={{ "_splat": item.equipmentId.toString() }} className="block">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-6">
+                        <div className="relative flex-shrink-0">
+                          {item.equipment?.imagePath ? (
+                            <img
+                              src={`/api/images/${item.equipment.imagePath}`}
+                              alt={item.equipment.modelName}
+                              className="w-24 h-24 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                              <span className="text-muted-foreground text-xs">No image</span>
+                            </div>
                           )}
                         </div>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold mb-1">
+                                {item.equipment?.modelName ?? `Equipment ${item.equipmentId}`}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {item.equipment?.category?.name}
+                              </p>
+                              {item.equipment?.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {item.equipment.description}
+                                </p>
+                              )}
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           ) : (
             <Card>
               <CardContent className="p-6">
@@ -192,7 +199,7 @@ export function Page({ booking }: PageProps) {
                   </div>
                 </div>
 
-                {booking.googleCalendarEventId && (
+                {booking.items.some((item) => item.googleCalendarEventId) && (
                   <div>
                     <span className="text-sm text-muted-foreground">Calendar Event</span>
                     <div className="font-medium text-green-600">Synced</div>
@@ -237,7 +244,7 @@ export function Page({ booking }: PageProps) {
                     Edit Booking
                   </Button>
                 </Link>
-                {booking.status === 'reserved' && (
+                {canCancel && (
                   <Button
                     variant="destructive"
                     className="w-full"

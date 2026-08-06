@@ -12,19 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { TimeSlotPicker, getBookingTimesFromSlots } from "@/components/shared/time-slot-picker"
-
-export interface BulkTimeBookingItem {
-  id: number
-  equipment?: {
-    modelName?: string | null
-    googleCalendarId?: string | null
-  } | null
-}
+import type { BookingWithItems } from "@/lib/booking/types"
 
 interface BulkChangeTimeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  bookings: BulkTimeBookingItem[]
+  bookings: BookingWithItems[]
   onConfirm: (startTime: string, endTime: string) => Promise<void>
 }
 
@@ -39,9 +32,11 @@ export function BulkChangeTimeDialog({
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const calendarIds = React.useMemo(() => {
-    return bookings
-      .map((booking) => booking.equipment?.googleCalendarId)
-      .filter((id): id is string => Boolean(id))
+    return Array.from(new Set(
+      bookings
+        .flatMap((booking) => booking.items.map((item) => item.equipment?.googleCalendarId))
+        .filter((id): id is string => Boolean(id))
+    ))
   }, [bookings])
 
   const handleConfirm = async () => {

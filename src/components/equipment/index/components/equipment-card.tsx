@@ -1,8 +1,7 @@
 import { Link } from '@tanstack/react-router';
-import { Calendar, Eye } from "lucide-react";
+import { Check, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Card, 
   CardAction,
@@ -26,59 +25,50 @@ export function EquipmentCard({ equipment, isSelected = false, onToggleSelect }:
   const isAvailable = equipment.isActive !== false;
   
   return (
-    <Card className={`group relative mx-auto w-full overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? " ring-2 ring-primary/40" : ""}`}>
-      {onToggleSelect && (
-        <div
-          className="absolute left-3 top-3 z-10 flex items-center rounded-md bg-background/90 p-1 shadow"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => onToggleSelect(equipment.id)}
-            aria-label="Select equipment"
-          />
-        </div>
-      )}
+    <Card className={`group relative mx-auto flex w-full flex-col overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? " ring-2 ring-primary/40" : ""}`}>
       {/* Image Section */}
-      <img
-        src={imageUrl}
-        alt={equipment.modelName}
-        className="aspect-video w-full object-cover transition-transform group-hover:scale-105"
-        onError={(e) => {
-          e.currentTarget.src = placeholderImage;
-        }}
-      />
+      <div className="relative aspect-video w-full overflow-hidden rounded-t-xl">
+        <img
+          src={imageUrl}
+          alt={equipment.modelName}
+          className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+          onError={(e) => {
+            e.currentTarget.src = placeholderImage;
+          }}
+        />
+      </div>
 
       <CardHeader>
-        {equipment.category && (
-          <CardAction>
-            <Badge variant="secondary">
-              {equipment.category.name}
-            </Badge>
-          </CardAction>
-        )}
+        <CardAction>
+          <Badge
+            className={isAvailable ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}
+          >
+            {isAvailable ? "Available" : "Unavailable"}
+          </Badge>
+        </CardAction>
         <CardTitle className="line-clamp-1">
           {equipment.modelName}
         </CardTitle>
-        {equipment.description && (
-          <CardDescription className="line-clamp-2">
-            {equipment.description}
-          </CardDescription>
-        )}
+        <CardDescription className="line-clamp-2 min-h-10">
+          {equipment.description}
+        </CardDescription>
       </CardHeader>
 
-      <CardFooter className="flex gap-2">
-        <Button asChild className="flex-1" disabled={!isAvailable}>
-          <Link to="/bookings/new" search={{ equipmentId: equipment.id }}>
-            <Calendar className="mr-2 h-4 w-4" />
-            Book
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="flex-1" disabled={!isAvailable}>
+      <CardFooter className="mt-auto flex gap-2">
+        <Button asChild variant="outline" className="flex-1">
           <Link to="/equipment/$" params={{ _splat: equipment.id.toString() }}>
             <Eye className="mr-2 h-4 w-4" />
-            View
+            Details
           </Link>
+        </Button>
+        <Button
+          variant={isSelected ? "default" : "outline"}
+          className="flex-1"
+          disabled={!isAvailable}
+          onClick={() => onToggleSelect?.(equipment.id)}
+        >
+          {isSelected && <Check className="mr-2 h-4 w-4" />}
+          {isSelected ? "Selected" : "Select"}
         </Button>
       </CardFooter>
     </Card>

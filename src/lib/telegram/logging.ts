@@ -23,10 +23,14 @@ const ACTION_EMOJIS = {
 } as const
 
 function formatBookingLogMessage(data: BookingLogData): string {
-  const { action, bookingId, userName, equipmentName, startTime, endTime, notes, previousStatus, newStatus } = data
+  const { action, bookingId, userName, equipmentName, equipmentNames, startTime, endTime, notes, previousStatus, newStatus } = data
 
   const emoji = ACTION_EMOJIS[action]
   const actionText = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase()
+
+  const equipmentLabel = (equipmentNames && equipmentNames.length > 0)
+    ? (equipmentNames.length === 1 ? equipmentNames[0] : `${equipmentNames.length} items: ${equipmentNames.join(', ')}`)
+    : equipmentName
 
   let message = ''
   
@@ -34,10 +38,10 @@ function formatBookingLogMessage(data: BookingLogData): string {
     const date = startTime.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
     const timeStart = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
     const timeEnd = endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-    message = `${emoji} **${equipmentName} ID#${bookingId} was ${actionText} for ${date} from ${timeStart} to ${timeEnd} by ${userName}**\n\n`
+    message = `${emoji} **${equipmentLabel} ID#${bookingId} was ${actionText} for ${date} from ${timeStart} to ${timeEnd} by ${userName}**\n\n`
   } else {
     message = `${emoji} **Booking ID#${bookingId} was ${actionText}**\n\n`
-    message += `🔧 **Equipment:** ${equipmentName}\n`
+    message += `🔧 **Equipment:** ${equipmentLabel}\n`
     message += `👤 **User:** ${userName}\n\n`
   }
 
@@ -126,6 +130,7 @@ export async function logBookingActivityById(
       userId: bookingDetails.userId,
       userName,
       equipmentName: bookingDetails.equipmentName,
+      equipmentNames: bookingDetails.equipmentNames,
       action,
       startTime: bookingDetails.startTime,
       endTime: bookingDetails.endTime,

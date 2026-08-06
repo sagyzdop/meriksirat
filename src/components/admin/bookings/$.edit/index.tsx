@@ -15,6 +15,7 @@ import { ArrowLeft, Save, Calendar, User, AlertCircle, ExternalLink } from 'luci
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { format } from 'date-fns'
 import { TimeSlotPicker, getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
+import type { AdminBookingWithDetails } from '@/lib/booking/types'
 
 const editBookingSchema = z.object({
   status: z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']),
@@ -24,7 +25,7 @@ const editBookingSchema = z.object({
 type EditBookingForm = z.infer<typeof editBookingSchema>
 
 interface PageProps {
-  booking: any
+  booking: AdminBookingWithDetails
   bookingId: number
 }
 
@@ -136,16 +137,25 @@ export function Page({ booking, bookingId }: PageProps) {
         return 'destructive'
       case 'overdue':
         return 'destructive'
+      case 'partially_returned':
+        return 'default'
       default:
         return 'secondary'
     }
   }
 
   const isOverdue = new Date(booking.endTime) < new Date() &&
-    (booking.status === 'booked' || booking.status === 'active')
+    (booking.status === 'booked' || booking.status === 'active' || booking.status === 'partially_returned')
 
   const canEditSchedule = booking.status === 'booked' || booking.status === 'active'
-  const hasCalendar = Boolean(booking.equipment?.googleCalendarId)
+  const items = booking.items ?? []
+  const itemCalendarIds = items
+    .map((item) => item.equipment?.googleCalendarId)
+    .filter((id): id is string => Boolean(id))
+  const hasCalendar = itemCalendarIds.length > 0
+  const calendarEventIds = items
+    .map((item) => item.googleCalendarEventId)
+    .filter((id): id is string => Boolean(id))
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -205,13 +215,15 @@ export function Page({ booking, bookingId }: PageProps) {
                 </p>
               </div>
               <div>
-                <span className="font-medium">Equipment ID:</span>
-                <p className="text-muted-foreground mt-1 font-mono">{booking.equipmentId}</p>
+                <span className="font-medium">Equipment IDs:</span>
+                <p className="text-muted-foreground mt-1 font-mono">
+                  {items.map((item) => item.equipmentId).join(', ') || 'None'}
+                </p>
               </div>
               <div>
-                <span className="font-medium">Calendar Event ID:</span>
+                <span className="font-medium">Calendar Event IDs:</span>
                 <p className="text-muted-foreground mt-1 font-mono text-xs break-all">
-                  {booking.googleCalendarEventId || 'Not synced'}
+                  {calendarEventIds.length > 0 ? calendarEventIds.join(', ') : 'Not synced'}
                 </p>
               </div>
             </div>
@@ -226,49 +238,62 @@ export function Page({ booking, bookingId }: PageProps) {
             </Badge>
           </div>
 
-          <Link
-            to="/admin/equipment/$equipmentId/edit"
-            params={{ equipmentId: booking.equipmentId.toString() }}
-            className="block"
-          >
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+          {items.length > 0 ? (
+            <div className="grid gap-4">
+              {items.map((item) => (
+                <Link
+                  key={item.id}
+                  to="/admin/equipment/$equipmentId/edit"
+                  params={{ equipmentId: item.equipmentId.toString() }}
+                  className="block"
+                >
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-6">
+                        <div className="relative flex-shrink-0">
+                          {item.equipment?.imagePath ? (
+                            <img
+                              src={`/api/images/${item.equipment.imagePath}`}
+                              alt={item.equipment.modelName}
+                              className="w-24 h-24 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+                              <span className="text-muted-foreground text-xs">No image</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold mb-1">
+                                {item.equipment?.modelName || 'Unknown Equipment'}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {item.equipment?.category?.name || 'Uncategorized'}
+                              </p>
+                              {item.equipment?.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {item.equipment.description}
+                                </p>
+                              )}
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <Card>
               <CardContent className="p-6">
-                <div className="flex items-start gap-6">
-                  <div className="relative flex-shrink-0">
-                    {booking.equipment?.imagePath ? (
-                      <img
-                        src={`/api/images/${booking.equipment.imagePath}`}
-                        alt={booking.equipment.modelName}
-                        className="w-24 h-24 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                        <span className="text-muted-foreground text-xs">No image</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold mb-1">
-                          {booking.equipment?.modelName || 'Unknown Equipment'}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {booking.equipment?.category?.name || 'Uncategorized'}
-                        </p>
-                        {booking.equipment?.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {booking.equipment.description}
-                          </p>
-                        )}
-                      </div>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    </div>
-                  </div>
-                </div>
+                <p className="text-muted-foreground">Equipment details not available</p>
               </CardContent>
             </Card>
-          </Link>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -300,7 +325,7 @@ export function Page({ booking, bookingId }: PageProps) {
         {hasCalendar && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Availability</h2>
-            <GoogleCalendarView calendarId={booking.equipment.googleCalendarId} />
+            <GoogleCalendarView calendarId={itemCalendarIds[0]} />
           </div>
         )}
 
@@ -318,12 +343,12 @@ export function Page({ booking, bookingId }: PageProps) {
             )}
             {canEditSchedule && (
               <TimeSlotPicker
-                googleCalendarId={booking.equipment!.googleCalendarId}
+                googleCalendarIds={itemCalendarIds}
                 initialDate={new Date(booking.startTime)}
                 initialSlots={initialSlots}
                 excludeBookingPeriod={{
-                  start: booking.startTime,
-                  end: booking.endTime,
+                  start: booking.startTime.toISOString(),
+                  end: booking.endTime.toISOString(),
                 }}
                 onSlotsChange={(slots, date) => {
                   setSelectedSlots(slots)

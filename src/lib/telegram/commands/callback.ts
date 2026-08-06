@@ -2,98 +2,178 @@
  * Telegram Callback Query Handler
  * 
  * Handles inline keyboard button clicks during equipment return flow.
+ * 
+ * Callback data format:
+ * - book_<bookingId>   : selects a booking (step: awaiting_booking_selection)
+ * - item_<itemId>      : selects a specific item (step: awaiting_item_selection)
+ * - item_all_<bookingId> : selects all returnable items of a booking
  */
 
 import type { BotContext } from '../context'
 import { getSession, setSession } from '../kv-session'
 import { withKeyboard } from '../server-utils'
+import { db } from '@/db'
+import { bookingItem, equipment } from '@/db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
+import { BOOKING_STATUS } from '../types'
+
+/**
+ * Builds a shared inline keyboard helper: 2 buttons per row.
+ */
+function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: string }>) {
+  const rows: Array<Array<{ text: string; callback_data: string }>> = []
+  for (let i = 0; i < buttons.length; i += 2) {
+    rows.push(buttons.slice(i, i + 2))
+  }
+  return { reply_markup: { inline_keyboard: rows } }
+}
+
+/**
+ * Fetches the returnable items for a booking and prompts the user to select.
+ */
+async function promptItemSelection(
+  ctx: BotContext,
+  chatId: string,
+  userId: string,
+  bookingId: number
+): Promise<void> {
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const items = await database
+    .select({
+      itemId: bookingItem.id,
+      equipmentName: equipment.modelName,
+    })
+    .from(bookingItem)
+    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .where(
+      and(
+        eq(bookingItem.bookingId, bookingId),
+        inArray(bookingItem.status, [
+          BOOKING_STATUS.BOOKED,
+          BOOKING_STATUS.ACTIVE,
+          BOOKING_STATUS.OVERDUE,
+        ])
+      )
+    )
+    .orderBy(bookingItem.id)
+
+  await setSession(ctx.env.meriksirat_kv, chatId, {
+    step: 'awaiting_item_selection',
+    userId,
+    activeBookingIds: [bookingId],
+    selectedBookingIds: [bookingId],
+    createdAt: Date.now(),
+  })
+
+  const buttons = items.map((it) => ({
+    text: it.equipmentName,
+    callback_data: `item_${it.itemId}`,
+  }))
+  buttons.push({
+    text: 'Return All Items',
+    callback_data: `item_all_${bookingId}`,
+  })
+
+  await ctx.editMessageText(
+    `Select which items to return for booking #${bookingId}:`,
+    buildInlineKeyboard(buttons)
+  )
+  await ctx.answerCbQuery()
+}
 
 /**
  * Handles inline keyboard button clicks (callback queries)
- * 
- * Flow:
- * 1. Extract chat ID and callback data from the callback query
- * 2. Retrieve session from KV storage
- * 3. Validate session exists and step is 'awaiting_item_selection'
- * 4. Parse callback data to determine selected booking IDs
- * 5. Update session with selected IDs and change step to 'awaiting_photo'
- * 6. Edit original message to confirm selection
- * 7. Answer callback query to remove loading state
- * 
- * @param ctx - Telegraf bot context with environment bindings
- * 
- * @example
- * User clicks: "Laptop" button (callback_data: "select_123")
- * Bot edits message: "Selected. Please send a photo of the equipment."
  */
 export async function handleCallback(ctx: BotContext): Promise<void> {
   try {
-    // Ensure we have a callback query with message and data
     if (!ctx.callbackQuery || !('data' in ctx.callbackQuery) || !ctx.callbackQuery.message) {
       return
     }
-    
-    // Extract chat ID from callback query message
+
     const chatId = String(ctx.callbackQuery.message.chat.id)
-    
-    // Extract callback data (button identifier)
     const callbackData = ctx.callbackQuery.data
-    
-    // Validate callback data exists
+
     if (!callbackData) {
       await ctx.answerCbQuery('Invalid selection')
       return
     }
-    
-    // Retrieve session from KV storage
+
     const session = await getSession(ctx.env.meriksirat_kv, chatId)
-    
-    // Validate session exists and is in correct state
-    if (!session || session.step !== 'awaiting_item_selection') {
+
+    if (!session) {
       await ctx.answerCbQuery('Session expired or invalid')
       await ctx.reply('Please use /end_booking first.', withKeyboard())
       return
     }
-    
-    // Parse callback data to determine selected booking IDs
-    let selectedBookingIds: number[]
-    
-    if (callbackData === 'select_all') {
-      // User selected "Return All Items"
-      selectedBookingIds = session.activeBookingIds || []
-    } else if (callbackData.startsWith('select_')) {
-      // User selected specific item: extract booking ID
-      const bookingIdStr = callbackData.substring(7) // Remove "select_" prefix
+
+    // Step 1: awaiting_booking_selection -> select a booking, then prompt items
+    if (session.step === 'awaiting_booking_selection' && callbackData.startsWith('book_')) {
+      const bookingIdStr = callbackData.substring(5)
       const bookingId = parseInt(bookingIdStr, 10)
-      
-      // Validate booking ID is a valid number
+
       if (isNaN(bookingId)) {
         await ctx.answerCbQuery('Invalid selection')
         return
       }
-      
-      selectedBookingIds = [bookingId]
-    } else {
-      // Invalid callback data format
-      await ctx.answerCbQuery('Invalid selection')
+
+      await promptItemSelection(ctx, chatId, session.userId!, bookingId)
       return
     }
-    
-    // Update session with selected booking IDs and change step to awaiting_photo
-    await setSession(ctx.env.meriksirat_kv, chatId, {
-      ...session,
-      selectedBookingIds,
-      step: 'awaiting_photo',
-    })
-    
-    // Edit original message to confirm selection
-    await ctx.editMessageText('Selected. Please send a photo of the equipment.')
-    
-    // Answer callback query to remove loading state from button
-    await ctx.answerCbQuery()
-    
+
+    // Step 2: awaiting_item_selection -> select items, then request photo
+    if (session.step === 'awaiting_item_selection') {
+      let selectedItemIds: number[]
+
+      if (callbackData === 'item_all_' + (session.selectedBookingIds?.[0] ?? 'x')) {
+        // "Return All Items" - collect all returnable items for the booking
+        const database = db(ctx.env.meriksirat_d1 as D1Database)
+        const bookingId = session.selectedBookingIds![0]
+        const items = await database
+          .select({ itemId: bookingItem.id })
+          .from(bookingItem)
+          .where(
+            and(
+              eq(bookingItem.bookingId, bookingId),
+              inArray(bookingItem.status, [
+                BOOKING_STATUS.BOOKED,
+                BOOKING_STATUS.ACTIVE,
+                BOOKING_STATUS.OVERDUE,
+              ])
+            )
+          )
+        selectedItemIds = items.map((i) => i.itemId)
+      } else if (callbackData.startsWith('item_')) {
+        const itemIdStr = callbackData.substring(5)
+        const itemId = parseInt(itemIdStr, 10)
+        if (isNaN(itemId)) {
+          await ctx.answerCbQuery('Invalid selection')
+          return
+        }
+        selectedItemIds = [itemId]
+      } else {
+        await ctx.answerCbQuery('Invalid selection')
+        return
+      }
+
+      if (selectedItemIds.length === 0) {
+        await ctx.answerCbQuery('No items to return')
+        return
+      }
+
+      await setSession(ctx.env.meriksirat_kv, chatId, {
+        ...session,
+        selectedItemIds,
+        step: 'awaiting_photo',
+      })
+
+      await ctx.editMessageText('Selected. Please send a photo of the equipment.')
+      await ctx.answerCbQuery()
+      return
+    }
+
+    await ctx.answerCbQuery('Invalid selection')
   } catch (error) {
-    // Log error with context for debugging
     console.error('Callback query handler error:', {
       chatId: ctx.callbackQuery?.message?.chat.id,
       callbackData: ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : undefined,
@@ -101,15 +181,13 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })
-    
-    // Try to answer callback query even on error
+
     try {
       await ctx.answerCbQuery('Error processing selection')
     } catch (answerError) {
       console.error('Failed to answer callback query:', answerError)
     }
-    
-    // Send user-friendly error message
+
     await ctx.reply('Error processing selection. Please try again.', withKeyboard())
   }
 }

@@ -10,7 +10,7 @@
 import { TelegramAPI } from './api'
 import { env } from 'cloudflare:workers'
 import { db } from '@/db'
-import { booking, user, equipment } from '@/db/schema'
+import { booking, bookingItem, user, equipment } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
 // ============================================================================
@@ -66,11 +66,12 @@ export function isTelegramLoggingEnabled(): boolean {
 /**
  * Gets booking details with user and equipment information
  * Common query used across multiple functions
+ * Returns the parent booking plus the list of equipment names for its items.
  */
 export async function getBookingDetailsForLogging(bookingId: number) {
   const database = db(env.meriksirat_d1 as D1Database)
-  
-  return await database
+
+  const parent = await database
     .select({
       bookingId: booking.id,
       userId: booking.userId,
@@ -83,14 +84,28 @@ export async function getBookingDetailsForLogging(bookingId: number) {
       userLastName: user.lastName,
       userEmail: user.email,
       userTelegramUsername: user.telegramUsername,
-      equipmentName: equipment.modelName,
-      equipmentId: equipment.id
     })
     .from(booking)
     .innerJoin(user, eq(booking.userId, user.id))
-    .innerJoin(equipment, eq(booking.equipmentId, equipment.id))
     .where(eq(booking.id, bookingId))
     .get()
+
+  if (!parent) return null
+
+  const items = await database
+    .select({
+      equipmentName: equipment.modelName,
+      equipmentId: equipment.id,
+    })
+    .from(bookingItem)
+    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .where(eq(bookingItem.bookingId, bookingId))
+
+  return {
+    ...parent,
+    equipmentNames: items.map((i) => i.equipmentName),
+    equipmentName: items.map((i) => i.equipmentName).join(', '),
+  }
 }
 
 // ============================================================================
@@ -109,13 +124,13 @@ export async function sendBookingReminder(
   chatId: string,
   bookingDetails: {
     userName: string
-    equipmentName: string
+    equipmentNames: string[]
     startTime: Date
     endTime: Date
     notes?: string | null
   }
 ): Promise<void> {
-  const { userName, equipmentName, startTime, endTime, notes } = bookingDetails
+  const { userName, equipmentNames, startTime, endTime, notes } = bookingDetails
   
   const startTimeStr = startTime.toLocaleTimeString('en-US', { 
     hour: '2-digit', 
@@ -135,7 +150,11 @@ export async function sendBookingReminder(
 
   let message = `⏰ *Booking Reminder*\n\n`
   message += `Hi ${userName}! Your booking starts in 15 minutes.\n\n`
-  message += `📦 *Equipment:* ${equipmentName}\n`
+  if (equipmentNames.length === 1) {
+    message += `📦 *Equipment:* ${equipmentNames[0]}\n`
+  } else {
+    message += `📦 *Equipment (${equipmentNames.length}):*\n${equipmentNames.map((name) => `  • ${name}`).join('\n')}\n`
+  }
   message += `📅 *Date:* ${dateStr}\n`
   message += `🕐 *Time:* ${startTimeStr} - ${endTimeStr}\n`
   

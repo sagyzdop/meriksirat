@@ -16,7 +16,7 @@ async function callAPI(token: string, method: string, data: any = {}) {
     body: JSON.stringify(data)
   })
   
-  const result = await response.json()
+  const result = await response.json() as any
   
   if (!result.ok) {
     throw new Error(`Telegram API error: ${result.description || 'Unknown error'}`)

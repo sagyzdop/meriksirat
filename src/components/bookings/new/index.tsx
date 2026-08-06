@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { handleBookingAndCalendar, handleMultiBookingAndCalendar } from "@/lib/booking"
+import { createBookingFn } from "@/lib/booking"
 import { getEquipmentByIdFn, type EquipmentWithCategory } from "@/lib/equipment"
 import { GoogleCalendarView } from "@/components/shared/event-calendar/google-calendar-view"
 import type { EventColor } from "@/components/shared/event-calendar"
@@ -91,27 +91,15 @@ export function NewBookingPage() {
 
     setIsBooking(true)
     try {
-      if (selectedEquipment.length === 1) {
-        const result = await handleBookingAndCalendar({
-          data: {
-            equipmentId: selectedEquipment[0].id,
-            startTime: times.startTime.toISOString(),
-            endTime: times.endTime.toISOString(),
-            notes: notes || undefined,
-          },
-        })
-        toast.success(`Booking created successfully! Booking ID: #${result.bookingId}`)
-      } else {
-        const result = await handleMultiBookingAndCalendar({
-          data: {
-            equipmentIds: selectedEquipment.map((item) => item.id),
-            startTime: times.startTime.toISOString(),
-            endTime: times.endTime.toISOString(),
-            notes: notes || undefined,
-          },
-        })
-        toast.success(`Created ${result.bookingIds.length} bookings successfully!`)
-      }
+      const result = await createBookingFn({
+        data: {
+          equipmentIds: selectedEquipment.map((item) => item.id),
+          startTime: times.startTime.toISOString(),
+          endTime: times.endTime.toISOString(),
+          notes: notes || undefined,
+        },
+      })
+      toast.success(`Booking created successfully! Booking ID: #${result.bookingId}`)
       setIsDialogOpen(false)
       setSelectedSlots([])
       setNotes("")
@@ -177,7 +165,7 @@ export function NewBookingPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Selected Equipment</h2>
-            <Link to="/equipment" search={{ selectedEquipmentIds: selectedEquipment.map((item) => item.id) }}>
+            <Link to="/equipment">
               <Button variant="outline" size="sm">
                 Change Equipment
               </Button>

@@ -12,6 +12,8 @@ interface Env {
   meriksirat_d1: D1Database
   meriksirat_r2: R2Bucket
   meriksirat_kv: KVNamespace
+  TELEGRAM_BOT_TOKEN?: string
+  TELEGRAM_CLUB_CHANNEL_ID?: string
 }
 
 const serverEntry = createServerEntry({
@@ -41,31 +43,37 @@ export default {
 }
 
 /**
- * Update bookings that should be marked as active
- * Uses the logic from src/lib/booking/functions/active-bookings.ts
+ * Update booking items that should be marked as active
+ * A booking item becomes active when the booking's start time is reached.
+ * Parent booking status is recomputed afterwards.
  */
 async function updateActiveBookings(env: Env): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
-    const { booking, equipment, user } = await import('./src/db/schema')
+    const { booking, bookingItem, equipment, user } = await import('./src/db/schema')
     const { eq, and, lte } = await import('drizzle-orm')
     const { updateCalendarEvent } = await import('./src/lib/google/google-caledar')
     const { logBookingActivityById } = await import('./src/lib/telegram/logging')
+    const { recomputeBookingStatus } = await import('./src/lib/booking/status')
 
     const database = db(env.meriksirat_d1)
     const now = new Date()
 
-    const activeBookings = await database
+    const activeItems = await database
       .select({
-        id: booking.id,
-        userId: booking.userId,
-        equipmentId: booking.equipmentId,
-        startTime: booking.startTime,
-        endTime: booking.endTime,
-        status: booking.status,
-        googleCalendarEventId: booking.googleCalendarEventId,
-        userEventDetails: booking.userEventDetails,
+        id: bookingItem.id,
+        bookingId: bookingItem.bookingId,
+        googleCalendarEventId: bookingItem.googleCalendarEventId,
+        status: bookingItem.status,
+        booking: {
+          userId: booking.userId,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          status: booking.status,
+          userEventDetails: booking.userEventDetails,
+        },
         equipment: {
+          id: equipment.id,
           modelName: equipment.modelName,
           googleCalendarId: equipment.googleCalendarId,
         },
@@ -73,61 +81,71 @@ async function updateActiveBookings(env: Env): Promise<void> {
           email: user.email,
         },
       })
-      .from(booking)
-      .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
+      .from(bookingItem)
+      .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
+      .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
       .leftJoin(user, eq(booking.userId, user.id))
       .where(
         and(
           lte(booking.startTime, now),
-          eq(booking.status, 'booked')
+          eq(bookingItem.status, 'booked')
         )
       )
 
-    for (const activeBooking of activeBookings) {
+    const touchedBookingIds = new Set<number>()
+
+    for (const item of activeItems) {
       try {
         const activeNote = `[System]: Automatically marked as active on ${now.toISOString()}`
-        const updatedNotes = activeBooking.userEventDetails 
-          ? `${activeBooking.userEventDetails}\n\n${activeNote}`
+        const updatedNotes = item.booking.userEventDetails
+          ? `${item.booking.userEventDetails}\n\n${activeNote}`
           : activeNote
 
         await database
-          .update(booking)
-          .set({
-            status: 'active',
-            userEventDetails: updatedNotes,
-            updatedAt: now,
-          })
-          .where(eq(booking.id, activeBooking.id))
+          .update(bookingItem)
+          .set({ status: 'active', updatedAt: now })
+          .where(eq(bookingItem.id, item.id))
 
-        if (activeBooking.googleCalendarEventId && activeBooking.equipment?.googleCalendarId) {
+        touchedBookingIds.add(item.bookingId)
+
+        if (item.googleCalendarEventId && item.equipment.googleCalendarId) {
           const event = {
-            summary: `${activeBooking.equipment.modelName || `Equipment ${activeBooking.equipmentId}`} - Booking (ACTIVE)`,
-            description: `Booking ID: ${activeBooking.id}\nUser: ${activeBooking.user?.email}\nStatus: ACTIVE\nStart Time: ${activeBooking.startTime.toISOString()}\nEnd Time: ${activeBooking.endTime.toISOString()}\nMarked active: ${now.toISOString()}\nNotes: ${updatedNotes}`,
-            start: { dateTime: activeBooking.startTime.toISOString(), timeZone: 'UTC' },
-            end: { dateTime: activeBooking.endTime.toISOString(), timeZone: 'UTC' },
+            summary: `${item.equipment.modelName || `Equipment ${item.equipment.id}`} - Booking (ACTIVE)`,
+            description: `Booking ID: ${item.bookingId}\nUser: ${item.user?.email}\nStatus: ACTIVE\nStart Time: ${item.booking.startTime.toISOString()}\nEnd Time: ${item.booking.endTime.toISOString()}\nMarked active: ${now.toISOString()}\nNotes: ${updatedNotes}`,
+            start: { dateTime: item.booking.startTime.toISOString(), timeZone: 'UTC' },
+            end: { dateTime: item.booking.endTime.toISOString(), timeZone: 'UTC' },
           }
 
           await updateCalendarEvent({
             data: {
-              equipmentCalendarId: activeBooking.equipment.googleCalendarId,
-              eventId: activeBooking.googleCalendarEventId,
+              equipmentCalendarId: item.equipment.googleCalendarId,
+              eventId: item.googleCalendarEventId,
               event,
-              userEmail: activeBooking.user?.email || '',
+              userEmail: item.user?.email || '',
             }
           })
         }
 
         try {
-          await logBookingActivityById(activeBooking.id, 'updated', {
-            previousStatus: activeBooking.status,
+          await logBookingActivityById(item.bookingId, 'updated', {
+            previousStatus: item.status,
             newStatus: 'active',
-            notes: 'Automatically marked as active by system'
+            notes: `Automatically marked as active by system (item ${item.id})`
           })
         } catch (logError) {
           console.error('Failed to log active booking:', logError)
         }
       } catch (error) {
-        console.error(`Failed to update booking ${activeBooking.id}:`, error)
+        console.error(`Failed to update booking item ${item.id}:`, error)
+      }
+    }
+
+    // Recompute parent statuses after item updates
+    for (const bookingId of touchedBookingIds) {
+      try {
+        await recomputeBookingStatus(database, bookingId)
+      } catch (error) {
+        console.error(`Failed to recompute status for booking ${bookingId}:`, error)
       }
     }
   } catch (error) {
@@ -141,22 +159,22 @@ async function updateActiveBookings(env: Env): Promise<void> {
 async function sendBookingReminders(env: Env): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
-    const { booking, equipment, user } = await import('./src/db/schema')
+    const { booking, bookingItem, equipment, user } = await import('./src/db/schema')
     const { eq, and, gte, lte } = await import('drizzle-orm')
     const { TelegramAPI } = await import('./src/lib/telegram/api')
     const { sendBookingReminder } = await import('./src/lib/telegram/server-utils')
 
     const database = db(env.meriksirat_d1)
     const now = new Date()
-    
+
     // Calculate time window: 15-20 minutes from now
     // This gives us a 5-minute window to catch bookings (since cron runs every 5 minutes)
     const reminderStart = new Date(now.getTime() + 15 * 60 * 1000) // 15 minutes from now
     const reminderEnd = new Date(now.getTime() + 20 * 60 * 1000)   // 20 minutes from now
 
-    const upcomingBookings = await database
+    const upcomingItems = await database
       .select({
-        id: booking.id,
+        bookingId: booking.id,
         userId: booking.userId,
         startTime: booking.startTime,
         endTime: booking.endTime,
@@ -173,7 +191,8 @@ async function sendBookingReminders(env: Env): Promise<void> {
         },
       })
       .from(booking)
-      .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
+      .innerJoin(bookingItem, eq(bookingItem.bookingId, booking.id))
+      .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
       .leftJoin(user, eq(booking.userId, user.id))
       .where(
         and(
@@ -184,7 +203,7 @@ async function sendBookingReminders(env: Env): Promise<void> {
       )
 
     // Get bot token from environment
-    const botToken = process.env.TELEGRAM_BOT_TOKEN
+    const botToken = env.TELEGRAM_BOT_TOKEN
     if (!botToken) {
       console.warn('TELEGRAM_BOT_TOKEN not configured, skipping reminders')
       return
@@ -192,26 +211,48 @@ async function sendBookingReminders(env: Env): Promise<void> {
 
     const telegram = new TelegramAPI(botToken)
 
-    for (const upcomingBooking of upcomingBookings) {
+    // Group items by booking to send one reminder listing all equipment
+    const bookingsMap = new Map<number, {
+      userId: string
+      startTime: Date
+      endTime: Date
+      userEventDetails: string | null
+      equipmentNames: string[]
+      telegramChatId?: string | null
+      firstName?: string | null
+    }>()
+
+    for (const row of upcomingItems) {
+      const entry = bookingsMap.get(row.bookingId) ?? {
+        userId: row.userId,
+        startTime: new Date(row.startTime),
+        endTime: new Date(row.endTime),
+        userEventDetails: row.userEventDetails,
+        equipmentNames: [],
+        telegramChatId: row.user?.telegramChatId,
+        firstName: row.user?.firstName,
+      }
+      entry.equipmentNames.push(row.equipment?.shortName || row.equipment?.modelName || 'Equipment')
+      bookingsMap.set(row.bookingId, entry)
+    }
+
+    for (const [bookingId, bookingInfo] of bookingsMap) {
       try {
         // Skip if user doesn't have Telegram linked
-        if (!upcomingBooking.user?.telegramChatId) {
+        if (!bookingInfo.telegramChatId) {
           continue
         }
 
-        const userName = upcomingBooking.user.firstName || 'there'
-        const equipmentName = upcomingBooking.equipment?.shortName || upcomingBooking.equipment?.modelName || 'Equipment'
-
-        await sendBookingReminder(telegram, upcomingBooking.user.telegramChatId, {
-          userName,
-          equipmentName,
-          startTime: new Date(upcomingBooking.startTime),
-          endTime: new Date(upcomingBooking.endTime),
-          notes: upcomingBooking.userEventDetails,
+        await sendBookingReminder(telegram, bookingInfo.telegramChatId, {
+          userName: bookingInfo.firstName || 'there',
+          equipmentNames: bookingInfo.equipmentNames,
+          startTime: bookingInfo.startTime,
+          endTime: bookingInfo.endTime,
+          notes: bookingInfo.userEventDetails,
         })
 
       } catch (error) {
-        console.error(`Failed to send reminder for booking ${upcomingBooking.id}:`, error)
+        console.error(`Failed to send reminder for booking ${bookingId}:`, error)
       }
     }
   } catch (error) {
@@ -220,30 +261,35 @@ async function sendBookingReminders(env: Env): Promise<void> {
 }
 
 /**
- * Update bookings that should be marked as overdue
- * Uses the logic from src/lib/booking/functions/overdue-bookings.ts
+ * Update booking items that should be marked as overdue
+ * An item becomes overdue when the booking's end time has passed.
+ * Parent booking status is recomputed afterwards.
  */
 async function updateOverdueBookings(env: Env): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
-    const { booking, equipment, user } = await import('./src/db/schema')
-    const { eq, and, or, lt } = await import('drizzle-orm')
+    const { booking, bookingItem, equipment, user } = await import('./src/db/schema')
+    const { eq, and, or, lt, inArray } = await import('drizzle-orm')
     const { updateCalendarEvent } = await import('./src/lib/google/google-caledar')
     const { logBookingActivityById } = await import('./src/lib/telegram/logging')
+    const { recomputeBookingStatus } = await import('./src/lib/booking/status')
 
     const database = db(env.meriksirat_d1)
     const now = new Date()
 
-    const overdueBookings = await database
+    const overdueItems = await database
       .select({
-        id: booking.id,
-        userId: booking.userId,
-        equipmentId: booking.equipmentId,
-        endTime: booking.endTime,
-        status: booking.status,
-        googleCalendarEventId: booking.googleCalendarEventId,
-        userEventDetails: booking.userEventDetails,
+        id: bookingItem.id,
+        bookingId: bookingItem.bookingId,
+        googleCalendarEventId: bookingItem.googleCalendarEventId,
+        status: bookingItem.status,
+        booking: {
+          userId: booking.userId,
+          endTime: booking.endTime,
+          userEventDetails: booking.userEventDetails,
+        },
         equipment: {
+          id: equipment.id,
           modelName: equipment.modelName,
           googleCalendarId: equipment.googleCalendarId,
         },
@@ -251,64 +297,74 @@ async function updateOverdueBookings(env: Env): Promise<void> {
           email: user.email,
         },
       })
-      .from(booking)
-      .leftJoin(equipment, eq(booking.equipmentId, equipment.id))
+      .from(bookingItem)
+      .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
+      .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
       .leftJoin(user, eq(booking.userId, user.id))
       .where(
         and(
           lt(booking.endTime, now),
           or(
-            eq(booking.status, 'booked'),
-            eq(booking.status, 'active')
+            eq(bookingItem.status, 'booked'),
+            eq(bookingItem.status, 'active')
           )
         )
       )
 
-    for (const overdueBooking of overdueBookings) {
+    const touchedBookingIds = new Set<number>()
+
+    for (const item of overdueItems) {
       try {
         const overdueNote = `[System]: Automatically marked as overdue on ${now.toISOString()}`
-        const updatedNotes = overdueBooking.userEventDetails 
-          ? `${overdueBooking.userEventDetails}\n\n${overdueNote}`
+        const updatedNotes = item.booking.userEventDetails
+          ? `${item.booking.userEventDetails}\n\n${overdueNote}`
           : overdueNote
 
         await database
-          .update(booking)
-          .set({
-            status: 'overdue',
-            userEventDetails: updatedNotes,
-            updatedAt: now,
-          })
-          .where(eq(booking.id, overdueBooking.id))
+          .update(bookingItem)
+          .set({ status: 'overdue', updatedAt: now })
+          .where(eq(bookingItem.id, item.id))
 
-        if (overdueBooking.googleCalendarEventId && overdueBooking.equipment?.googleCalendarId) {
+        touchedBookingIds.add(item.bookingId)
+
+        if (item.googleCalendarEventId && item.equipment.googleCalendarId) {
           const event = {
-            summary: `${overdueBooking.equipment.modelName || `Equipment ${overdueBooking.equipmentId}`} - Booking (OVERDUE)`,
-            description: `Booking ID: ${overdueBooking.id}\nUser: ${overdueBooking.user?.email}\nStatus: OVERDUE\nOriginal End Time: ${overdueBooking.endTime.toISOString()}\nMarked overdue: ${now.toISOString()}\nNotes: ${updatedNotes}`,
-            start: { dateTime: overdueBooking.endTime.toISOString(), timeZone: 'UTC' },
-            end: { dateTime: new Date(overdueBooking.endTime.getTime() + 24 * 60 * 60 * 1000).toISOString(), timeZone: 'UTC' },
+            summary: `${item.equipment.modelName || `Equipment ${item.equipment.id}`} - Booking (OVERDUE)`,
+            description: `Booking ID: ${item.bookingId}\nUser: ${item.user?.email}\nStatus: OVERDUE\nOriginal End Time: ${item.booking.endTime.toISOString()}\nMarked overdue: ${now.toISOString()}\nNotes: ${updatedNotes}`,
+            start: { dateTime: item.booking.endTime.toISOString(), timeZone: 'UTC' },
+            end: { dateTime: new Date(item.booking.endTime.getTime() + 24 * 60 * 60 * 1000).toISOString(), timeZone: 'UTC' },
           }
 
           await updateCalendarEvent({
             data: {
-              equipmentCalendarId: overdueBooking.equipment.googleCalendarId,
-              eventId: overdueBooking.googleCalendarEventId,
+              equipmentCalendarId: item.equipment.googleCalendarId,
+              eventId: item.googleCalendarEventId,
               event,
-              userEmail: overdueBooking.user?.email || '',
+              userEmail: item.user?.email || '',
             }
           })
         }
 
         try {
-          await logBookingActivityById(overdueBooking.id, 'updated', {
-            previousStatus: overdueBooking.status,
+          await logBookingActivityById(item.bookingId, 'updated', {
+            previousStatus: item.status,
             newStatus: 'overdue',
-            notes: 'Automatically marked as overdue by system'
+            notes: `Automatically marked as overdue by system (item ${item.id})`
           })
         } catch (logError) {
           console.error('Failed to log overdue booking:', logError)
         }
       } catch (error) {
-        console.error(`Failed to update booking ${overdueBooking.id}:`, error)
+        console.error(`Failed to update booking item ${item.id}:`, error)
+      }
+    }
+
+    // Recompute parent statuses after item updates
+    for (const bookingId of touchedBookingIds) {
+      try {
+        await recomputeBookingStatus(database, bookingId)
+      } catch (error) {
+        console.error(`Failed to recompute status for booking ${bookingId}:`, error)
       }
     }
   } catch (error) {

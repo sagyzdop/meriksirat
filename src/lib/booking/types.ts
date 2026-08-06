@@ -1,53 +1,42 @@
 import { z } from 'zod'
 
-export interface BookingWithEquipment {
+export interface BookingEquipmentInfo {
   id: number
-  userId: string
-  equipmentId: number
-  startTime: Date
-  endTime: Date
-  status: string
-  googleCalendarEventId: string | null
-  userEventDetails: string | null
-  createdAt: Date
-  updatedAt: Date
-  equipment: {
+  modelName: string
+  description: string | null
+  categoryId: number | null
+  imagePath: string | null
+  googleCalendarId: string
+  category: {
     id: number
-    modelName: string
-    description: string | null
-    categoryId: number | null
-    imagePath: string | null
-    googleCalendarId: string
-    category: {
-      id: number
-      name: string
-    } | null
+    name: string
   } | null
 }
 
-export interface AdminBookingWithDetails {
+export interface BookingItemWithEquipment {
+  id: number
+  equipmentId: number
+  status: string
+  googleCalendarEventId: string | null
+  returnedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+  equipment: BookingEquipmentInfo | null
+}
+
+export interface BookingWithItems {
   id: number
   userId: string
-  equipmentId: number
   startTime: Date
   endTime: Date
   status: string
-  googleCalendarEventId: string | null
   userEventDetails: string | null
   createdAt: Date
   updatedAt: Date
-  equipment: {
-    id: number
-    modelName: string
-    description: string | null
-    categoryId: number | null
-    imagePath: string | null
-    googleCalendarId: string
-    category: {
-      id: number
-      name: string
-    } | null
-  } | null
+  items: BookingItemWithEquipment[]
+}
+
+export interface AdminBookingWithDetails extends BookingWithItems {
   user: {
     id: string
     email: string
@@ -56,14 +45,13 @@ export interface AdminBookingWithDetails {
   } | null
 }
 
-export const BookingInputSchema = z.object({
-  equipmentId: z.coerce.number(),
-  startTime: z.string(),
-  endTime: z.string(),
-  notes: z.string().optional(),
-})
+export const BOOKING_STATUSES = ['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned'] as const
+export const SETTABLE_BOOKING_STATUSES = ['booked', 'active', 'returned', 'cancelled', 'overdue'] as const
 
-export const MultiBookingInputSchema = z.object({
+export type BookingStatus = (typeof BOOKING_STATUSES)[number]
+export type SettableBookingStatus = (typeof SETTABLE_BOOKING_STATUSES)[number]
+
+export const CreateBookingSchema = z.object({
   equipmentIds: z.array(z.coerce.number()).min(1),
   startTime: z.string(),
   endTime: z.string(),
@@ -71,7 +59,7 @@ export const MultiBookingInputSchema = z.object({
 })
 
 export const BookingFiltersSchema = z.object({
-  status: z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue'])).optional(),
+  status: z.array(z.enum(BOOKING_STATUSES)).optional(),
   equipmentId: z.coerce.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -84,7 +72,7 @@ export const BookingFiltersSchema = z.object({
 export type BookingFilters = z.infer<typeof BookingFiltersSchema>
 
 export interface PaginatedBookingsResponse {
-  data: BookingWithEquipment[]
+  data: BookingWithItems[]
   pagination: {
     page: number
     limit: number
@@ -109,7 +97,7 @@ export interface PaginatedAdminBookingsResponse {
 
 // Admin booking oversight schemas
 export const AdminBookingFiltersSchema = z.object({
-  status: z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue'])).optional(),
+  status: z.array(z.enum(BOOKING_STATUSES)).optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(50),
   sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment', 'user']).optional().default('startTime'),
@@ -120,7 +108,7 @@ export type AdminBookingFilters = z.infer<typeof AdminBookingFiltersSchema>
 
 export const UpdateBookingStatusAdminSchema = z.object({
   bookingId: z.coerce.number(),
-  status: z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']),
+  status: z.enum(SETTABLE_BOOKING_STATUSES),
   notes: z.string().optional(), // Admin notes will be stored in userEventDetails for now
   startTime: z.string().optional(),
   endTime: z.string().optional(),
@@ -156,4 +144,3 @@ export const GetBookingByIdSchema = z.object({
 export const DeleteBookingSchema = z.object({
   bookingId: z.coerce.number()
 })
-

@@ -69,7 +69,8 @@ export const BOOKING_STATUS = {
   ACTIVE: 'active',
   RETURNED: 'returned',
   CANCELLED: 'cancelled',
-  OVERDUE: 'overdue'
+  OVERDUE: 'overdue',
+  PARTIALLY_RETURNED: 'partially_returned'
 } as const
 
 export type BookingStatus = typeof BOOKING_STATUS[keyof typeof BOOKING_STATUS]
@@ -82,6 +83,7 @@ export interface BookingLogData {
   userId: string
   userName: string
   equipmentName: string
+  equipmentNames?: string[]
   action: 'created' | 'updated' | 'cancelled' | 'returned' | 'deleted'
   startTime?: Date
   endTime?: Date
@@ -104,9 +106,10 @@ export interface AdminNotification {
  * Session data structure for KV storage
  */
 export interface SessionData {
-  step?: 'awaiting_item_selection' | 'awaiting_photo'
+  step?: 'awaiting_booking_selection' | 'awaiting_item_selection' | 'awaiting_photo'
   userId?: string
   activeBookingIds?: number[]
   selectedBookingIds?: number[]
+  selectedItemIds?: number[]
   createdAt?: number
 }
