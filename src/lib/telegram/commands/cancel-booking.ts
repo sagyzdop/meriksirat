@@ -1,12 +1,16 @@
 /**
  * Telegram Cancel Booking Command
  *
- * Handles /cancel_booking - per-item cancellation of upcoming/active bookings.
+ * Handles /cancel_booking - per-item or per-booking (all items) cancellation
+ * of upcoming/active bookings.
  *
  * Callback data format:
- * - cancel_item_<itemId>           : shows a confirmation prompt
- * - confirm_cancel_item_<itemId>   : performs the cancellation
- * - deny_cancel_item_<itemId>      : aborts the cancellation
+ * - cancel_item_<itemId>              : shows a confirmation prompt
+ * - confirm_cancel_item_<itemId>      : performs the cancellation
+ * - deny_cancel_item_<itemId>         : aborts the cancellation
+ * - cancel_all_<bookingId>            : shows a confirmation prompt for a booking
+ * - confirm_cancel_all_<bookingId>    : cancels all items of the booking
+ * - deny_cancel_all_<bookingId>       : aborts the cancellation
  */
 
 import type { BotContext } from '../context'
@@ -30,10 +34,12 @@ function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: strin
   return { reply_markup: { inline_keyboard: rows } }
 }
 
-interface CancellableItem {
-  itemId: number
-  bookingId: number
-  equipmentName: string
+interface CancellableBooking {
+  id: number
+  items: Array<{
+    itemId: number
+    equipmentName: string
+  }>
 }
 
 async function getUserIdByChatId(
@@ -51,13 +57,13 @@ async function getUserIdByChatId(
 }
 
 /**
- * Fetch the user's items that can still be cancelled
+ * Fetch the user's bookings that still have cancellable items
  * (items that are not yet returned or cancelled).
  */
-async function fetchCancellableItems(
+async function fetchCancellableBookings(
   ctx: BotContext,
   userId: string
-): Promise<CancellableItem[]> {
+): Promise<CancellableBooking[]> {
   const database = db(ctx.env.meriksirat_d1 as D1Database)
 
   const rows = await database
@@ -81,26 +87,40 @@ async function fetchCancellableItems(
     )
     .orderBy(booking.startTime, bookingItem.id)
 
-  return rows.map((r) => ({
-    itemId: r.itemId,
-    bookingId: r.bookingId,
-    equipmentName: r.equipmentName,
-  }))
+  const bookingsMap = new Map<number, CancellableBooking>()
+  for (const row of rows) {
+    let entry = bookingsMap.get(row.bookingId)
+    if (!entry) {
+      entry = { id: row.bookingId, items: [] }
+      bookingsMap.set(row.bookingId, entry)
+    }
+    entry.items.push({
+      itemId: row.itemId,
+      equipmentName: row.equipmentName,
+    })
+  }
+
+  return [...bookingsMap.values()]
 }
 
 /**
- * Cancel a single booking item, mirroring the per-item logic of the web
- * cancelBookingFn (recompute parent status, log activity, delete gcal event).
+ * Cancel a set of booking items, mirroring the logic of the web cancelBookingFn
+ * (recompute parent statuses, log activity, delete gcal events).
  */
-async function cancelItem(
+async function cancelItems(
   ctx: BotContext,
   userId: string,
-  itemId: number
+  itemIds: number[]
 ): Promise<{ ok: boolean; message: string }> {
+  if (itemIds.length === 0) {
+    return { ok: false, message: 'No cancellable items found.' }
+  }
+
   const database = db(ctx.env.meriksirat_d1 as D1Database)
 
-  const item = await database
+  const items = await database
     .select({
+      id: bookingItem.id,
       bookingId: bookingItem.bookingId,
       itemStatus: bookingItem.status,
       equipmentName: equipment.modelName,
@@ -110,54 +130,107 @@ async function cancelItem(
     .from(bookingItem)
     .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
     .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
-    .where(and(eq(bookingItem.id, itemId), eq(booking.userId, userId)))
-    .limit(1)
-    .then((rows) => rows[0])
+    .where(and(inArray(bookingItem.id, itemIds), eq(booking.userId, userId)))
 
-  if (!item) {
+  if (items.length === 0) {
     return { ok: false, message: 'Item not found.' }
   }
 
-  if (
-    item.itemStatus === 'cancelled' ||
-    item.itemStatus === 'returned'
-  ) {
-    return { ok: false, message: 'This item is already cancelled or returned.' }
+  const cancellable = items.filter(
+    (it) => it.itemStatus !== 'cancelled' && it.itemStatus !== 'returned'
+  )
+
+  if (cancellable.length === 0) {
+    return {
+      ok: false,
+      message: 'The selected items are already cancelled or returned.',
+    }
   }
 
   await database
     .update(bookingItem)
     .set({ status: 'cancelled', updatedAt: new Date() })
-    .where(eq(bookingItem.id, itemId))
+    .where(inArray(bookingItem.id, cancellable.map((it) => it.id)))
 
-  await recomputeBookingStatus(database, item.bookingId)
+  const touchedBookings = new Set(cancellable.map((it) => it.bookingId))
 
-  try {
-    await logBookingActivityById(item.bookingId, 'cancelled', {
-      previousStatus: item.itemStatus,
-      newStatus: 'cancelled',
-    })
-  } catch (logError) {
-    console.error('Failed to log item cancellation:', logError)
-  }
-
-  if (item.googleCalendarEventId && item.equipmentCalendarId) {
+  for (const bookingId of touchedBookings) {
     try {
-      await deleteCalendarEvent({
-        data: {
-          equipmentCalendarId: item.equipmentCalendarId,
-          eventId: item.googleCalendarEventId,
-        },
-      })
+      await recomputeBookingStatus(database, bookingId)
     } catch (err) {
-      console.error('Failed to delete calendar event for cancelled item:', err)
+      console.error(`Failed to recompute status for booking ${bookingId}:`, err)
     }
   }
 
+  for (const bookingId of touchedBookings) {
+    try {
+      await logBookingActivityById(bookingId, 'cancelled', {
+        previousStatus: items.find((it) => it.bookingId === bookingId)?.itemStatus,
+        newStatus: 'cancelled',
+      })
+    } catch (logError) {
+      console.error('Failed to log item cancellation:', logError)
+    }
+  }
+
+  for (const it of cancellable) {
+    if (it.googleCalendarEventId && it.equipmentCalendarId) {
+      try {
+        await deleteCalendarEvent({
+          data: {
+            equipmentCalendarId: it.equipmentCalendarId,
+            eventId: it.googleCalendarEventId,
+          },
+        })
+      } catch (err) {
+        console.error('Failed to delete calendar event for cancelled item:', err)
+      }
+    }
+  }
+
+  const names = cancellable.map((it) => it.equipmentName).join(', ')
+  const bookingsStr = [...touchedBookings]
+    .sort((a, b) => a - b)
+    .map((b) => `#${b}`)
+    .join(', ')
+
   return {
     ok: true,
-    message: `Cancelled ${item.equipmentName} from booking #${item.bookingId}.`,
+    message: `Cancelled ${names} (booking ${bookingsStr}).`,
   }
+}
+
+/**
+ * Cancel all cancellable items of a single booking.
+ */
+async function cancelAllItems(
+  ctx: BotContext,
+  userId: string,
+  bookingId: number
+): Promise<{ ok: boolean; message: string }> {
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const rows = await database
+    .select({ itemId: bookingItem.id })
+    .from(bookingItem)
+    .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
+    .where(
+      and(
+        eq(bookingItem.bookingId, bookingId),
+        eq(booking.userId, userId),
+        inArray(bookingItem.status, [
+          BOOKING_STATUS.BOOKED,
+          BOOKING_STATUS.ACTIVE,
+          BOOKING_STATUS.OVERDUE,
+        ])
+      )
+    )
+
+  return cancelItems(
+    ctx,
+    userId,
+    rows.map((r) => r.itemId)
+  )
 }
 
 /**
@@ -165,8 +238,8 @@ async function cancelItem(
  *
  * Flow:
  * 1. Verify user is linked to Telegram account
- * 2. Fetch cancellable items
- * 3. Show a list of items with inline cancel buttons
+ * 2. Fetch bookings with cancellable items
+ * 3. Show the bookings/items with inline cancel buttons
  *
  * @param ctx - Bot context with environment bindings
  */
@@ -187,9 +260,9 @@ export async function handleCancelBooking(ctx: BotContext): Promise<void> {
       return
     }
 
-    const items = await fetchCancellableItems(ctx, userId)
+    const bookings = await fetchCancellableBookings(ctx, userId)
 
-    if (items.length === 0) {
+    if (bookings.length === 0) {
       await ctx.reply(
         'You have no upcoming or active bookings to cancel.',
         withKeyboard()
@@ -197,15 +270,27 @@ export async function handleCancelBooking(ctx: BotContext): Promise<void> {
       return
     }
 
-    const buttons = items.map((it) => ({
-      text: `#${it.bookingId} - ${it.equipmentName}`,
-      callback_data: `cancel_item_${it.itemId}`,
-    }))
+    const buttons: Array<{ text: string; callback_data: string }> = []
+    const messageLines: string[] = ['Select the item(s) you want to cancel:']
 
-    await ctx.reply(
-      'Select the item you want to cancel:',
-      buildInlineKeyboard(buttons)
-    )
+    for (const b of bookings) {
+      messageLines.push(`\nBooking #${b.id}`)
+      for (const it of b.items) {
+        messageLines.push(`  • ${it.equipmentName}`)
+      }
+      for (const it of b.items) {
+        buttons.push({
+          text: it.equipmentName,
+          callback_data: `cancel_item_${it.itemId}`,
+        })
+      }
+      buttons.push({
+        text: `Cancel all items (${b.items.length})`,
+        callback_data: `cancel_all_${b.id}`,
+      })
+    }
+
+    await ctx.reply(messageLines.join('\n'), buildInlineKeyboard(buttons))
   } catch (error) {
     console.error('Cancel booking command error:', {
       chatId: ctx.chat?.id,
@@ -252,12 +337,32 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
     return true
   }
 
-  if (callbackData.startsWith('confirm_cancel_item_')) {
-    const itemId = parseInt(
-      callbackData.substring('confirm_cancel_item_'.length),
-      10
+  if (callbackData.startsWith('cancel_all_')) {
+    const bookingId = parseInt(callbackData.substring('cancel_all_'.length), 10)
+    if (isNaN(bookingId)) {
+      await ctx.answerCbQuery('Invalid selection')
+      return true
+    }
+
+    await ctx.editMessageText(
+      `Cancel all items in booking #${bookingId}?`,
+      buildInlineKeyboard([
+        { text: 'Yes, cancel all', callback_data: `confirm_cancel_all_${bookingId}` },
+        { text: 'No', callback_data: `deny_cancel_all_${bookingId}` },
+      ])
     )
-    if (isNaN(itemId)) {
+    await ctx.answerCbQuery()
+    return true
+  }
+
+  if (
+    callbackData.startsWith('confirm_cancel_item_') ||
+    callbackData.startsWith('confirm_cancel_all_')
+  ) {
+    const isAll = callbackData.startsWith('confirm_cancel_all_')
+    const prefix = isAll ? 'confirm_cancel_all_' : 'confirm_cancel_item_'
+    const id = parseInt(callbackData.substring(prefix.length), 10)
+    if (isNaN(id)) {
       await ctx.answerCbQuery('Invalid selection')
       return true
     }
@@ -269,14 +374,19 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
       return true
     }
 
-    const result = await cancelItem(ctx, userId, itemId)
+    const result = isAll
+      ? await cancelAllItems(ctx, userId, id)
+      : await cancelItems(ctx, userId, [id])
 
     await ctx.editMessageText(result.message)
     await ctx.answerCbQuery()
     return true
   }
 
-  if (callbackData.startsWith('deny_cancel_item_')) {
+  if (
+    callbackData.startsWith('deny_cancel_item_') ||
+    callbackData.startsWith('deny_cancel_all_')
+  ) {
     await ctx.editMessageText('Cancellation aborted.')
     await ctx.answerCbQuery()
     return true

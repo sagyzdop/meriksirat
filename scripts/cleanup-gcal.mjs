@@ -80,14 +80,14 @@ function runWrangler(command, extraArgs = []) {
   })
 }
 
-// ---- Step 1: read bookings with calendar events ----
-console.log('Reading prod bookings with calendar events...')
+// ---- Step 1: read booking items with calendar events ----
+console.log('Reading prod booking items with calendar events...')
 const query = [
   '--command',
-  `SELECT b.id, b.gcal_event_id, e.gcal_id AS calendar_id
-   FROM booking b
-   JOIN equipment e ON e.id = b.equipment_id
-   WHERE b.gcal_event_id IS NOT NULL`,
+  `SELECT bi.booking_id AS booking_id, bi.gcal_event_id AS gcal_event_id, e.gcal_id AS calendar_id
+   FROM booking_item bi
+   JOIN equipment e ON e.id = bi.equipment_id
+   WHERE bi.gcal_event_id IS NOT NULL`,
   '--json',
 ]
 const raw = runWrangler(query)
@@ -96,11 +96,11 @@ const rows = Array.isArray(parsed)
   ? parsed.flatMap((entry) => entry.results ?? [])
   : parsed.results ?? []
 
-console.log(`Found ${rows.length} booking(s) with calendar events.`)
+console.log(`Found ${rows.length} booking item(s) with calendar events.`)
 
 if (dryRun) {
   for (const row of rows) {
-    console.log(`  [dry-run] would delete event ${row.gcal_event_id} from calendar ${row.calendar_id} (booking #${row.id})`)
+    console.log(`  [dry-run] would delete event ${row.gcal_event_id} from calendar ${row.calendar_id} (booking #${row.booking_id})`)
   }
   console.log('Dry run complete. Nothing was changed.')
   process.exit(0)
@@ -116,10 +116,10 @@ if (rows.length > 0) {
       const ok = await deleteCalendarEvent(accessToken, row.calendar_id, row.gcal_event_id)
       if (ok) {
         deleted++
-        console.log(`  deleted event ${row.gcal_event_id} (booking #${row.id})`)
+        console.log(`  deleted event ${row.gcal_event_id} (booking #${row.booking_id})`)
       } else {
         failed++
-        console.error(`  FAILED to delete event ${row.gcal_event_id} (booking #${row.id})`)
+        console.error(`  FAILED to delete event ${row.gcal_event_id} (booking #${row.booking_id})`)
       }
     } catch (error) {
       failed++
