@@ -1,9 +1,9 @@
 import * as React from "react"
-import { Loader2, ExternalLink } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import { useRouter, useSearch, Link } from "@tanstack/react-router"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { createBookingFn } from "@/lib/booking"
 import { getEquipmentByIdFn, type EquipmentWithCategory } from "@/lib/equipment"
 import { GoogleCalendarView } from "@/components/shared/event-calendar/google-calendar-view"
@@ -21,6 +22,9 @@ import type { EventColor } from "@/components/shared/event-calendar"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { TimeSlotPicker, getBookingTimesFromSlots } from "@/components/shared/time-slot-picker"
+import { PageContainer } from "@/components/layout/page-container"
+import { PageHeader } from "@/components/layout/page-header"
+import { Section } from "@/components/layout/section"
 import { format } from "date-fns"
 
 export function NewBookingPage() {
@@ -81,6 +85,23 @@ export function NewBookingPage() {
   const handleSlotsChange = (slots: string[], date: Date | undefined) => {
     setSelectedSlots(slots)
     setSelectedDate(date)
+  }
+
+  const removeEquipment = (equipmentId: number) => {
+    const remaining = selectedEquipment.filter((item) => item.id !== equipmentId)
+    setSelectedEquipment(remaining)
+    // Sync with the selection on /equipment (persisted in localStorage)
+    try {
+      window.localStorage.setItem(
+        'equipment-selection',
+        JSON.stringify(remaining.map((item) => item.id))
+      )
+    } catch {
+      // ignore storage errors
+    }
+    if (remaining.length === 0) {
+      router.navigate({ to: '/equipment' })
+    }
   }
 
   const handleBooking = async () => {
@@ -146,6 +167,9 @@ export function NewBookingPage() {
     orange: "bg-orange-500",
   }
 
+  const colorDotFor = (item: EquipmentWithCategory) =>
+    colorClasses[equipmentColorMap[item.googleCalendarId] || "sky"]
+
   if (isLoadingEquipment) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -155,90 +179,94 @@ export function NewBookingPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">New Booking</h1>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="New Booking"
+        description="Select equipment and choose a time slot for your booking"
+        backTo="/equipment"
+        backLabel="Back to Equipment"
+      />
 
+      <div className="space-y-8">
         {/* Selected Equipment Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Selected Equipment</h2>
+        <Section
+          title="Selected Equipment"
+          spacing="compact"
+          actions={
             <Link to="/equipment">
-              <Button variant="outline" size="sm">
-                Change Equipment
-              </Button>
+              <Button variant="outline">Add More</Button>
             </Link>
-          </div>
-          
+          }
+        >
           {selectedEquipment.length > 0 ? (
-            <div className="grid gap-4">
-              {selectedEquipment.map((item) => (
-                <Link key={item.id} to="/equipment/$" params={{ _splat: item.id.toString() }} className="block">
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-6">
-                        <div className="relative shrink-0">
-                          {item.imagePath ? (
-                            <img 
-                              src={`/api/images/${item.imagePath}`} 
-                              alt={item.modelName}
-                              className="w-24 h-24 object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                              <span className="text-muted-foreground text-xs">No image</span>
-                            </div>
+            <div className="relative rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Image</TableHead>
+                    <TableHead className="whitespace-nowrap">Model Name</TableHead>
+                    <TableHead className="whitespace-nowrap">Category</TableHead>
+                    <TableHead className="whitespace-nowrap" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedEquipment.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="whitespace-nowrap">
+                        <img
+                          src={
+                            item.imagePath
+                              ? `/api/images/${item.imagePath}`
+                              : "/equipment-placeholder.svg"
+                          }
+                          alt={item.modelName}
+                          className="h-10 w-14 rounded-md border object-cover"
+                        />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{item.modelName}</span>
+                          {item.description && (
+                            <span className="max-w-[280px] truncate text-sm text-muted-foreground">
+                              {item.description}
+                            </span>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`inline-flex h-2.5 w-2.5 rounded-full ${colorClasses[equipmentColorMap[item.googleCalendarId] || "sky"]}`}
-                                />
-                                <h3 className="text-lg font-semibold mb-1">
-                                  {item.modelName}
-                                </h3>
-                              </div>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {item.category?.name}
-                              </p>
-                              {item.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {item.description}
-                                </p>
-                              )}
-                            </div>
-                            <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant="outline">
+                          {item.category?.name ?? "Uncategorized"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeEquipment(item.id)}
+                          aria-label={`Remove ${item.modelName}`}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No equipment selected</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Please select equipment from the equipment page to continue
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative rounded-md border py-12 text-center">
+              <p className="text-muted-foreground">No equipment selected</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Please select equipment from the equipment page to continue
+              </p>
+            </div>
           )}
-        </div>
+        </Section>
 
         {/* Availability View */}
         {selectedEquipment.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Availability</h2>
+          <Section title="Availability" spacing="compact">
             <GoogleCalendarView
               calendarIds={selectedEquipment
                 .map((item) => item.googleCalendarId)
@@ -248,35 +276,36 @@ export function NewBookingPage() {
             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
               {selectedEquipment.map((item) => (
                 <div key={item.id} className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex h-2.5 w-2.5 rounded-full ${colorClasses[equipmentColorMap[item.googleCalendarId] || "sky"]}`}
-                  />
+                  <span className={`inline-flex size-2.5 rounded-full ${colorDotFor(item)}`} />
                   <span>{item.modelName}</span>
                 </div>
               ))}
             </div>
-          </div>
+          </Section>
         )}
 
         {/* Date & Time Selection */}
         {selectedEquipment.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Select Date & Time</h2>
+          <Section title="Select Date & Time" spacing="compact">
             <TimeSlotPicker
               googleCalendarIds={selectedEquipment
                 .map((item) => item.googleCalendarId)
                 .filter((id): id is string => Boolean(id))}
               onSlotsChange={handleSlotsChange}
             />
-            <div className="flex justify-end">
-              <Button
-                disabled={selectedSlots.length === 0}
-                onClick={() => setIsDialogOpen(true)}
-                className="w-full md:w-auto"
-              >
-                Book Equipment
-              </Button>
-            </div>
+          </Section>
+        )}
+
+        {/* Book Equipment */}
+        {selectedEquipment.length > 0 && (
+          <div className="flex justify-end">
+            <Button
+              disabled={selectedSlots.length === 0}
+              onClick={() => setIsDialogOpen(true)}
+              className="w-full md:w-auto"
+            >
+              Book Equipment
+            </Button>
           </div>
         )}
       </div>
@@ -297,7 +326,7 @@ export function NewBookingPage() {
               <div className="text-sm text-muted-foreground">
                 {selectedEquipment.map((item) => (
                   <div key={item.id} className="flex items-center gap-2">
-                    <span className={`inline-flex h-2.5 w-2.5 rounded-full ${colorClasses[equipmentColorMap[item.googleCalendarId] || "sky"]}`} />
+                    <span className={`inline-flex size-2.5 rounded-full ${colorDotFor(item)}`} />
                     <div>
                       <p className="font-medium">{item.modelName}</p>
                       <p>{item.category?.name}</p>
@@ -371,6 +400,6 @@ export function NewBookingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

@@ -134,21 +134,13 @@ function GoogleCalendarViewBase({
     }
   }, [calendarIdList, colorByCalendarId, range])
 
-  if (isLoading && events.length === 0) {
-    return (
-      <div
-        className={cn(
-          "flex h-150 w-full items-center justify-center overflow-hidden rounded-lg border bg-muted",
-          className
-        )}
-      >
-        <Spinner className="h-8 w-8" />
-      </div>
-    )
-  }
-
   return (
-    <div className={cn("h-150 overflow-hidden", className)}>
+    <div className={cn("relative h-150 overflow-hidden", className)}>
+      {isLoading && events.length === 0 && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/50">
+          <Spinner className="h-8 w-8" />
+        </div>
+      )}
       <EventCalendar
         events={events}
         initialView="week"

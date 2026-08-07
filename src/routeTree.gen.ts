@@ -30,12 +30,12 @@ import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/
 import { Route as AuthenticatedAdminEquipmentIndexRouteImport } from './routes/_authenticated/admin/equipment/index'
 import { Route as AuthenticatedAdminEquipmentNewRouteImport } from './routes/_authenticated/admin/equipment/new'
 import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin/users/index'
+import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_authenticated/admin/users/$userId'
 import { Route as AuthenticatedBookingsBookingIdIndexRouteImport } from './routes/_authenticated/bookings/$bookingId/index'
 import { Route as AuthenticatedBookingsBookingIdEditRouteImport } from './routes/_authenticated/bookings_/$bookingId/edit'
 import { Route as AuthenticatedAdminBookingsBookingIdIndexRouteImport } from './routes/_authenticated/admin/bookings/$bookingId/index'
 import { Route as AuthenticatedAdminBookingsBookingIdEditRouteImport } from './routes/_authenticated/admin/bookings/$bookingId.edit'
 import { Route as AuthenticatedAdminEquipmentEquipmentIdEditRouteImport } from './routes/_authenticated/admin/equipment/$equipmentId.edit'
-import { Route as AuthenticatedAdminUsersUserIdEditRouteImport } from './routes/_authenticated/admin/users/$userId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -152,6 +152,12 @@ const AuthenticatedAdminUsersIndexRoute =
     path: '/users/',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminUsersUserIdRoute =
+  AuthenticatedAdminUsersUserIdRouteImport.update({
+    id: '/users/$userId',
+    path: '/users/$userId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedBookingsBookingIdIndexRoute =
   AuthenticatedBookingsBookingIdIndexRouteImport.update({
     id: '/bookings/$bookingId/',
@@ -182,12 +188,6 @@ const AuthenticatedAdminEquipmentEquipmentIdEditRoute =
     path: '/equipment/$equipmentId/edit',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminUsersUserIdEditRoute =
-  AuthenticatedAdminUsersUserIdEditRouteImport.update({
-    id: '/users/$userId/edit',
-    path: '/users/$userId/edit',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -206,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/equipment/': typeof AuthenticatedEquipmentIndexRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
+  '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
   '/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
   '/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
@@ -214,7 +215,6 @@ export interface FileRoutesByFullPath {
   '/bookings/$bookingId/': typeof AuthenticatedBookingsBookingIdIndexRoute
   '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
-  '/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
   '/admin/bookings/$bookingId/': typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -234,6 +234,7 @@ export interface FileRoutesByTo {
   '/bookings': typeof AuthenticatedBookingsIndexRoute
   '/equipment': typeof AuthenticatedEquipmentIndexRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
+  '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
   '/admin/bookings': typeof AuthenticatedAdminBookingsIndexRoute
   '/admin/categories': typeof AuthenticatedAdminCategoriesIndexRoute
@@ -242,7 +243,6 @@ export interface FileRoutesByTo {
   '/bookings/$bookingId': typeof AuthenticatedBookingsBookingIdIndexRoute
   '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
-  '/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
   '/admin/bookings/$bookingId': typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 export interface FileRoutesById {
@@ -264,6 +264,7 @@ export interface FileRoutesById {
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/_authenticated/equipment/': typeof AuthenticatedEquipmentIndexRoute
   '/_authenticated/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
+  '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/_authenticated/bookings_/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
   '/_authenticated/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
   '/_authenticated/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
@@ -272,7 +273,6 @@ export interface FileRoutesById {
   '/_authenticated/bookings/$bookingId/': typeof AuthenticatedBookingsBookingIdIndexRoute
   '/_authenticated/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/_authenticated/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
-  '/_authenticated/admin/users/$userId/edit': typeof AuthenticatedAdminUsersUserIdEditRoute
   '/_authenticated/admin/bookings/$bookingId/': typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -294,6 +294,7 @@ export interface FileRouteTypes {
     | '/bookings/'
     | '/equipment/'
     | '/admin/equipment/new'
+    | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
     | '/admin/bookings/'
     | '/admin/categories/'
@@ -302,7 +303,6 @@ export interface FileRouteTypes {
     | '/bookings/$bookingId/'
     | '/admin/bookings/$bookingId/edit'
     | '/admin/equipment/$equipmentId/edit'
-    | '/admin/users/$userId/edit'
     | '/admin/bookings/$bookingId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -322,6 +322,7 @@ export interface FileRouteTypes {
     | '/bookings'
     | '/equipment'
     | '/admin/equipment/new'
+    | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
     | '/admin/bookings'
     | '/admin/categories'
@@ -330,7 +331,6 @@ export interface FileRouteTypes {
     | '/bookings/$bookingId'
     | '/admin/bookings/$bookingId/edit'
     | '/admin/equipment/$equipmentId/edit'
-    | '/admin/users/$userId/edit'
     | '/admin/bookings/$bookingId'
   id:
     | '__root__'
@@ -351,6 +351,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bookings/'
     | '/_authenticated/equipment/'
     | '/_authenticated/admin/equipment/new'
+    | '/_authenticated/admin/users/$userId'
     | '/_authenticated/bookings_/$bookingId/edit'
     | '/_authenticated/admin/bookings/'
     | '/_authenticated/admin/categories/'
@@ -359,7 +360,6 @@ export interface FileRouteTypes {
     | '/_authenticated/bookings/$bookingId/'
     | '/_authenticated/admin/bookings/$bookingId/edit'
     | '/_authenticated/admin/equipment/$equipmentId/edit'
-    | '/_authenticated/admin/users/$userId/edit'
     | '/_authenticated/admin/bookings/$bookingId/'
   fileRoutesById: FileRoutesById
 }
@@ -522,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/users/$userId': {
+      id: '/_authenticated/admin/users/$userId'
+      path: '/users/$userId'
+      fullPath: '/admin/users/$userId'
+      preLoaderRoute: typeof AuthenticatedAdminUsersUserIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/bookings/$bookingId/': {
       id: '/_authenticated/bookings/$bookingId/'
       path: '/bookings/$bookingId'
@@ -557,13 +564,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEquipmentEquipmentIdEditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/users/$userId/edit': {
-      id: '/_authenticated/admin/users/$userId/edit'
-      path: '/users/$userId/edit'
-      fullPath: '/admin/users/$userId/edit'
-      preLoaderRoute: typeof AuthenticatedAdminUsersUserIdEditRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
   }
 }
 
@@ -571,13 +571,13 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminEquipmentNewRoute: typeof AuthenticatedAdminEquipmentNewRoute
+  AuthenticatedAdminUsersUserIdRoute: typeof AuthenticatedAdminUsersUserIdRoute
   AuthenticatedAdminBookingsIndexRoute: typeof AuthenticatedAdminBookingsIndexRoute
   AuthenticatedAdminCategoriesIndexRoute: typeof AuthenticatedAdminCategoriesIndexRoute
   AuthenticatedAdminEquipmentIndexRoute: typeof AuthenticatedAdminEquipmentIndexRoute
   AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
   AuthenticatedAdminBookingsBookingIdEditRoute: typeof AuthenticatedAdminBookingsBookingIdEditRoute
   AuthenticatedAdminEquipmentEquipmentIdEditRoute: typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
-  AuthenticatedAdminUsersUserIdEditRoute: typeof AuthenticatedAdminUsersUserIdEditRoute
   AuthenticatedAdminBookingsBookingIdIndexRoute: typeof AuthenticatedAdminBookingsBookingIdIndexRoute
 }
 
@@ -585,6 +585,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedAdminEquipmentNewRoute: AuthenticatedAdminEquipmentNewRoute,
+  AuthenticatedAdminUsersUserIdRoute: AuthenticatedAdminUsersUserIdRoute,
   AuthenticatedAdminBookingsIndexRoute: AuthenticatedAdminBookingsIndexRoute,
   AuthenticatedAdminCategoriesIndexRoute:
     AuthenticatedAdminCategoriesIndexRoute,
@@ -594,8 +595,6 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminBookingsBookingIdEditRoute,
   AuthenticatedAdminEquipmentEquipmentIdEditRoute:
     AuthenticatedAdminEquipmentEquipmentIdEditRoute,
-  AuthenticatedAdminUsersUserIdEditRoute:
-    AuthenticatedAdminUsersUserIdEditRoute,
   AuthenticatedAdminBookingsBookingIdIndexRoute:
     AuthenticatedAdminBookingsBookingIdIndexRoute,
 }

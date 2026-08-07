@@ -5,13 +5,15 @@ import { z } from 'zod'
 import { useState, useRef } from 'react'
 import { createEquipmentAdminFn, uploadEquipmentImageFn } from '@/lib/equipment'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, Camera, Upload, X } from 'lucide-react'
+import { Save, Upload, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
 
 const createEquipmentSchema = z.object({
   modelName: z.string().min(1, 'Model name is required'),
@@ -142,40 +144,74 @@ export function Page({ categories }: PageProps) {
   }
 
   return (
-    <div className="h-full flex-1 flex-col gap-6 p-4 sm:gap-8 sm:p-8 md:flex">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancel}
-            className="flex items-center gap-2 w-fit"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Equipment
-          </Button>
-          <div className="flex flex-col gap-1">
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Create New Equipment</h2>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Add new equipment to the catalog with model details and calendar integration
-            </p>
-          </div>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Create New Equipment"
+        description="Add new equipment to the catalog with model details and calendar integration"
+        backTo="/admin/equipment"
+        backLabel="Back to Equipment"
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
-            Equipment Details
-          </CardTitle>
-          <CardDescription>
-            Enter the equipment information including model name, category, and Google Calendar ID
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <Section spacing="compact">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Equipment Image
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    Upload an image of the equipment (optional). Max size: 5MB. Formats: JPEG, PNG, WebP
+                  </p>
+                </div>
+
+                {imagePreview && (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="Equipment preview"
+                      className="h-32 w-32 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      onClick={handleRemoveImage}
+                      disabled={isSubmitting}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4">
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleImageSelect}
+                    disabled={isSubmitting}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {selectedImage ? 'Change Image' : 'Select Image'}
+                  </Button>
+                  {selectedImage && (
+                    <span className="text-sm text-muted-foreground">
+                      {selectedImage.name} ({(selectedImage.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -245,7 +281,7 @@ export function Page({ categories }: PageProps) {
                         disabled={isSubmitting}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select a category" />
                           </SelectTrigger>
                         </FormControl>
@@ -308,63 +344,6 @@ export function Page({ categories }: PageProps) {
                 )}
               />
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Equipment Image
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    Upload an image of the equipment (optional). Max size: 5MB. Formats: JPEG, PNG, WebP
-                  </p>
-                </div>
-
-                {imagePreview && (
-                  <div className="relative inline-block">
-                    <img
-                      src={imagePreview}
-                      alt="Equipment preview"
-                      className="h-32 w-32 object-cover rounded-lg border"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                      onClick={handleRemoveImage}
-                      disabled={isSubmitting}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4">
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    onChange={handleImageSelect}
-                    disabled={isSubmitting}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    {selectedImage ? 'Change Image' : 'Select Image'}
-                  </Button>
-                  {selectedImage && (
-                    <span className="text-sm text-muted-foreground">
-                      {selectedImage.name} ({(selectedImage.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                  )}
-                </div>
-              </div>
-
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -377,7 +356,16 @@ export function Page({ categories }: PageProps) {
                 </Alert>
               )}
 
-              <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting || isUploadingImage}
@@ -389,20 +377,10 @@ export function Page({ categories }: PageProps) {
                     : 'Create Equipment'
                   }
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto"
-                >
-                  Cancel
-                </Button>
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
-    </div>
+        </Section>
+    </PageContainer>
   )
 }

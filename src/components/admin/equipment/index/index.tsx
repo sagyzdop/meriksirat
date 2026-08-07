@@ -1,8 +1,6 @@
 
-import { useState } from "react"
 import { createEquipmentColumns } from "./components/equipment-columns"
 import { EquipmentDataTable } from "./components/equipment-data-table"
-import { EquipmentDeleteDialog } from "./components/equipment-delete-dialog"
 import { EquipmentWithCategory } from "@/lib/equipment"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
@@ -40,15 +38,7 @@ interface PageProps {
 }
 
 export function Page({ equipment, categories, pagination, filters, isLoading = false }: PageProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentWithCategory | null>(null)
-
-  const handleDeleteEquipment = (equipment: EquipmentWithCategory) => {
-    setSelectedEquipment(equipment)
-    setDeleteDialogOpen(true)
-  }
-
-  const columns = createEquipmentColumns(() => { }, handleDeleteEquipment)
+  const columns = createEquipmentColumns()
 
   const description = pagination.total > 0
     ? `Managing ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
@@ -75,12 +65,6 @@ export function Page({ equipment, categories, pagination, filters, isLoading = f
         pagination={pagination}
         filters={filters}
         isLoading={isLoading}
-      />
-
-      <EquipmentDeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        equipment={selectedEquipment}
       />
     </PageContainer>
   )

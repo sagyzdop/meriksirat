@@ -96,8 +96,8 @@ export function MonthView({
   }, [])
 
   return (
-    <div data-slot="month-view" className="contents">
-      <div className="border-border/70 grid grid-cols-7 border-b">
+    <div data-slot="month-view" className="flex h-full flex-col">
+      <div className="border-border/70 grid grid-cols-7 border-b bg-background">
         {weekdays.map((day) => (
           <div
             key={day}
@@ -107,7 +107,7 @@ export function MonthView({
           </div>
         ))}
       </div>
-      <div className="grid flex-1 auto-rows-fr">
+      <div className="grid flex-1 auto-rows-auto overflow-y-auto">
         {weeks.map((week, weekIndex) => (
           <div
             key={`week-${weekIndex}`}

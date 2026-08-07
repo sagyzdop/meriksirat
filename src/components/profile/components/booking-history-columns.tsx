@@ -10,15 +10,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowUpDown, Calendar, Clock } from "lucide-react"
 import { BookingWithItems } from "@/lib/booking/types"
 import { format } from "date-fns"
-
-const statusConfig = {
-  booked: { label: "Booked", variant: "secondary" as const },
-  active: { label: "Active", variant: "default" as const },
-  returned: { label: "Returned", variant: "secondary" as const },
-  cancelled: { label: "Cancelled", variant: "destructive" as const },
-  overdue: { label: "Overdue", variant: "destructive" as const },
-  partially_returned: { label: "Partially Returned", variant: "default" as const },
-}
+import { getBookingStatusConfig } from "@/components/shared/booking-status-badge"
 
 export const bookingHistoryColumns: ColumnDef<BookingWithItems>[] = [
   {
@@ -117,8 +109,8 @@ export const bookingHistoryColumns: ColumnDef<BookingWithItems>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
-      const status = row.getValue("status") as keyof typeof statusConfig
-      const config = statusConfig[status] || { label: status, variant: "secondary" as const }
+      const status = row.getValue("status") as string
+      const config = getBookingStatusConfig(status)
       
       return (
         <Badge variant={config.variant}>

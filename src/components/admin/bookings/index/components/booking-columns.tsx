@@ -1,6 +1,5 @@
 import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -12,21 +11,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ArrowUpDown, MoreHorizontal, Edit, Calendar, AlertCircle, Trash } from "lucide-react"
-import { format, isPast } from "date-fns"
+import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
 import { DeleteBookingDialog } from "./delete-booking-dialog"
-
-const statusConfig = {
-  booked: { label: "Booked", variant: "default" as const },
-  active: { label: "Active", variant: "default" as const },
-  returned: { label: "Returned", variant: "secondary" as const },
-  cancelled: { label: "Cancelled", variant: "outline" as const },
-  overdue: { label: "Overdue", variant: "destructive" as const },
-  partially_returned: { label: "Partially Returned", variant: "default" as const },
-}
+import { BookingStatusBadge, isBookingOverdue } from "@/components/shared/booking-status-badge"
 
 export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
   {
@@ -152,8 +143,7 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
       const endTime = row.getValue("endTime") as Date
       if (!endTime) return <span className="text-muted-foreground">No date</span>
 
-      const isOverdue = isPast(new Date(endTime)) &&
-        (booking.status === 'booked' || booking.status === 'active' || booking.status === 'partially_returned')
+      const isOverdue = isBookingOverdue(endTime, booking.status)
 
       return (
         <div className="flex flex-col">
@@ -188,20 +178,15 @@ export const bookingColumns: ColumnDef<AdminBookingWithDetails>[] = [
     ),
     cell: ({ row }) => {
       const booking = row.original
-      const status = row.getValue("status") as keyof typeof statusConfig
-
-      // Check if booking is actually overdue (past end time and not returned/cancelled)
-      const isOverdue = isPast(new Date(booking.endTime)) &&
-        (status === 'booked' || status === 'active' || status === 'partially_returned')
-
-      const displayStatus = isOverdue ? 'overdue' : status
-      const config = statusConfig[displayStatus] || statusConfig.booked
+      const status = row.getValue("status") as string
 
       return (
-        <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
-          {isOverdue && <AlertCircle className="h-3 w-3" />}
-          {config.label}
-        </Badge>
+        <BookingStatusBadge
+          status={status}
+          endTime={booking.endTime}
+          showOverdueIcon
+          className="flex items-center gap-1"
+        />
       )
     },
     filterFn: (row, id, value) => {

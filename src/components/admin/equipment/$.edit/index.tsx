@@ -5,15 +5,16 @@ import { z } from 'zod'
 import { useState, useRef } from 'react'
 import { updateEquipmentAdminFn, deleteEquipmentAdminFn, uploadEquipmentImageFn } from '@/lib/equipment'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { ArrowLeft, Save, Camera, Upload, X, Trash2, AlertTriangle } from 'lucide-react'
+import { Save, Upload, X, Trash2, AlertTriangle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -188,222 +189,18 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
   }
 
   return (
-    <div className="h-full flex-1 flex-col gap-6 p-4 sm:gap-8 sm:p-8 md:flex">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancel}
-            className="flex items-center gap-2 w-fit"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Equipment
-          </Button>
-          <div className="flex flex-col gap-1">
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Edit Equipment</h2>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Modify equipment properties, status, and manage deletion
-            </p>
-          </div>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Edit Equipment"
+        description="Modify equipment properties, status, and manage deletion"
+        backTo="/admin/equipment"
+        backLabel="Back to Equipment"
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
-            Equipment Information
-          </CardTitle>
-          <CardDescription>
-            Editing: {equipment.modelName} (ID: {equipment.id})
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium">Equipment ID:</span>
-              <span className="ml-2 font-mono text-muted-foreground">{equipment.id}</span>
-            </div>
-            <div>
-              <span className="font-medium">Calendar ID:</span>
-              <span className="ml-2 font-mono text-muted-foreground break-all">{equipment.googleCalendarId}</span>
-            </div>
-            <div>
-              <span className="font-medium">Current Category:</span>
-              <Badge variant="outline" className="ml-2">
-                {equipment.category?.name || 'Uncategorized'}
-              </Badge>
-            </div>
-            <div>
-              <span className="font-medium">Current Status:</span>
-              <Badge variant={equipment.isActive ? 'default' : 'secondary'} className="ml-2">
-                {equipment.isActive ? 'Active' : 'Inactive'}
-              </Badge>
-            </div>
-          </div>
-          
-          {equipment.imagePath && (
-            <div className="space-y-2">
-              <span className="text-sm font-medium">Current Image:</span>
-              <div className="relative inline-block">
-                <img
-                  src={`/api/images/${equipment.imagePath}`}
-                  alt={equipment.modelName}
-                  className="h-32 w-32 object-cover rounded-lg border"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit Equipment Details</CardTitle>
-          <CardDescription>
-            Update equipment properties including model name, category, and active status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="space-y-8">
+        <Section spacing="compact">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="modelName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model Name *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., Canon EOS R5, Sony A7 IV"
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="shortName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Short Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., R5, A7IV (optional)"
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Detailed description of the equipment, specifications, included accessories, etc."
-                        className="min-h-[100px]"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category *</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        value={field.value?.toString()}
-                        disabled={isSubmitting}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[...categories]
-                            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-                            .map((category) => (
-                              <SelectItem key={category.id} value={category.id.toString()}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="requiredClearanceLevel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Required Clearance Level *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="10"
-                          placeholder="1-10"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="googleCalendarId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Google Calendar ID *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., equipment-camera-01@example.com"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <p className="text-sm text-muted-foreground">
-                      Each equipment must have a unique Google Calendar ID for booking management
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="isActive"
@@ -485,6 +282,139 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="modelName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Model Name *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Canon EOS R5, Sony A7 IV"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="shortName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Short Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., R5, A7IV (optional)"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Detailed description of the equipment, specifications, included accessories, etc."
+                        className="min-h-[100px]"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category *</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        value={field.value?.toString()}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {[...categories]
+                            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                            .map((category) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="requiredClearanceLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Required Clearance Level *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="10"
+                          placeholder="1-10"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="googleCalendarId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Google Calendar ID *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., equipment-camera-01@example.com"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <p className="text-sm text-muted-foreground">
+                      Each equipment must have a unique Google Calendar ID for booking management
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {error && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
@@ -499,29 +429,6 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
               )}
 
               <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || isUploadingImage}
-                    className="flex items-center gap-2 w-full sm:w-auto"
-                  >
-                    <Save className="h-4 w-4" />
-                    {isSubmitting 
-                      ? (isUploadingImage ? 'Uploading Image...' : 'Saving Changes...') 
-                      : 'Save Changes'
-                    }
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancel}
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -558,11 +465,35 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || isUploadingImage}
+                    className="flex items-center gap-2 w-full sm:w-auto"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSubmitting 
+                      ? (isUploadingImage ? 'Uploading Image...' : 'Saving Changes...') 
+                      : 'Save Changes'
+                    }
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
-    </div>
+        </Section>
+      </div>
+    </PageContainer>
   )
 }

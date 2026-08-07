@@ -1,11 +1,10 @@
-import { createUserColumns } from "./components/user-columns"
+import { createUserColumns, UserField } from "./components/user-columns"
 import { UserDataTable } from "./components/user-data-table"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
-import { useState } from "react"
-import { DeactivateUserDialog } from "./components/deactivate-user-dialog"
 import { updateUserAdminFn } from "@/lib/user"
 import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 import { User } from "@/lib/user/types"
 
@@ -32,33 +31,38 @@ interface PageProps {
   pagination: Pagination
   filters: Filters
   isLoading?: boolean
+  canAssignElevatedRoles?: boolean
 }
 
-export function Page({ users, pagination, filters, isLoading = false }: PageProps) {
-  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+export function Page({ users, pagination, filters, isLoading = false, canAssignElevatedRoles = true }: PageProps) {
   const queryClient = useQueryClient()
 
   const description = pagination.totalCount > 0
     ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
     : "No users found"
 
-  const handleDeactivateUser = (user: User) => {
-    setSelectedUser(user)
-    setDeactivateDialogOpen(true)
+  const handleUpdateField = async (userId: string, field: UserField, value: string) => {
+    try {
+      const data = field === 'clearanceLevel'
+        ? { clearanceLevel: parseInt(value) }
+        : { [field]: value }
+
+      await updateUserAdminFn({
+        data: { userId, ...data },
+      })
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User updated')
+    } catch (error) {
+      toast.error('Failed to update user', {
+        description: error instanceof Error ? error.message : 'An error occurred',
+      })
+    }
   }
 
-  const handleConfirmDeactivation = async (userId: string) => {
-    await updateUserAdminFn({
-      data: {
-        userId,
-        status: 'Inactive'
-      }
-    })
-    await queryClient.invalidateQueries({ queryKey: ['users'] })
-  }
-
-  const columns = createUserColumns(handleDeactivateUser)
+  const columns = createUserColumns({
+    onUpdateField: handleUpdateField,
+    canAssignElevatedRoles,
+  })
 
   return (
     <PageContainer>
@@ -72,13 +76,6 @@ export function Page({ users, pagination, filters, isLoading = false }: PageProp
         pagination={pagination}
         filters={filters}
         isLoading={isLoading}
-      />
-
-      <DeactivateUserDialog
-        open={deactivateDialogOpen}
-        onOpenChange={setDeactivateDialogOpen}
-        user={selectedUser}
-        onConfirm={handleConfirmDeactivation}
       />
     </PageContainer>
   )

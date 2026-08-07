@@ -3,7 +3,6 @@ import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -11,6 +10,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import { useDebounce } from "@/hooks/use-debounce"
 
 import { Button } from "@/components/ui/button"
@@ -24,12 +24,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,8 +31,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
+import { BulkEditClearanceDialog } from "./bulk-edit-clearance-dialog"
 import { LoadingOverlay } from "@/components/shared/loading-overlay"
-import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { Shield, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { EquipmentWithCategory } from "@/lib/equipment"
 
 interface Pagination {
@@ -79,8 +74,9 @@ const statusOptions = [
 
 export function EquipmentDataTable({ columns, data, categories, pagination, filters, isLoading = false }: EquipmentDataTableProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [rowSelection, setRowSelection] = React.useState({})
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [bulkEditClearanceOpen, setBulkEditClearanceOpen] = React.useState(false)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const searchQueryValue = filters.searchQuery || ""
   const [localSearchValue, setLocalSearchValue] = React.useState(searchQueryValue)
@@ -174,7 +170,6 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
     columns,
     state: {
       sorting,
-      columnVisibility,
       rowSelection,
       columnFilters,
       pagination: {
@@ -191,7 +186,6 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
     onRowSelectionChange: setRowSelection,
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
@@ -249,6 +243,12 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
     })
   }, [filters.limit, navigate])
 
+  const selectedEquipmentIds = React.useMemo(() => {
+    return Object.keys(rowSelection)
+      .map(index => data[parseInt(index)]?.id)
+      .filter((id): id is number => id != null)
+  }, [rowSelection, data])
+
   return (
     <div className="space-y-4">
       {/* Filters - Responsive layout */}
@@ -287,33 +287,18 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
             )}
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
-                Columns
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          {selectedEquipmentIds.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-full border-dashed sm:w-auto"
+              onClick={() => setBulkEditClearanceOpen(true)}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Edit Clearance ({selectedEquipmentIds.length})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -345,6 +330,15 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={(event) => {
+                    const target = event.target as HTMLElement
+                    if (target.closest('button, a, input, select, label, [role="combobox"]')) return
+                    navigate({
+                      to: '/admin/equipment/$equipmentId/edit',
+                      params: { equipmentId: row.original.id.toString() },
+                    })
+                  }}
+                  className="cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
@@ -440,6 +434,16 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
           </div>
         </div>
       </div>
+
+      <BulkEditClearanceDialog
+        equipmentIds={selectedEquipmentIds}
+        open={bulkEditClearanceOpen}
+        onOpenChange={setBulkEditClearanceOpen}
+        onSuccess={() => {
+          setRowSelection({})
+          queryClient.invalidateQueries({ queryKey: ['equipment', 'admin-list'] })
+        }}
+      />
     </div>
   )
 }

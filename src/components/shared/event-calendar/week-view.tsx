@@ -222,9 +222,9 @@ export function WeekView({
   return (
     <div
       data-slot="week-view"
-      className="flex h-full flex-col overflow-y-auto"
+      className="flex h-full flex-col"
     >
-      <div className="bg-background/80 border-border/70 sticky top-0 z-30 grid grid-cols-8 border-b backdrop-blur-md">
+      <div className="border-border/70 grid grid-cols-8 border-b bg-background">
         <div className="text-muted-foreground/70 py-2 text-center text-sm">
           <span className="max-[479px]:sr-only">{format(currentDate, "O")}</span>
         </div>
@@ -307,7 +307,7 @@ export function WeekView({
         </div>
       )}
 
-      <div className="grid flex-1 grid-cols-8">
+      <div className="grid flex-1 grid-cols-8 overflow-y-auto">
         <div className="border-border/70 grid auto-cols-fr border-r">
           {hours.map((hour, index) => (
             <div

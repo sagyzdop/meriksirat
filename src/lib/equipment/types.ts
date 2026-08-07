@@ -84,3 +84,8 @@ export const UploadEquipmentImageSchema = z.object({
   contentType: z.string(),
   fileName: z.string(),
 })
+
+export const BulkUpdateEquipmentClearanceSchema = z.object({
+  equipmentIds: z.array(z.number()),
+  requiredClearanceLevel: z.number().min(1).max(10),
+})

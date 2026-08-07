@@ -1,41 +1,52 @@
 import { ColumnDef } from "@tanstack/react-table"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Shield, UserX } from "lucide-react"
-import { format } from "date-fns"
-import { Link } from "@tanstack/react-router"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ArrowUpDown } from "lucide-react"
 
 import { User } from "@/lib/user/types"
 
-const roleConfig = {
-  user: { label: "User", variant: "secondary" as const, icon: null },
-  manager: { label: "Manager", variant: "default" as const, icon: Shield },
-  admin: { label: "Admin", variant: "destructive" as const, icon: Shield },
+export type UserField = 'role' | 'clearanceLevel' | 'status'
+
+interface UserColumnsOptions {
+  onUpdateField?: (userId: string, field: UserField, value: string) => Promise<void>
+  canAssignElevatedRoles?: boolean
 }
 
-const statusConfig = {
-  Active: { label: "Active", variant: "default" as const },
-  Inactive: { label: "Inactive", variant: "secondary" as const },
-  "On Probation": { label: "On Probation", variant: "destructive" as const },
-  Board: { label: "Board", variant: "default" as const },
-  "Ex-Board": { label: "Ex-Board", variant: "secondary" as const },
-  Roommate: { label: "Roommate", variant: "default" as const },
-  "Ex-Roommate": { label: "Ex-Roommate", variant: "secondary" as const },
-  Graduated: { label: "Graduated", variant: "secondary" as const },
+interface InlineSelectProps {
+  value: string
+  placeholder?: string
+  options: { value: string; label: string; disabled?: boolean }[]
+  onValueChange: (value: string) => void
 }
 
-export const createUserColumns = (
-  onDeactivate?: (user: User) => void
-): ColumnDef<User>[] => [
+function InlineSelect({ value, placeholder, options, onValueChange }: InlineSelectProps) {
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger size="sm" className="h-8 w-32">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+export const createUserColumns = ({
+  onUpdateField,
+  canAssignElevatedRoles = true,
+}: UserColumnsOptions = {}): ColumnDef<User>[] => [
     {
       id: "select",
       header: ({ table }) => (
@@ -87,26 +98,6 @@ export const createUserColumns = (
       },
     },
     {
-      accessorKey: "email",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={column.getToggleSortingHandler()}
-        >
-          Email
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const email = row.getValue("email") as string
-        return (
-          <div className="max-w-[200px] truncate font-mono text-sm">
-            {email}
-          </div>
-        )
-      },
-    },
-    {
       accessorKey: "role",
       header: ({ column }) => (
         <Button
@@ -118,18 +109,20 @@ export const createUserColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const role = row.getValue("role") as keyof typeof roleConfig | null
-        if (!role) {
-          return <Badge variant="secondary">No Role</Badge>
-        }
-        const config = roleConfig[role]
-        const Icon = config.icon
+        const user = row.original
+        const role = user.role ?? ''
 
         return (
-          <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
-            {Icon && <Icon className="h-3 w-3" />}
-            {config.label}
-          </Badge>
+          <InlineSelect
+            value={role}
+            placeholder="—"
+            options={[
+              { value: 'user', label: 'User' },
+              { value: 'manager', label: 'Manager', disabled: !canAssignElevatedRoles },
+              { value: 'admin', label: 'Admin', disabled: !canAssignElevatedRoles },
+            ]}
+            onValueChange={(value) => onUpdateField?.(user.id, 'role', value)}
+          />
         )
       },
       filterFn: (row, id, value) => {
@@ -148,14 +141,19 @@ export const createUserColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const clearanceLevel = row.getValue("clearanceLevel") as number | null
-        if (!clearanceLevel) {
-          return <Badge variant="outline">No Level</Badge>
-        }
+        const user = row.original
+        const clearanceLevel = user.clearanceLevel ?? null
+
         return (
-          <Badge variant="outline" className="font-mono">
-            Level {clearanceLevel}
-          </Badge>
+          <InlineSelect
+            value={clearanceLevel ? clearanceLevel.toString() : ''}
+            placeholder="—"
+            options={[...Array(10)].map((_, i) => ({
+              value: (i + 1).toString(),
+              label: `Level ${i + 1}`,
+            }))}
+            onValueChange={(value) => onUpdateField?.(user.id, 'clearanceLevel', value)}
+          />
         )
       },
     },
@@ -171,111 +169,29 @@ export const createUserColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const status = row.getValue("status") as keyof typeof statusConfig | null
-        if (!status) {
-          return <Badge variant="secondary">No Status</Badge>
-        }
-        const config = statusConfig[status]
+        const user = row.original
+        const status = user.status ?? ''
 
         return (
-          <Badge variant={config.variant}>
-            {config.label}
-          </Badge>
+          <InlineSelect
+            value={status}
+            placeholder="—"
+            options={[
+              { value: 'Active', label: 'Active' },
+              { value: 'Inactive', label: 'Inactive' },
+              { value: 'On Probation', label: 'On Probation' },
+              { value: 'Board', label: 'Board' },
+              { value: 'Ex-Board', label: 'Ex-Board' },
+              { value: 'Roommate', label: 'Roommate' },
+              { value: 'Ex-Roommate', label: 'Ex-Roommate' },
+              { value: 'Graduated', label: 'Graduated' },
+            ]}
+            onValueChange={(value) => onUpdateField?.(user.id, 'status', value)}
+          />
         )
       },
       filterFn: (row, id, value) => {
         return value.includes(row.getValue(id))
-      },
-    },
-    {
-      accessorKey: "createdAt",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={column.getToggleSortingHandler()}
-        >
-          Created
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const createdAt = row.getValue("createdAt") as Date
-        if (!createdAt) return <span className="text-muted-foreground">No date</span>
-
-        return (
-          <div className="flex flex-col">
-            <span className="font-medium">
-              {format(new Date(createdAt), "MMM dd, yyyy")}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {format(new Date(createdAt), "HH:mm")}
-            </span>
-          </div>
-        )
-      },
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const user = row.original
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(user.id)}
-              >
-                Copy user ID
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(user.email)}
-              >
-                Copy email
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link
-                  to="/admin/users/$userId/edit"
-                  params={{ userId: user.id }}
-                  className="flex items-center gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit user
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link
-                  to="/profile"
-                  search={{ userId: user.id }}
-                  className="flex items-center gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  View profile
-                </Link>
-              </DropdownMenuItem>
-              {onDeactivate && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => onDeactivate(user)}
-                  >
-                    <UserX className="h-4 w-4 mr-2" />
-                    Deactivate user
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
       },
     },
   ]

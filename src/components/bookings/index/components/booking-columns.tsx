@@ -9,15 +9,7 @@ import { BookingWithItems } from "@/lib/booking/types"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
 import { CancelBookingDialog } from "./cancel-booking-dialog"
-
-const statusConfig = {
-  booked: { label: "Booked", variant: "secondary" as const },
-  active: { label: "Active", variant: "default" as const },
-  returned: { label: "Returned", variant: "secondary" as const },
-  cancelled: { label: "Cancelled", variant: "destructive" as const },
-  overdue: { label: "Overdue", variant: "destructive" as const },
-  partially_returned: { label: "Partially Returned", variant: "default" as const },
-}
+import { getBookingStatusConfig } from "@/components/shared/booking-status-badge"
 
 export function getBookingColumns(): ColumnDef<BookingWithItems>[] {
   return [
@@ -172,7 +164,7 @@ export function getBookingColumns(): ColumnDef<BookingWithItems>[] {
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("status") as string
-      const config = statusConfig[status as keyof typeof statusConfig] ?? statusConfig.booked
+      const config = getBookingStatusConfig(status)
       
       return (
         <Badge variant={config.variant}>

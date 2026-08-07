@@ -2,33 +2,21 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2, Calendar } from "lucide-react"
-import { Link } from "@tanstack/react-router"
+import { ArrowUpDown } from "lucide-react"
 import { EquipmentWithCategory } from "@/lib/equipment"
 
-interface EquipmentActionsProps {
-  equipment: EquipmentWithCategory
-  onEdit: (equipment: EquipmentWithCategory) => void
-  onDelete: (equipment: EquipmentWithCategory) => void
-}
-
 const statusConfig = {
-  true: { label: "Active", variant: "default" as const },
-  false: { label: "Inactive", variant: "secondary" as const },
+  true: {
+    label: "Active",
+    className: "bg-green-500 text-white hover:bg-green-600",
+  },
+  false: {
+    label: "Inactive",
+    className: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200",
+  },
 }
 
-export const createEquipmentColumns = (
-  onEdit: (equipment: EquipmentWithCategory) => void,
-  onDelete: (equipment: EquipmentWithCategory) => void
-): ColumnDef<EquipmentWithCategory>[] => [
+export const createEquipmentColumns = (): ColumnDef<EquipmentWithCategory>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -54,6 +42,23 @@ export const createEquipmentColumns = (
     enableHiding: false,
   },
   {
+    id: "image",
+    accessorFn: (row) => row.imagePath,
+    header: "Image",
+    enableSorting: false,
+    cell: ({ row }) => {
+      const imagePath = row.original.imagePath
+
+      return (
+        <img
+          src={imagePath ? `/api/images/${imagePath}` : "/equipment-placeholder.svg"}
+          alt={row.original.modelName}
+          className="h-10 w-14 rounded-md border object-cover"
+        />
+      )
+    },
+  },
+  {
     id: "modelName",
     accessorFn: (row) => row.modelName,
     header: ({ column }) => (
@@ -72,7 +77,7 @@ export const createEquipmentColumns = (
         <div className="flex flex-col">
           <span className="font-medium">{equipment.modelName}</span>
           {equipment.description && (
-            <span className="text-sm text-muted-foreground line-clamp-1">
+            <span className="max-w-[280px] truncate text-sm text-muted-foreground">
               {equipment.description}
             </span>
           )}
@@ -148,7 +153,7 @@ export const createEquipmentColumns = (
       const config = statusConfig[status.toString() as keyof typeof statusConfig]
       
       return (
-        <Badge variant={config.variant}>
+        <Badge variant="default" className={config.className}>
           {config.label}
         </Badge>
       )
@@ -157,123 +162,6 @@ export const createEquipmentColumns = (
       const isActive = row.getValue(id) as boolean | null
       const status = isActive === null ? "true" : isActive.toString()
       return value.includes(status)
-    },
-  },
-  {
-    id: "availability",
-    header: "Availability",
-    cell: ({ row }) => {
-      const isActive = row.getValue("isActive") as boolean | null
-      const status = isActive === null ? true : isActive
-      
-      // For now, show availability based on active status
-      // In a real implementation, this would check current bookings
-      if (!status) {
-        return (
-          <Badge variant="secondary">
-            Unavailable
-          </Badge>
-        )
-      }
-      
-      return (
-        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-          Available
-        </Badge>
-      )
-    },
-  },
-  {
-    id: "edit",
-    header: "",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const equipment = row.original
-
-      return (
-        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button asChild size="sm" variant="outline">
-            <Link 
-              to="/admin/equipment/$equipmentId/edit" 
-              params={{ equipmentId: equipment.id.toString() }}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Link>
-          </Button>
-        </div>
-      )
-    },
-    size: 100,
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const equipment = row.original
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(equipment.id.toString())}
-            >
-              Copy equipment ID
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(equipment.googleCalendarId)}
-            >
-              Copy calendar ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link 
-                to="/admin/equipment/$equipmentId/edit" 
-                params={{ equipmentId: equipment.id.toString() }}
-                className="flex items-center gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Edit equipment
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link 
-                to="/equipment/$" 
-                params={{ _splat: equipment.id.toString() }}
-                className="flex items-center gap-2"
-              >
-                <Eye className="h-4 w-4" />
-                View details
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link 
-                to="/bookings" 
-                search={{ equipmentId: equipment.id }}
-                className="flex items-center gap-2"
-              >
-                <Calendar className="h-4 w-4" />
-                View bookings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(equipment)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete equipment
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
     },
   },
 ]

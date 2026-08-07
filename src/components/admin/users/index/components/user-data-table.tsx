@@ -25,12 +25,6 @@ import {
 } from "@/components/ui/table"
 import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -301,32 +295,6 @@ export function UserDataTable({
               Edit Clearance ({selectedUserIds.length})
             </Button>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
-                Columns
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
@@ -358,6 +326,15 @@ export function UserDataTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={(event) => {
+                    const target = event.target as HTMLElement
+                    if (target.closest('button, a, input, select, label, [role="combobox"]')) return
+                    navigate({
+                      to: '/admin/users/$userId',
+                      params: { userId: row.original.id },
+                    })
+                  }}
+                  className="cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">

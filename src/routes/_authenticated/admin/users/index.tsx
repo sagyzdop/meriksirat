@@ -108,6 +108,7 @@ export const Route = createFileRoute('/_authenticated/admin/users/')({
 
 function RouteComponent() {
   const search = Route.useSearch()
+  const { adminUser } = Route.useRouteContext()
   const { data, isFetching } = useQuery(usersQueries.adminList(search))
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
@@ -126,6 +127,7 @@ function RouteComponent() {
       }
       filters={search}
       isLoading={isRouterPending || isFetching}
+      canAssignElevatedRoles={adminUser?.role === 'admin'}
     />
   )
 }

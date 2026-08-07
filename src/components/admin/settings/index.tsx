@@ -1,6 +1,3 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Bell, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -11,6 +8,7 @@ import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
 
 interface SettingsData {
   id: string
@@ -57,13 +55,6 @@ export function Page({ settings }: PageProps) {
     }
   }
   
-  const formatTime = (value: number | '') => {
-    const minutes = value === '' ? 0 : value
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
-  }
-  
   return (
     <PageContainer>
       <PageHeader 
@@ -71,18 +62,12 @@ export function Page({ settings }: PageProps) {
         description="Manage system settings and configurations"
       />
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Global Booking Note
-            </CardTitle>
-            <CardDescription>
-              This message will be appended to all Google Calendar event descriptions for bookings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+      <div className="space-y-8">
+        <Section
+          title="Global Booking Note"
+          description="This message will be appended to all Google Calendar event descriptions for bookings"
+        >
+          <div className="space-y-2">
             <Label htmlFor="globalNote">Booking Note</Label>
             <Textarea
               id="globalNote"
@@ -91,121 +76,102 @@ export function Page({ settings }: PageProps) {
               onChange={(e) => setGlobalBookingNote(e.target.value)}
               rows={4}
             />
-            <p className="text-xs text-muted-foreground">
-              This note will be automatically appended to all booking calendar event descriptions.
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </Section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Operating Hours
-            </CardTitle>
-            <CardDescription>
-              Set the daily operating hours for equipment bookings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Time</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={startHour}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val === '') {
-                        setStartHour('')
-                      } else {
-                        setStartHour(Math.min(23, Math.max(0, parseInt(val))))
-                      }
-                    }}
-                    placeholder="HH"
-                    className="flex-1"
-                  />
-                  <span className="flex items-center">:</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={startMinute}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val === '') {
-                        setStartMinute('')
-                      } else {
-                        setStartMinute(Math.min(59, Math.max(0, parseInt(val))))
-                      }
-                    }}
-                    placeholder="MM"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Current: {formatTime((startHour === '' ? 0 : startHour) * 60 + (startMinute === '' ? 0 : startMinute))}
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>End Time</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={endHour}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val === '') {
-                        setEndHour('')
-                      } else {
-                        setEndHour(Math.min(23, Math.max(0, parseInt(val))))
-                      }
-                    }}
-                    placeholder="HH"
-                    className="flex-1"
-                  />
-                  <span className="flex items-center">:</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={endMinute}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val === '') {
-                        setEndMinute('')
-                      } else {
-                        setEndMinute(Math.min(59, Math.max(0, parseInt(val))))
-                      }
-                    }}
-                    placeholder="MM"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Current: {formatTime((endHour === '' ? 0 : endHour) * 60 + (endMinute === '' ? 0 : endMinute))}
-                </p>
+        <Section
+          title="Operating Hours"
+          description="Set the daily operating hours for equipment bookings"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Start Time</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="23"
+                  value={startHour}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '') {
+                      setStartHour('')
+                    } else {
+                      setStartHour(Math.min(23, Math.max(0, parseInt(val))))
+                    }
+                  }}
+                  placeholder="HH"
+                  className="flex-1"
+                />
+                <span className="flex items-center">:</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={startMinute}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '') {
+                      setStartMinute('')
+                    } else {
+                      setStartMinute(Math.min(59, Math.max(0, parseInt(val))))
+                    }
+                  }}
+                  placeholder="MM"
+                  className="flex-1"
+                />
               </div>
             </div>
             
-            <Separator />
-            
-            <div className="flex justify-end">
-              <Button 
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? 'Saving...' : 'Save Settings'}
-              </Button>
+            <div className="space-y-2">
+              <Label>End Time</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="23"
+                  value={endHour}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '') {
+                      setEndHour('')
+                    } else {
+                      setEndHour(Math.min(23, Math.max(0, parseInt(val))))
+                    }
+                  }}
+                  placeholder="HH"
+                  className="flex-1"
+                />
+                <span className="flex items-center">:</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={endMinute}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '') {
+                      setEndMinute('')
+                    } else {
+                      setEndMinute(Math.min(59, Math.max(0, parseInt(val))))
+                    }
+                  }}
+                  placeholder="MM"
+                  className="flex-1"
+                />
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Section>
+      </div>
+
+      <div className="flex justify-end pt-8">
+        <Button 
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? 'Saving...' : 'Save Settings'}
+        </Button>
       </div>
     </PageContainer>
   )

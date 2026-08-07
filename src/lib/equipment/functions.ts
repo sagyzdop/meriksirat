@@ -8,7 +8,8 @@ import {
   CreateEquipmentSchema,
   UpdateEquipmentSchema,
   DeleteEquipmentSchema,
-  UploadEquipmentImageSchema
+  UploadEquipmentImageSchema,
+  BulkUpdateEquipmentClearanceSchema
 } from './types'
 import { getUserClearanceLevel } from './server'
 
@@ -345,6 +346,35 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
       .where(eq(equipment.id, data.equipmentId))
 
     return { success: true }
+  })
+
+/**
+ * Bulk update required clearance level for multiple equipment (Admin only)
+ */
+export const bulkUpdateEquipmentClearanceFn = createServerFn({ method: 'POST' })
+  .validator(BulkUpdateEquipmentClearanceSchema)
+  .handler(async ({ data }) => {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { equipment } = await import('@/db/schema')
+    const { inArray } = await import('drizzle-orm')
+
+    const headers = getRequestHeaders()
+    await checkAdminPermission(headers, ['admin', 'manager'])
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    if (data.equipmentIds.length === 0) {
+      throw new Error('No equipment IDs provided')
+    }
+
+    await database
+      .update(equipment)
+      .set({ requiredClearanceLevel: data.requiredClearanceLevel })
+      .where(inArray(equipment.id, data.equipmentIds))
+
+    return { success: true, count: data.equipmentIds.length }
   })
 
 /**

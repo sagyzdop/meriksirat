@@ -1,20 +1,25 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { updateBookingStatusAdminFn } from '@/lib/booking'
-import { GoogleCalendarView } from '@/components/shared/event-calendar/google-calendar-view'
+import { getBookingSlots } from '@/lib/booking/slots'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Save, Calendar, User, AlertCircle, ExternalLink } from 'lucide-react'
+import { Save, Calendar, User, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { format } from 'date-fns'
-import { TimeSlotPicker, getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
+import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
+import { EquipmentCard } from '@/components/shared/equipment-card'
+import { BookingStatusBadge } from '@/components/shared/booking-status-badge'
+import { BookingSchedule } from '@/components/shared/booking-schedule'
 import type { AdminBookingWithDetails } from '@/lib/booking/types'
 
 const editBookingSchema = z.object({
@@ -35,29 +40,9 @@ export function Page({ booking, bookingId }: PageProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const getInitialSlots = () => {
-    const startTime = new Date(booking.startTime)
-    const endTime = new Date(booking.endTime)
-
-    const slots: string[] = []
-    const current = new Date(startTime)
-
-    while (current < endTime) {
-      const timeStr = `${current.getHours().toString().padStart(2, '0')}:${current
-        .getMinutes()
-        .toString()
-        .padStart(2, '0')}`
-      slots.push(timeStr)
-      current.setMinutes(current.getMinutes() + 30)
-    }
-
-    return slots
-  }
-
-  const initialSlots = useMemo(() => getInitialSlots(), [booking.startTime, booking.endTime])
+  const initialSlots = getBookingSlots(booking.startTime, booking.endTime)
   const [selectedSlots, setSelectedSlots] = useState<string[]>(initialSlots)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date(booking.startTime))
-
 
   const form = useForm<EditBookingForm>({
     resolver: zodResolver(editBookingSchema),
@@ -66,6 +51,10 @@ export function Page({ booking, bookingId }: PageProps) {
       notes: '',
     },
   })
+
+  const canEditSchedule = booking.status === 'booked' || booking.status === 'active'
+  const items = booking.items ?? []
+  const hasCalendar = items.some((item) => item.equipment?.googleCalendarId)
 
   const onSubmit = async (data: EditBookingForm) => {
     const times = canEditSchedule && hasCalendar
@@ -125,64 +114,24 @@ export function Page({ booking, bookingId }: PageProps) {
     navigate({ to: '/admin/bookings' })
   }
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'default'
-      case 'booked':
-        return 'secondary'
-      case 'returned':
-        return 'outline'
-      case 'cancelled':
-        return 'destructive'
-      case 'overdue':
-        return 'destructive'
-      case 'partially_returned':
-        return 'default'
-      default:
-        return 'secondary'
-    }
-  }
-
   const isOverdue = new Date(booking.endTime) < new Date() &&
     (booking.status === 'booked' || booking.status === 'active' || booking.status === 'partially_returned')
 
-  const canEditSchedule = booking.status === 'booked' || booking.status === 'active'
-  const items = booking.items ?? []
-  const itemCalendarIds = items
-    .map((item) => item.equipment?.googleCalendarId)
-    .filter((id): id is string => Boolean(id))
-  const hasCalendar = itemCalendarIds.length > 0
   const calendarEventIds = items
     .map((item) => item.googleCalendarEventId)
     .filter((id): id is string => Boolean(id))
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="space-y-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Edit Booking</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Booking ID: #{booking.id} • Created {format(new Date(booking.createdAt), 'PPP')}
-              </p>
-            </div>
-          </div>
-          <Badge variant={getStatusBadgeVariant(booking.status)}>
-            {booking.status.toUpperCase()}
-          </Badge>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title="Edit Booking"
+        description={`Booking ID: #${booking.id} • Created ${format(new Date(booking.createdAt), 'PPP')}`}
+        backTo="/admin/bookings"
+        backLabel="Back to Bookings"
+        actions={<BookingStatusBadge status={booking.status} colorized />}
+      />
 
+      <div className="space-y-8">
         {isOverdue && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -201,28 +150,28 @@ export function Page({ booking, bookingId }: PageProps) {
             <CardDescription>Administrative context for this booking.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
               <div>
                 <span className="font-medium">User Name:</span>
-                <p className="text-muted-foreground mt-1">
+                <p className="mt-1 text-muted-foreground">
                   {`${booking.user?.firstName || ''} ${booking.user?.lastName || ''}`.trim() || 'Unknown'}
                 </p>
               </div>
               <div>
                 <span className="font-medium">User Email:</span>
-                <p className="text-muted-foreground mt-1 break-all">
+                <p className="mt-1 break-all text-muted-foreground">
                   {booking.user?.email || 'Unknown'}
                 </p>
               </div>
               <div>
                 <span className="font-medium">Equipment IDs:</span>
-                <p className="text-muted-foreground mt-1 font-mono">
+                <p className="mt-1 font-mono text-muted-foreground">
                   {items.map((item) => item.equipmentId).join(', ') || 'None'}
                 </p>
               </div>
               <div>
                 <span className="font-medium">Calendar Event IDs:</span>
-                <p className="text-muted-foreground mt-1 font-mono text-xs break-all">
+                <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
                   {calendarEventIds.length > 0 ? calendarEventIds.join(', ') : 'Not synced'}
                 </p>
               </div>
@@ -230,61 +179,21 @@ export function Page({ booking, bookingId }: PageProps) {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Equipment Details</h2>
-            <Badge variant={getStatusBadgeVariant(booking.status)}>
-              {booking.status.toUpperCase()}
-            </Badge>
-          </div>
-
+        <Section title="Equipment Details" spacing="compact">
           {items.length > 0 ? (
-            <div className="grid gap-4">
+            <div className="space-y-3">
               {items.map((item) => (
-                <Link
+                <EquipmentCard
                   key={item.id}
-                  to="/admin/equipment/$equipmentId/edit"
-                  params={{ equipmentId: item.equipmentId.toString() }}
-                  className="block"
-                >
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-6">
-                        <div className="relative flex-shrink-0">
-                          {item.equipment?.imagePath ? (
-                            <img
-                              src={`/api/images/${item.equipment.imagePath}`}
-                              alt={item.equipment.modelName}
-                              className="w-24 h-24 object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                              <span className="text-muted-foreground text-xs">No image</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <h3 className="text-lg font-semibold mb-1">
-                                {item.equipment?.modelName || 'Unknown Equipment'}
-                              </h3>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {item.equipment?.category?.name || 'Uncategorized'}
-                              </p>
-                              {item.equipment?.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {item.equipment.description}
-                                </p>
-                              )}
-                            </div>
-                            <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                  item={{
+                    id: item.equipmentId,
+                    imagePath: item.equipment?.imagePath ?? null,
+                    modelName: item.equipment?.modelName || 'Unknown Equipment',
+                    description: item.equipment?.description ?? null,
+                    category: item.equipment?.category ?? null,
+                  }}
+                  linkVariant="admin-edit"
+                />
               ))}
             </div>
           ) : (
@@ -294,71 +203,23 @@ export function Page({ booking, bookingId }: PageProps) {
               </CardContent>
             </Card>
           )}
-        </div>
+        </Section>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Current Booking</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium">Start Time:</span>
-              <p className="text-muted-foreground mt-1">
-                {format(new Date(booking.startTime), 'PPP p')}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium">End Time:</span>
-              <p className="text-muted-foreground mt-1">
-                {format(new Date(booking.endTime), 'PPP p')}
-              </p>
-            </div>
-          </div>
-          {booking.userEventDetails && (
-            <div className="mt-4 pt-4 border-t">
-              <span className="font-medium text-sm">User Notes & History:</span>
-              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                {booking.userEventDetails}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {hasCalendar && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Availability</h2>
-            <GoogleCalendarView calendarId={itemCalendarIds[0]} />
-          </div>
-        )}
-
-        {hasCalendar && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Update Date & Time</h2>
-            {!canEditSchedule && (
-              <Card className="border-yellow-200 bg-yellow-50">
-                <CardContent className="pt-6">
-                  <p className="text-sm text-yellow-800">
-                    Schedule updates are only available for <strong>booked</strong> or <strong>active</strong> bookings.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            {canEditSchedule && (
-              <TimeSlotPicker
-                googleCalendarIds={itemCalendarIds}
-                initialDate={new Date(booking.startTime)}
-                initialSlots={initialSlots}
-                excludeBookingPeriod={{
-                  start: booking.startTime.toISOString(),
-                  end: booking.endTime.toISOString(),
-                }}
-                onSlotsChange={(slots, date) => {
-                  setSelectedSlots(slots)
-                  setSelectedDate(date)
-                }}
-                disabled={isSubmitting}
-              />
-            )}
-          </div>
-        )}
+        {/* Current Booking / Availability / Update Date & Time */}
+        <BookingSchedule
+          items={items}
+          startTime={booking.startTime}
+          endTime={booking.endTime}
+          currentNotes={booking.userEventDetails}
+          canEdit={canEditSchedule}
+          warnWhenLocked
+          initialSlots={initialSlots}
+          disabled={isSubmitting}
+          onSlotsChange={(slots, date) => {
+            setSelectedSlots(slots)
+            setSelectedDate(date)
+          }}
+        />
 
         <Card>
           <CardHeader>
@@ -479,6 +340,6 @@ export function Page({ booking, bookingId }: PageProps) {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   )
 }

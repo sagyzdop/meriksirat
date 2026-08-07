@@ -22,8 +22,11 @@ export function Page({ user }: ProfilePageProps) {
 
   return (
     <PageContainer>
-      <PageHeader title="Profile" />
-      <div className="space-y-6">
+      <PageHeader
+        title="Profile"
+        description="Manage your account information"
+      />
+      <div className="space-y-8">
         <Section spacing="compact">
           <ProfileHeader user={user} />
         </Section>

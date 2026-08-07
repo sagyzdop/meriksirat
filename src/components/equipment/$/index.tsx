@@ -2,8 +2,11 @@ import { useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getEquipmentByIdFn, type EquipmentWithCategory } from '@/lib/equipment'
 import { GoogleCalendarView } from '@/components/shared/event-calendar/google-calendar-view'
-import { EquipmentDetail } from './components/equipment-detail-page'
 import { Spinner } from '@/components/ui/spinner'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 
 export function Page() {
     const { _splat: equipmentId } = useParams({ strict: false })
@@ -69,16 +72,58 @@ export function Page() {
     }
 
     return (
-        <div className="w-full space-y-8">
-            <EquipmentDetail equipment={equipment} />
+        <PageContainer>
+            <PageHeader
+                title={equipment.modelName}
+                backTo="/equipment"
+                backLabel="Back to Equipment"
+            />
 
-            {/* Calendar View */}
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Availability</h3>
-                    <GoogleCalendarView calendarId={equipment.googleCalendarId} />
+            <div className="space-y-8">
+                {/* Equipment Image */}
+                <div className="relative">
+                    <img
+                        src={equipment.imagePath ? `/api/images/${equipment.imagePath}` : "/equipment-placeholder.svg"}
+                        alt={equipment.modelName}
+                        className="w-full rounded-lg border object-cover aspect-video max-h-64"
+                    />
                 </div>
+
+                {/* Equipment Details */}
+                <Section title="Details" spacing="compact">
+                    <div className="relative rounded-md border overflow-x-auto">
+                        <Table>
+                            <TableBody>
+                                {equipment.description && (
+                                    <TableRow>
+                                        <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Description</TableCell>
+                                        <TableCell className="whitespace-normal break-words">{equipment.description}</TableCell>
+                                    </TableRow>
+                                )}
+                                {equipment.category && (
+                                    <TableRow>
+                                        <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Category</TableCell>
+                                        <TableCell>{equipment.category.name}</TableCell>
+                                    </TableRow>
+                                )}
+                                <TableRow>
+                                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Required Clearance Level</TableCell>
+                                    <TableCell>{equipment.requiredClearanceLevel ?? 'None'}</TableCell>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Status</TableCell>
+                                    <TableCell>{equipment.isActive ? 'Available' : 'Unavailable'}</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </div>
+                </Section>
+
+                {/* Calendar View */}
+                <Section title="Availability" spacing="compact">
+                    <GoogleCalendarView calendarId={equipment.googleCalendarId} />
+                </Section>
             </div>
-        </div>
-    );
+        </PageContainer>
+    )
 }
