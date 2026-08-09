@@ -5,14 +5,22 @@ import {
   ChevronRight,
   Download,
   Info,
+  Star,
+  Trash2,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { AlbumPhoto } from '@/lib/albums'
 import { downloadPhotoFile } from '@/lib/albums/download'
-import { formatBytes, formatUtcDate } from '@/lib/format'
+import { formatBytes, formatUtcDateTime } from '@/lib/format'
 import { PhotoImage } from './photo-image'
 
 interface PhotoLightboxProps {
@@ -20,6 +28,10 @@ interface PhotoLightboxProps {
   index: number
   onIndexChange: (index: number) => void
   onClose: () => void
+  canManage?: boolean
+  coverFileId?: string | null
+  onSetCover?: (photo: AlbumPhoto) => void
+  onDeletePhoto?: (photo: AlbumPhoto) => void
 }
 
 const CHROME_TIMEOUT_MS = 3000
@@ -29,11 +41,16 @@ export function PhotoLightbox({
   index,
   onIndexChange,
   onClose,
+  canManage = false,
+  coverFileId = null,
+  onSetCover,
+  onDeletePhoto,
 }: PhotoLightboxProps) {
   const photo = photos[index]
   const [chromeVisible, setChromeVisible] = React.useState(true)
   const [infoOpen, setInfoOpen] = React.useState(false)
   const [downloading, setDownloading] = React.useState(false)
+  const [confirmDelete, setConfirmDelete] = React.useState(false)
   const hideTimer = React.useRef<number | null>(null)
 
   const wakeChrome = React.useCallback(() => {
@@ -56,6 +73,7 @@ export function PhotoLightbox({
 
   React.useEffect(() => {
     setInfoOpen(false)
+    setConfirmDelete(false)
     wakeChrome()
     return () => {
       if (hideTimer.current !== null) window.clearTimeout(hideTimer.current)
@@ -103,11 +121,12 @@ export function PhotoLightbox({
       onTouchStart={wakeChrome}
     >
       <PhotoImage
+        key={photo.id}
         src={photo.url}
         alt={photo.name}
         fit="contain"
-        containerClassName="bg-transparent h-full w-full p-3 sm:p-10"
-        className="max-h-full max-w-full object-contain"
+        placeholderSrc={photo.thumbnailUrl}
+        containerClassName="bg-transparent h-full w-full"
         onClick={() => setChromeVisible((v) => !v)}
       />
 
@@ -127,6 +146,37 @@ export function PhotoLightbox({
           <ArrowLeft className="size-6" />
         </Button>
         <div className="pointer-events-auto flex items-center gap-1">
+          {canManage && onSetCover && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 hover:text-white"
+              disabled={coverFileId === photo.id}
+              title={
+                coverFileId === photo.id
+                  ? 'This is the current cover'
+                  : 'Set as album cover'
+              }
+              onClick={() => onSetCover(photo)}
+            >
+              <Star
+                className="size-5"
+                fill={coverFileId === photo.id ? 'currentColor' : 'none'}
+              />
+              Set as cover
+            </Button>
+          )}
+          {canManage && onDeletePhoto && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-red-500/20 hover:text-red-400"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Delete photo"
+            >
+              <Trash2 className="size-6" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -202,9 +252,7 @@ export function PhotoLightbox({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs font-medium text-zinc-400">
-                    Photo
-                  </div>
+                  <div className="text-xs font-medium text-zinc-400">Photo</div>
                   <div className="mt-0.5">
                     {index + 1} of {photos.length}
                   </div>
@@ -220,11 +268,9 @@ export function PhotoLightbox({
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-zinc-400">
-                    Date
-                  </div>
+                  <div className="text-xs font-medium text-zinc-400">Date</div>
                   <div className="mt-0.5">
-                    {formatUtcDate(photo.capturedAt) || '—'}
+                    {formatUtcDateTime(photo.capturedAt) || '—'}
                   </div>
                 </div>
               </div>
@@ -232,6 +278,30 @@ export function PhotoLightbox({
           </div>
         </>
       )}
+
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent>
+          <DialogTitle>Delete photo?</DialogTitle>
+          <DialogDescription>
+            This permanently removes &quot;{photo.name}&quot; from the album and
+            your Drive storage.
+          </DialogDescription>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (onDeletePhoto) onDeletePhoto(photo)
+                setConfirmDelete(false)
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

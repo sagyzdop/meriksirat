@@ -1,24 +1,5 @@
 import * as React from 'react'
-import {
-  Download,
-  ImageIcon,
-  Star,
-  Trash2,
-  MoreHorizontal,
-} from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { ImageIcon } from 'lucide-react'
 import {
   Empty,
   EmptyDescription,
@@ -27,14 +8,13 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import type { AlbumPhoto } from '@/lib/albums'
-import { downloadPhotoFile } from '@/lib/albums/download'
-import { toast } from 'sonner'
 import { PhotoImage } from './photo-image'
 import { PhotoLightbox } from './photo-lightbox'
 
 interface PhotoGridProps {
   photos: AlbumPhoto[]
   canManage?: boolean
+  coverFileId?: string | null
   onSetCover?: (photo: AlbumPhoto) => void
   onDeletePhoto?: (photo: AlbumPhoto) => void
 }
@@ -42,29 +22,17 @@ interface PhotoGridProps {
 export function PhotoGrid({
   photos,
   canManage = false,
+  coverFileId = null,
   onSetCover,
   onDeletePhoto,
 }: PhotoGridProps) {
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
-  const [confirmDelete, setConfirmDelete] = React.useState<AlbumPhoto | null>(
-    null
-  )
 
   const open =
     lightboxIndex !== null &&
     lightboxIndex >= 0 &&
     lightboxIndex < photos.length
   const current = open ? photos[lightboxIndex!] : null
-
-  const handleDownload = async (photo: AlbumPhoto) => {
-    try {
-      await downloadPhotoFile(photo)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not download photo'
-      )
-    }
-  }
 
   if (photos.length === 0) {
     return (
@@ -106,47 +74,6 @@ export function PhotoGrid({
               alt={photo.name}
               className="transition-transform duration-300 group-hover:scale-105"
             />
-            {canManage && (
-              <div
-                className="pointer-events-none absolute inset-0 flex items-end justify-end gap-1 bg-gradient-to-t from-black/50 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100"
-              >
-                <div className="pointer-events-auto">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon-sm"
-                        className="bg-background/80 backdrop-blur"
-                        aria-label={`Actions for ${photo.name}`}
-                      >
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {onSetCover && (
-                        <DropdownMenuItem onClick={() => onSetCover(photo)}>
-                          <Star />
-                          Set as cover
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={() => handleDownload(photo)}>
-                        <Download />
-                        Download
-                      </DropdownMenuItem>
-                      {onDeletePhoto && (
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setConfirmDelete(photo)}
-                        >
-                          <Trash2 />
-                          Delete photo
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -157,35 +84,12 @@ export function PhotoGrid({
           index={lightboxIndex!}
           onIndexChange={setLightboxIndex}
           onClose={() => setLightboxIndex(null)}
+          canManage={canManage}
+          coverFileId={coverFileId}
+          onSetCover={onSetCover}
+          onDeletePhoto={onDeletePhoto}
         />
       )}
-
-      <Dialog
-        open={!!confirmDelete}
-        onOpenChange={(o) => !o && setConfirmDelete(null)}
-      >
-        <DialogContent>
-          <DialogTitle>Delete photo?</DialogTitle>
-          <DialogDescription>
-            This permanently removes &quot;{confirmDelete?.name}&quot; from the
-            album and your Drive storage.
-          </DialogDescription>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirmDelete(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (confirmDelete && onDeletePhoto) onDeletePhoto(confirmDelete)
-                setConfirmDelete(null)
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

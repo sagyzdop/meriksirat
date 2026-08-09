@@ -24,3 +24,21 @@ export function formatUtcDate(iso: string | null | undefined): string {
     timeZone: 'UTC',
   }).format(date)
 }
+
+/**
+ * Format a UTC ISO timestamp as a stable date + time string. Uses a fixed UTC
+ * timezone so server and client renders match (avoids hydration mismatches).
+ */
+export function formatUtcDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  }).format(date)
+}
