@@ -3,7 +3,12 @@ import * as React from 'react'
 import { updateBookingFn, cancelBookingFn } from '@/lib/booking'
 import { getBookingSlots } from '@/lib/booking/slots'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Trash2 } from 'lucide-react'
 import {
@@ -24,7 +29,7 @@ import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { EquipmentCard } from '@/components/shared/equipment-card'
+import { BookingEquipmentTable } from '@/components/shared/booking-equipment-table'
 import { BookingStatusBadge } from '@/components/shared/booking-status-badge'
 import { BookingSchedule } from '@/components/shared/booking-schedule'
 
@@ -122,53 +127,68 @@ export function Page({ booking, bookingId }: PageProps) {
         description={`Booking ID: #${booking.id} • Created ${format(new Date(booking.createdAt), 'PPP')}`}
         backTo="/bookings"
         backLabel="Back to Bookings"
-        actions={<BookingStatusBadge status={booking.status} colorized />}
       />
 
       <div className="space-y-8">
         {!canEdit && (
-          <Card className="border-yellow-200 bg-yellow-50">
-            <CardContent className="pt-6">
-              <p className="text-sm text-yellow-800">
-                This booking cannot be edited because it has been <strong>{booking.status}</strong>. 
-                You can only edit bookings that are booked or active.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+            This booking cannot be edited because it has been <strong>{booking.status}</strong>.
+            You can only edit bookings that are booked or active.
+          </div>
         )}
 
-        {/* Equipment Details */}
-        <Section title="Equipment Details" spacing="compact">
-          {booking.items?.length > 0 ? (
-            <div className="space-y-3">
-              {booking.items.map((item: any) => (
-                <EquipmentCard
-                  key={item.id}
-                  item={{
-                    id: item.equipmentId,
-                    imagePath: item.equipment?.imagePath ?? null,
-                    modelName: item.equipment?.modelName || 'Unknown Equipment',
-                    description: item.equipment?.description ?? null,
-                    category: item.equipment?.category ?? null,
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-muted-foreground">Equipment details not available</p>
-              </CardContent>
-            </Card>
-          )}
+        {/* Details */}
+        <Section title="Details" spacing="compact">
+          <div className="relative rounded-md border overflow-x-auto">
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">ID</TableCell>
+                  <TableCell className="whitespace-nowrap">{booking.id}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Status</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <BookingStatusBadge status={booking.status} endTime={booking.endTime} colorized />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Start Time</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {format(new Date(booking.startTime), 'EEE, MMM d, yyyy HH:mm')}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">End Time</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {format(new Date(booking.endTime), 'EEE, MMM d, yyyy HH:mm')}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Created At</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {format(new Date(booking.createdAt), 'MMM d, yyyy HH:mm')}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </Section>
 
-        {/* Current Booking / Availability / Update Date & Time */}
+        {/* Equipment Details */}
+        {booking.items?.length > 0 ? (
+          <BookingEquipmentTable items={booking.items} />
+        ) : (
+          <div className="relative rounded-md border py-12 text-center text-muted-foreground">
+            Equipment details not available
+          </div>
+        )}
+
+        {/* Availability / Update Date & Time */}
         <BookingSchedule
           items={booking.items ?? []}
           startTime={booking.startTime}
           endTime={booking.endTime}
-          currentNotes={booking.userEventDetails}
           canEdit={canEdit}
           initialSlots={initialSlots}
           disabled={isSubmitting}
@@ -194,32 +214,7 @@ export function Page({ booking, bookingId }: PageProps) {
 
         {/* Action Buttons */}
         {canEdit && (
-          <div className="flex flex-col justify-between gap-4 sm:flex-row">
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <Button
-                onClick={onSubmit}
-                disabled={isSubmitting || selectedSlots.length === 0}
-                className="w-full sm:w-auto"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-            </div>
-
+          <div className="flex flex-col justify-end gap-4 sm:flex-row">
             {canCancel && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -253,6 +248,29 @@ export function Page({ booking, bookingId }: PageProps) {
                 </AlertDialogContent>
               </AlertDialog>
             )}
+
+            <Button
+              onClick={onSubmit}
+              disabled={isSubmitting || selectedSlots.length === 0}
+              className="w-full sm:w-auto"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
           </div>
         )}
       </div>

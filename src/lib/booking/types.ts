@@ -121,20 +121,13 @@ export const UpdateBookingSchema = z.object({
   notes: z.string().optional(),
 })
 
-export const BulkUpdateBookingTimeSchema = z.object({
-  bookingIds: z.array(z.coerce.number()).min(1),
-  startTime: z.string(),
-  endTime: z.string(),
-})
-
-export const BulkUpdateBookingTimeAdminSchema = z.object({
-  bookingIds: z.array(z.coerce.number()).min(1),
-  startTime: z.string(),
-  endTime: z.string(),
-})
-
 export const CancelBookingSchema = z.object({
   bookingId: z.coerce.number()
+})
+
+export const CancelBookingItemSchema = z.object({
+  bookingId: z.coerce.number(),
+  itemId: z.coerce.number(),
 })
 
 export const GetBookingByIdSchema = z.object({

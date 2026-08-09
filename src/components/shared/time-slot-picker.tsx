@@ -183,7 +183,9 @@ export function TimeSlotPicker({
     isInitialMount.current = false
   }, [])
 
-  // Handle time slot selection
+  // Handle time slot selection. Selections are treated as a range: picking any
+  // set of slots selects every slot between the earliest and latest pick, which
+  // is also how the booking times are derived (first slot → last slot + 30min).
   const handleSlotClick = (time: string) => {
     if (disabled) return
 
@@ -191,10 +193,20 @@ export function TimeSlotPicker({
     if (!slot?.available) return
 
     setSelectedSlots((prev) => {
-      if (prev.includes(time)) {
-        return prev.filter((t) => t !== time)
-      }
-      return [...prev, time].sort()
+      const next = prev.includes(time)
+        ? prev.filter((t) => t !== time)
+        : [...prev, time]
+
+      if (next.length === 0) return next
+
+      const sorted = [...next].sort()
+      const min = sorted[0]
+      const max = sorted[sorted.length - 1]
+
+      return timeSlots
+        .map((s) => s.time)
+        .sort()
+        .filter((t) => t >= min && t <= max)
     })
   }
 
@@ -292,7 +304,9 @@ export function TimeSlotPicker({
                 disabled={!slot.available || disabled}
                 className={cn(
                   "w-full shadow-none text-xs h-8",
-                  !slot.available && "opacity-40 cursor-not-allowed"
+                  !slot.available &&
+                    !selectedSlots.includes(slot.time) &&
+                    "opacity-40 cursor-not-allowed"
                 )}
                 size="sm"
               >
@@ -323,7 +337,7 @@ export function TimeSlotPicker({
             </div>
           ) : (
             <span className="text-gray-500">
-              Select one or more consecutive time slots to book this equipment.
+              Select one or more time slots to book this equipment.
             </span>
           )}
         </div>

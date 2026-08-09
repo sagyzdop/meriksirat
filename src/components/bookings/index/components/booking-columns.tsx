@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowUpDown, Calendar, Clock, Pencil } from "lucide-react"
+import { ArrowUpDown, Pencil } from "lucide-react"
 import { BookingWithItems } from "@/lib/booking/types"
 import { format } from "date-fns"
 import { Link } from "@tanstack/react-router"
@@ -83,7 +83,6 @@ export function getBookingColumns(): ColumnDef<BookingWithItems>[] {
         variant="ghost"
         onClick={column.getToggleSortingHandler()}
       >
-        <Calendar className="mr-2 h-4 w-4" />
         Start Time
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
@@ -111,7 +110,6 @@ export function getBookingColumns(): ColumnDef<BookingWithItems>[] {
         variant="ghost"
         onClick={column.getToggleSortingHandler()}
       >
-        <Clock className="mr-2 h-4 w-4" />
         End Time
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>

@@ -4,9 +4,10 @@ import type { BookingWithItems } from "@/lib/booking/types";
 
 interface PageProps {
   booking: BookingWithItems;
+  telegramBotUsername?: string;
 }
 
-export function Page({ booking }: PageProps) {
+export function Page({ booking, telegramBotUsername }: PageProps) {
   const canCancel = booking.status === "booked" || booking.status === "active";
 
   return (
@@ -17,6 +18,7 @@ export function Page({ booking }: PageProps) {
       editTo="/bookings/$bookingId/edit"
       canCancel={canCancel}
       onCancel={() => cancelBookingFn({ data: { bookingId: booking.id } })}
+      telegramBotUsername={telegramBotUsername}
     />
   );
 }

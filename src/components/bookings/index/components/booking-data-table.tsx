@@ -40,8 +40,7 @@ import { BookingWithItems } from "@/lib/booking/types"
 import { DataTableFacetedFilter } from "./data-table-faceted-filter"
 import { X, MessageCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { createTelegramBotLink } from "@/lib/telegram/client-utils"
-import { cancelBookingFn, updateBookingsTimeFn } from "@/lib/booking"
-import { BulkChangeTimeDialog } from "@/components/bookings/components/bulk-change-time-dialog"
+import { cancelBookingFn } from "@/lib/booking"
 import { BulkCancelBookingsDialog } from "@/components/bookings/components/bulk-cancel-bookings-dialog"
 import { toast } from "sonner"
 
@@ -94,7 +93,6 @@ export function BookingDataTable({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [rowSelection, setRowSelection] = React.useState({})
-  const [bulkDialogOpen, setBulkDialogOpen] = React.useState(false)
   const [bulkCancelOpen, setBulkCancelOpen] = React.useState(false)
   const [isBulkCancelling, setIsBulkCancelling] = React.useState(false)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -225,18 +223,6 @@ export function BookingDataTable({
     return cancellableBookings.map((booking) => booking.id)
   }, [cancellableBookings])
 
-  const handleBulkTimeUpdate = async (startTime: string, endTime: string) => {
-    if (selectedBookingIds.length === 0) return
-    await updateBookingsTimeFn({
-      data: {
-        bookingIds: selectedBookingIds,
-        startTime,
-        endTime,
-      },
-    })
-    await queryClient.invalidateQueries({ queryKey: ['bookings'] })
-  }
-
   const handleBulkCancel = async () => {
     if (cancellableBookingIds.length === 0) return
 
@@ -304,15 +290,6 @@ export function BookingDataTable({
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-full sm:w-auto"
-            disabled={selectedBookingIds.length === 0}
-            onClick={() => setBulkDialogOpen(true)}
-          >
-            Change Time
-          </Button>
-          <Button
             variant="destructive"
             size="sm"
             className="h-8 w-full sm:w-auto"
@@ -366,13 +343,6 @@ export function BookingDataTable({
           </DropdownMenu>
         </div>
       </div>
-
-      <BulkChangeTimeDialog
-        open={bulkDialogOpen}
-        onOpenChange={setBulkDialogOpen}
-        bookings={selectedBookings}
-        onConfirm={handleBulkTimeUpdate}
-      />
 
       <BulkCancelBookingsDialog
         open={bulkCancelOpen}

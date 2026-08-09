@@ -19,9 +19,8 @@ import { eq, and, inArray } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { withKeyboard } from '../server-utils'
 import { BOOKING_STATUS } from '../types'
-import { recomputeBookingStatus } from '@/lib/booking/status'
 import { logBookingActivityById } from '../logging'
-import { deleteCalendarEvent } from '@/lib/google/google-caledar'
+import { cancelBookingItems } from '@/lib/booking/booking-items'
 
 /**
  * Builds a shared inline keyboard helper: 2 buttons per row.
@@ -104,8 +103,8 @@ async function fetchCancellableBookings(
 }
 
 /**
- * Cancel a set of booking items, mirroring the logic of the web cancelBookingFn
- * (recompute parent statuses, log activity, delete gcal events).
+ * Cancel a set of booking items, reusing the shared per-item cancellation
+ * logic (recompute parent statuses, log activity, delete gcal events).
  */
 async function cancelItems(
   ctx: BotContext,
@@ -118,54 +117,35 @@ async function cancelItems(
 
   const database = db(ctx.env.meriksirat_d1 as D1Database)
 
-  const items = await database
-    .select({
-      id: bookingItem.id,
-      bookingId: bookingItem.bookingId,
-      itemStatus: bookingItem.status,
-      equipmentName: equipment.modelName,
-      googleCalendarEventId: bookingItem.googleCalendarEventId,
-      equipmentCalendarId: equipment.googleCalendarId,
-    })
+  // Verify ownership and keep only the caller's items
+  const ownedRows = await database
+    .select({ id: bookingItem.id })
     .from(bookingItem)
-    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
     .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
     .where(and(inArray(bookingItem.id, itemIds), eq(booking.userId, userId)))
 
-  if (items.length === 0) {
+  if (ownedRows.length === 0) {
     return { ok: false, message: 'Item not found.' }
   }
 
-  const cancellable = items.filter(
-    (it) => it.itemStatus !== 'cancelled' && it.itemStatus !== 'returned'
+  const result = await cancelBookingItems(
+    database,
+    ownedRows.map((r) => r.id)
   )
 
-  if (cancellable.length === 0) {
+  if (result.updated.length === 0) {
     return {
       ok: false,
       message: 'The selected items are already cancelled or returned.',
     }
   }
 
-  await database
-    .update(bookingItem)
-    .set({ status: 'cancelled', updatedAt: new Date() })
-    .where(inArray(bookingItem.id, cancellable.map((it) => it.id)))
-
-  const touchedBookings = new Set(cancellable.map((it) => it.bookingId))
-
-  for (const bookingId of touchedBookings) {
-    try {
-      await recomputeBookingStatus(database, bookingId)
-    } catch (err) {
-      console.error(`Failed to recompute status for booking ${bookingId}:`, err)
-    }
-  }
-
-  for (const bookingId of touchedBookings) {
+  for (const bookingId of result.touchedBookings) {
     try {
       await logBookingActivityById(bookingId, 'cancelled', {
-        previousStatus: items.find((it) => it.bookingId === bookingId)?.itemStatus,
+        previousStatus: result.updated.find(
+          (it) => it.bookingId === bookingId
+        )?.itemStatus,
         newStatus: 'cancelled',
       })
     } catch (logError) {
@@ -173,23 +153,8 @@ async function cancelItems(
     }
   }
 
-  for (const it of cancellable) {
-    if (it.googleCalendarEventId && it.equipmentCalendarId) {
-      try {
-        await deleteCalendarEvent({
-          data: {
-            equipmentCalendarId: it.equipmentCalendarId,
-            eventId: it.googleCalendarEventId,
-          },
-        })
-      } catch (err) {
-        console.error('Failed to delete calendar event for cancelled item:', err)
-      }
-    }
-  }
-
-  const names = cancellable.map((it) => it.equipmentName).join(', ')
-  const bookingsStr = [...touchedBookings]
+  const names = result.updated.map((it) => it.equipmentName).join(', ')
+  const bookingsStr = [...result.touchedBookings]
     .sort((a, b) => a - b)
     .map((b) => `#${b}`)
     .join(', ')

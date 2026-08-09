@@ -12,8 +12,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { notifyAdmins } from '../admin'
 import { logBookingActivity } from '../logging'
 import { withKeyboard } from '../server-utils'
-import { recomputeBookingStatus } from '@/lib/booking/status'
-import { deleteCalendarEvent } from '@/lib/google/google-caledar'
+import { returnBookingItems } from '@/lib/booking/booking-items'
 
 /**
  * Handles photo messages for equipment return flow
@@ -49,7 +48,6 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
     }
 
     const selectedItemIds = session.selectedItemIds
-    const selectedBookingIds = session.selectedBookingIds
 
     if (!selectedItemIds || selectedItemIds.length === 0) {
       return
@@ -58,50 +56,10 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
     try {
       const database = db(ctx.env.meriksirat_d1 as D1Database)
 
-      // Mark selected items as returned
-      await database
-        .update(bookingItem)
-        .set({
-          status: 'returned',
-          returnedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(inArray(bookingItem.id, selectedItemIds))
-
-      // Recompute parent booking statuses
-      const touchedBookings = new Set<number>([...(selectedBookingIds ?? [])])
-      for (const bookingId of touchedBookings) {
-        try {
-          await recomputeBookingStatus(database, bookingId)
-        } catch (err) {
-          console.error(`Failed to recompute status for booking ${bookingId}:`, err)
-        }
-      }
-
-      // Delete the Google Calendar events for the returned items
-      const eventRows = await database
-        .select({
-          googleCalendarEventId: bookingItem.googleCalendarEventId,
-          equipmentCalendarId: equipment.googleCalendarId,
-        })
-        .from(bookingItem)
-        .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-        .where(inArray(bookingItem.id, selectedItemIds))
-
-      for (const row of eventRows) {
-        if (row.googleCalendarEventId && row.equipmentCalendarId) {
-          try {
-            await deleteCalendarEvent({
-              data: {
-                equipmentCalendarId: row.equipmentCalendarId,
-                eventId: row.googleCalendarEventId,
-              },
-            })
-          } catch (err) {
-            console.error('Failed to delete calendar event for returned item:', err)
-          }
-        }
-      }
+      // Mark selected items as returned (reuses the shared return logic:
+      // updates the items, recomputes parent booking statuses, deletes the
+      // Google Calendar events for the returned items).
+      await returnBookingItems(database, selectedItemIds)
 
       // Query returned item details with equipment and user for notification
       const itemDetails = await database

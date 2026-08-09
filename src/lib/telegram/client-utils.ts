@@ -5,7 +5,7 @@
  * on the client side without importing server-side modules or environment variables.
  */
 
-import { BOOKING_STATUS, type BookingStatus } from './types'
+import { BOOKING_STATUS } from './types'
 
 // ============================================================================
 // CLIENT-SAFE UTILITIES
