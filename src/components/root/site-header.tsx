@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Progress } from '@/components/ui/progress'
+import { X } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +14,7 @@ import {
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import {
   revealUploadDetails,
+  uploadManager,
   useUploads,
 } from '@/lib/albums/upload-manager'
 import { cn } from '@/lib/utils'
@@ -27,18 +29,21 @@ export function SiteHeader() {
     (j) => j.status === 'queued' || j.status === 'uploading'
   )
   const finished = jobs.filter(
-    (j) => j.status === 'done' || j.status === 'error' || j.status === 'cancelled'
+    (j) =>
+      j.status === 'done' || j.status === 'error' || j.status === 'cancelled'
   )
   const total = jobs.length
   const doneCount = finished.length
-  const overall =
-    total === 0 ? 0 : Math.round((doneCount / total) * 100)
+  const overall = total === 0 ? 0 : Math.round((doneCount / total) * 100)
 
   // Get current page name based on pathname
   const getPageName = () => {
     const segments = pathname.split('/').filter(Boolean)
 
-    if (segments.length === 0 || (segments.length === 1 && segments[0] === 'equipment')) {
+    if (
+      segments.length === 0 ||
+      (segments.length === 1 && segments[0] === 'equipment')
+    ) {
       return 'Equipment'
     }
 
@@ -71,6 +76,12 @@ export function SiteHeader() {
 
       case 'faq':
         return 'FAQ'
+
+      case 'albums':
+        return 'Public Albums'
+
+      case 'my-albums':
+        return 'My Albums'
 
       case 'dashboard':
         return 'Dashboard'
@@ -115,7 +126,7 @@ export function SiteHeader() {
         />
         <h1 className="text-base font-medium">{pageName}</h1>
         <div className="ml-auto flex items-center gap-2">
-          {active.length > 0 && (
+          {total > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -124,7 +135,7 @@ export function SiteHeader() {
                   title="View uploads"
                 >
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Uploading</span>
+                    <span>{active.length > 0 ? 'Uploading' : 'Uploads'}</span>
                     <span>
                       {doneCount}/{total} · {overall}%
                     </span>
@@ -139,7 +150,7 @@ export function SiteHeader() {
                 {byAlbum.length > 1 && (
                   <>
                     <DropdownMenuLabel className="font-normal text-muted-foreground">
-                      {byAlbum.length} albums uploading
+                      {byAlbum.length} albums with uploads
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                   </>
@@ -151,6 +162,7 @@ export function SiteHeader() {
                   const groupDone = group.jobs.filter(
                     (j) => j.status === 'done'
                   ).length
+                  const groupFinished = group.jobs.length - groupActive
                   const groupOverall =
                     group.jobs.length === 0
                       ? 0
@@ -165,10 +177,27 @@ export function SiteHeader() {
                         <span className="min-w-0 flex-1 truncate font-medium">
                           {group.albumTitle}
                         </span>
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          {groupActive > 0
-                            ? `${groupDone}/${group.jobs.length}`
-                            : 'done'}
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {groupActive > 0
+                              ? `${groupDone}/${group.jobs.length}`
+                              : 'done'}
+                          </span>
+                          {groupFinished > 0 && (
+                            <button
+                              type="button"
+                              aria-label={`Clear finished uploads for ${group.albumTitle}`}
+                              title="Clear finished"
+                              className="text-muted-foreground transition-colors hover:text-foreground"
+                              onPointerDown={(e) => e.preventDefault()}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                uploadManager.clear(group.albumId)
+                              }}
+                            >
+                              <X className="size-3.5" />
+                            </button>
+                          )}
                         </span>
                       </span>
                       <Progress

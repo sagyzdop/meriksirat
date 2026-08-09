@@ -8,7 +8,8 @@ import {
   Users,
   Tags,
   Calendar,
-  Images
+  Images,
+  FolderOpen,
 } from 'lucide-react'
 
 import {
@@ -48,9 +49,14 @@ const data = {
       title: 'Albums',
       items: [
         {
-          title: 'Albums',
+          title: 'All Public Albums',
           url: '/albums',
           icon: Images,
+        },
+        {
+          title: 'My Albums',
+          url: '/my-albums',
+          icon: FolderOpen,
         },
       ],
     },
@@ -101,59 +107,73 @@ const data = {
   ],
 }
 
-export function AppSidebar({ user: userData, onLogout, ...props }: React.ComponentProps<typeof Sidebar> & { 
-  user?: any;
-  onLogout?: () => void;
+export function AppSidebar({
+  user: userData,
+  onLogout,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user?: any
+  onLogout?: () => void
 }) {
   const [user, setUser] = React.useState<{
-    id: string;
-    name: string;
-    email: string;
-    image?: string | null;
-  } | null>(null);
+    id: string
+    name: string
+    email: string
+    image?: string | null
+  } | null>(null)
 
   const { isMobile, setOpenMobile } = useSidebar()
   const router = useRouter()
 
   React.useEffect(() => {
-    getSessionFn().then(session => {
-      setUser(session?.user || null);
-    });
-  }, []);
+    getSessionFn().then((session) => {
+      setUser(session?.user || null)
+    })
+  }, [])
 
   // Close mobile sidebar on navigation
   React.useEffect(() => {
     if (!isMobile) return
-    
+
     const unsubscribe = router.subscribe('onBeforeLoad', () => {
       setOpenMobile(false)
     })
-    
+
     return unsubscribe
   }, [isMobile, router, setOpenMobile])
 
-  const displayUser = userData ? {
-    name: [userData.firstName, userData.lastName].filter(Boolean).join(' ') || userData.email,
-    email: userData.email,
-    avatar: userData.image || user?.image || '/avatars/default.jpg',
-  } : {
-    name: 'Loading...',
-    email: '',
-    avatar: '/avatars/default.jpg',
-  };
+  const displayUser = userData
+    ? {
+        name:
+          [userData.firstName, userData.lastName].filter(Boolean).join(' ') ||
+          userData.email,
+        email: userData.email,
+        avatar: userData.image || user?.image || '/avatars/default.jpg',
+      }
+    : {
+        name: 'Loading...',
+        email: '',
+        avatar: '/avatars/default.jpg',
+      }
 
   // Check if user has admin privileges
-  const hasAdminAccess = userData?.role === 'admin' || userData?.role === 'manager';
+  const hasAdminAccess =
+    userData?.role === 'admin' || userData?.role === 'manager'
 
   return (
-    <Sidebar collapsible="offcanvas" {...props} aria-label="Main navigation sidebar">
+    <Sidebar
+      collapsible="offcanvas"
+      {...props}
+      aria-label="Main navigation sidebar"
+    >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
-              aria-label="Go to equipment page">
+              aria-label="Go to equipment page"
+            >
               <Link to="/equipment">
                 <Layers className="size-5!" aria-hidden="true" />
                 <span className="text-base font-semibold">MerikSirat</span>
@@ -164,12 +184,18 @@ export function AppSidebar({ user: userData, onLogout, ...props }: React.Compone
       </SidebarHeader>
       <SidebarContent>
         <NavMain groups={data.navGroups} />
-        {hasAdminAccess && (
-          <NavSecondary title="Admin" items={data.navAdmin} />
-        )}
+        {hasAdminAccess && <NavSecondary title="Admin" items={data.navAdmin} />}
         <div className="mt-auto">
           <div className="px-4 py-2 text-xs text-muted-foreground">
-            Made by <a href="https://sagyzdop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">sagyzdop</a>
+            Made by{' '}
+            <a
+              href="https://sagyzdop.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-primary"
+            >
+              sagyzdop
+            </a>
           </div>
           <NavSecondary title="Help" items={data.navSecondary} />
         </div>
