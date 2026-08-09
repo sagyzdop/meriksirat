@@ -127,17 +127,6 @@ export async function listDriveFolderFiles(
   return files
 }
 
-export async function getDriveFileMetadata(
-  accessToken: string,
-  fileId: string
-): Promise<{ name: string; mimeType: string }> {
-  const response = await driveFetch(
-    accessToken,
-    `${API}/files/${fileId}?fields=name,mimeType`
-  )
-  return (await response.json()) as { name: string; mimeType: string }
-}
-
 export type DriveFolderState = 'ok' | 'trashed' | 'missing'
 
 /**
@@ -208,17 +197,6 @@ export async function renameDriveFile(
   })
 }
 
-/**
- * Stream a file's binary content. The caller is responsible for piping the
- * returned body through (do not buffer large files).
- */
-export async function streamDriveFile(
-  accessToken: string,
-  fileId: string
-): Promise<Response> {
-  return driveFetch(accessToken, `${API}/files/${fileId}?alt=media`)
-}
-
 export async function deleteDriveFile(
   accessToken: string,
   fileId: string
@@ -231,6 +209,8 @@ export async function deleteDriveFile(
 /**
  * Grant read access to anyone with the link. This makes every file inside the
  * folder directly viewable through the Google CDN without authentication.
+ * Album folders always have this permission: it is set at creation and never
+ * revoked — `is_shared` only controls whether the link works in the app.
  */
 export async function setAnyoneReader(
   accessToken: string,
@@ -241,31 +221,6 @@ export async function setAnyoneReader(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type: 'anyone', role: 'reader' }),
   })
-}
-
-/**
- * Revoke the "anyone" reader permission (if present), taking the folder back
- * to private. Files become inaccessible through the public CDN.
- */
-export async function removeAnyoneReader(
-  accessToken: string,
-  fileId: string
-): Promise<void> {
-  const response = await driveFetch(
-    accessToken,
-    `${API}/files/${fileId}/permissions?fields=permissions(id,type,role)`
-  )
-  const data = (await response.json()) as {
-    permissions?: { id: string; type: string }[]
-  }
-  const anyone = data.permissions?.find((p) => p.type === 'anyone')
-  if (anyone) {
-    await driveFetch(
-      accessToken,
-      `${API}/files/${fileId}/permissions/${anyone.id}`,
-      { method: 'DELETE' }
-    )
-  }
 }
 
 /**

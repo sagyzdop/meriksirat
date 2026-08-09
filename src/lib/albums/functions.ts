@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
-  AlbumFilterSchema,
+  AlbumListQuerySchema,
   ClaimEditAccessSchema,
   CreateAlbumSchema,
   CreateUploadSessionSchema,
@@ -11,6 +11,7 @@ import {
   RefreshAlbumSchema,
   RemoveMemberSchema,
   RestoreAlbumSchema,
+  RotateEditTokenSchema,
   SetCoverPhotoSchema,
   ToggleAlbumShareSchema,
   UpdateAlbumSchema,
@@ -19,6 +20,8 @@ import type {
   AlbumAuthor,
   AlbumDetail,
   AlbumFolderState,
+  AlbumListPage,
+  AlbumListQuery,
   AlbumPhoto,
   AlbumSummary,
   UploadSession,
@@ -53,18 +56,243 @@ async function loadAlbumOrNull(
   return database.select().from(album).where(eq(album.id, albumId)).get()
 }
 
-async function listAlbumPhotos(albumRow: {
-  id: string
-  driveFolderId: string
-  isShared: boolean | null
-}): Promise<{ photos: AlbumPhoto[]; folderState: AlbumFolderState }> {
+type AlbumRowWithAuthors =
+  (typeof import('@/db/schema'))['album']['$inferSelect'] & {
+    owner: { id: string; name: string } | null
+    members: { user: { id: string; name: string } | null }[]
+  }
+
+/**
+ * Keyset pagination over the `(createdAt desc, id desc)` ordering. The cursor
+ * is an opaque, URL-safe token encoding the last row's position.
+ */
+function encodeAlbumCursor(createdAtMs: number, id: string): string {
+  const raw = `${createdAtMs}:${id}`
+  return typeof btoa === 'function'
+    ? btoa(raw)
+    : Buffer.from(raw, 'utf-8').toString('base64')
+}
+
+function decodeAlbumCursor(
+  cursor: string | null | undefined
+): { createdAtMs: number; id: string } | null {
+  if (!cursor) return null
+  try {
+    const raw =
+      typeof atob === 'function'
+        ? atob(cursor)
+        : Buffer.from(cursor, 'base64').toString('utf-8')
+    const sep = raw.indexOf(':')
+    const createdAtMs = Number(raw.slice(0, sep))
+    const id = raw.slice(sep + 1)
+    if (!Number.isFinite(createdAtMs) || !id) return null
+    return { createdAtMs, id }
+  } catch {
+    return null
+  }
+}
+
+function toAlbumSummary(
+  row: AlbumRowWithAuthors,
+  me: string | null,
+  ownershipOverride?: 'owner' | 'co-author'
+): AlbumSummary {
+  const authors: AlbumAuthor[] = [
+    ...(row.owner ? [{ id: row.owner.id, name: row.owner.name }] : []),
+    ...(row.members ?? [])
+      .map((m) => (m.user ? { id: m.user.id, name: m.user.name } : null))
+      .filter((a): a is AlbumAuthor => !!a),
+  ]
+  return {
+    id: row.id,
+    ownerUserId: row.ownerUserId,
+    title: row.title,
+    description: row.description ?? '',
+    driveFolderId: row.driveFolderId,
+    coverFileId: row.coverFileId,
+    coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,
+    isShared: !!row.isShared,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    ownership:
+      ownershipOverride ??
+      (me && row.ownerUserId === me ? 'owner' : 'co-author'),
+    coAuthorCount: (row.members ?? []).length,
+    authors,
+  }
+}
+
+interface ListAlbumsPaginatedArgs {
+  database: ReturnType<(typeof import('@/db'))['db']>
+  /**
+   * Scoping predicate (access, isShared, etc.).
+   */
+  baseWhere?: import('drizzle-orm').SQL
+  /**
+   * Ownership filter predicate for a given ownership value.
+   */
+  ownershipWhere?: (
+    ownership: 'owner' | 'co-author'
+  ) => import('drizzle-orm').SQL | undefined
+  me?: string | null
+  ownershipOverride?: 'owner' | 'co-author'
+  query: AlbumListQuery
+}
+
+const withAuthors = {
+  owner: { columns: { id: true, name: true } },
+  members: {
+    with: { user: { columns: { id: true, name: true } } },
+  },
+} as const
+
+/**
+ * Run a paginated album list query applying filters (search over title and
+ * description, ownership, visibility) and keyset pagination.
+ */
+async function listAlbumsPaginated({
+  database,
+  baseWhere,
+  ownershipWhere,
+  me = null,
+  ownershipOverride,
+  query,
+}: ListAlbumsPaginatedArgs): Promise<AlbumListPage> {
+  const { album } = await import('@/db/schema')
+  const { and, desc, eq, lt, like, or, sql } = await import('drizzle-orm')
+
+  const conditions: import('drizzle-orm').SQL[] = []
+  if (baseWhere) conditions.push(baseWhere)
+
+  const search = (query.search ?? '').trim()
+  if (search) {
+    const pattern = `%${search.toLowerCase()}%`
+    conditions.push(
+      or(
+        like(sql`lower(${album.title})`, pattern),
+        like(sql`lower(${album.description})`, pattern)
+      )!
+    )
+  }
+
+  if (query.visibility === 'public') conditions.push(eq(album.isShared, true))
+  if (query.visibility === 'private') conditions.push(eq(album.isShared, false))
+
+  if (query.ownership !== 'all' && ownershipWhere) {
+    const own = ownershipWhere(query.ownership)
+    if (own) conditions.push(own)
+  }
+
+  const decoded = decodeAlbumCursor(query.cursor)
+  if (decoded) {
+    conditions.push(
+      or(
+        lt(album.createdAt, new Date(decoded.createdAtMs)),
+        and(
+          eq(album.createdAt, new Date(decoded.createdAtMs)),
+          lt(album.id, decoded.id)
+        )!
+      )!
+    )
+  }
+
+  const where = conditions.length ? and(...conditions) : undefined
+  const limit = query.limit ?? 24
+
+  const rows = await database.query.album.findMany({
+    where,
+    orderBy: [desc(album.createdAt), desc(album.id)],
+    limit: limit + 1,
+    with: withAuthors,
+  })
+
+  const hasMore = rows.length > limit
+  const pageRows = hasMore ? rows.slice(0, limit) : rows
+  const last = pageRows[pageRows.length - 1]
+
+  return {
+    albums: pageRows.map((row) =>
+      toAlbumSummary(row as AlbumRowWithAuthors, me, ownershipOverride)
+    ),
+    nextCursor:
+      hasMore && last
+        ? encodeAlbumCursor(last.createdAt.getTime(), last.id)
+        : null,
+  }
+}
+
+async function listAlbumsForCurrentUser(
+  database: ReturnType<(typeof import('@/db'))['db']>,
+  data: AlbumListQuery
+): Promise<AlbumListPage> {
+  const { getRequestHeaders } = await import('@tanstack/react-start/server')
+  const { album, albumMember } = await import('@/db/schema')
+  const { eq, and, ne, inArray, or } = await import('drizzle-orm')
+  const { getSessionUser } = await import('./server')
+
+  const headers = getRequestHeaders()
+  const currentUser = await getSessionUser(headers)
+  if (!currentUser) return { albums: [], nextCursor: null }
+  const me = currentUser.id
+
+  const memberRows = await database
+    .select({ albumId: albumMember.albumId })
+    .from(albumMember)
+    .where(eq(albumMember.userId, me))
+    .all()
+  const memberAlbumIds = memberRows.map((r) => r.albumId)
+
+  const baseWhere = memberAlbumIds.length
+    ? or(eq(album.ownerUserId, me), inArray(album.id, memberAlbumIds))
+    : eq(album.ownerUserId, me)
+
+  const ownershipWhere = (ownership: 'owner' | 'co-author') =>
+    ownership === 'owner'
+      ? eq(album.ownerUserId, me)
+      : memberAlbumIds.length
+        ? and(ne(album.ownerUserId, me), inArray(album.id, memberAlbumIds))
+        : undefined
+
+  return listAlbumsPaginated({
+    database,
+    baseWhere,
+    ownershipWhere,
+    me,
+    query: data,
+  })
+}
+
+/**
+ * Normalize a Drive capture timestamp to an ISO string.
+ *
+ * Drive's `imageMediaMetadata.time` is the EXIF capture time in the format
+ * `YYYY:MM:DD HH:MM:SS` (camera-local, no timezone), which `new Date()` can't
+ * parse. ISO timestamps (e.g. `createdTime`) parse directly.
+ */
+function normalizeCapturedAt(value: string | undefined): string {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString()
+  const match = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(
+    value
+  )
+  if (!match) return ''
+  const [, y, mo, d, h, mi, s] = match
+  const exifParsed = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}Z`)
+  return Number.isNaN(exifParsed.getTime()) ? '' : exifParsed.toISOString()
+}
+
+async function listAlbumPhotos(driveFolderId: string): Promise<{
+  photos: AlbumPhoto[]
+  folderState: AlbumFolderState
+}> {
   const { getCachedListing, setCachedListing } = await import('./server')
   const { getGoogleAccessToken } =
     await import('@/lib/google/google-calendar-auth')
   const { listDriveFolderFiles, getDriveFolderState, DriveNotFoundError } =
     await import('@/lib/google/google-drive')
 
-  const cached = await getCachedListing(albumRow.driveFolderId)
+  const cached = await getCachedListing(driveFolderId)
 
   let files: import('@/lib/google/google-drive').DriveFileMeta[]
   let folderState: AlbumFolderState
@@ -76,38 +304,38 @@ async function listAlbumPhotos(albumRow: {
     try {
       const accessToken = await getGoogleAccessToken()
       const [state, listed] = await Promise.all([
-        getDriveFolderState(accessToken, albumRow.driveFolderId),
-        listDriveFolderFiles(accessToken, albumRow.driveFolderId),
+        getDriveFolderState(accessToken, driveFolderId),
+        listDriveFolderFiles(accessToken, driveFolderId),
       ])
       folderState = state
       files = listed
-      await setCachedListing(albumRow.driveFolderId, files, folderState)
+      await setCachedListing(driveFolderId, files, folderState)
     } catch (error) {
       if (error instanceof DriveNotFoundError) {
         // The folder was permanently deleted directly in Google Drive.
         // Photos are gone.
         folderState = 'missing'
         files = []
-        await setCachedListing(albumRow.driveFolderId, files, folderState)
+        await setCachedListing(driveFolderId, files, folderState)
       } else {
         throw error
       }
     }
   }
 
-  const isShared = !!albumRow.isShared
-
   const photos = files
     .filter((f) => f.mimeType?.startsWith('image/'))
     .map((f) => {
-      const capturedAt = f.imageMediaMetadata?.time ?? f.createdTime ?? ''
-      const { url, thumbnailUrl } = albumPhotoUrls(albumRow.id, f.id, isShared)
+      const capturedAt =
+        normalizeCapturedAt(f.imageMediaMetadata?.time) || f.createdTime || ''
+      const { url, thumbnailUrl } = albumPhotoUrls(f.id)
       return {
         id: f.id,
         name: f.name,
         mimeType: f.mimeType,
         size: f.size ? Number(f.size) : null,
         capturedAt,
+        createdAt: f.createdTime ?? '',
         url,
         thumbnailUrl,
       }
@@ -121,6 +349,20 @@ async function listAlbumPhotos(albumRow: {
   return { photos, folderState }
 }
 
+/**
+ * Pick a default cover: the first photo ever uploaded to the folder (earliest
+ * Drive creation time). Returns null when there are no photos.
+ */
+function defaultCoverFileId(photos: AlbumPhoto[]): string | null {
+  let earliest: AlbumPhoto | null = null
+  for (const photo of photos) {
+    const createdAt = photo.createdAt
+    if (!createdAt) continue
+    if (!earliest || createdAt < (earliest.createdAt ?? 0)) earliest = photo
+  }
+  return earliest?.id ?? null
+}
+
 async function buildAlbumDetail(
   database: ReturnType<(typeof import('@/db'))['db']>,
   albumId: string,
@@ -128,7 +370,7 @@ async function buildAlbumDetail(
 ): Promise<AlbumDetail | null> {
   const { resolveAlbumAccess } = await import('./server')
   const { eq } = await import('drizzle-orm')
-  const { albumMember, user } = await import('@/db/schema')
+  const { album, albumMember, user } = await import('@/db/schema')
 
   const row = await loadAlbumOrNull(database, albumId)
   if (!row) return null
@@ -137,7 +379,7 @@ async function buildAlbumDetail(
   if (!row.isShared && access === 'none') return null
 
   const [listing, owner, members] = await Promise.all([
-    listAlbumPhotos(row),
+    listAlbumPhotos(row.driveFolderId),
     database
       .select({ name: user.name })
       .from(user)
@@ -151,6 +393,15 @@ async function buildAlbumDetail(
       .all(),
   ])
 
+  // No cover set yet: default to the first uploaded photo.
+  const coverFileId = row.coverFileId ?? defaultCoverFileId(listing.photos)
+  if (row.coverFileId !== coverFileId && coverFileId) {
+    await database
+      .update(album)
+      .set({ coverFileId, updatedAt: new Date() })
+      .where(eq(album.id, albumId))
+  }
+
   const authors: AlbumAuthor[] = [
     { id: row.ownerUserId, name: owner?.name ?? 'Unknown' },
     ...members.map((m) => ({ id: m.userId, name: m.name })),
@@ -162,10 +413,8 @@ async function buildAlbumDetail(
     title: row.title,
     description: row.description ?? '',
     driveFolderId: row.driveFolderId,
-    coverFileId: row.coverFileId,
-    coverUrl: row.coverFileId
-      ? albumCoverUrl(row.id, row.coverFileId, !!row.isShared)
-      : null,
+    coverFileId,
+    coverUrl: coverFileId ? albumCoverUrl(coverFileId) : null,
     isShared: !!row.isShared,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -196,7 +445,11 @@ async function resolveMonthFolder(
   const month = now.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
 
   const albumsRoot = await getOrCreateDriveFolder(accessToken, 'Albums', 'root')
-  const yearFolder = await getOrCreateDriveFolder(accessToken, year, albumsRoot.id)
+  const yearFolder = await getOrCreateDriveFolder(
+    accessToken,
+    year,
+    albumsRoot.id
+  )
   return getOrCreateDriveFolder(accessToken, month, yearFolder.id)
 }
 
@@ -209,7 +462,8 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
     const { album } = await import('@/db/schema')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { createDriveFolder } = await import('@/lib/google/google-drive')
+    const { createDriveFolder, setAnyoneReader } =
+      await import('@/lib/google/google-drive')
     const { getSessionUser } = await import('./server')
     const { newAlbumId, newShareToken } = await import('./ids')
 
@@ -219,7 +473,15 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
 
     const accessToken = await getGoogleAccessToken()
     const monthFolder = await resolveMonthFolder(accessToken)
-    const folder = await createDriveFolder(accessToken, data.title, monthFolder.id)
+    const folder = await createDriveFolder(
+      accessToken,
+      data.title,
+      monthFolder.id
+    )
+
+    // Albums are always created public: the Drive folder is open to anyone
+    // with the link, so photos can be served straight from Google's CDN.
+    await setAnyoneReader(accessToken, folder.id)
 
     const database = db(env.meriksirat_d1 as D1Database)
     const albumId = newAlbumId()
@@ -231,109 +493,67 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       description: data.description ?? '',
       driveFolderId: folder.id,
       editShareToken: newShareToken(),
+      isShared: true,
     })
 
     return { id: albumId }
   })
 
 export const getMyAlbumsFn = createServerFn({ method: 'GET' })
-  .validator(AlbumFilterSchema)
-  .handler(async ({ data: filter }): Promise<AlbumSummary[]> => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+  .validator(AlbumListQuerySchema)
+  .handler(async ({ data }): Promise<AlbumListPage> => {
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album, albumMember } = await import('@/db/schema')
-    const { eq, and, ne, inArray, desc, or, exists } =
-      await import('drizzle-orm')
-    const { getSessionUser } = await import('./server')
-
-    const headers = getRequestHeaders()
-    const currentUser = await getSessionUser(headers)
-    if (!currentUser) return []
-    const me = currentUser.id
 
     const database = db(env.meriksirat_d1 as D1Database)
-
-    const memberRows = await database
-      .select({ albumId: albumMember.albumId })
-      .from(albumMember)
-      .where(eq(albumMember.userId, me))
-      .all()
-    const memberAlbumIds = memberRows.map((r) => r.albumId)
-
-    const withAuthors = {
-      owner: { columns: { id: true, name: true } },
-      members: {
-        with: { user: { columns: { id: true, name: true } } },
-      },
-    } as const
-
-    let whereExpr: import('drizzle-orm').SQL | undefined
-
-    if (filter === 'owned') {
-      whereExpr = eq(album.ownerUserId, me)
-    } else if (filter === 'shared-with-me') {
-      if (memberAlbumIds.length === 0) return []
-      whereExpr = and(
-        ne(album.ownerUserId, me),
-        inArray(album.id, memberAlbumIds)
-      )
-    } else if (filter === 'shared-by-me') {
-      whereExpr = and(
-        eq(album.ownerUserId, me),
-        exists(
-          database
-            .select({ id: albumMember.id })
-            .from(albumMember)
-            .where(eq(albumMember.albumId, album.id))
-        )
-      )
-    } else {
-      whereExpr = memberAlbumIds.length
-        ? or(eq(album.ownerUserId, me), inArray(album.id, memberAlbumIds))
-        : eq(album.ownerUserId, me)
-    }
-
-    const rows = await database.query.album.findMany({
-      where: whereExpr,
-      orderBy: desc(album.createdAt),
-      with: withAuthors,
-    })
-
-    return rows.map((row): AlbumSummary => {
-      const authors: AlbumAuthor[] = [
-        ...(row.owner ? [{ id: row.owner.id, name: row.owner.name }] : []),
-        ...(row.members ?? [])
-          .map((m) => (m.user ? { id: m.user.id, name: m.user.name } : null))
-          .filter((a): a is AlbumAuthor => !!a),
-      ]
-      return {
-        id: row.id,
-        ownerUserId: row.ownerUserId,
-        title: row.title,
-        description: row.description ?? '',
-        driveFolderId: row.driveFolderId,
-        coverFileId: row.coverFileId,
-        coverUrl: row.coverFileId
-          ? albumCoverUrl(row.id, row.coverFileId, !!row.isShared)
-          : null,
-        isShared: !!row.isShared,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-        ownership: row.ownerUserId === me ? 'owner' : 'co-author',
-        coAuthorCount: (row.members ?? []).length,
-        authors,
-      }
-    })
+    return listAlbumsForCurrentUser(database, data)
   })
 
-export const getAllAlbumsFn = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<AlbumSummary[]> => {
+export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
+  .validator(AlbumListQuerySchema)
+  .handler(async ({ data }): Promise<AlbumListPage> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
-    const { desc } = await import('drizzle-orm')
+    const { eq } = await import('drizzle-orm')
+    const { rateLimit } = await import('@/lib/ratelimit')
+
+    const headers = getRequestHeaders()
+
+    // Public albums are listed without authentication — anyone with the link
+    // can browse the shared gallery. Only `is_shared` albums appear here, so
+    // the ownership filter does not apply. Rate-limited per IP to stop a
+    // scripted client from hammering D1 reads.
+    const limit = await rateLimit(headers, {
+      name: 'public-albums',
+      limit: 120,
+    })
+    if (!limit.allowed) {
+      throw new Error(
+        `Too many requests. Try again in ${limit.retryAfterSeconds} seconds.`
+      )
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    return listAlbumsPaginated({
+      database,
+      baseWhere: eq(album.isShared, true),
+      ownershipWhere: () => undefined,
+      ownershipOverride: 'co-author',
+      query: data,
+    })
+  })
+
+export const getAllAlbumsFn = createServerFn({ method: 'GET' })
+  .validator(AlbumListQuerySchema)
+  .handler(async ({ data }): Promise<AlbumListPage> => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { album } = await import('@/db/schema')
+    const { eq, ne } = await import('drizzle-orm')
     const { getSessionUser } = await import('./server')
 
     const headers = getRequestHeaders()
@@ -342,49 +562,22 @@ export const getAllAlbumsFn = createServerFn({ method: 'GET' }).handler(
       !currentUser ||
       (currentUser.role !== 'admin' && currentUser.role !== 'manager')
     ) {
-      return []
+      return { albums: [], nextCursor: null }
     }
     const me = currentUser.id
 
     const database = db(env.meriksirat_d1 as D1Database)
 
-    const rows = await database.query.album.findMany({
-      orderBy: desc(album.createdAt),
-      with: {
-        owner: { columns: { id: true, name: true } },
-        members: {
-          with: { user: { columns: { id: true, name: true } } },
-        },
-      },
+    return listAlbumsPaginated({
+      database,
+      ownershipWhere: (ownership) =>
+        ownership === 'owner'
+          ? eq(album.ownerUserId, me)
+          : ne(album.ownerUserId, me),
+      me,
+      query: data,
     })
-
-    return rows.map((row): AlbumSummary => {
-      const authors: AlbumAuthor[] = [
-        ...(row.owner ? [{ id: row.owner.id, name: row.owner.name }] : []),
-        ...(row.members ?? [])
-          .map((m) => (m.user ? { id: m.user.id, name: m.user.name } : null))
-          .filter((a): a is AlbumAuthor => !!a),
-      ]
-      return {
-        id: row.id,
-        ownerUserId: row.ownerUserId,
-        title: row.title,
-        description: row.description ?? '',
-        driveFolderId: row.driveFolderId,
-        coverFileId: row.coverFileId,
-        coverUrl: row.coverFileId
-          ? albumCoverUrl(row.id, row.coverFileId, !!row.isShared)
-          : null,
-        isShared: !!row.isShared,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-        ownership: row.ownerUserId === me ? 'owner' : 'co-author',
-        coAuthorCount: (row.members ?? []).length,
-        authors,
-      }
-    })
-  }
-)
+  })
 
 export const getAlbumFn = createServerFn({ method: 'GET' })
   .validator(GetAlbumSchema)
@@ -395,6 +588,23 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
+
+    // Guests are rate-limited per IP before any Drive or D1 work so a scripted
+    // client cannot probe albums or burn Drive quota. Authenticated users are
+    // unlimited (members on a shared campus NAT must not be throttled).
+    const { getSessionUser } = await import('./server')
+    if (!(await getSessionUser(headers))) {
+      const { rateLimit } = await import('@/lib/ratelimit')
+      const limit = await rateLimit(headers, {
+        name: 'album-detail',
+        limit: 60,
+      })
+      if (!limit.allowed) {
+        throw new Error(
+          `Too many requests. Try again in ${limit.retryAfterSeconds} seconds.`
+        )
+      }
+    }
 
     return buildAlbumDetail(database, data.albumId, headers)
   })
@@ -444,7 +654,11 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
 
     const accessToken = await getGoogleAccessToken()
     const monthFolder = await resolveMonthFolder(accessToken)
-    const folder = await createDriveFolder(accessToken, row.title, monthFolder.id)
+    const folder = await createDriveFolder(
+      accessToken,
+      row.title,
+      monthFolder.id
+    )
 
     await invalidateCachedListing(row.driveFolderId)
     await database
@@ -579,8 +793,7 @@ export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
     const { resolveAlbumAccess, requireAccess } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { setAnyoneReader, removeAnyoneReader } =
-      await import('@/lib/google/google-drive')
+    const { setAnyoneReader } = await import('@/lib/google/google-drive')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -589,11 +802,12 @@ export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
     const { access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
-    const accessToken = await getGoogleAccessToken()
+    // `is_shared` only controls whether the album link works in the app.
+    // The Drive folder always stays public (anyone reader), so photos keep
+    // loading from Google's CDN regardless.
     if (data.shared) {
+      const accessToken = await getGoogleAccessToken()
       await setAnyoneReader(accessToken, row.driveFolderId)
-    } else {
-      await removeAnyoneReader(accessToken, row.driveFolderId)
     }
 
     await database
@@ -635,6 +849,34 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
     return { success: true, access: 'editor' }
   })
 
+export const rotateEditTokenFn = createServerFn({ method: 'POST' })
+  .validator(RotateEditTokenSchema)
+  .handler(async ({ data }) => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { album } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { resolveAlbumAccess, requireAccess } = await import('./server')
+    const { newShareToken } = await import('./ids')
+
+    const headers = getRequestHeaders()
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    const row = await loadAlbum(database, data.albumId)
+    const { access } = await resolveAlbumAccess(headers, row)
+    requireAccess(access, ['owner', 'manager'])
+
+    // A fresh token invalidates every previously shared edit link.
+    const editShareToken = newShareToken()
+    await database
+      .update(album)
+      .set({ editShareToken, updatedAt: new Date() })
+      .where(eq(album.id, data.albumId))
+
+    return { success: true, editShareToken }
+  })
+
 export const createUploadSessionFn = createServerFn({ method: 'POST' })
   .validator(CreateUploadSessionSchema)
   .handler(async ({ data }): Promise<UploadSession> => {
@@ -645,11 +887,8 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const {
-      mintResumableUpload,
-      findDriveFileByName,
-      getDriveFolderState,
-    } = await import('@/lib/google/google-drive')
+    const { mintResumableUpload, findDriveFileByName, getDriveFolderState } =
+      await import('@/lib/google/google-drive')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)

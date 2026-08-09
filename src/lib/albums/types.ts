@@ -1,12 +1,47 @@
 import { z } from 'zod'
 
-export const AlbumFilterSchema = z.enum([
-  'all',
-  'owned',
-  'shared-by-me',
-  'shared-with-me',
-]).default('all')
-export type AlbumFilter = z.infer<typeof AlbumFilterSchema>
+export const AlbumOwnershipFilterSchema = z
+  .enum(['owner', 'co-author', 'all'])
+  .default('all')
+export type AlbumOwnershipFilter = z.infer<typeof AlbumOwnershipFilterSchema>
+
+export const AlbumVisibilityFilterSchema = z
+  .enum(['public', 'private', 'all'])
+  .default('all')
+export type AlbumVisibilityFilter = z.infer<typeof AlbumVisibilityFilterSchema>
+
+/**
+ * User-facing list filters (mirrored into the URL search params).
+ */
+export const AlbumListFiltersSchema = z.object({
+  search: z.string().trim().max(200).optional().default(''),
+  ownership: AlbumOwnershipFilterSchema,
+  visibility: AlbumVisibilityFilterSchema,
+})
+export type AlbumListFilters = z.infer<typeof AlbumListFiltersSchema>
+
+/**
+ * Search-only filters for the public albums page, where ownership and
+ * visibility do not apply.
+ */
+export const AlbumSearchSchema = z.object({
+  search: z.string().trim().max(200).optional().default(''),
+})
+export type AlbumSearch = z.infer<typeof AlbumSearchSchema>
+
+/**
+ * Server query: filters plus cursor pagination.
+ */
+export const AlbumListQuerySchema = AlbumListFiltersSchema.extend({
+  limit: z.number().int().min(1).max(100).optional().default(24),
+  cursor: z.string().max(500).nullable().optional().default(null),
+})
+export type AlbumListQuery = z.infer<typeof AlbumListQuerySchema>
+
+export interface AlbumListPage {
+  albums: AlbumSummary[]
+  nextCursor: string | null
+}
 
 export const CreateAlbumSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
@@ -35,6 +70,10 @@ export const ToggleAlbumShareSchema = z.object({
 export const ClaimEditAccessSchema = z.object({
   albumId: z.string(),
   token: z.string(),
+})
+
+export const RotateEditTokenSchema = z.object({
+  albumId: z.string(),
 })
 
 export const DeletePhotoSchema = z.object({
@@ -91,6 +130,11 @@ export interface AlbumPhoto {
   mimeType: string
   size: number | null
   capturedAt: string
+  /**
+   * Drive creation time (ISO). Used to pick the default cover: the first
+   * uploaded photo in the folder.
+   */
+  createdAt?: string
   url: string
   thumbnailUrl: string
 }
