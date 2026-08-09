@@ -18,6 +18,21 @@ export interface PersistedJob {
   status: string
   progress: number
   error?: string
+  /**
+   * Number of upload attempts already made. Persisted so the auto-retry budget
+   * survives page reloads (repeated refreshes can't loop forever).
+   */
+  attempts?: number
+  /**
+   * Earliest timestamp (ms) at which a backed-off queued job may be picked up
+   * again. Persisted so a reload doesn't shortcut an in-flight backoff.
+   */
+  nextAttemptAt?: number
+  /**
+   * When a job reached a terminal state (done/error/cancelled), used to
+   * auto-expire finished jobs after their TTL.
+   */
+  finishedAt?: number
 }
 
 const JOBS_KEY = 'meriksirat.uploads.jobs.v1'

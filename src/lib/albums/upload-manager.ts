@@ -20,6 +20,65 @@ export interface UploadJob {
   status: UploadStatus
   progress: number
   error?: string
+  /**
+   * Number of upload attempts already made. Persisted so the auto-retry budget
+   * survives page reloads.
+   */
+  attempts?: number
+  /**
+   * Earliest timestamp (ms) at which a backed-off queued job may run again.
+   */
+  nextAttemptAt?: number
+  /**
+   * When a job reached a terminal state (done/error/cancelled). Finished jobs
+   * auto-expire after their TTL so they don't accumulate in the header widget
+   * and localStorage forever.
+   */
+  finishedAt?: number
+}
+
+/**
+ * Finished jobs are kept briefly so the UI can show the completed state and so
+ * errors stay retryable for a while, but they auto-expire after these TTLs.
+ */
+const FINISHED_TTL_MS: Record<'done' | 'error' | 'cancelled', number> = {
+  done: 60 * 60 * 1000, // 1 hour
+  cancelled: 60 * 60 * 1000, // 1 hour
+  error: 7 * 24 * 60 * 60 * 1000, // 7 days — long enough to retry manually
+}
+
+/**
+ * Failure worth retrying automatically: browser-level network failures (the
+ * fetch to mint an upload session rejects with `TypeError: Load failed`) and
+ * the transient XHR PUT errors below (network error, timeout, 5xx, 429).
+ */
+class TransientUploadError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'TransientUploadError'
+  }
+}
+
+function isTransientError(error: unknown): boolean {
+  return error instanceof TransientUploadError || error instanceof TypeError
+}
+
+/**
+ * The server rejects session minting when the file already exists in the
+ * album folder. A previous attempt of this exact job usually finished on
+ * Google's side while its result was lost (e.g. the page refreshed mid-upload),
+ * so treat it as success instead of failing.
+ */
+function isAlreadyExistsError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes('already exists in this album')
+  )
+}
+
+function retryDelay(attempt: number): number {
+  const base = Math.min(1000 * 2 ** (attempt - 1), 30000)
+  return Math.round(base * (0.8 + Math.random() * 0.4))
 }
 
 /**
@@ -41,6 +100,7 @@ class UploadManager {
   private xhrsById = new Map<string, XMLHttpRequest>()
   private running = 0
   private readonly maxConcurrent = 2
+  private readonly maxAttempts = 5
   private rehydrated = false
 
   constructor() {
@@ -55,9 +115,17 @@ class UploadManager {
       status: job.status === 'uploading' ? 'queued' : (job.status as UploadStatus),
       progress: job.status === 'uploading' ? 0 : job.progress,
       error: job.error,
+      attempts: job.attempts ?? 0,
+      nextAttemptAt: job.nextAttemptAt,
+      finishedAt: job.finishedAt,
     }))
+    this.purgeExpired()
     this.persist()
     void this.rehydrate()
+    if (typeof window !== 'undefined') {
+      // Sweep finished jobs that have hit their TTL since the last sweep.
+      setInterval(() => this.purgeExpired(), 60 * 1000)
+    }
   }
 
   subscribe = (listener: () => void): (() => void) => {
@@ -116,6 +184,12 @@ class UploadManager {
       this.emit(next)
       this.persist()
     }
+    // Let the freshly loaded page settle before restarting uploads: jobs
+    // firing at the exact moment of a reload pile onto the same Worker cold
+    // start as the HTML/asset requests, which makes the first attempt fail
+    // with network errors. A short stagger avoids that burst; auto-retry
+    // catches anything that still slips through.
+    await new Promise((resolve) => setTimeout(resolve, 400))
     this.pump()
   }
 
@@ -165,6 +239,7 @@ class UploadManager {
         mimeType: file.type || 'image/jpeg',
         status: 'queued',
         progress: 0,
+        attempts: 0,
       }
       this.filesById.set(job.id, file)
       accepted.push(job)
@@ -189,7 +264,7 @@ class UploadManager {
   cancel(id: string): void {
     this.xhrsById.get(id)?.abort()
     this.filesById.delete(id)
-    this.patch(id, { status: 'cancelled' })
+    this.patch(id, { status: 'cancelled', finishedAt: Date.now() })
     void deleteUploadFiles([id])
     this.pump()
   }
@@ -211,7 +286,13 @@ class UploadManager {
       })
       return
     }
-    this.patch(id, { status: 'queued', progress: 0, error: undefined })
+    this.patch(id, {
+      status: 'queued',
+      progress: 0,
+      error: undefined,
+      attempts: 0,
+      nextAttemptAt: undefined,
+    })
     this.pump()
   }
 
@@ -230,9 +311,35 @@ class UploadManager {
     if (removedIds.length > 0) void deleteUploadFiles(removedIds)
   }
 
+  /**
+   * Drop finished jobs that have been done/cancelled/errored for longer than
+   * their TTL. Active jobs are never touched.
+   */
+  private purgeExpired(): void {
+    const now = Date.now()
+    const expired = this.snapshot.filter((job) => {
+      if (!job.finishedAt) return false
+      const ttl = FINISHED_TTL_MS[job.status as 'done' | 'error' | 'cancelled']
+      if (ttl === undefined) return false
+      return now - job.finishedAt >= ttl
+    })
+    if (expired.length === 0) return
+    const expiredIds = new Set(expired.map((j) => j.id))
+    const next = this.snapshot.filter((j) => !expiredIds.has(j.id))
+    expiredIds.forEach((id) => this.filesById.delete(id))
+    this.emit(next)
+    this.persist()
+    void deleteUploadFiles([...expiredIds])
+  }
+
   private pump(): void {
+    const now = Date.now()
     while (this.running < this.maxConcurrent) {
-      const next = this.snapshot.find((job) => job.status === 'queued')
+      const next = this.snapshot.find(
+        (job) =>
+          job.status === 'queued' &&
+          (job.nextAttemptAt === undefined || job.nextAttemptAt <= now)
+      )
       if (!next) break
       this.running++
       void this.run(next)
@@ -240,6 +347,7 @@ class UploadManager {
   }
 
   private async run(job: UploadJob): Promise<void> {
+    const attempt = (job.attempts ?? 0) + 1
     this.patch(job.id, { status: 'uploading', progress: 0 })
     try {
       const { uploadUrl } = await createUploadSessionFn({
@@ -252,17 +360,55 @@ class UploadManager {
 
       const ok = await this.putFile(job.id, uploadUrl)
       if (ok) {
-        this.patch(job.id, { status: 'done', progress: 100 })
+        this.patch(job.id, {
+          status: 'done',
+          progress: 100,
+          attempts: attempt,
+          finishedAt: Date.now(),
+        })
         this.filesById.delete(job.id)
         void deleteUploadFiles([job.id])
       }
     } catch (error) {
       const current = this.snapshot.find((j) => j.id === job.id)
       if (current?.status !== 'cancelled') {
-        this.patch(job.id, {
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Upload failed',
-        })
+        if (isAlreadyExistsError(error)) {
+          // The file reached the folder (a previous attempt finished on
+          // Google's side) — this job is effectively done.
+          this.patch(job.id, {
+            status: 'done',
+            progress: 100,
+            attempts: attempt,
+            error: undefined,
+            finishedAt: Date.now(),
+          })
+          this.filesById.delete(job.id)
+          void deleteUploadFiles([job.id])
+        } else if (isTransientError(error) && attempt < this.maxAttempts) {
+          // Transient failure (network error, timeout, 5xx, 429): back off
+          // and re-queue automatically. `nextAttemptAt` is persisted so a
+          // page refresh doesn't shortcut the wait.
+          const delay = retryDelay(attempt)
+          this.patch(job.id, {
+            status: 'queued',
+            attempts: attempt,
+            nextAttemptAt: Date.now() + delay,
+            error: undefined,
+          })
+          setTimeout(() => this.pump(), delay)
+        } else {
+          this.patch(job.id, {
+            status: 'error',
+            attempts: attempt,
+            finishedAt: Date.now(),
+            error:
+              error instanceof Error
+                ? isTransientError(error)
+                  ? `Upload failed after ${attempt} attempts — retry manually`
+                  : error.message
+                : 'Upload failed',
+          })
+        }
       }
     } finally {
       this.running--
@@ -292,13 +438,23 @@ class UploadManager {
         this.xhrsById.delete(jobId)
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(true)
+        } else if (
+          xhr.status === 408 ||
+          xhr.status === 429 ||
+          xhr.status >= 500
+        ) {
+          reject(new TransientUploadError(`Upload failed (${xhr.status})`))
         } else {
           reject(new Error(`Upload failed (${xhr.status})`))
         }
       }
       xhr.onerror = () => {
         this.xhrsById.delete(jobId)
-        reject(new Error('Network error during upload'))
+        reject(new TransientUploadError('Network error during upload'))
+      }
+      xhr.ontimeout = () => {
+        this.xhrsById.delete(jobId)
+        reject(new TransientUploadError('Upload timed out'))
       }
       xhr.onabort = () => {
         this.xhrsById.delete(jobId)
