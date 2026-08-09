@@ -1,33 +1,34 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { AlbumListFiltersSchema, albumQueries } from '@/lib/albums'
 import type { AlbumListFilters } from '@/lib/albums'
 import { AlbumsPage } from '@/components/albums/albums-page'
 
-export const Route = createFileRoute('/_authenticated/admin/albums')({
+export const Route = createFileRoute('/_authenticated/my-albums/')({
   validateSearch: AlbumListFiltersSchema,
   loaderDeps: ({ search }) => ({ filters: search }),
   loader: async ({ context, deps }) => {
     const queryClient = context.queryClient
     try {
       await queryClient.ensureInfiniteQueryData({
-        ...albumQueries.manage(deps.filters),
+        ...albumQueries.mine(deps.filters),
         revalidateIfStale: true,
       })
     } catch (error) {
       console.error('Failed to load albums:', error)
     }
   },
-  component: AdminAlbums,
+  component: MyAlbumsIndex,
 })
 
-function AdminAlbums() {
-  const navigate = useNavigate({ from: '/admin/albums' })
+function MyAlbumsIndex() {
+  const navigate = useNavigate({ from: '/my-albums/' })
   const search = Route.useSearch()
+  const queryClient = useQueryClient()
 
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useInfiniteQuery(albumQueries.manage(search))
+    useInfiniteQuery(albumQueries.mine(search))
 
   const albums = React.useMemo(
     () => data?.pages.flatMap((page) => page.albums) ?? [],
@@ -38,16 +39,26 @@ function AdminAlbums() {
     navigate({ search: (prev) => ({ ...prev, ...next }) })
   }
 
+  const handleCreated = () => {
+    queryClient.invalidateQueries({
+      queryKey: albumQueries.all,
+      refetchType: 'all',
+    })
+    navigate({
+      search: { search: '', ownership: 'all', visibility: 'all' },
+    })
+  }
+
   return (
     <AlbumsPage
-      mode="manage"
+      mode="mine"
       albums={albums}
       filters={search}
       onFiltersChange={handleFiltersChange}
       hasNextPage={hasNextPage}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
-      onCreated={() => {}}
+      onCreated={handleCreated}
     />
   )
 }

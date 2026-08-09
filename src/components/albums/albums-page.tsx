@@ -23,33 +23,41 @@ import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { toast } from 'sonner'
 import { createAlbumFn } from '@/lib/albums'
-import type { AlbumFilter, AlbumSummary } from '@/lib/albums'
-import { AlbumCard } from './album-card'
-import { AlbumFilterCombobox } from './album-filter'
+import type { AlbumListFilters, AlbumSummary } from '@/lib/albums'
+import { AlbumToolbar } from './album-toolbar'
+import { InfiniteAlbumGroupedList } from './album-sections'
 
 interface AlbumsPageProps {
   mode: 'mine' | 'manage'
-  filter: AlbumFilter
-  onFilterChange: (filter: AlbumFilter) => void
-  mine: AlbumSummary[]
-  manage: AlbumSummary[]
+  albums: AlbumSummary[]
+  filters: AlbumListFilters
+  onFiltersChange: (next: Partial<AlbumListFilters>) => void
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  fetchNextPage: () => void
+  showPrivacy?: boolean
+  showOwnershipFilter?: boolean
+  showVisibilityFilter?: boolean
   onCreated: () => void
 }
 
 export function AlbumsPage({
   mode,
-  filter,
-  onFilterChange,
-  mine,
-  manage,
+  albums,
+  filters,
+  onFiltersChange,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
+  showPrivacy = true,
+  showOwnershipFilter = true,
+  showVisibilityFilter = true,
   onCreated,
 }: AlbumsPageProps) {
   const [createOpen, setCreateOpen] = React.useState(false)
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [busy, setBusy] = React.useState(false)
-
-  const list = mode === 'manage' ? manage : mine
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,7 +84,7 @@ export function AlbumsPage({
   return (
     <PageContainer>
       <PageHeader
-        title={mode === 'manage' ? 'Manage Albums' : 'Albums'}
+        title={mode === 'manage' ? 'Manage Albums' : 'My Albums'}
         description="Photo albums backed by Google Drive."
         actions={
           mode === 'mine' && (
@@ -88,13 +96,14 @@ export function AlbumsPage({
         }
       />
 
-      {mode === 'mine' && (
-        <div className="-mt-2 mb-6">
-          <AlbumFilterCombobox value={filter} onSelect={onFilterChange} />
-        </div>
-      )}
+      <AlbumToolbar
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        showOwnership={showOwnershipFilter}
+        showVisibility={showVisibilityFilter}
+      />
 
-      {list.length === 0 ? (
+      {albums.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -106,22 +115,22 @@ export function AlbumsPage({
             <EmptyDescription>
               {mode === 'manage'
                 ? 'All albums across the club appear here.'
-                : filter === 'all'
+                : !filters.search &&
+                    filters.ownership === 'all' &&
+                    filters.visibility === 'all'
                   ? 'Create your first album to start sharing photos.'
-                  : 'No albums match this filter.'}
+                  : 'No albums match your search and filters.'}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {list.map((album) => (
-            <AlbumCard
-              key={album.id}
-              album={album}
-              showOwnership={mode === 'mine'}
-            />
-          ))}
-        </div>
+        <InfiniteAlbumGroupedList
+          albums={albums}
+          showPrivacy={showPrivacy}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+        />
       )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -174,4 +183,3 @@ export function AlbumsPage({
     </PageContainer>
   )
 }
-

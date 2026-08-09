@@ -16,18 +16,18 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedFaqRouteImport } from './routes/_authenticated/faq'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AlbumsIndexRouteImport } from './routes/albums/index'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums/$albumId'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AuthenticatedAdminAlbumsRouteImport } from './routes/_authenticated/admin/albums'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
-import { Route as AuthenticatedAlbumsIndexRouteImport } from './routes/_authenticated/albums/index'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings/index'
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
 import { Route as AuthenticatedEquipmentSplatRouteImport } from './routes/_authenticated/equipment/$'
+import { Route as AuthenticatedMyAlbumsIndexRouteImport } from './routes/_authenticated/my-albums/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as ApiDriveImageSplatRouteImport } from './routes/api/drive-image.$'
 import { Route as ApiImagesSplatRouteImport } from './routes/api/images.$'
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings/index'
 import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/_authenticated/admin/categories/index'
@@ -75,6 +75,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AlbumsIndexRoute = AlbumsIndexRouteImport.update({
+  id: '/albums/',
+  path: '/albums/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AlbumsAlbumIdRoute = AlbumsAlbumIdRouteImport.update({
   id: '/albums/$albumId',
   path: '/albums/$albumId',
@@ -103,12 +108,6 @@ const AuthenticatedAdminSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAlbumsIndexRoute =
-  AuthenticatedAlbumsIndexRouteImport.update({
-    id: '/albums/',
-    path: '/albums/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedBookingsIndexRoute =
   AuthenticatedBookingsIndexRouteImport.update({
     id: '/bookings/',
@@ -133,14 +132,15 @@ const AuthenticatedEquipmentSplatRoute =
     path: '/equipment/$',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedMyAlbumsIndexRoute =
+  AuthenticatedMyAlbumsIndexRouteImport.update({
+    id: '/my-albums/',
+    path: '/my-albums/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDriveImageSplatRoute = ApiDriveImageSplatRouteImport.update({
-  id: '/api/drive-image/$',
-  path: '/api/drive-image/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiImagesSplatRoute = ApiImagesSplatRouteImport.update({
@@ -224,17 +224,17 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/albums/': typeof AlbumsIndexRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/drive-image/$': typeof ApiDriveImageSplatRoute
   '/api/images/$': typeof ApiImagesSplatRoute
-  '/albums/': typeof AuthenticatedAlbumsIndexRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/equipment/': typeof AuthenticatedEquipmentIndexRoute
+  '/my-albums/': typeof AuthenticatedMyAlbumsIndexRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
@@ -256,17 +256,17 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/albums': typeof AlbumsIndexRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/drive-image/$': typeof ApiDriveImageSplatRoute
   '/api/images/$': typeof ApiImagesSplatRoute
-  '/albums': typeof AuthenticatedAlbumsIndexRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
   '/equipment': typeof AuthenticatedEquipmentIndexRoute
+  '/my-albums': typeof AuthenticatedMyAlbumsIndexRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
@@ -290,17 +290,17 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/albums/': typeof AlbumsIndexRoute
   '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/_authenticated/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/drive-image/$': typeof ApiDriveImageSplatRoute
   '/api/images/$': typeof ApiImagesSplatRoute
-  '/_authenticated/albums/': typeof AuthenticatedAlbumsIndexRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/_authenticated/equipment/': typeof AuthenticatedEquipmentIndexRoute
+  '/_authenticated/my-albums/': typeof AuthenticatedMyAlbumsIndexRoute
   '/_authenticated/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/_authenticated/bookings_/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
@@ -324,17 +324,17 @@ export interface FileRouteTypes {
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
+    | '/albums/'
     | '/admin/albums'
     | '/admin/dashboard'
     | '/admin/settings'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
-    | '/api/drive-image/$'
     | '/api/images/$'
-    | '/albums/'
     | '/bookings/'
     | '/equipment/'
+    | '/my-albums/'
     | '/admin/equipment/new'
     | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
@@ -356,17 +356,17 @@ export interface FileRouteTypes {
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
+    | '/albums'
     | '/admin/albums'
     | '/admin/dashboard'
     | '/admin/settings'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
-    | '/api/drive-image/$'
     | '/api/images/$'
-    | '/albums'
     | '/bookings'
     | '/equipment'
+    | '/my-albums'
     | '/admin/equipment/new'
     | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
@@ -389,17 +389,17 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/albums/$albumId'
     | '/api/telegram'
+    | '/albums/'
     | '/_authenticated/admin/albums'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/settings'
     | '/_authenticated/bookings/new'
     | '/_authenticated/equipment/$'
     | '/api/auth/$'
-    | '/api/drive-image/$'
     | '/api/images/$'
-    | '/_authenticated/albums/'
     | '/_authenticated/bookings/'
     | '/_authenticated/equipment/'
+    | '/_authenticated/my-albums/'
     | '/_authenticated/admin/equipment/new'
     | '/_authenticated/admin/users/$userId'
     | '/_authenticated/bookings_/$bookingId/edit'
@@ -420,8 +420,8 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   AlbumsAlbumIdRoute: typeof AlbumsAlbumIdRoute
   ApiTelegramRoute: typeof ApiTelegramRoute
+  AlbumsIndexRoute: typeof AlbumsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiDriveImageSplatRoute: typeof ApiDriveImageSplatRoute
   ApiImagesSplatRoute: typeof ApiImagesSplatRoute
 }
 
@@ -476,6 +476,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/albums/': {
+      id: '/albums/'
+      path: '/albums'
+      fullPath: '/albums/'
+      preLoaderRoute: typeof AlbumsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/albums/$albumId': {
       id: '/albums/$albumId'
       path: '/albums/$albumId'
@@ -511,13 +518,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/albums/': {
-      id: '/_authenticated/albums/'
-      path: '/albums'
-      fullPath: '/albums/'
-      preLoaderRoute: typeof AuthenticatedAlbumsIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/bookings/': {
       id: '/_authenticated/bookings/'
       path: '/bookings'
@@ -546,18 +546,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEquipmentSplatRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/my-albums/': {
+      id: '/_authenticated/my-albums/'
+      path: '/my-albums'
+      fullPath: '/my-albums/'
+      preLoaderRoute: typeof AuthenticatedMyAlbumsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/drive-image/$': {
-      id: '/api/drive-image/$'
-      path: '/api/drive-image/$'
-      fullPath: '/api/drive-image/$'
-      preLoaderRoute: typeof ApiDriveImageSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/images/$': {
@@ -690,9 +690,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedBookingsNewRoute: typeof AuthenticatedBookingsNewRoute
   AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
-  AuthenticatedAlbumsIndexRoute: typeof AuthenticatedAlbumsIndexRoute
   AuthenticatedBookingsIndexRoute: typeof AuthenticatedBookingsIndexRoute
   AuthenticatedEquipmentIndexRoute: typeof AuthenticatedEquipmentIndexRoute
+  AuthenticatedMyAlbumsIndexRoute: typeof AuthenticatedMyAlbumsIndexRoute
   AuthenticatedBookingsBookingIdEditRoute: typeof AuthenticatedBookingsBookingIdEditRoute
   AuthenticatedBookingsBookingIdIndexRoute: typeof AuthenticatedBookingsBookingIdIndexRoute
 }
@@ -703,9 +703,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedBookingsNewRoute: AuthenticatedBookingsNewRoute,
   AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,
-  AuthenticatedAlbumsIndexRoute: AuthenticatedAlbumsIndexRoute,
   AuthenticatedBookingsIndexRoute: AuthenticatedBookingsIndexRoute,
   AuthenticatedEquipmentIndexRoute: AuthenticatedEquipmentIndexRoute,
+  AuthenticatedMyAlbumsIndexRoute: AuthenticatedMyAlbumsIndexRoute,
   AuthenticatedBookingsBookingIdEditRoute:
     AuthenticatedBookingsBookingIdEditRoute,
   AuthenticatedBookingsBookingIdIndexRoute:
@@ -723,8 +723,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   AlbumsAlbumIdRoute: AlbumsAlbumIdRoute,
   ApiTelegramRoute: ApiTelegramRoute,
+  AlbumsIndexRoute: AlbumsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiDriveImageSplatRoute: ApiDriveImageSplatRoute,
   ApiImagesSplatRoute: ApiImagesSplatRoute,
 }
 export const routeTree = rootRouteImport
