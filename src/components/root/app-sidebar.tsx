@@ -7,7 +7,8 @@ import {
   ShieldCheck,
   Users,
   Tags,
-  Calendar
+  Calendar,
+  Images
 } from 'lucide-react'
 
 import {
@@ -27,16 +28,31 @@ import { NavUser } from './nav-user'
 import { NavSecondary } from './nav-secondary'
 
 const data = {
-  navMain: [
+  navGroups: [
     {
-      title: 'Equipment Booking',
-      url: '/equipment',
-      icon: Camera,
+      title: 'Bookings',
+      items: [
+        {
+          title: 'Equipment Booking',
+          url: '/equipment',
+          icon: Camera,
+        },
+        {
+          title: 'My Bookings',
+          url: '/bookings',
+          icon: Calendar,
+        },
+      ],
     },
     {
-      title: 'My Bookings',
-      url: '/bookings',
-      icon: Calendar,
+      title: 'Albums',
+      items: [
+        {
+          title: 'Albums',
+          url: '/albums',
+          icon: Images,
+        },
+      ],
     },
   ],
   navSecondary: [
@@ -61,6 +77,11 @@ const data = {
       title: 'Equipment Management',
       url: '/admin/equipment',
       icon: Camera,
+    },
+    {
+      title: 'Album Management',
+      url: '/admin/albums',
+      icon: Images,
     },
     {
       title: 'Category Management',
@@ -142,15 +163,15 @@ export function AppSidebar({ user: userData, onLogout, ...props }: React.Compone
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain groups={data.navGroups} />
         {hasAdminAccess && (
-          <NavSecondary items={data.navAdmin} />
+          <NavSecondary title="Admin" items={data.navAdmin} />
         )}
         <div className="mt-auto">
           <div className="px-4 py-2 text-xs text-muted-foreground">
             Made by <a href="https://sagyzdop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">sagyzdop</a>
           </div>
-          <NavSecondary items={data.navSecondary} />
+          <NavSecondary title="Help" items={data.navSecondary} />
         </div>
       </SidebarContent>
       <SidebarFooter>

@@ -36,6 +36,13 @@
       "when": 1786041796789,
       "tag": "0004_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786211450955,
+      "tag": "0005_setup",
+      "breakpoints": true
     }
   ]
 }

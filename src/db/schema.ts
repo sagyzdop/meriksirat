@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const user = sqliteTable(
   'user',
@@ -288,11 +288,85 @@ export const bookingItemRelations = relations(bookingItem, ({ one }) => ({
   }),
 }))
 
+// Photo Albums (Google Drive-backed gallery)
+// Albums are stored in a shared master Google Drive account. The view link
+// (`/albums/<id>`) exposes the Drive folder via the "anyone" reader permission
+// when `isShared` is true. The edit link carries `editShareToken`; a logged-in
+// user who presents it becomes an `albumMember` (co-author / editor).
+
+export const album = sqliteTable(
+  'album',
+  {
+    id: text('id').primaryKey(),
+    ownerUserId: text('owner_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description').default(''),
+    driveFolderId: text('drive_folder_id').notNull().unique(),
+    coverFileId: text('cover_file_id'),
+    editShareToken: text('edit_share_token').notNull().unique(),
+    isShared: integer('is_shared', { mode: 'boolean' }).default(false),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('album_ownerUserId_idx').on(table.ownerUserId),
+    index('album_isShared_idx').on(table.isShared),
+  ]
+)
+
+export const albumMember = sqliteTable(
+  'album_member',
+  {
+    id: text('id').primaryKey(),
+    albumId: text('album_id')
+      .notNull()
+      .references(() => album.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('album_member_albumId_userId_idx').on(table.albumId, table.userId),
+    index('album_member_userId_idx').on(table.userId),
+  ]
+)
+
+export const albumRelations = relations(album, ({ one, many }) => ({
+  owner: one(user, {
+    fields: [album.ownerUserId],
+    references: [user.id],
+  }),
+  members: many(albumMember),
+}))
+
+export const albumMemberRelations = relations(albumMember, ({ one }) => ({
+  album: one(album, {
+    fields: [albumMember.albumId],
+    references: [album.id],
+  }),
+  user: one(user, {
+    fields: [albumMember.userId],
+    references: [user.id],
+  }),
+}))
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   telegramLinkTokens: many(telegramToken),
   bookings: many(booking),
+  albums: many(album),
+  albumMemberships: many(albumMember),
 }))
 
 export const equipmentRelations = relations(equipment, ({ one, many }) => ({
