@@ -22,7 +22,7 @@ export const Route = createRootRouteWithContext<{
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'MerikSirat',
+        title: 'NU Image',
       },
     ],
     links: [
