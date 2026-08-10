@@ -1,19 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { getUserFn } from '@/lib/user'
 
 export const Route = createFileRoute('/')({
-  beforeLoad: async () => {
-    const user = await getUserFn()
-
-    if (user) {
-      if (user.onboardingComplete) {
-        throw redirect({ to: '/equipment' })
-      } else {
-        throw redirect({ to: '/onboarding' })
-      }
-    } else {
-      throw redirect({ to: '/login' })
-    }
+  beforeLoad: () => {
+    throw redirect({ to: '/albums' })
   },
   component: App,
 })
