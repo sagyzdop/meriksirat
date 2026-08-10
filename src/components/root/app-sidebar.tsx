@@ -23,6 +23,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { getSessionFn } from '@/lib/auth/session'
+import { ALBUM_CREATE_MIN_CLEARANCE } from '@/lib/albums'
 import { Link, useRouter } from '@tanstack/react-router'
 import { NavMain } from './nav-main'
 import { NavUser } from './nav-user'
@@ -160,6 +161,32 @@ export function AppSidebar({
   const hasAdminAccess =
     userData?.role === 'admin' || userData?.role === 'manager'
 
+  // Album creation is gated at ALBUM_CREATE_MIN_CLEARANCE; users below that
+  // level see the Albums section in the sidebar as inactive with an explanation.
+  const canUseAlbums =
+    (userData?.clearanceLevel ?? 0) >= ALBUM_CREATE_MIN_CLEARANCE
+
+  const navGroups = React.useMemo(
+    () =>
+      data.navGroups.map((group) =>
+        group.title === 'Albums'
+          ? {
+              ...group,
+              items: group.items.map((item) =>
+                canUseAlbums
+                  ? item
+                  : {
+                      ...item,
+                      disabled: true,
+                      disabledReason: `Album creation and management require clearance level ${ALBUM_CREATE_MIN_CLEARANCE}. Contact an admin to request access.`,
+                    }
+              ),
+            }
+          : group
+      ),
+    [canUseAlbums]
+  )
+
   return (
     <Sidebar
       collapsible="offcanvas"
@@ -183,7 +210,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain groups={data.navGroups} />
+        <NavMain groups={navGroups} />
         {hasAdminAccess && <NavSecondary title="Admin" items={data.navAdmin} />}
         <div className="mt-auto">
           <div className="px-4 py-2 text-xs text-muted-foreground">

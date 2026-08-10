@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
+  ALBUM_CREATE_MIN_CLEARANCE,
   AlbumListQuerySchema,
   ClaimEditAccessSchema,
   CreateAlbumSchema,
@@ -514,6 +515,11 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
     const headers = getRequestHeaders()
     const currentUser = await getSessionUser(headers)
     if (!currentUser) throw new Error('Unauthorized')
+    if (currentUser.clearanceLevel < ALBUM_CREATE_MIN_CLEARANCE) {
+      throw new Error(
+        `Album creation requires clearance level ${ALBUM_CREATE_MIN_CLEARANCE} or higher`
+      )
+    }
 
     const accessToken = await getGoogleAccessToken()
     const monthFolder = await resolveMonthFolder(accessToken)

@@ -38,6 +38,7 @@ interface AlbumsPageProps {
   showPrivacy?: boolean
   showOwnershipFilter?: boolean
   showVisibilityFilter?: boolean
+  canCreate?: boolean
   onCreated: () => void
 }
 
@@ -52,6 +53,7 @@ export function AlbumsPage({
   showPrivacy = true,
   showOwnershipFilter = true,
   showVisibilityFilter = true,
+  canCreate = true,
   onCreated,
 }: AlbumsPageProps) {
   const [createOpen, setCreateOpen] = React.useState(false)
@@ -88,7 +90,16 @@ export function AlbumsPage({
         description="Photo albums backed by Google Drive."
         actions={
           mode === 'mine' && (
-            <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              disabled={!canCreate}
+              title={
+                canCreate
+                  ? undefined
+                  : 'Album creation requires clearance level 3'
+              }
+            >
               <Plus />
               New album
             </Button>

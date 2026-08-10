@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
-import { AlbumListFiltersSchema, albumQueries } from '@/lib/albums'
+import { ALBUM_CREATE_MIN_CLEARANCE, albumQueries } from '@/lib/albums'
+import { AlbumListFiltersSchema } from '@/lib/albums'
 import type { AlbumListFilters } from '@/lib/albums'
 import { AlbumsPage } from '@/components/albums/albums-page'
 
@@ -26,6 +27,9 @@ function MyAlbumsIndex() {
   const navigate = useNavigate({ from: '/my-albums/' })
   const search = Route.useSearch()
   const queryClient = useQueryClient()
+  const { user } = Route.useRouteContext()
+
+  const canCreate = (user?.clearanceLevel ?? 0) >= ALBUM_CREATE_MIN_CLEARANCE
 
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery(albumQueries.mine(search))
@@ -58,6 +62,7 @@ function MyAlbumsIndex() {
       hasNextPage={hasNextPage}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
+      canCreate={canCreate}
       onCreated={handleCreated}
     />
   )

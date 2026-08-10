@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+/**
+ * Minimum user clearance level required to create a new album. Users below
+ * this level see the Albums section disabled in the sidebar.
+ */
+export const ALBUM_CREATE_MIN_CLEARANCE = 3
+
 export const AlbumOwnershipFilterSchema = z
   .enum(['owner', 'co-author', 'all'])
   .default('all')
