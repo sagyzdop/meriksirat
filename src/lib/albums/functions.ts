@@ -58,8 +58,18 @@ async function loadAlbumOrNull(
 
 type AlbumRowWithAuthors =
   (typeof import('@/db/schema'))['album']['$inferSelect'] & {
-    owner: { id: string; name: string } | null
-    members: { user: { id: string; name: string } | null }[]
+    owner: {
+      id: string
+      name: string
+      telegramUsername: string | null
+    } | null
+    members: {
+      user: {
+        id: string
+        name: string
+        telegramUsername: string | null
+      } | null
+    }[]
   }
 
 /**
@@ -98,9 +108,25 @@ function toAlbumSummary(
   ownershipOverride?: 'owner' | 'co-author'
 ): AlbumSummary {
   const authors: AlbumAuthor[] = [
-    ...(row.owner ? [{ id: row.owner.id, name: row.owner.name }] : []),
+    ...(row.owner
+      ? [
+          {
+            id: row.owner.id,
+            name: row.owner.name,
+            telegramUsername: row.owner.telegramUsername,
+          },
+        ]
+      : []),
     ...(row.members ?? [])
-      .map((m) => (m.user ? { id: m.user.id, name: m.user.name } : null))
+      .map((m) =>
+        m.user
+          ? {
+              id: m.user.id,
+              name: m.user.name,
+              telegramUsername: m.user.telegramUsername,
+            }
+          : null
+      )
       .filter((a): a is AlbumAuthor => !!a),
   ]
   return {
@@ -140,9 +166,15 @@ interface ListAlbumsPaginatedArgs {
 }
 
 const withAuthors = {
-  owner: { columns: { id: true, name: true } },
+  owner: {
+    columns: { id: true, name: true, telegramUsername: true },
+  },
   members: {
-    with: { user: { columns: { id: true, name: true } } },
+    with: {
+      user: {
+        columns: { id: true, name: true, telegramUsername: true },
+      },
+    },
   },
 } as const
 
@@ -381,12 +413,16 @@ async function buildAlbumDetail(
   const [listing, owner, members] = await Promise.all([
     listAlbumPhotos(row.driveFolderId),
     database
-      .select({ name: user.name })
+      .select({ name: user.name, telegramUsername: user.telegramUsername })
       .from(user)
       .where(eq(user.id, row.ownerUserId))
       .get(),
     database
-      .select({ userId: albumMember.userId, name: user.name })
+      .select({
+        userId: albumMember.userId,
+        name: user.name,
+        telegramUsername: user.telegramUsername,
+      })
       .from(albumMember)
       .innerJoin(user, eq(albumMember.userId, user.id))
       .where(eq(albumMember.albumId, row.id))
@@ -403,8 +439,16 @@ async function buildAlbumDetail(
   }
 
   const authors: AlbumAuthor[] = [
-    { id: row.ownerUserId, name: owner?.name ?? 'Unknown' },
-    ...members.map((m) => ({ id: m.userId, name: m.name })),
+    {
+      id: row.ownerUserId,
+      name: owner?.name ?? 'Unknown',
+      telegramUsername: owner?.telegramUsername ?? null,
+    },
+    ...members.map((m) => ({
+      id: m.userId,
+      name: m.name,
+      telegramUsername: m.telegramUsername,
+    })),
   ]
 
   return {

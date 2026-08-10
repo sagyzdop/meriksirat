@@ -122,6 +122,10 @@ export type AlbumFolderState = 'ok' | 'trashed' | 'missing'
 export interface AlbumAuthor {
   id: string
   name: string
+  /**
+   * Telegram @username, used when composing a share message ("by @user").
+   */
+  telegramUsername: string | null
 }
 
 export interface AlbumPhoto {

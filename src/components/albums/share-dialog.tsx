@@ -22,7 +22,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { rotateEditTokenFn, toggleAlbumShareFn } from '@/lib/albums'
+import {
+  albumShareText,
+  rotateEditTokenFn,
+  toggleAlbumShareFn,
+} from '@/lib/albums'
 import type { AlbumDetail } from '@/lib/albums'
 
 interface ShareDialogProps {
@@ -101,11 +105,15 @@ export function ShareDialog({
     }
   }
 
-  const copy = async (value: string, kind: 'view' | 'edit') => {
+  const copy = async (
+    value: string,
+    kind: 'view' | 'edit',
+    successMessage?: string
+  ) => {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(kind)
-      toast.success('Link copied')
+      toast.success(successMessage ?? 'Link copied')
       setTimeout(() => setCopied(null), 1500)
     } catch {
       toast.error('Could not copy link')
@@ -155,13 +163,25 @@ export function ShareDialog({
                   variant="outline"
                   size="icon"
                   disabled={!album.isShared}
-                  onClick={() => copy(viewUrl, 'view')}
+                  onClick={() =>
+                    copy(
+                      albumShareText(album, origin),
+                      'view',
+                      'Copied to clipboard'
+                    )
+                  }
                   aria-label="Copy view link"
+                  title="Copy view link"
                 >
                   {copied === 'view' ? <Check /> : <Copy />}
                 </Button>
               </div>
-              {!album.isShared && (
+              {album.isShared ? (
+                <p className="text-xs text-muted-foreground">
+                  Copies a ready-to-paste Telegram message with the album name,
+                  description, and author Telegram handles.
+                </p>
+              ) : (
                 <p className="text-xs text-muted-foreground">
                   Turn on the view link to let anyone open this album in the
                   app.

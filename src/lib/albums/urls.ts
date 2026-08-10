@@ -35,3 +35,11 @@ export function albumPhotoUrls(fileId: string): {
 export function albumCoverUrl(fileId: string): string {
   return driveCdnUrl(fileId, 800)
 }
+
+/**
+ * Larger cover variant used for Open Graph / Telegram link previews. Uses the
+ * `=w1200` server-side resize so preview cards get a hi-res image for free.
+ */
+export function albumOgImageUrl(fileId: string): string {
+  return driveCdnUrl(fileId, 1200)
+}

@@ -20,8 +20,12 @@ import { authClient } from '@/lib/auth/auth-client'
 import { getUserFn } from '@/lib/user'
 import {
   albumQueries,
+  albumOgImageUrl,
+  albumShareText,
+  albumViewUrl,
   claimEditAccessFn,
   deletePhotoFn,
+  getShareOrigin,
   setCoverPhotoFn,
 } from '@/lib/albums'
 import type { AlbumPhoto } from '@/lib/albums'
@@ -39,11 +43,44 @@ const searchSchema = z.object({
 export const Route = createFileRoute('/albums/$albumId')({
   validateSearch: searchSchema,
   loader: async ({ context, params }) => {
+    const albumKey = albumQueries.detail(params.albumId)
     const [user] = await Promise.all([
       getUserFn(),
-      context.queryClient.ensureQueryData(albumQueries.detail(params.albumId)),
+      context.queryClient.ensureQueryData(albumKey),
     ])
-    return { user }
+    const album = context.queryClient.getQueryData(albumKey.queryKey)
+    return { user, album }
+  },
+  head: ({ loaderData }) => {
+    const album = loaderData?.album
+    if (!album) return {}
+
+    const title = album.title
+    const description = (album.description || 'Photo album on NU Image').slice(
+      0,
+      300
+    )
+    const origin = getShareOrigin()
+    const url = origin ? albumViewUrl(origin, album.id) : undefined
+    const ogImage = album.coverFileId
+      ? albumOgImageUrl(album.coverFileId)
+      : undefined
+
+    return {
+      title,
+      meta: [
+        { name: 'description', content: description },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: title },
+        { property: 'og:description', content: description },
+        ...(url ? [{ property: 'og:url', content: url }] : []),
+        ...(ogImage ? [{ property: 'og:image', content: ogImage }] : []),
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: title },
+        { name: 'twitter:description', content: description },
+        ...(ogImage ? [{ name: 'twitter:image', content: ogImage }] : []),
+      ],
+    }
   },
   component: AlbumPage,
 })
@@ -116,11 +153,14 @@ function AlbumPage() {
   const canManage = album ? album.access !== 'none' : false
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/albums/${albumId}`
+    const origin = window.location.origin
+    const url = albumViewUrl(origin, albumId)
+    const text = album ? albumShareText(album, origin) : url
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
       try {
         await navigator.share({
           title: album?.title ?? 'NU Image album',
+          text,
           url,
         })
         return
@@ -131,8 +171,8 @@ function AlbumPage() {
       }
     }
     try {
-      await navigator.clipboard.writeText(url)
-      toast.success('Link copied')
+      await navigator.clipboard.writeText(text)
+      toast.success('Copied to clipboard')
     } catch {
       toast.error('Could not copy link')
     }
