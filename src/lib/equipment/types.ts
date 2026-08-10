@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+/**
+ * Minimum user clearance level required to access equipment booking. Users
+ * below this level see the Equipment section in the sidebar as inactive.
+ */
+export const EQUIPMENT_MIN_CLEARANCE = 2
+
 export interface EquipmentWithCategory {
   id: number
   modelName: string

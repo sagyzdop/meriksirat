@@ -3,6 +3,7 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import type { PaginatedEquipmentResponse, EquipmentResponse, EquipmentWithCategory } from './types'
 import {
+  EQUIPMENT_MIN_CLEARANCE,
   EquipmentFiltersSchema,
   AdminEquipmentFiltersSchema,
   CreateEquipmentSchema,
@@ -36,6 +37,10 @@ export const getEquipmentFn = createServerFn({
 
     const database = db(env.meriksirat_d1 as D1Database)
     const userClearanceLevel = await getUserClearanceLevel(session.user.id)
+
+    if (userClearanceLevel < EQUIPMENT_MIN_CLEARANCE) {
+      return null
+    }
 
     const sortBy = data.sortBy ?? 'modelName'
     const sortOrder = data.sortOrder ?? 'asc'
@@ -148,6 +153,10 @@ export const getEquipmentByIdFn = createServerFn({
     const database = db(env.meriksirat_d1 as D1Database)
     const userClearanceLevel = await getUserClearanceLevel(session.user.id)
 
+    if (userClearanceLevel < EQUIPMENT_MIN_CLEARANCE) {
+      return null
+    }
+
     const equipmentItem = await database
       .select({
         id: equipment.id,
@@ -195,6 +204,12 @@ export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
     })
 
     if (!session?.user) {
+      return null
+    }
+
+    if (
+      (await getUserClearanceLevel(session.user.id)) < EQUIPMENT_MIN_CLEARANCE
+    ) {
       return null
     }
 

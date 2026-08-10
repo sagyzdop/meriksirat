@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/sidebar'
 import { getSessionFn } from '@/lib/auth/session'
 import { ALBUM_CREATE_MIN_CLEARANCE } from '@/lib/albums'
+import { EQUIPMENT_MIN_CLEARANCE } from '@/lib/equipment'
 import { Link, useRouter } from '@tanstack/react-router'
 import { NavMain } from './nav-main'
 import { NavUser } from './nav-user'
@@ -166,6 +167,11 @@ export function AppSidebar({
   const canUseAlbums =
     (userData?.clearanceLevel ?? 0) >= ALBUM_CREATE_MIN_CLEARANCE
 
+  // Equipment booking is gated at EQUIPMENT_MIN_CLEARANCE, shown as inactive
+  // for users below that level, matching the Albums treatment.
+  const canUseEquipment =
+    (userData?.clearanceLevel ?? 0) >= EQUIPMENT_MIN_CLEARANCE
+
   const navGroups = React.useMemo(
     () =>
       data.navGroups.map((group) =>
@@ -182,9 +188,24 @@ export function AppSidebar({
                     }
               ),
             }
-          : group
+          : group.title === 'Bookings'
+            ? {
+                ...group,
+                items: group.items.map((item) =>
+                  item.title === 'Equipment Booking'
+                    ? canUseEquipment
+                      ? item
+                      : {
+                          ...item,
+                          disabled: true,
+                          disabledReason: `Equipment booking requires clearance level ${EQUIPMENT_MIN_CLEARANCE} or higher. Contact an admin to request access.`,
+                        }
+                    : item
+                ),
+              }
+            : group
       ),
-    [canUseAlbums]
+    [canUseAlbums, canUseEquipment]
   )
 
   return (
