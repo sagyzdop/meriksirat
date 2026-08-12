@@ -1,21 +1,21 @@
 /**
  * DataTable Component
- * 
+ *
  * A responsive data table component that displays data in a table format on desktop
  * and switches to a card-based layout on mobile devices.
- * 
+ *
  * Features:
  * - Desktop: Full table with sorting, filtering, and pagination
  * - Mobile: Card-based layout with all relevant data
  * - Loading states with skeleton placeholders
  * - Empty states with customizable messages
  * - Optional custom mobile card renderer
- * 
+ *
  * Usage:
  * ```tsx
  * import { DataTable } from '@/components/data-table/data-table'
  * import { columns } from './columns'
- * 
+ *
  * <DataTable
  *   columns={columns}
  *   data={data}
@@ -33,12 +33,12 @@
  *   )}
  * />
  * ```
- * 
+ *
  * Requirements: 2.4, 7.4
  * @see https://ui.shadcn.com/docs/components/data-table
  * @see https://ui.shadcn.com/docs/components/card
  */
-import * as React from "react"
+import * as React from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -52,7 +52,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from '@tanstack/react-table'
 
 import {
   Table,
@@ -61,19 +61,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Empty } from "@/components/ui/empty"
+} from '@/components/ui/table'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Empty } from '@/components/ui/empty'
 
 /**
  * Props for the DataTable component
- * 
+ *
  * @template TData - The type of data in the table
  * @template TValue - The type of values in the table cells
  */
@@ -90,10 +85,10 @@ export interface DataTableProps<TData, TValue> {
   emptyMessage?: string
   /** Initial page size for pagination */
   pageSize?: number
-  /** 
+  /**
    * Optional custom renderer for mobile card view
    * If not provided, a default card layout will be used
-   * 
+   *
    * @example
    * renderMobileCard={(equipment) => (
    *   <Card>
@@ -112,10 +107,10 @@ export interface DataTableProps<TData, TValue> {
 
 /**
  * DataTable component that provides responsive table/card views
- * 
+ *
  * Displays a table on desktop (md breakpoint and above) and cards on mobile.
  * Includes built-in loading and empty states.
- * 
+ *
  * @template TData - The type of data in the table
  * @template TValue - The type of values in the table cells
  */
@@ -124,13 +119,16 @@ export function DataTable<TData, TValue>({
   data,
   onRowClick,
   loading = false,
-  emptyMessage = "No results.",
+  emptyMessage = 'No results.',
   pageSize = 10,
   renderMobileCard,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({})
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
   const [sorting, setSorting] = React.useState<SortingState>([])
 
   const table = useReactTable({
@@ -220,7 +218,10 @@ export function DataTable<TData, TValue>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="[&:has([role=checkbox])]:pl-3">
+                    <TableHead
+                      key={header.id}
+                      className="[&:has([role=checkbox])]:pl-3"
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -234,7 +235,10 @@ export function DataTable<TData, TValue>({
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   <Empty title={emptyMessage} />
                 </TableCell>
               </TableRow>
@@ -259,7 +263,10 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                  <TableHead
+                    key={header.id}
+                    className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -275,12 +282,15 @@ export function DataTable<TData, TValue>({
             {table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                data-state={row.getIsSelected() && "selected"}
+                data-state={row.getIsSelected() && 'selected'}
                 onClick={() => onRowClick?.(row.original)}
-                className={onRowClick ? "cursor-pointer" : undefined}
+                className={onRowClick ? 'cursor-pointer' : undefined}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                  <TableCell
+                    key={cell.id}
+                    className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -296,7 +306,7 @@ export function DataTable<TData, TValue>({
           <div
             key={row.id}
             onClick={() => onRowClick?.(row.original)}
-            className={onRowClick ? "cursor-pointer" : undefined}
+            className={onRowClick ? 'cursor-pointer' : undefined}
           >
             {renderMobileCard ? (
               renderMobileCard(row.original)
@@ -304,41 +314,61 @@ export function DataTable<TData, TValue>({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    {/* Default: show first non-checkbox column as title */}
-                    {row.getVisibleCells().find(cell => 
-                      !cell.column.id.includes('select') && 
-                      !cell.column.id.includes('actions')
-                    )?.column.columnDef.header as string}
+                    {
+                      row
+                        .getVisibleCells()
+                        .find(
+                          (cell) =>
+                            !cell.column.id.includes('select') &&
+                            !cell.column.id.includes('actions')
+                        )?.column.columnDef.header as string
+                    }
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {row.getVisibleCells()
-                    .filter(cell => 
-                      !cell.column.id.includes('select') && 
-                      !cell.column.id.includes('actions')
+                  {row
+                    .getVisibleCells()
+                    .filter(
+                      (cell) =>
+                        !cell.column.id.includes('select') &&
+                        !cell.column.id.includes('actions')
                     )
-                    .map((cell) => (
-                      <div key={cell.id} className="flex flex-col space-y-1">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {flexRender(
-                            cell.column.columnDef.header,
-                            cell.getContext()
+                    .map((cell) => {
+                      const header = table
+                        .getHeaderGroups()[0]
+                        ?.headers.find((h) => h.column.id === cell.column.id)
+                      return (
+                        <div key={cell.id} className="flex flex-col space-y-1">
+                          {header && (
+                            <span className="text-sm font-medium text-muted-foreground">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            </span>
                           )}
-                        </span>
-                        <span className="text-sm">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </span>
-                      </div>
-                    ))}
-                  {/* Show actions at the bottom if present */}
-                  {row.getVisibleCells().find(cell => cell.column.id.includes('actions')) && (
+                          <span className="text-sm">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  {row
+                    .getVisibleCells()
+                    .find((cell) => cell.column.id.includes('actions')) && (
                     <div className="pt-2 border-t">
                       {flexRender(
-                        row.getVisibleCells().find(cell => cell.column.id.includes('actions'))!.column.columnDef.cell,
-                        row.getVisibleCells().find(cell => cell.column.id.includes('actions'))!.getContext()
+                        row
+                          .getVisibleCells()
+                          .find((cell) => cell.column.id.includes('actions'))!
+                          .column.columnDef.cell,
+                        row
+                          .getVisibleCells()
+                          .find((cell) => cell.column.id.includes('actions'))!
+                          .getContext()
                       )}
                     </div>
                   )}

@@ -53,7 +53,7 @@ export function AlbumToolbar({
 
   // Single-select semantics: the faceted filter toggles, so the last item in
   // the returned array is the one the user just chose; empty means cleared.
-  const single = (values: string[] | undefined, current: string) =>
+  const single = (values: string[] | undefined) =>
     values && values.length > 0 ? values[values.length - 1] : 'all'
 
   const ownershipSelected =
@@ -84,10 +84,7 @@ export function AlbumToolbar({
             selectedValues={ownershipSelected}
             onSelectionChange={(values) =>
               onFiltersChange({
-                ownership: single(
-                  values,
-                  filters.ownership
-                ) as AlbumOwnershipFilter,
+                ownership: single(values) as AlbumOwnershipFilter,
               })
             }
           />
@@ -99,10 +96,7 @@ export function AlbumToolbar({
             selectedValues={visibilitySelected}
             onSelectionChange={(values) =>
               onFiltersChange({
-                visibility: single(
-                  values,
-                  filters.visibility
-                ) as AlbumVisibilityFilter,
+                visibility: single(values) as AlbumVisibilityFilter,
               })
             }
           />

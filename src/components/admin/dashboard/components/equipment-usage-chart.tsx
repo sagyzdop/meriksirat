@@ -1,4 +1,4 @@
-import { Pie, PieChart, Cell, Legend } from 'recharts'
+import { Pie, PieChart } from 'recharts'
 import {
   Card,
   CardContent,
