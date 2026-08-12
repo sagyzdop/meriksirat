@@ -11,6 +11,7 @@ import { InfiniteAlbumGroupedList } from '@/components/albums/album-sections'
 import { AlbumToolbar } from '@/components/albums/album-toolbar'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
+import { SplashText } from '@/components/layout/splash-text'
 import {
   Empty,
   EmptyDescription,
@@ -62,10 +63,7 @@ function PublicAlbumsIndex() {
 
   const content = (
     <PageContainer>
-      <PageHeader
-        title="Albums"
-        description="Photo albums shared publicly by the NU Image club."
-      />
+      <PageHeader title="Albums" description={<SplashText />} />
 
       <AlbumToolbar
         filters={filters}
