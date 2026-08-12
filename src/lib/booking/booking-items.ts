@@ -1,8 +1,10 @@
 import type { db } from '@/db'
-import { bookingItem, equipment } from '@/db/schema'
+import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { recomputeBookingStatus } from '@/lib/booking/status'
-import { deleteCalendarEvent } from '@/lib/google/google-caledar'
+import { deleteCalendarEvent, updateCalendarEvent } from '@/lib/google/google-caledar'
+import { formatBookingDetailsPlain } from '@/lib/booking/details'
+import { formatUserDisplayName } from '@/lib/utils'
 
 type BookingDatabase = ReturnType<typeof db>
 
@@ -12,6 +14,13 @@ type BookingDatabase = ReturnType<typeof db>
  * These are the single source of truth for cancelling/returning booking items.
  * They are reused by the Telegram bot flows (/cancel_booking, /return_equipment
  * photo completion) and by the web booking pages.
+ *
+ * Calendar event rules:
+ * - Cancel always deletes the event.
+ * - Return updates the event end time to the ACTUAL return time (uncapped, so
+ *   a late return is reflected exactly). The event is kept once the booking
+ *   has started. If the booking was never started (defensive path; never-started
+ *   bookings are force-cancelled instead), the event is deleted.
  */
 
 export interface BookingItemActionResult {
@@ -24,11 +33,29 @@ export interface BookingItemActionResult {
   touchedBookings: number[]
 }
 
-export async function cancelBookingItems(
+interface BookingItemWithContext {
+  id: number
+  bookingId: number
+  itemStatus: string
+  equipmentName: string
+  googleCalendarEventId: string | null
+  equipmentCalendarId: string | null
+  startedAt: Date | null
+  bookingStartTime: Date
+  bookingEndTime: Date
+  userEventDetails: string | null
+  userFirstName: string | null
+  userLastName: string | null
+  userName: string | null
+  userTelegramUsername: string | null
+  userEmail: string | null
+}
+
+async function selectItemsWithContext(
   database: BookingDatabase,
   itemIds: number[]
-): Promise<BookingItemActionResult> {
-  const items = await database
+): Promise<BookingItemWithContext[]> {
+  return database
     .select({
       id: bookingItem.id,
       bookingId: bookingItem.bookingId,
@@ -36,10 +63,48 @@ export async function cancelBookingItems(
       equipmentName: equipment.modelName,
       googleCalendarEventId: bookingItem.googleCalendarEventId,
       equipmentCalendarId: equipment.googleCalendarId,
+      startedAt: booking.startedAt,
+      bookingStartTime: booking.startTime,
+      bookingEndTime: booking.endTime,
+      userEventDetails: booking.userEventDetails,
+      userFirstName: user.firstName,
+      userLastName: user.lastName,
+      userName: user.name,
+      userTelegramUsername: user.telegramUsername,
+      userEmail: user.email,
     })
     .from(bookingItem)
     .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
+    .innerJoin(user, eq(booking.userId, user.id))
     .where(inArray(bookingItem.id, itemIds))
+}
+
+function buildItemEventDetails(item: BookingItemWithContext, status: string) {
+  const userDisplayName = formatUserDisplayName({
+    firstName: item.userFirstName,
+    lastName: item.userLastName,
+    name: item.userName,
+    telegramUsername: item.userTelegramUsername,
+  })
+
+  return formatBookingDetailsPlain({
+    bookingId: item.bookingId,
+    userDisplayName,
+    equipmentNames: [item.equipmentName],
+    startTime: item.bookingStartTime,
+    endTime: item.bookingEndTime,
+    startedAt: item.startedAt,
+    status,
+    notes: item.userEventDetails,
+  })
+}
+
+export async function cancelBookingItems(
+  database: BookingDatabase,
+  itemIds: number[]
+): Promise<BookingItemActionResult> {
+  const items = await selectItemsWithContext(database, itemIds)
 
   const cancellable = items.filter(
     (it) => it.itemStatus !== 'cancelled' && it.itemStatus !== 'returned'
@@ -94,18 +159,7 @@ export async function returnBookingItems(
   database: BookingDatabase,
   itemIds: number[]
 ): Promise<BookingItemActionResult> {
-  const items = await database
-    .select({
-      id: bookingItem.id,
-      bookingId: bookingItem.bookingId,
-      itemStatus: bookingItem.status,
-      equipmentName: equipment.modelName,
-      googleCalendarEventId: bookingItem.googleCalendarEventId,
-      equipmentCalendarId: equipment.googleCalendarId,
-    })
-    .from(bookingItem)
-    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-    .where(inArray(bookingItem.id, itemIds))
+  const items = await selectItemsWithContext(database, itemIds)
 
   const returnable = items.filter(
     (it) => it.itemStatus !== 'returned' && it.itemStatus !== 'cancelled'
@@ -115,9 +169,11 @@ export async function returnBookingItems(
     return { updated: [], touchedBookings: [] }
   }
 
+  const returnedAt = new Date()
+
   await database
     .update(bookingItem)
-    .set({ status: 'returned', returnedAt: new Date(), updatedAt: new Date() })
+    .set({ status: 'returned', returnedAt, updatedAt: new Date() })
     .where(inArray(bookingItem.id, returnable.map((it) => it.id)))
 
   const touchedBookings = [...new Set(returnable.map((it) => it.bookingId))]
@@ -131,17 +187,33 @@ export async function returnBookingItems(
   }
 
   for (const it of returnable) {
-    if (it.googleCalendarEventId && it.equipmentCalendarId) {
-      try {
+    if (!it.googleCalendarEventId || !it.equipmentCalendarId) continue
+
+    try {
+      if (it.startedAt) {
+        await updateCalendarEvent({
+          data: {
+            equipmentCalendarId: it.equipmentCalendarId,
+            eventId: it.googleCalendarEventId,
+            event: {
+              summary: `${it.equipmentName} (RETURNED)`,
+              description: buildItemEventDetails(it, 'returned'),
+              start: { dateTime: it.startedAt.toISOString(), timeZone: 'UTC' },
+              end: { dateTime: returnedAt.toISOString(), timeZone: 'UTC' },
+            },
+            userEmail: it.userEmail || '',
+          },
+        })
+      } else {
         await deleteCalendarEvent({
           data: {
             equipmentCalendarId: it.equipmentCalendarId,
             eventId: it.googleCalendarEventId,
           },
         })
-      } catch (err) {
-        console.error('Failed to delete calendar event for returned item:', err)
       }
+    } catch (err) {
+      console.error('Failed to update calendar event for returned item:', err)
     }
   }
 

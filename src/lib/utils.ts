@@ -26,29 +26,4 @@ export function formatUserDisplayName(user: UserIdentity): string {
   return telegramHandle ? `${baseName} (${telegramHandle})` : baseName
 }
 
-type EventDescriptionParams = {
-  bookingId: number
-  userDisplayName: string
-  notes?: string | null
-  status?: string | null
-  globalNote?: string | null
-}
 
-export function buildEventDescription(params: EventDescriptionParams): string {
-  const descriptionParts = [
-    `Booking ID: ${params.bookingId}`,
-    `User: ${params.userDisplayName}`
-  ]
-
-  if (params.status) {
-    descriptionParts.push(`Status: ${params.status}`)
-  }
-
-  descriptionParts.push(`Notes: ${params.notes || 'No additional notes'}`)
-
-  if (params.globalNote && params.globalNote.trim()) {
-    descriptionParts.push('', '---', params.globalNote)
-  }
-
-  return descriptionParts.join('\n')
-}
