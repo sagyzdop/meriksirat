@@ -3,6 +3,7 @@ import {
   getEquipmentFn,
   getAdminEquipmentFn,
   getCategoriesFn,
+  getEquipmentByIdFn,
 } from './functions'
 import type {
   AdminEquipmentFilters,
@@ -48,6 +49,11 @@ export const equipmentQueries = {
       queryFn: async (): Promise<PaginatedEquipmentResponse> =>
         (await getAdminEquipmentFn({ data: filters })) ??
         adminEquipmentEmptyResponse(filters),
+    }),
+  detail: (equipmentId: number) =>
+    queryOptions({
+      queryKey: ['equipment', 'detail', equipmentId],
+      queryFn: () => getEquipmentByIdFn({ data: { equipmentId } }),
     }),
   categories: () =>
     queryOptions({
