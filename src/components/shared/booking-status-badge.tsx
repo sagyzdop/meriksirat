@@ -29,7 +29,7 @@ export function isBookingOverdue(
 ): boolean {
   return (
     isPast(new Date(endTime)) &&
-    (status === "booked" || status === "active" || status === "partially_returned")
+    (status === "active" || status === "partially_returned")
   );
 }
 

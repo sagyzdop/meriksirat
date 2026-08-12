@@ -47,6 +47,8 @@ interface BookingDetailProps {
   cancelDescription?: string;
   canCancel?: boolean;
   onCancel?: () => Promise<unknown>;
+  canStart?: boolean;
+  onStart?: () => Promise<unknown>;
   telegramBotUsername?: string;
 }
 
@@ -65,15 +67,42 @@ export function BookingDetail({
   cancelDescription = "Are you sure you want to cancel this booking? This action cannot be undone and the calendar event will be removed.",
   canCancel = false,
   onCancel,
+  canStart = false,
+  onStart,
   telegramBotUsername,
 }: BookingDetailProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showStartDialog, setShowStartDialog] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [pendingCancelItem, setPendingCancelItem] =
     useState<BookingItemWithEquipment | null>(null);
   const [isCancellingItem, setIsCancellingItem] = useState(false);
+
+  const actualReturn = booking.items.reduce<Date | null>((max, item) => {
+    if (!item.returnedAt) return max;
+    return !max || item.returnedAt > max ? item.returnedAt : max;
+  }, null);
+
+  const handleStart = async () => {
+    if (!onStart) return;
+    setIsStarting(true);
+    try {
+      await onStart();
+      toast.success("Booking started successfully");
+      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      router.invalidate();
+      setShowStartDialog(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to start booking"
+      );
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   const handleCancel = async () => {
     if (!onCancel) return;
@@ -171,6 +200,26 @@ export function BookingDetail({
                     {format(new Date(booking.endTime), "EEE, MMM d, yyyy HH:mm")}
                   </TableCell>
                 </TableRow>
+                {booking.startedAt && (
+                  <TableRow>
+                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                      Actual Start
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {format(new Date(booking.startedAt), "EEE, MMM d, yyyy HH:mm")}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {actualReturn && (
+                  <TableRow>
+                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                      Actual Return
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {format(new Date(actualReturn), "EEE, MMM d, yyyy HH:mm")}
+                    </TableCell>
+                  </TableRow>
+                )}
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
                     Created At
@@ -229,6 +278,14 @@ export function BookingDetail({
         </Section>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {canStart && onStart && (
+            <Button
+              variant="default"
+              onClick={() => setShowStartDialog(true)}
+            >
+              Start Pickup
+            </Button>
+          )}
           {canCancel && onCancel && (
             <Button
               variant="destructive"
@@ -242,6 +299,29 @@ export function BookingDetail({
           </Link>
         </div>
       </div>
+
+      <AlertDialog open={showStartDialog} onOpenChange={setShowStartDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start Pickup</AlertDialogTitle>
+            <AlertDialogDescription>
+              Start this booking now? The equipment will be marked as picked up and
+              the calendar event will be updated with the actual start time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isStarting}>
+              Not Now
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleStart}
+              disabled={isStarting}
+            >
+              {isStarting ? "Starting..." : "Start Booking"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
