@@ -40,6 +40,11 @@ export const user = sqliteTable(
   onboardingComplete: integer('onboarding_complete', {
     mode: 'boolean',
   }).default(false),
+  // Violation counters (per booking): auto-cancelled for not starting, overdue
+  cancelledInStartWindowCount: integer('cancelled_in_start_window_count')
+    .default(0)
+    .notNull(),
+  overdueCount: integer('overdue_count').default(0).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
@@ -218,6 +223,11 @@ export const booking = sqliteTable(
       .notNull()
       .default('booked'),
     userEventDetails: text('user_event_details'), // User-provided booking notes
+    startedAt: integer('started_at', { mode: 'timestamp_ms' }), // Actual pickup time
+    startReminderSentAt: integer('start_reminder_sent_at', { mode: 'timestamp_ms' }),
+    startWarningSentAt: integer('start_warning_sent_at', { mode: 'timestamp_ms' }),
+    returnReminderSentAt: integer('return_reminder_sent_at', { mode: 'timestamp_ms' }),
+    graceWarningSentAt: integer('grace_warning_sent_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
