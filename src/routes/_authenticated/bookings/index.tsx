@@ -58,11 +58,17 @@ export const Route = createFileRoute('/_authenticated/bookings/')({
 function RouteComponent() {
   const { telegramBotUsername } = Route.useLoaderData()
   const search = Route.useSearch()
+  const { user } = Route.useRouteContext()
   const { data, isFetching } = useQuery(bookingsQueries.mine(search))
   const response = data ?? bookingsEmptyResponse(search)
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })
+
+  const currentUserName =
+    `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+    user?.email ||
+    'You'
 
   return (
     <Page
@@ -70,6 +76,7 @@ function RouteComponent() {
       pagination={response.pagination}
       filters={search}
       telegramBotUsername={telegramBotUsername}
+      currentUserName={currentUserName}
       isLoading={isRouterPending || isFetching}
     />
   )

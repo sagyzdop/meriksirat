@@ -2,7 +2,6 @@ import * as React from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
-  SortingState,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -23,24 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
+import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
+import { useServerTableSorting } from '@/components/shared/data-table/use-server-table-sorting'
 import { BulkEditClearanceDialog } from '@/components/shared/bulk-edit-clearance-dialog'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
-import {
-  Shield,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from 'lucide-react'
+import { Shield, X } from 'lucide-react'
 import {
   EquipmentWithCategory,
   bulkUpdateEquipmentClearanceFn,
@@ -132,13 +119,7 @@ export function EquipmentDataTable({
     setLocalSearchValue(searchQueryValue)
   }, [searchQueryValue])
 
-  // Controlled sorting state - sync with URL params
-  const [sorting, setSorting] = React.useState<SortingState>([
-    {
-      id: filters.sortBy,
-      desc: filters.sortOrder === 'desc',
-    },
-  ])
+  const { sorting, handleSortingChange } = useServerTableSorting(filters)
 
   // Get category options for filtering from pre-fetched categories
   const categoryOptions = React.useMemo(() => {
@@ -162,48 +143,6 @@ export function EquipmentDataTable({
 
     return options.map(({ value, label }) => ({ value, label }))
   }, [categories, data])
-
-  // Sync sorting state with URL params when they change
-  React.useEffect(() => {
-    setSorting([
-      {
-        id: filters.sortBy,
-        desc: filters.sortOrder === 'desc',
-      },
-    ])
-  }, [filters.sortBy, filters.sortOrder])
-
-  // Handle sorting changes - navigate to update URL
-  const handleSortingChange = React.useCallback(
-    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
-      // Get the current sorting state from URL params (source of truth)
-      const currentSorting: SortingState = [
-        {
-          id: filters.sortBy,
-          desc: filters.sortOrder === 'desc',
-        },
-      ]
-
-      const newSorting =
-        typeof updaterOrValue === 'function'
-          ? updaterOrValue(currentSorting)
-          : updaterOrValue
-
-      if (newSorting.length > 0) {
-        const sort = newSorting[0]
-        navigate({
-          to: '.',
-          search: {
-            ...filters,
-            sortBy: sort.id as any,
-            sortOrder: sort.desc ? 'desc' : 'asc',
-            page: 1,
-          },
-        })
-      }
-    },
-    [filters, navigate]
-  )
 
   const table = useReactTable({
     data,
@@ -442,78 +381,15 @@ export function EquipmentDataTable({
         </Table>
       </div>
 
-      {/* Pagination - Responsive layout */}
-      <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {pagination.total} row(s) selected.
-        </div>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium whitespace-nowrap">
-              Rows per page
-            </p>
-            <Select
-              value={`${pagination.limit}`}
-              onValueChange={(value) => handlePageSizeChange(Number(value))}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={pagination.limit} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-between sm:justify-center gap-2">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-              Page {pagination.page} of {pagination.totalPages}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => handlePageChange(1)}
-                disabled={pagination.page <= 1}
-              >
-                <span className="sr-only">Go to first page</span>
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-              >
-                <span className="sr-only">Go to previous page</span>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page >= pagination.totalPages}
-              >
-                <span className="sr-only">Go to next page</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => handlePageChange(pagination.totalPages)}
-                disabled={pagination.page >= pagination.totalPages}
-              >
-                <span className="sr-only">Go to last page</span>
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ServerDataTablePagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        limit={pagination.limit}
+        selectedCount={selectedEquipmentIds.length}
+        totalCount={pagination.total}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       <BulkEditClearanceDialog
         open={bulkEditClearanceOpen}

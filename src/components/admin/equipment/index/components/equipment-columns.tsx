@@ -1,8 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowUpDown } from 'lucide-react'
+import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { EquipmentWithCategory } from '@/lib/equipment'
 
 const statusConfig = {
@@ -68,10 +67,7 @@ export const createEquipmentColumns =
       id: 'modelName',
       accessorFn: (row) => row.modelName,
       header: ({ column }) => (
-        <Button variant="ghost" onClick={column.getToggleSortingHandler()}>
-          Model Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+        <DataTableColumnHeader column={column} title="Model Name" />
       ),
       cell: ({ row }) => {
         const equipment = row.original
@@ -92,10 +88,7 @@ export const createEquipmentColumns =
       id: 'category',
       accessorFn: (row) => row.category?.name || 'Uncategorized',
       header: ({ column }) => (
-        <Button variant="ghost" onClick={column.getToggleSortingHandler()}>
-          Category
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+        <DataTableColumnHeader column={column} title="Category" />
       ),
       cell: ({ row }) => {
         const category = row.original.category
@@ -113,10 +106,7 @@ export const createEquipmentColumns =
       id: 'requiredClearanceLevel',
       accessorFn: (row) => row.requiredClearanceLevel,
       header: ({ column }) => (
-        <Button variant="ghost" onClick={column.getToggleSortingHandler()}>
-          Clearance Level
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+        <DataTableColumnHeader column={column} title="Clearance Level" />
       ),
       cell: ({ row }) => {
         const clearanceLevel = row.getValue('requiredClearanceLevel') as
@@ -135,10 +125,7 @@ export const createEquipmentColumns =
       id: 'isActive',
       accessorFn: (row) => row.isActive,
       header: ({ column }) => (
-        <Button variant="ghost" onClick={column.getToggleSortingHandler()}>
-          Status
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+        <DataTableColumnHeader column={column} title="Status" />
       ),
       cell: ({ row }) => {
         const isActive = row.getValue('isActive') as boolean | null

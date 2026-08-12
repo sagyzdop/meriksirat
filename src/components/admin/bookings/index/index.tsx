@@ -1,8 +1,16 @@
-import { bookingColumns } from "./components/booking-columns"
-import { BookingDataTable } from "./components/booking-data-table"
-import type { AdminBookingWithDetails } from "@/lib/booking/types"
-import { PageContainer } from "@/components/layout/page-container"
-import { PageHeader } from "@/components/layout/page-header"
+import * as React from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+
+import {
+  BookingCollapsibleContent,
+  BookingCollapsibleList,
+} from '@/components/shared/booking-collapsible'
+import { DeleteBookingDialog } from './components/delete-booking-dialog'
+import { updateBookingStatusAdminFn } from '@/lib/booking'
+import type { AdminBookingWithDetails } from '@/lib/booking/types'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 
 interface Pagination {
   page: number
@@ -28,23 +36,134 @@ interface PageProps {
   isLoading?: boolean
 }
 
-export function Page({ bookings, pagination, filters, isLoading = false }: PageProps) {
-  const description = pagination.total > 0
-    ? `Managing ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
-    : "No bookings found"
+const statusOptions = [
+  { value: 'booked', label: 'Booked' },
+  { value: 'active', label: 'Active' },
+  { value: 'returned', label: 'Returned' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'overdue', label: 'Overdue' },
+]
+
+export function Page({
+  bookings,
+  pagination,
+  filters,
+  isLoading = false,
+}: PageProps) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<AdminBookingWithDetails | null>(null)
+
+  const description =
+    pagination.total > 0
+      ? `Managing ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
+      : 'No bookings found'
+
+  const getDisplayName = (booking: AdminBookingWithDetails) => {
+    if (!booking.user) return 'Unknown User'
+    const name =
+      `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim()
+    return name || booking.user.email || 'Unknown User'
+  }
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Manage Bookings"
-        description={description}
-      />
-      <BookingDataTable
-        data={bookings}
-        columns={bookingColumns}
+      <PageHeader title="Manage Bookings" description={description} />
+      <BookingCollapsibleList
+        bookings={bookings}
         pagination={pagination}
         filters={filters}
+        statusOptions={statusOptions}
+        showOverdueBanner
         isLoading={isLoading}
+        calendarActionText="update their calendar events"
+        isCancellable={(status) =>
+          status !== 'returned' && status !== 'cancelled'
+        }
+        bulkCancelFn={(bookingId) =>
+          updateBookingStatusAdminFn({
+            data: { bookingId, status: 'cancelled' },
+          })
+        }
+        getDisplayName={getDisplayName}
+        onSortChange={(sortBy, sortOrder) =>
+          navigate({
+            to: '.',
+            search: {
+              ...filters,
+              sortBy: sortBy as Filters['sortBy'],
+              sortOrder,
+              page: 1,
+            },
+          })
+        }
+        onStatusFilterChange={(status) =>
+          navigate({
+            to: '.',
+            search: { ...filters, status, page: 1 },
+          })
+        }
+        onResetFilters={() =>
+          navigate({
+            to: '.',
+            search: {
+              page: 1,
+              limit: filters.limit,
+              sortBy: 'startTime',
+              sortOrder: 'desc',
+            },
+          })
+        }
+        onPageChange={(page) =>
+          navigate({ to: '.', search: { ...filters, page } })
+        }
+        onPageSizeChange={(limit) =>
+          navigate({ to: '.', search: { ...filters, limit, page: 1 } })
+        }
+        renderCollapsibleContent={(booking) => (
+          <BookingCollapsibleContent
+            booking={booking}
+            onViewDetails={() =>
+              navigate({
+                to: '/admin/bookings/$bookingId',
+                params: { bookingId: booking.id.toString() },
+              })
+            }
+            onEdit={() =>
+              navigate({
+                to: '/admin/bookings/$bookingId/edit',
+                params: { bookingId: booking.id.toString() },
+              })
+            }
+            onCopyId={() =>
+              navigator.clipboard.writeText(booking.id.toString())
+            }
+            onViewEquipment={
+              booking.items[0]?.equipment
+                ? () =>
+                    navigate({
+                      to: '/equipment/$',
+                      params: {
+                        _splat: booking.items[0].equipment!.id.toString(),
+                      },
+                    })
+                : undefined
+            }
+            onDelete={() => setDeleteTarget(booking)}
+          />
+        )}
+      />
+
+      <DeleteBookingDialog
+        booking={deleteTarget}
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+        onSuccess={() =>
+          queryClient.invalidateQueries({ queryKey: ['bookings'] })
+        }
       />
     </PageContainer>
   )

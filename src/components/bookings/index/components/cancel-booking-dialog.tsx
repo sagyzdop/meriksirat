@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,11 +8,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { BookingWithItems } from "@/lib/booking/types"
-import { toast } from "sonner"
-import { useQueryClient } from "@tanstack/react-query"
-import { cancelBookingFn } from "@/lib/booking"
+} from '@/components/ui/alert-dialog'
+import { BookingWithItems } from '@/lib/booking/types'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { cancelBookingFn } from '@/lib/booking'
 
 interface CancelBookingDialogProps {
   booking: BookingWithItems | null
@@ -41,18 +41,18 @@ export function CancelBookingDialog({
         },
       })
 
-      toast.success("Booking cancelled successfully")
-      
+      toast.success('Booking cancelled successfully')
+
       // Refresh the bookings list in the background
       await queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      
+
       if (onSuccess) {
         onSuccess()
       }
     } catch (error) {
-      console.error("Error cancelling booking:", error)
+      console.error('Error cancelling booking:', error)
       toast.error(
-        error instanceof Error ? error.message : "Failed to cancel booking"
+        error instanceof Error ? error.message : 'Failed to cancel booking'
       )
     } finally {
       setIsLoading(false)
@@ -67,9 +67,21 @@ export function CancelBookingDialog({
           <AlertDialogDescription>
             Are you sure you want to cancel this booking
             {booking.items.length > 0 && (
-              <> for <strong>{booking.items.map((item) => item.equipment?.modelName ?? `Equipment ${item.equipmentId}`).join(", ")}</strong></>
-            )}? This action cannot
-            be undone.
+              <>
+                {' '}
+                for{' '}
+                <strong>
+                  {booking.items
+                    .map(
+                      (item) =>
+                        item.equipment?.modelName ??
+                        `Equipment ${item.equipmentId}`
+                    )
+                    .join(', ')}
+                </strong>
+              </>
+            )}
+            ? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -82,7 +94,7 @@ export function CancelBookingDialog({
             disabled={isLoading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isLoading ? "Cancelling..." : "Yes, cancel booking"}
+            {isLoading ? 'Cancelling...' : 'Yes, cancel booking'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
