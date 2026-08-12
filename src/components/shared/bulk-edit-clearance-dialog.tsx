@@ -1,6 +1,6 @@
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -16,16 +16,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from '@/components/ui/form'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
+} from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 const bulkEditSchema = z.object({
   clearanceLevel: z.number().min(1).max(10),
@@ -78,7 +78,7 @@ export function BulkEditClearanceDialog({
     } catch (error) {
       toast.error(errorTitle, {
         description:
-          error instanceof Error ? error.message : "An error occurred",
+          error instanceof Error ? error.message : 'An error occurred',
       })
     }
   }
@@ -94,7 +94,10 @@ export function BulkEditClearanceDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="clearanceLevel"
@@ -134,7 +137,7 @@ export function BulkEditClearanceDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Updating..." : "Update All"}
+                {form.formState.isSubmitting ? 'Updating...' : 'Update All'}
               </Button>
             </DialogFooter>
           </form>

@@ -7,31 +7,19 @@ import {
   getTelegramBotUsernameFn,
 } from '@/lib/booking'
 import { z } from 'zod'
+import { stringArrayParam } from '@/lib/search-params'
 
 const searchSchema = z.object({
-  status: z
-    .preprocess(
-      (val) => {
-        if (Array.isArray(val)) return val
-        if (typeof val === 'string') {
-          if (val === '') return undefined
-          // Handle stringified JSON arrays
-          if (val.startsWith('[') && val.endsWith(']')) {
-            try {
-              const parsed = JSON.parse(val)
-              if (Array.isArray(parsed)) return parsed
-            } catch (e) {
-              // Fall through to other treatments
-            }
-          }
-          if (val.includes(',')) return val.split(',')
-          return [val]
-        }
-        return val
-      },
-      z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned']))
-    )
-    .optional(),
+  status: stringArrayParam(
+    z.enum([
+      'booked',
+      'active',
+      'returned',
+      'cancelled',
+      'overdue',
+      'partially_returned',
+    ])
+  ),
   equipmentId: z.coerce.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -49,7 +37,9 @@ export const Route = createFileRoute('/_authenticated/bookings/')({
   loaderDeps: ({ search }) => ({ search }),
   loader: async ({ deps, context }) => {
     try {
-      await context.queryClient.ensureQueryData(bookingsQueries.mine(deps.search))
+      await context.queryClient.ensureQueryData(
+        bookingsQueries.mine(deps.search)
+      )
     } catch (error) {
       console.error('Failed to load bookings:', error)
     }

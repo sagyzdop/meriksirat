@@ -2,78 +2,24 @@ import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/users/index'
 import { usersQueries } from '@/lib/user'
+import { numberArrayParam, stringArrayParam } from '@/lib/search-params'
 import { z } from 'zod'
 
 const searchSchema = z.object({
-  role: z
-    .preprocess(
-      (val) => {
-        if (Array.isArray(val)) return val
-        if (typeof val === 'string') {
-          if (val === '') return undefined
-          if (val.startsWith('[') && val.endsWith(']')) {
-            try {
-              const parsed = JSON.parse(val)
-              if (Array.isArray(parsed)) return parsed
-            } catch (e) {}
-          }
-          if (val.includes(',')) return val.split(',')
-          return [val]
-        }
-        return val === null ? undefined : val
-      },
-      z.array(z.enum(['user', 'manager', 'admin']))
-    )
-    .optional(),
-  status: z
-    .preprocess(
-      (val) => {
-        if (Array.isArray(val)) return val
-        if (typeof val === 'string') {
-          if (val === '') return undefined
-          if (val.startsWith('[') && val.endsWith(']')) {
-            try {
-              const parsed = JSON.parse(val)
-              if (Array.isArray(parsed)) return parsed
-            } catch (e) {}
-          }
-          if (val.includes(',')) return val.split(',')
-          return [val]
-        }
-        return val === null ? undefined : val
-      },
-      z.array(
-        z.enum([
-          'Active',
-          'Inactive',
-          'On Probation',
-          'Board',
-          'Ex-Board',
-          'Roommate',
-          'Ex-Roommate',
-          'Graduated',
-        ])
-      )
-    )
-    .optional(),
-  clearanceLevel: z
-    .preprocess((val) => {
-      if (Array.isArray(val)) return val.map(Number)
-      if (typeof val === 'number') return [val]
-      if (typeof val === 'string') {
-        if (val === '') return undefined
-        if (val.startsWith('[') && val.endsWith(']')) {
-          try {
-            const parsed = JSON.parse(val)
-            if (Array.isArray(parsed)) return parsed.map(Number)
-          } catch (e) {}
-        }
-        if (val.includes(',')) return val.split(',').map(Number)
-        return [Number(val)]
-      }
-      return val === null ? undefined : val
-    }, z.array(z.coerce.number()))
-    .optional(),
+  role: stringArrayParam(z.enum(['user', 'manager', 'admin'])),
+  status: stringArrayParam(
+    z.enum([
+      'Active',
+      'Inactive',
+      'On Probation',
+      'Board',
+      'Ex-Board',
+      'Roommate',
+      'Ex-Roommate',
+      'Graduated',
+    ])
+  ),
+  clearanceLevel: numberArrayParam(),
   search: z.string().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),

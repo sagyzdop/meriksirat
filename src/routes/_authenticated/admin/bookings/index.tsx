@@ -3,31 +3,19 @@ import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/bookings/index'
 import { bookingsQueries, adminBookingsEmptyResponse } from '@/lib/booking'
 import { z } from 'zod'
+import { stringArrayParam } from '@/lib/search-params'
 
 const searchSchema = z.object({
-  status: z
-    .preprocess(
-      (val) => {
-        if (Array.isArray(val)) return val
-        if (typeof val === 'string') {
-          if (val === '') return undefined
-          // Handle stringified JSON arrays
-          if (val.startsWith('[') && val.endsWith(']')) {
-            try {
-              const parsed = JSON.parse(val)
-              if (Array.isArray(parsed)) return parsed
-            } catch (e) {
-              // Fall through
-            }
-          }
-          if (val.includes(',')) return val.split(',')
-          return [val]
-        }
-        return val
-      },
-      z.array(z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned']))
-    )
-    .optional(),
+  status: stringArrayParam(
+    z.enum([
+      'booked',
+      'active',
+      'returned',
+      'cancelled',
+      'overdue',
+      'partially_returned',
+    ])
+  ),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
   sortBy: z

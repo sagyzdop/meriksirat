@@ -1,6 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { Users, Camera, Tags, Calendar, ArrowRight } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
@@ -40,9 +46,7 @@ export function Page() {
             <Link to="/admin/equipment" className="block">
               <CardHeader>
                 <CardTitle>Equipment</CardTitle>
-                <CardDescription>
-                  Manage equipment catalog
-                </CardDescription>
+                <CardDescription>Manage equipment catalog</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -59,9 +63,7 @@ export function Page() {
             <Link to="/admin/categories" className="block">
               <CardHeader>
                 <CardTitle>Categories</CardTitle>
-                <CardDescription>
-                  Organize equipment
-                </CardDescription>
+                <CardDescription>Organize equipment</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -78,9 +80,7 @@ export function Page() {
             <Link to="/admin/bookings" className="block">
               <CardHeader>
                 <CardTitle>Bookings</CardTitle>
-                <CardDescription>
-                  Monitor all bookings
-                </CardDescription>
+                <CardDescription>Monitor all bookings</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">

@@ -2,50 +2,15 @@ import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/equipment/index'
 import { equipmentQueries, adminEquipmentEmptyResponse } from '@/lib/equipment'
+import { booleanArrayParam, numberArrayParam } from '@/lib/search-params'
 import { z } from 'zod'
 
 const searchSchema = z.object({
-  categoryIds: z
-    .preprocess((val) => {
-      if (Array.isArray(val)) return val
-      if (typeof val === 'number') return [val]
-      if (typeof val === 'string') {
-        if (val === '') return undefined
-        if (val.startsWith('[') && val.endsWith(']')) {
-          try {
-            const parsed = JSON.parse(val)
-            if (Array.isArray(parsed)) return parsed.map(Number)
-          } catch (e) {}
-        }
-        if (val.includes(',')) return val.split(',').map(Number)
-        return [Number(val)]
-      }
-      return val
-    }, z.array(z.coerce.number()))
-    .optional(),
+  categoryIds: numberArrayParam(),
   searchQuery: z.string().optional(),
   minClearanceLevel: z.coerce.number().optional(),
   maxClearanceLevel: z.coerce.number().optional(),
-  isActive: z
-    .preprocess((val) => {
-      if (Array.isArray(val)) return val.map((v) => String(v) === 'true')
-      if (typeof val === 'string') {
-        if (val === '') return undefined
-        if (val.startsWith('[') && val.endsWith(']')) {
-          try {
-            const parsed = JSON.parse(val)
-            if (Array.isArray(parsed))
-              return parsed.map((v) => String(v) === 'true')
-          } catch (e) {}
-        }
-        if (val.includes(','))
-          return val.split(',').map((v) => String(v) === 'true')
-        return [val === 'true']
-      }
-      if (typeof val === 'boolean') return [val]
-      return val
-    }, z.array(z.boolean()))
-    .optional(),
+  isActive: booleanArrayParam(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
   sortBy: z
