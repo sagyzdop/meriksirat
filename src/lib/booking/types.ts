@@ -31,6 +31,7 @@ export interface BookingWithItems {
   endTime: Date
   status: string
   userEventDetails: string | null
+  startedAt: Date | null
   createdAt: Date
   updatedAt: Date
   items: BookingItemWithEquipment[]
@@ -108,10 +109,15 @@ export type AdminBookingFilters = z.infer<typeof AdminBookingFiltersSchema>
 
 export const UpdateBookingStatusAdminSchema = z.object({
   bookingId: z.coerce.number(),
-  status: z.enum(SETTABLE_BOOKING_STATUSES),
+  // Admins may only move a booking to `cancelled`; other statuses are rejected.
+  status: z.literal('cancelled').optional(),
   notes: z.string().optional(), // Admin notes will be stored in userEventDetails for now
   startTime: z.string().optional(),
   endTime: z.string().optional(),
+})
+
+export const StartBookingSchema = z.object({
+  bookingId: z.coerce.number(),
 })
 
 export const UpdateBookingSchema = z.object({

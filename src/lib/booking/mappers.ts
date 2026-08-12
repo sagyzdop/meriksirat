@@ -35,6 +35,7 @@ export interface BookingItemRow {
   endTime: Date
   status: string
   userEventDetails: string | null
+  startedAt: Date | null
   createdAt: Date
   updatedAt: Date
   itemId: number
@@ -71,6 +72,7 @@ export function mapBookingsWithItems(rows: BookingItemRow[]): BookingWithItems[]
         endTime: row.endTime,
         status: row.status,
         userEventDetails: row.userEventDetails,
+        startedAt: row.startedAt,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         items: [],
