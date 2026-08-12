@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { BookingWithItems } from "@/lib/booking/types"
-import { DataTableFacetedFilter } from "./data-table-faceted-filter"
+import { DataTableFacetedFilter } from "@/components/shared/data-table-faceted-filter"
 import { X, MessageCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { createTelegramBotLink } from "@/lib/telegram/client-utils"
 import { cancelBookingFn } from "@/lib/booking"

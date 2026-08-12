@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
-import { DataTableFacetedFilter } from '@/components/admin/equipment/index/components/data-table-faceted-filter'
+import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
 import type {
   AlbumListFilters,
   AlbumOwnershipFilter,

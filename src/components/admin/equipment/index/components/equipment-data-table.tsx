@@ -30,11 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DataTableFacetedFilter } from "./data-table-faceted-filter"
-import { BulkEditClearanceDialog } from "./bulk-edit-clearance-dialog"
+import { DataTableFacetedFilter } from "@/components/shared/data-table-faceted-filter"
+import { BulkEditClearanceDialog } from "@/components/shared/bulk-edit-clearance-dialog"
 import { LoadingOverlay } from "@/components/shared/loading-overlay"
 import { Shield, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
-import { EquipmentWithCategory } from "@/lib/equipment"
+import { EquipmentWithCategory, bulkUpdateEquipmentClearanceFn } from "@/lib/equipment"
 
 interface Pagination {
   page: number
@@ -436,9 +436,21 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
       </div>
 
       <BulkEditClearanceDialog
-        equipmentIds={selectedEquipmentIds}
         open={bulkEditClearanceOpen}
         onOpenChange={setBulkEditClearanceOpen}
+        count={selectedEquipmentIds.length}
+        itemNoun="equipment item(s)"
+        actionPhrase="update the required clearance level"
+        successMessage={`Updated clearance level for ${selectedEquipmentIds.length} equipment item(s)`}
+        errorTitle="Failed to update equipment"
+        onSubmit={async (clearanceLevel) => {
+          await bulkUpdateEquipmentClearanceFn({
+            data: {
+              equipmentIds: selectedEquipmentIds,
+              requiredClearanceLevel: clearanceLevel,
+            },
+          })
+        }}
         onSuccess={() => {
           setRowSelection({})
           queryClient.invalidateQueries({ queryKey: ['equipment', 'admin-list'] })

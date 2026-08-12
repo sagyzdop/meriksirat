@@ -31,11 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DataTableFacetedFilter } from "./data-table-faceted-filter"
+import { DataTableFacetedFilter } from "@/components/shared/data-table-faceted-filter"
 import { createUserColumns } from "./user-columns"
 import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Shield } from "lucide-react"
-import { BulkEditClearanceDialog } from "./bulk-edit-clearance-dialog"
+import { BulkEditClearanceDialog } from "@/components/shared/bulk-edit-clearance-dialog"
 
+import { bulkUpdateUserClearanceFn } from "@/lib/user/functions"
 import { User } from "@/lib/user/types"
 
 interface Pagination {
@@ -432,9 +433,18 @@ export function UserDataTable({
       </div>
 
       <BulkEditClearanceDialog
-        userIds={selectedUserIds}
         open={bulkEditClearanceOpen}
         onOpenChange={setBulkEditClearanceOpen}
+        count={selectedUserIds.length}
+        itemNoun="user(s)"
+        actionPhrase="update the clearance level"
+        successMessage={`Updated clearance level for ${selectedUserIds.length} user(s)`}
+        errorTitle="Failed to update users"
+        onSubmit={async (clearanceLevel) => {
+          await bulkUpdateUserClearanceFn({
+            data: { userIds: selectedUserIds, clearanceLevel },
+          })
+        }}
         onSuccess={() => {
           table.resetRowSelection()
           queryClient.invalidateQueries({ queryKey: ['users'] })
