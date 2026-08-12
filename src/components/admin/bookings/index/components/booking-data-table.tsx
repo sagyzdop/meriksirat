@@ -103,7 +103,7 @@ export function BookingDataTable({
   const overdueCount = React.useMemo(() => {
     return data.filter(booking =>
       isPast(new Date(booking.endTime)) &&
-      (booking.status === 'booked' || booking.status === 'active')
+      (booking.status === 'active' || booking.status === 'partially_returned')
     ).length
   }, [data])
 
@@ -221,8 +221,9 @@ export function BookingDataTable({
   }, [selectedBookings])
 
   const cancellableBookings = React.useMemo(() => {
-    return selectedBookings.filter((booking) =>
-      booking.status === "booked" || booking.status === "active"
+    return selectedBookings.filter(
+      (booking) =>
+        booking.status !== "returned" && booking.status !== "cancelled"
     )
   }, [selectedBookings])
 
@@ -389,7 +390,7 @@ export function BookingDataTable({
               table.getRowModel().rows.map((row) => {
                 const booking = row.original
                 const isOverdue = isPast(new Date(booking.endTime)) &&
-                  (booking.status === 'booked' || booking.status === 'active')
+                  (booking.status === 'active' || booking.status === 'partially_returned')
 
                 return (
                   <TableRow

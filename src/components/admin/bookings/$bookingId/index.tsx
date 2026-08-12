@@ -9,9 +9,7 @@ interface PageProps {
 
 export function Page({ booking, telegramBotUsername }: PageProps) {
   const canCancel =
-    booking.status === "booked" ||
-    booking.status === "active" ||
-    booking.status === "partially_returned";
+    booking.status !== "returned" && booking.status !== "cancelled";
 
   return (
     <BookingDetail

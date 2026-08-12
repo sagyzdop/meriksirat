@@ -8,7 +8,6 @@ import { getBookingSlots } from '@/lib/booking/slots'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { Save, Calendar, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -19,10 +18,20 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { BookingEquipmentTable } from '@/components/shared/booking-equipment-table'
 import { BookingSchedule } from '@/components/shared/booking-schedule'
+import { BookingStatusBadge } from '@/components/shared/booking-status-badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import type { AdminBookingWithDetails } from '@/lib/booking/types'
 
 const editBookingSchema = z.object({
-  status: z.enum(['booked', 'active', 'returned', 'cancelled', 'overdue']),
   notes: z.string().optional(),
 })
 
@@ -38,6 +47,9 @@ export function Page({ booking, bookingId }: PageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelNotes, setCancelNotes] = useState('')
+  const [isCancelling, setIsCancelling] = useState(false)
 
   const initialSlots = getBookingSlots(booking.startTime, booking.endTime)
   const [selectedSlots, setSelectedSlots] = useState<string[]>(initialSlots)
@@ -46,7 +58,6 @@ export function Page({ booking, bookingId }: PageProps) {
   const form = useForm<EditBookingForm>({
     resolver: zodResolver(editBookingSchema),
     defaultValues: {
-      status: booking.status as 'booked' | 'active' | 'returned' | 'cancelled' | 'overdue',
       notes: '',
     },
   })
@@ -72,13 +83,11 @@ export function Page({ booking, bookingId }: PageProps) {
     try {
       const requestData: {
         bookingId: number
-        status: EditBookingForm['status']
         notes?: string
         startTime?: string
         endTime?: string
       } = {
         bookingId,
-        status: data.status,
         notes: data.notes,
       }
 
@@ -109,12 +118,32 @@ export function Page({ booking, bookingId }: PageProps) {
     }
   }
 
+  const handleCancelBooking = async () => {
+    setIsCancelling(true)
+    try {
+      await updateBookingStatusAdminFn({
+        data: {
+          bookingId,
+          status: 'cancelled',
+          notes: cancelNotes || 'Booking cancelled by admin',
+        },
+      })
+      setShowCancelDialog(false)
+      navigate({ to: '/admin/bookings' })
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to cancel booking. Please try again.')
+      setShowCancelDialog(false)
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
   const handleCancel = () => {
     navigate({ to: '/admin/bookings' })
   }
 
   const isOverdue = new Date(booking.endTime) < new Date() &&
-    (booking.status === 'booked' || booking.status === 'active' || booking.status === 'partially_returned')
+    (booking.status === 'active' || booking.status === 'partially_returned')
 
   return (
     <PageContainer>
@@ -149,22 +178,11 @@ export function Page({ booking, bookingId }: PageProps) {
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Status</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <Select
-                      onValueChange={(value) => form.setValue('status', value as EditBookingForm['status'])}
-                      value={form.watch('status')}
-                      disabled={isSubmitting}
-                    >
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue placeholder="Select a status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="booked">Booked</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="returned">Returned</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <BookingStatusBadge
+                      status={booking.status}
+                      endTime={booking.endTime}
+                      colorized
+                    />
                   </TableCell>
                 </TableRow>
                 <TableRow>
@@ -237,8 +255,8 @@ export function Page({ booking, bookingId }: PageProps) {
         />
 
         <Section
-          title="Admin Status & Notes"
-          description="Change the booking status, add administrative notes, and optionally update the schedule."
+          title="Admin Notes"
+          description="Add administrative notes and optionally update the schedule. Status changes are handled by the Cancel Booking button."
           spacing="compact"
         >
           <Form {...form}>
@@ -270,7 +288,7 @@ export function Page({ booking, bookingId }: PageProps) {
                 <Calendar className="h-4 w-4" />
                 <AlertDescription>
                   <strong>Calendar Synchronization:</strong> Updates will be synchronized with Google Calendar,
-                  including status changes, schedule updates, and administrative notes.
+                  including schedule updates and administrative notes.
                 </AlertDescription>
               </Alert>
 
@@ -290,12 +308,21 @@ export function Page({ booking, bookingId }: PageProps) {
               <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-end">
                 <Button
                   type="button"
+                  variant="destructive"
+                  onClick={() => setShowCancelDialog(true)}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto sm:mr-auto"
+                >
+                  Cancel Booking
+                </Button>
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={handleCancel}
                   disabled={isSubmitting}
                   className="w-full sm:w-auto"
                 >
-                  Cancel
+                  Back
                 </Button>
                 <Button
                   type="submit"
@@ -310,6 +337,37 @@ export function Page({ booking, bookingId }: PageProps) {
           </Form>
         </Section>
       </div>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel booking #{booking.id}? This action cannot be undone
+              and all calendar events for this booking will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <FormLabel>Reason (optional)</FormLabel>
+            <Textarea
+              value={cancelNotes}
+              onChange={(e) => setCancelNotes(e.target.value)}
+              placeholder="Add a reason for cancelling (optional)..."
+              disabled={isCancelling}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>Keep Booking</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelBooking}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   )
 }
