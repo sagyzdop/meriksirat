@@ -87,6 +87,7 @@ export interface BookingLogData {
   action: 'created' | 'updated' | 'cancelled' | 'returned' | 'deleted'
   startTime?: Date
   endTime?: Date
+  startedAt?: Date | null
   notes?: string | null
   previousStatus?: string
   newStatus?: string
@@ -106,10 +107,11 @@ export interface AdminNotification {
  * Session data structure for KV storage
  */
 export interface SessionData {
-  step?: 'awaiting_booking_selection' | 'awaiting_item_selection' | 'awaiting_photo'
+  step?: 'awaiting_booking_selection' | 'awaiting_item_selection' | 'awaiting_photo' | 'awaiting_start_selection' | 'awaiting_start_confirm'
   userId?: string
   activeBookingIds?: number[]
   selectedBookingIds?: number[]
   selectedItemIds?: number[]
+  startBookingId?: number
   createdAt?: number
 }

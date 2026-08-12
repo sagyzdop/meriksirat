@@ -51,6 +51,15 @@ function formatBookingLogMessage(data: BookingLogData): string {
     message += `📊 **Status:** ${newStatus}\n`
   }
 
+  if (data.startedAt) {
+    const started = data.startedAt.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+    message += `🕐 **Started at:** ${started}\n`
+  }
+
   if (notes) {
     message += `📝 **Notes:** ${notes}\n`
   }
@@ -134,6 +143,7 @@ export async function logBookingActivityById(
       action,
       startTime: bookingDetails.startTime,
       endTime: bookingDetails.endTime,
+      startedAt: bookingDetails.startedAt,
       notes: options.notes || bookingDetails.notes,
       previousStatus: options.previousStatus,
       newStatus: options.newStatus || bookingDetails.status
