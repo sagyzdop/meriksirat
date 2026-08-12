@@ -99,6 +99,10 @@ export const GetUserByIdSchema = z.object({
   userId: z.string(),
 })
 
+export const ResetUserViolationCountersSchema = z.object({
+  userId: z.string(),
+})
+
 // User Profile Update Schema (for users updating their own profile)
 export const UpdateUserProfileSchema = z.object({
   firstName: z.string().min(1).optional(),

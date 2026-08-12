@@ -6,6 +6,7 @@ import {
   GetUserByIdSchema,
   UpdateUserProfileSchema,
   BulkUpdateUserClearanceSchema,
+  ResetUserViolationCountersSchema,
   type UserProfile,
 } from './types'
 
@@ -128,6 +129,8 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
         status: user.status,
         firstName: user.firstName,
         lastName: user.lastName,
+        cancelledInStartWindowCount: user.cancelledInStartWindowCount,
+        overdueCount: user.overdueCount,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
@@ -326,6 +329,8 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
         major: user.major,
         graduationYear: user.graduationYear,
         onboardingComplete: user.onboardingComplete,
+        cancelledInStartWindowCount: user.cancelledInStartWindowCount,
+        overdueCount: user.overdueCount,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
@@ -338,6 +343,36 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
     }
 
     return userData
+  })
+
+/**
+ * Reset a user's violation counters (auto-cancelled bookings and overdue returns).
+ * Only admins and managers can reset counters.
+ */
+export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })
+  .validator(ResetUserViolationCountersSchema)
+  .handler(async ({ data }) => {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const headers = getRequestHeaders()
+    await checkAdminPermission(headers, ['admin', 'manager'])
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    const result = await database
+      .update(user)
+      .set({ cancelledInStartWindowCount: 0, overdueCount: 0 })
+      .where(eq(user.id, data.userId))
+
+    if (result.meta.changes === 0) {
+      throw new Error('User not found')
+    }
+
+    return { success: true }
   })
 
 /**
