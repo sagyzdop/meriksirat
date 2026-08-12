@@ -3,12 +3,7 @@ import * as React from 'react'
 import { updateBookingFn, cancelBookingFn } from '@/lib/booking'
 import { getBookingSlots } from '@/lib/booking/slots'
 import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Trash2 } from 'lucide-react'
 import {
@@ -78,13 +73,16 @@ export function Page({ booking, bookingId }: PageProps) {
       })
 
       toast.success('Booking updated successfully!')
-      
+
       setTimeout(() => {
         navigate({ to: '/bookings' })
       }, 1500)
     } catch (error) {
       console.error('Failed to update booking:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update booking. Please try again.'
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to update booking. Please try again.'
       toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
@@ -96,17 +94,20 @@ export function Page({ booking, bookingId }: PageProps) {
 
     try {
       await cancelBookingFn({
-        data: { bookingId }
+        data: { bookingId },
       })
 
       toast.success('Booking cancelled successfully!')
-      
+
       setTimeout(() => {
         navigate({ to: '/bookings' })
       }, 1500)
     } catch (error) {
       console.error('Failed to cancel booking:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to cancel booking. Please try again.'
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to cancel booking. Please try again.'
       toast.error(errorMessage)
     } finally {
       setIsCancelling(false)
@@ -132,8 +133,9 @@ export function Page({ booking, bookingId }: PageProps) {
       <div className="space-y-8">
         {!canEdit && (
           <div className="rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-            This booking cannot be edited because it has been <strong>{booking.status}</strong>.
-            You can only edit bookings that have not started yet.
+            This booking cannot be edited because it has been{' '}
+            <strong>{booking.status}</strong>. You can only edit bookings that
+            have not started yet.
           </div>
         )}
 
@@ -143,29 +145,51 @@ export function Page({ booking, bookingId }: PageProps) {
             <Table>
               <TableBody>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">ID</TableCell>
-                  <TableCell className="whitespace-nowrap">{booking.id}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Status</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    ID
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <BookingStatusBadge status={booking.status} endTime={booking.endTime} colorized />
+                    {booking.id}
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Start Time</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Status
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {format(new Date(booking.startTime), 'EEE, MMM d, yyyy HH:mm')}
+                    <BookingStatusBadge
+                      status={booking.status}
+                      endTime={booking.endTime}
+                      colorized
+                    />
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">End Time</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Start Time
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {format(new Date(booking.endTime), 'EEE, MMM d, yyyy HH:mm')}
+                    {format(
+                      new Date(booking.startTime),
+                      'EEE, MMM d, yyyy HH:mm'
+                    )}
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Created At</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    End Time
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {format(
+                      new Date(booking.endTime),
+                      'EEE, MMM d, yyyy HH:mm'
+                    )}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Created At
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {format(new Date(booking.createdAt), 'MMM d, yyyy HH:mm')}
                   </TableCell>
@@ -231,12 +255,14 @@ export function Page({ booking, bookingId }: PageProps) {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to cancel this booking? This action cannot be undone.
-                      The calendar event will be deleted.
+                      Are you sure you want to cancel this booking? This action
+                      cannot be undone. The calendar event will be deleted.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isCancelling}>No, keep it</AlertDialogCancel>
+                    <AlertDialogCancel disabled={isCancelling}>
+                      No, keep it
+                    </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleCancel}
                       disabled={isCancelling}

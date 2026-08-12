@@ -1,15 +1,15 @@
-import { BookingDetail } from "@/components/shared/booking-detail";
-import { updateBookingStatusAdminFn } from "@/lib/booking";
-import type { AdminBookingWithDetails } from "@/lib/booking/types";
+import { BookingDetail } from '@/components/shared/booking-detail'
+import { updateBookingStatusAdminFn } from '@/lib/booking'
+import type { AdminBookingWithDetails } from '@/lib/booking/types'
 
 interface PageProps {
-  booking: AdminBookingWithDetails;
-  telegramBotUsername?: string;
+  booking: AdminBookingWithDetails
+  telegramBotUsername?: string
 }
 
 export function Page({ booking, telegramBotUsername }: PageProps) {
   const canCancel =
-    booking.status !== "returned" && booking.status !== "cancelled";
+    booking.status !== 'returned' && booking.status !== 'cancelled'
 
   return (
     <BookingDetail
@@ -21,8 +21,8 @@ export function Page({ booking, telegramBotUsername }: PageProps) {
         booking.user
           ? {
               name:
-                `${booking.user.firstName ?? ""} ${booking.user.lastName ?? ""}`.trim() ||
-                "Unknown",
+                `${booking.user.firstName ?? ''} ${booking.user.lastName ?? ''}`.trim() ||
+                'Unknown',
               email: booking.user.email,
             }
           : null
@@ -31,10 +31,10 @@ export function Page({ booking, telegramBotUsername }: PageProps) {
       canCancel={canCancel}
       onCancel={() =>
         updateBookingStatusAdminFn({
-          data: { bookingId: booking.id, status: "cancelled" },
+          data: { bookingId: booking.id, status: 'cancelled' },
         })
       }
       telegramBotUsername={telegramBotUsername}
     />
-  );
+  )
 }

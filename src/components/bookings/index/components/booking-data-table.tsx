@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -9,11 +9,11 @@ import {
   getFacetedRowModel,
   getFacetedUniqueValues,
   useReactTable,
-} from "@tanstack/react-table"
-import { useNavigate } from "@tanstack/react-router"
-import { useQueryClient } from "@tanstack/react-query"
+} from '@tanstack/react-table'
+import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -21,28 +21,35 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { LoadingOverlay } from "@/components/shared/loading-overlay"
+} from '@/components/ui/table'
+import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { BookingWithItems } from "@/lib/booking/types"
-import { DataTableFacetedFilter } from "@/components/shared/data-table-faceted-filter"
-import { X, MessageCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
-import { createTelegramBotLink } from "@/lib/telegram/client-utils"
-import { cancelBookingFn } from "@/lib/booking"
-import { BulkCancelBookingsDialog } from "@/components/shared/bulk-cancel-bookings-dialog"
-import { toast } from "sonner"
+} from '@/components/ui/select'
+import { BookingWithItems } from '@/lib/booking/types'
+import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
+import {
+  X,
+  MessageCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react'
+import { createTelegramBotLink } from '@/lib/telegram/client-utils'
+import { cancelBookingFn } from '@/lib/booking'
+import { BulkCancelBookingsDialog } from '@/components/shared/bulk-cancel-bookings-dialog'
+import { toast } from 'sonner'
 
 interface Pagination {
   page: number
@@ -74,12 +81,12 @@ interface BookingDataTableProps {
 }
 
 const statusOptions = [
-  { value: "booked", label: "Booked" },
-  { value: "active", label: "Active" },
-  { value: "returned", label: "Returned" },
-  { value: "cancelled", label: "Cancelled" },
-  { value: "overdue", label: "Overdue" },
-  { value: "partially_returned", label: "Partially Returned" },
+  { value: 'booked', label: 'Booked' },
+  { value: 'active', label: 'Active' },
+  { value: 'returned', label: 'Returned' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'partially_returned', label: 'Partially Returned' },
 ]
 
 export function BookingDataTable({
@@ -95,51 +102,66 @@ export function BookingDataTable({
   const [rowSelection, setRowSelection] = React.useState({})
   const [bulkCancelOpen, setBulkCancelOpen] = React.useState(false)
   const [isBulkCancelling, setIsBulkCancelling] = React.useState(false)
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({})
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
 
   // Controlled sorting state - sync with URL params
-  const [sorting, setSorting] = React.useState<SortingState>([{
-    id: filters.sortBy,
-    desc: filters.sortOrder === 'desc'
-  }])
+  const [sorting, setSorting] = React.useState<SortingState>([
+    {
+      id: filters.sortBy,
+      desc: filters.sortOrder === 'desc',
+    },
+  ])
 
   // Sync sorting state with URL params when they change
   React.useEffect(() => {
-    setSorting([{
-      id: filters.sortBy,
-      desc: filters.sortOrder === 'desc'
-    }])
+    setSorting([
+      {
+        id: filters.sortBy,
+        desc: filters.sortOrder === 'desc',
+      },
+    ])
   }, [filters.sortBy, filters.sortOrder])
 
   // Handle sorting changes - navigate to update URL
-  const handleSortingChange = React.useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
-    // Get the current sorting state from URL params (source of truth)
-    const currentSorting: SortingState = [{
-      id: filters.sortBy,
-      desc: filters.sortOrder === 'desc'
-    }]
-
-    const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
-
-    if (newSorting.length > 0) {
-      const sort = newSorting[0]
-      navigate({
-        to: '.',
-        search: {
-          ...filters,
-          sortBy: sort.id as any,
-          sortOrder: sort.desc ? 'desc' : 'asc',
-          page: 1,
+  const handleSortingChange = React.useCallback(
+    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+      // Get the current sorting state from URL params (source of truth)
+      const currentSorting: SortingState = [
+        {
+          id: filters.sortBy,
+          desc: filters.sortOrder === 'desc',
         },
-      })
-    }
-  }, [filters, navigate])
+      ]
+
+      const newSorting =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(currentSorting)
+          : updaterOrValue
+
+      if (newSorting.length > 0) {
+        const sort = newSorting[0]
+        navigate({
+          to: '.',
+          search: {
+            ...filters,
+            sortBy: sort.id as any,
+            sortOrder: sort.desc ? 'desc' : 'asc',
+            page: 1,
+          },
+        })
+      }
+    },
+    [filters, navigate]
+  )
 
   const handleRowClick = (bookingId: number) => {
     navigate({
-      to: "/bookings/$bookingId",
-      params: { bookingId: bookingId.toString() }
+      to: '/bookings/$bookingId',
+      params: { bookingId: bookingId.toString() },
     })
   }
 
@@ -172,34 +194,43 @@ export function BookingDataTable({
   })
 
   // Handle filter changes
-  const handleFilterChange = React.useCallback((filterId: string, values: string[] | undefined) => {
-    if (filterId === 'status') {
-      navigate({
-        to: '.',
-        search: {
-          ...filters,
-          status: (values && values.length > 0) ? values : undefined,
-          page: 1,
-        },
-      })
-    }
-  }, [filters, navigate])
+  const handleFilterChange = React.useCallback(
+    (filterId: string, values: string[] | undefined) => {
+      if (filterId === 'status') {
+        navigate({
+          to: '.',
+          search: {
+            ...filters,
+            status: values && values.length > 0 ? values : undefined,
+            page: 1,
+          },
+        })
+      }
+    },
+    [filters, navigate]
+  )
 
   // Handle pagination changes
-  const handlePageChange = React.useCallback((newPage: number) => {
-    navigate({
-      to: '.',
-      search: { ...filters, page: newPage },
-    })
-  }, [filters, navigate])
+  const handlePageChange = React.useCallback(
+    (newPage: number) => {
+      navigate({
+        to: '.',
+        search: { ...filters, page: newPage },
+      })
+    },
+    [filters, navigate]
+  )
 
   // Handle page size changes
-  const handlePageSizeChange = React.useCallback((newPageSize: number) => {
-    navigate({
-      to: '.',
-      search: { ...filters, limit: newPageSize, page: 1 },
-    })
-  }, [filters, navigate])
+  const handlePageSizeChange = React.useCallback(
+    (newPageSize: number) => {
+      navigate({
+        to: '.',
+        search: { ...filters, limit: newPageSize, page: 1 },
+      })
+    },
+    [filters, navigate]
+  )
 
   const isFiltered = filters.status && filters.status.length > 0
 
@@ -214,9 +245,7 @@ export function BookingDataTable({
   }, [selectedBookings])
 
   const cancellableBookings = React.useMemo(() => {
-    return selectedBookings.filter((booking) =>
-      booking.status === "booked"
-    )
+    return selectedBookings.filter((booking) => booking.status === 'booked')
   }, [selectedBookings])
 
   const cancellableBookingIds = React.useMemo(() => {
@@ -233,18 +262,22 @@ export function BookingDataTable({
       )
     )
 
-    const successCount = results.filter((result) => result.status === "fulfilled").length
+    const successCount = results.filter(
+      (result) => result.status === 'fulfilled'
+    ).length
     const failedCount = results.length - successCount
 
     if (successCount > 0) {
-      toast.success(`Cancelled ${successCount} booking${successCount === 1 ? "" : "s"}`)
+      toast.success(
+        `Cancelled ${successCount} booking${successCount === 1 ? '' : 's'}`
+      )
       setRowSelection({})
       await queryClient.invalidateQueries({ queryKey: ['bookings'] })
     }
 
     if (failedCount > 0) {
-      toast.error("Some bookings could not be cancelled", {
-        description: `Failed to cancel ${failedCount} booking${failedCount === 1 ? "" : "s"}.`,
+      toast.error('Some bookings could not be cancelled', {
+        description: `Failed to cancel ${failedCount} booking${failedCount === 1 ? '' : 's'}.`,
       })
     }
 
@@ -274,7 +307,9 @@ export function BookingDataTable({
               title="Status"
               options={statusOptions}
               selectedValues={filters.status || []}
-              onSelectionChange={(values) => handleFilterChange('status', values)}
+              onSelectionChange={(values) =>
+                handleFilterChange('status', values)
+              }
             />
             {isFiltered && (
               <Button
@@ -317,7 +352,11 @@ export function BookingDataTable({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-full sm:w-auto"
+              >
                 Columns
               </Button>
             </DropdownMenuTrigger>
@@ -363,13 +402,16 @@ export function BookingDataTable({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableHead
+                      key={header.id}
+                      className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   )
                 })}
@@ -381,12 +423,15 @@ export function BookingDataTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() && 'selected'}
                   onClick={() => handleRowClick(row.original.id)}
                   className="cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableCell
+                      key={cell.id}
+                      className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -412,12 +457,14 @@ export function BookingDataTable({
       {/* Pagination - Responsive layout */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {pagination.total} row(s) selected.
         </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
+            <p className="text-sm font-medium whitespace-nowrap">
+              Rows per page
+            </p>
             <Select
               value={`${pagination.limit}`}
               onValueChange={(value) => handlePageSizeChange(Number(value))}

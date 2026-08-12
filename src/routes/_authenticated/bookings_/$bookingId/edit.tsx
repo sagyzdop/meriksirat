@@ -3,7 +3,9 @@ import { getBookingByIdFn } from '@/lib/booking'
 import { Page } from '@/components/bookings/bookings_/$bookingId.edit'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 
-export const Route = createFileRoute('/_authenticated/bookings_/$bookingId/edit')({
+export const Route = createFileRoute(
+  '/_authenticated/bookings_/$bookingId/edit'
+)({
   component: RouteComponent,
   loader: async ({ params }) => {
     const bookingId = params.bookingId
@@ -12,17 +14,17 @@ export const Route = createFileRoute('/_authenticated/bookings_/$bookingId/edit'
     }
 
     try {
-      const booking = await getBookingByIdFn({ 
-        data: { bookingId: parseInt(bookingId) } 
+      const booking = await getBookingByIdFn({
+        data: { bookingId: parseInt(bookingId) },
       })
 
       if (!booking) {
         throw new Error('Booking not found')
       }
 
-      return { 
+      return {
         booking,
-        bookingId: parseInt(bookingId)
+        bookingId: parseInt(bookingId),
       }
     } catch (error) {
       console.error('Failed to load booking:', error)
@@ -33,7 +35,9 @@ export const Route = createFileRoute('/_authenticated/bookings_/$bookingId/edit'
 
 function RouteComponent() {
   const { booking, bookingId } = Route.useLoaderData()
-  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
+  const isLoading = useRouterState({
+    select: (state) => state.status === 'pending',
+  })
   return (
     <div className="relative">
       {isLoading && <LoadingOverlay />}

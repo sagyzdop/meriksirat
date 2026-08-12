@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { toast } from "sonner";
-import { useRouter } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/layout/page-header";
-import { Section } from "@/components/layout/section";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,54 +16,54 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { resetUserViolationCountersFn } from "@/lib/user";
+} from '@/components/ui/alert-dialog'
+import { resetUserViolationCountersFn } from '@/lib/user'
 
 const formatDate = (value: string | number | null | undefined) => {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 const formatRole = (role: string | null | undefined) => {
-  if (!role) return "—";
-  return role.charAt(0).toUpperCase() + role.slice(1);
-};
+  if (!role) return '—'
+  return role.charAt(0).toUpperCase() + role.slice(1)
+}
 
 interface PageProps {
-  user: any;
+  user: any
 }
 
 export function Page({ user }: PageProps) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [showResetDialog, setShowResetDialog] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const [showResetDialog, setShowResetDialog] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
 
   const hasViolations =
-    (user.cancelledInStartWindowCount ?? 0) > 0 || (user.overdueCount ?? 0) > 0;
+    (user.cancelledInStartWindowCount ?? 0) > 0 || (user.overdueCount ?? 0) > 0
 
   const handleResetCounters = async () => {
-    setIsResetting(true);
+    setIsResetting(true)
     try {
-      await resetUserViolationCountersFn({ data: { userId: user.id } });
-      toast.success("Violation counters reset");
-      await queryClient.invalidateQueries();
-      router.invalidate();
-      setShowResetDialog(false);
+      await resetUserViolationCountersFn({ data: { userId: user.id } })
+      toast.success('Violation counters reset')
+      await queryClient.invalidateQueries()
+      router.invalidate()
+      setShowResetDialog(false)
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to reset counters"
-      );
+        error instanceof Error ? error.message : 'Failed to reset counters'
+      )
     } finally {
-      setIsResetting(false);
+      setIsResetting(false)
     }
-  };
+  }
 
   return (
     <PageContainer>
@@ -78,51 +78,80 @@ export function Page({ user }: PageProps) {
             <Table>
               <TableBody>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Name</TableCell>
-                  <TableCell>{`${user.firstName || ""} ${user.lastName || ""}`.trim() || "—"}</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Name
+                  </TableCell>
+                  <TableCell>
+                    {`${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                      '—'}
+                  </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Email</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Email
+                  </TableCell>
                   <TableCell className="break-all">{user.email}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Role</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Role
+                  </TableCell>
                   <TableCell>{formatRole(user.role)}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Clearance Level</TableCell>
-                  <TableCell>{user.clearanceLevel ? `Level ${user.clearanceLevel}` : "—"}</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Clearance Level
+                  </TableCell>
+                  <TableCell>
+                    {user.clearanceLevel ? `Level ${user.clearanceLevel}` : '—'}
+                  </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Status</TableCell>
-                  <TableCell>{user.status || "—"}</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Status
+                  </TableCell>
+                  <TableCell>{user.status || '—'}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Instagram</TableCell>
-                  <TableCell>{user.instagramUsername || "—"}</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Instagram
+                  </TableCell>
+                  <TableCell>{user.instagramUsername || '—'}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">NU ID</TableCell>
-                  <TableCell>{user.nuId ?? "—"}</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    NU ID
+                  </TableCell>
+                  <TableCell>{user.nuId ?? '—'}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Birthday</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Birthday
+                  </TableCell>
                   <TableCell>{formatDate(user.birthday)}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Major</TableCell>
-                  <TableCell>{user.major || "—"}</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Major
+                  </TableCell>
+                  <TableCell>{user.major || '—'}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Graduation Year</TableCell>
-                  <TableCell>{user.graduationYear ?? "—"}</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Graduation Year
+                  </TableCell>
+                  <TableCell>{user.graduationYear ?? '—'}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">Member Since</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Member Since
+                  </TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">User ID</TableCell>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    User ID
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">{user.id}</TableCell>
                 </TableRow>
               </TableBody>
@@ -176,16 +205,18 @@ export function Page({ user }: PageProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isResetting}>Keep Counters</AlertDialogCancel>
+            <AlertDialogCancel disabled={isResetting}>
+              Keep Counters
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleResetCounters}
               disabled={isResetting}
             >
-              {isResetting ? "Clearing..." : "Clear Violations"}
+              {isResetting ? 'Clearing...' : 'Clear Violations'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </PageContainer>
-  );
+  )
 }

@@ -1,9 +1,9 @@
-import * as React from "react"
-import { Table } from "@tanstack/react-table"
-import { X, SlidersHorizontal } from "lucide-react"
+import * as React from 'react'
+import { Table } from '@tanstack/react-table'
+import { X, SlidersHorizontal } from 'lucide-react'
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Sheet,
   SheetContent,
@@ -11,7 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from '@/components/ui/sheet'
 import {
   Command,
   CommandEmpty,
@@ -19,16 +19,16 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
+} from '@/components/ui/command'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { useDebounce } from "@/hooks/use-debounce"
-import { cn } from "@/lib/utils"
+} from '@/components/ui/popover'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { useDebounce } from '@/hooks/use-debounce'
+import { cn } from '@/lib/utils'
 
 export interface DataTableFilter {
   column: string
@@ -54,14 +54,14 @@ interface DataTableToolbarProps<TData> {
 export function DataTableToolbar<TData>({
   table,
   searchKey,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = 'Search...',
   filters = [],
   viewOptions,
   onSearchChange,
   onFilterChange,
   onClearFilters,
 }: DataTableToolbarProps<TData>) {
-  const [searchValue, setSearchValue] = React.useState("")
+  const [searchValue, setSearchValue] = React.useState('')
   const [isSheetOpen, setIsSheetOpen] = React.useState(false)
   const debouncedSearch = useDebounce(searchValue, 300)
 
@@ -79,7 +79,10 @@ export function DataTableToolbar<TData>({
     return filters.some((filter) => {
       const column = table.getColumn(filter.column)
       const filterValue = column?.getFilterValue()
-      return filterValue && (Array.isArray(filterValue) ? filterValue.length > 0 : true)
+      return (
+        filterValue &&
+        (Array.isArray(filterValue) ? filterValue.length > 0 : true)
+      )
     })
   }, [table, filters])
 
@@ -90,7 +93,7 @@ export function DataTableToolbar<TData>({
       // Clear all column filters
       table.resetColumnFilters()
     }
-    setSearchValue("")
+    setSearchValue('')
   }
 
   // Filter component for desktop
@@ -159,20 +162,25 @@ export function DataTableToolbar<TData>({
                           newSelectedValues.add(option.value)
                         }
                         const values = Array.from(newSelectedValues)
-                        
+
                         if (onFilterChange) {
-                          onFilterChange(filter.column, values.length ? values : undefined)
+                          onFilterChange(
+                            filter.column,
+                            values.length ? values : undefined
+                          )
                         } else {
-                          column?.setFilterValue(values.length ? values : undefined)
+                          column?.setFilterValue(
+                            values.length ? values : undefined
+                          )
                         }
                       }}
                     >
                       <div
                         className={cn(
-                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
                           isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50"
+                            ? 'bg-primary text-primary-foreground'
+                            : 'opacity-50'
                         )}
                       >
                         {isSelected && (
@@ -231,24 +239,29 @@ export function DataTableToolbar<TData>({
                         newSelectedValues.add(option.value)
                       }
                       const values = Array.from(newSelectedValues)
-                      
+
                       if (onFilterChange) {
-                        onFilterChange(filter.column, values.length ? values : undefined)
+                        onFilterChange(
+                          filter.column,
+                          values.length ? values : undefined
+                        )
                       } else {
-                        column?.setFilterValue(values.length ? values : undefined)
+                        column?.setFilterValue(
+                          values.length ? values : undefined
+                        )
                       }
                     }}
                     className={cn(
-                      "flex w-full items-center space-x-2 rounded-md border p-2 text-left text-sm transition-colors hover:bg-accent",
-                      isSelected && "border-primary bg-accent"
+                      'flex w-full items-center space-x-2 rounded-md border p-2 text-left text-sm transition-colors hover:bg-accent',
+                      isSelected && 'border-primary bg-accent'
                     )}
                   >
                     <div
                       className={cn(
-                        "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        'flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
                         isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50"
+                          ? 'bg-primary text-primary-foreground'
+                          : 'opacity-50'
                       )}
                     >
                       {isSelected && (
@@ -305,11 +318,7 @@ export function DataTableToolbar<TData>({
         {filters.length > 0 && (
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 md:hidden"
-              >
+              <Button variant="outline" size="sm" className="h-8 md:hidden">
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
                 Filters
                 {isFiltered && (
@@ -351,9 +360,7 @@ export function DataTableToolbar<TData>({
 
       {/* View Options */}
       {viewOptions && (
-        <div className="flex items-center gap-2">
-          {viewOptions}
-        </div>
+        <div className="flex items-center gap-2">{viewOptions}</div>
       )}
     </div>
   )

@@ -7,7 +7,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog'
 
 interface BulkCancelBookingsDialogProps {
   open: boolean
@@ -37,13 +37,14 @@ export function BulkCancelBookingsDialog({
             {cancellableCount === 1
               ? `This will cancel 1 booking and ${calendarActionText}.`
               : `This will cancel ${cancellableCount} bookings and ${calendarActionText}.`}
-            {totalSelectedCount > cancellableCount && (
-              " Bookings that are already cancelled or returned will be skipped."
-            )}
+            {totalSelectedCount > cancellableCount &&
+              ' Bookings that are already cancelled or returned will be skipped.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isProcessing}>Keep bookings</AlertDialogCancel>
+          <AlertDialogCancel disabled={isProcessing}>
+            Keep bookings
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(event) => {
               event.preventDefault()
@@ -52,7 +53,7 @@ export function BulkCancelBookingsDialog({
             disabled={isProcessing}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isProcessing ? "Cancelling..." : "Yes, cancel"}
+            {isProcessing ? 'Cancelling...' : 'Yes, cancel'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -9,12 +9,12 @@ import {
   getFacetedRowModel,
   getFacetedUniqueValues,
   useReactTable,
-} from "@tanstack/react-table"
-import { useNavigate } from "@tanstack/react-router"
-import { useQueryClient } from "@tanstack/react-query"
+} from '@tanstack/react-table'
+import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -22,22 +22,29 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { LoadingOverlay } from "@/components/shared/loading-overlay"
+} from '@/components/ui/table'
+import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { DataTableFacetedFilter } from "@/components/shared/data-table-faceted-filter"
-import { createUserColumns } from "./user-columns"
-import { X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Shield } from "lucide-react"
-import { BulkEditClearanceDialog } from "@/components/shared/bulk-edit-clearance-dialog"
+} from '@/components/ui/select'
+import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
+import { createUserColumns } from './user-columns'
+import {
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Shield,
+} from 'lucide-react'
+import { BulkEditClearanceDialog } from '@/components/shared/bulk-edit-clearance-dialog'
 
-import { bulkUpdateUserClearanceFn } from "@/lib/user/functions"
-import { User } from "@/lib/user/types"
+import { bulkUpdateUserClearanceFn } from '@/lib/user/functions'
+import { User } from '@/lib/user/types'
 
 interface Pagination {
   page: number
@@ -53,7 +60,14 @@ interface Filters {
   search?: string
   page: number
   limit: number
-  sortBy: 'firstName' | 'lastName' | 'email' | 'role' | 'status' | 'clearanceLevel' | 'createdAt'
+  sortBy:
+    | 'firstName'
+    | 'lastName'
+    | 'email'
+    | 'role'
+    | 'status'
+    | 'clearanceLevel'
+    | 'createdAt'
   sortOrder: 'asc' | 'desc'
 }
 
@@ -66,20 +80,20 @@ interface UserDataTableProps {
 }
 
 const roleOptions = [
-  { value: "user", label: "User" },
-  { value: "manager", label: "Manager" },
-  { value: "admin", label: "Admin" },
+  { value: 'user', label: 'User' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'admin', label: 'Admin' },
 ]
 
 const statusOptions = [
-  { value: "Active", label: "Active" },
-  { value: "Inactive", label: "Inactive" },
-  { value: "On Probation", label: "On Probation" },
-  { value: "Board", label: "Board" },
-  { value: "Ex-Board", label: "Ex-Board" },
-  { value: "Roommate", label: "Roommate" },
-  { value: "Ex-Roommate", label: "Ex-Roommate" },
-  { value: "Graduated", label: "Graduated" },
+  { value: 'Active', label: 'Active' },
+  { value: 'Inactive', label: 'Inactive' },
+  { value: 'On Probation', label: 'On Probation' },
+  { value: 'Board', label: 'Board' },
+  { value: 'Ex-Board', label: 'Ex-Board' },
+  { value: 'Roommate', label: 'Roommate' },
+  { value: 'Ex-Roommate', label: 'Ex-Roommate' },
+  { value: 'Graduated', label: 'Graduated' },
 ]
 
 const clearanceLevelOptions = [...Array(10)].map((_, i) => ({
@@ -97,15 +111,21 @@ export function UserDataTable({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [rowSelection, setRowSelection] = React.useState({})
-  const [bulkEditClearanceOpen, setBulkEditClearanceOpen] = React.useState(false)
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [bulkEditClearanceOpen, setBulkEditClearanceOpen] =
+    React.useState(false)
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({})
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
 
   // Controlled sorting state - sync with URL params
-  const [sorting, setSorting] = React.useState<SortingState>([{
-    id: filters.sortBy,
-    desc: filters.sortOrder === 'desc'
-  }])
+  const [sorting, setSorting] = React.useState<SortingState>([
+    {
+      id: filters.sortBy,
+      desc: filters.sortOrder === 'desc',
+    },
+  ])
 
   // Create columns
   const columns = React.useMemo(
@@ -115,35 +135,45 @@ export function UserDataTable({
 
   // Sync sorting state with URL params when they change
   React.useEffect(() => {
-    setSorting([{
-      id: filters.sortBy,
-      desc: filters.sortOrder === 'desc'
-    }])
+    setSorting([
+      {
+        id: filters.sortBy,
+        desc: filters.sortOrder === 'desc',
+      },
+    ])
   }, [filters.sortBy, filters.sortOrder])
 
   // Handle sorting changes - navigate to update URL
-  const handleSortingChange = React.useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
-    // Get the current sorting state from URL params (source of truth)
-    const currentSorting: SortingState = [{
-      id: filters.sortBy,
-      desc: filters.sortOrder === 'desc'
-    }]
-
-    const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
-
-    if (newSorting.length > 0) {
-      const sort = newSorting[0]
-      navigate({
-        to: '.',
-        search: {
-          ...filters,
-          sortBy: sort.id as any,
-          sortOrder: sort.desc ? 'desc' : 'asc',
-          page: 1,
+  const handleSortingChange = React.useCallback(
+    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+      // Get the current sorting state from URL params (source of truth)
+      const currentSorting: SortingState = [
+        {
+          id: filters.sortBy,
+          desc: filters.sortOrder === 'desc',
         },
-      })
-    }
-  }, [filters, navigate])
+      ]
+
+      const newSorting =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(currentSorting)
+          : updaterOrValue
+
+      if (newSorting.length > 0) {
+        const sort = newSorting[0]
+        navigate({
+          to: '.',
+          search: {
+            ...filters,
+            sortBy: sort.id as any,
+            sortOrder: sort.desc ? 'desc' : 'asc',
+            page: 1,
+          },
+        })
+      }
+    },
+    [filters, navigate]
+  )
 
   const table = useReactTable({
     data,
@@ -174,57 +204,74 @@ export function UserDataTable({
   })
 
   // Handle search input changes
-  const handleSearchChange = React.useCallback((value: string) => {
-    navigate({
-      to: '.',
-      search: {
-        ...filters,
-        search: value || undefined,
-        page: 1,
-      },
-    })
-  }, [filters, navigate])
+  const handleSearchChange = React.useCallback(
+    (value: string) => {
+      navigate({
+        to: '.',
+        search: {
+          ...filters,
+          search: value || undefined,
+          page: 1,
+        },
+      })
+    },
+    [filters, navigate]
+  )
 
   // Handle filter changes
-  const handleFilterChange = React.useCallback((filterId: string, value: string[] | undefined) => {
-    if (filterId === 'role' || filterId === 'status') {
-      navigate({
-        to: '.',
-        search: {
-          ...filters,
-          [filterId]: (value && value.length > 0) ? value : undefined,
-          page: 1,
-        },
-      })
-    } else if (filterId === 'clearanceLevel') {
-      navigate({
-        to: '.',
-        search: {
-          ...filters,
-          clearanceLevel: (value && value.length > 0) ? value.map(Number) : undefined,
-          page: 1,
-        },
-      })
-    }
-  }, [filters, navigate])
+  const handleFilterChange = React.useCallback(
+    (filterId: string, value: string[] | undefined) => {
+      if (filterId === 'role' || filterId === 'status') {
+        navigate({
+          to: '.',
+          search: {
+            ...filters,
+            [filterId]: value && value.length > 0 ? value : undefined,
+            page: 1,
+          },
+        })
+      } else if (filterId === 'clearanceLevel') {
+        navigate({
+          to: '.',
+          search: {
+            ...filters,
+            clearanceLevel:
+              value && value.length > 0 ? value.map(Number) : undefined,
+            page: 1,
+          },
+        })
+      }
+    },
+    [filters, navigate]
+  )
 
   // Handle pagination changes
-  const handlePageChange = React.useCallback((newPage: number) => {
-    navigate({
-      to: '.',
-      search: { ...filters, page: newPage },
-    })
-  }, [filters, navigate])
+  const handlePageChange = React.useCallback(
+    (newPage: number) => {
+      navigate({
+        to: '.',
+        search: { ...filters, page: newPage },
+      })
+    },
+    [filters, navigate]
+  )
 
   // Handle page size changes
-  const handlePageSizeChange = React.useCallback((newPageSize: number) => {
-    navigate({
-      to: '.',
-      search: { ...filters, limit: newPageSize, page: 1 },
-    })
-  }, [filters, navigate])
+  const handlePageSizeChange = React.useCallback(
+    (newPageSize: number) => {
+      navigate({
+        to: '.',
+        search: { ...filters, limit: newPageSize, page: 1 },
+      })
+    },
+    [filters, navigate]
+  )
 
-  const isFiltered = (filters.role && filters.role.length > 0) || (filters.status && filters.status.length > 0) || (filters.clearanceLevel && filters.clearanceLevel.length > 0) || filters.search
+  const isFiltered =
+    (filters.role && filters.role.length > 0) ||
+    (filters.status && filters.status.length > 0) ||
+    (filters.clearanceLevel && filters.clearanceLevel.length > 0) ||
+    filters.search
 
   const clearAllFilters = React.useCallback(() => {
     navigate({
@@ -239,7 +286,9 @@ export function UserDataTable({
   }, [filters.limit, navigate])
 
   const selectedUserIds = React.useMemo(() => {
-    return Object.keys(rowSelection).map(index => data[parseInt(index)]?.id).filter(Boolean)
+    return Object.keys(rowSelection)
+      .map((index) => data[parseInt(index)]?.id)
+      .filter(Boolean)
   }, [rowSelection, data])
 
   return (
@@ -249,7 +298,7 @@ export function UserDataTable({
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-1">
           <Input
             placeholder="Search users by name or email..."
-            value={filters.search || ""}
+            value={filters.search || ''}
             onChange={(event) => handleSearchChange(event.target.value)}
             className="h-8 w-full sm:w-[200px] lg:w-[300px]"
           />
@@ -264,13 +313,19 @@ export function UserDataTable({
               title="Status"
               options={statusOptions}
               selectedValues={filters.status || []}
-              onSelectionChange={(values) => handleFilterChange('status', values)}
+              onSelectionChange={(values) =>
+                handleFilterChange('status', values)
+              }
             />
             <DataTableFacetedFilter
               title="Clearance Level"
               options={clearanceLevelOptions}
-              selectedValues={filters.clearanceLevel ? filters.clearanceLevel.map(String) : []}
-              onSelectionChange={(values) => handleFilterChange('clearanceLevel', values)}
+              selectedValues={
+                filters.clearanceLevel ? filters.clearanceLevel.map(String) : []
+              }
+              onSelectionChange={(values) =>
+                handleFilterChange('clearanceLevel', values)
+              }
             />
             {isFiltered && (
               <Button
@@ -308,13 +363,16 @@ export function UserDataTable({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableHead
+                      key={header.id}
+                      className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   )
                 })}
@@ -326,10 +384,15 @@ export function UserDataTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() && 'selected'}
                   onClick={(event) => {
                     const target = event.target as HTMLElement
-                    if (target.closest('button, a, input, select, label, [role="combobox"]')) return
+                    if (
+                      target.closest(
+                        'button, a, input, select, label, [role="combobox"]'
+                      )
+                    )
+                      return
                     navigate({
                       to: '/admin/users/$userId',
                       params: { userId: row.original.id },
@@ -338,7 +401,10 @@ export function UserDataTable({
                   className="cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableCell
+                      key={cell.id}
+                      className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -364,12 +430,13 @@ export function UserDataTable({
       {/* Pagination - Responsive layout */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
-          {selectedUserIds.length} of{" "}
-          {pagination.totalCount} row(s) selected.
+          {selectedUserIds.length} of {pagination.totalCount} row(s) selected.
         </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
+            <p className="text-sm font-medium whitespace-nowrap">
+              Rows per page
+            </p>
             <Select
               value={`${pagination.limit}`}
               onValueChange={(value) => handlePageSizeChange(Number(value))}

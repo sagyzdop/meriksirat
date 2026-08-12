@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -8,13 +8,13 @@ import {
   getFacetedRowModel,
   getFacetedUniqueValues,
   useReactTable,
-} from "@tanstack/react-table"
-import { useNavigate } from "@tanstack/react-router"
-import { useQueryClient } from "@tanstack/react-query"
-import { useDebounce } from "@/hooks/use-debounce"
+} from '@tanstack/react-table'
+import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { useDebounce } from '@/hooks/use-debounce'
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -22,19 +22,29 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from '@/components/ui/table'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { DataTableFacetedFilter } from "@/components/shared/data-table-faceted-filter"
-import { BulkEditClearanceDialog } from "@/components/shared/bulk-edit-clearance-dialog"
-import { LoadingOverlay } from "@/components/shared/loading-overlay"
-import { Shield, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
-import { EquipmentWithCategory, bulkUpdateEquipmentClearanceFn } from "@/lib/equipment"
+} from '@/components/ui/select'
+import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
+import { BulkEditClearanceDialog } from '@/components/shared/bulk-edit-clearance-dialog'
+import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import {
+  Shield,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react'
+import {
+  EquipmentWithCategory,
+  bulkUpdateEquipmentClearanceFn,
+} from '@/lib/equipment'
 
 interface Pagination {
   page: number
@@ -53,7 +63,12 @@ interface Filters {
   isActive?: boolean[]
   page: number
   limit: number
-  sortBy: 'modelName' | 'category' | 'requiredClearanceLevel' | 'isActive' | 'createdAt'
+  sortBy:
+    | 'modelName'
+    | 'category'
+    | 'requiredClearanceLevel'
+    | 'isActive'
+    | 'createdAt'
   sortOrder: 'asc' | 'desc'
 }
 
@@ -68,18 +83,29 @@ interface EquipmentDataTableProps {
 
 // Static filter options - in a real app, categories would be fetched from the server
 const statusOptions = [
-  { value: "true", label: "Active" },
-  { value: "false", label: "Inactive" },
+  { value: 'true', label: 'Active' },
+  { value: 'false', label: 'Inactive' },
 ]
 
-export function EquipmentDataTable({ columns, data, categories, pagination, filters, isLoading = false }: EquipmentDataTableProps) {
+export function EquipmentDataTable({
+  columns,
+  data,
+  categories,
+  pagination,
+  filters,
+  isLoading = false,
+}: EquipmentDataTableProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [rowSelection, setRowSelection] = React.useState({})
-  const [bulkEditClearanceOpen, setBulkEditClearanceOpen] = React.useState(false)
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const searchQueryValue = filters.searchQuery || ""
-  const [localSearchValue, setLocalSearchValue] = React.useState(searchQueryValue)
+  const [bulkEditClearanceOpen, setBulkEditClearanceOpen] =
+    React.useState(false)
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const searchQueryValue = filters.searchQuery || ''
+  const [localSearchValue, setLocalSearchValue] =
+    React.useState(searchQueryValue)
   const debouncedSearchValue = useDebounce(localSearchValue, 300)
   const filtersRef = React.useRef(filters)
 
@@ -107,26 +133,30 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
   }, [searchQueryValue])
 
   // Controlled sorting state - sync with URL params
-  const [sorting, setSorting] = React.useState<SortingState>([{
-    id: filters.sortBy,
-    desc: filters.sortOrder === 'desc'
-  }])
+  const [sorting, setSorting] = React.useState<SortingState>([
+    {
+      id: filters.sortBy,
+      desc: filters.sortOrder === 'desc',
+    },
+  ])
 
   // Get category options for filtering from pre-fetched categories
   const categoryOptions = React.useMemo(() => {
-    const options = categories.map(cat => ({
-      value: cat.id.toString(),
-      label: cat.name,
-      sortOrder: cat.sortOrder ?? 0
-    })).sort((a, b) => a.sortOrder - b.sortOrder)
+    const options = categories
+      .map((cat) => ({
+        value: cat.id.toString(),
+        label: cat.name,
+        sortOrder: cat.sortOrder ?? 0,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
 
     // Add uncategorized option if there's any equipment without category
-    const hasUncategorized = data.some(equipment => !equipment.category)
+    const hasUncategorized = data.some((equipment) => !equipment.category)
     if (hasUncategorized) {
       options.push({
-        value: "null",
-        label: "Uncategorized",
-        sortOrder: Number.MAX_SAFE_INTEGER
+        value: 'null',
+        label: 'Uncategorized',
+        sortOrder: Number.MAX_SAFE_INTEGER,
       })
     }
 
@@ -135,35 +165,45 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
 
   // Sync sorting state with URL params when they change
   React.useEffect(() => {
-    setSorting([{
-      id: filters.sortBy,
-      desc: filters.sortOrder === 'desc'
-    }])
+    setSorting([
+      {
+        id: filters.sortBy,
+        desc: filters.sortOrder === 'desc',
+      },
+    ])
   }, [filters.sortBy, filters.sortOrder])
 
   // Handle sorting changes - navigate to update URL
-  const handleSortingChange = React.useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
-    // Get the current sorting state from URL params (source of truth)
-    const currentSorting: SortingState = [{
-      id: filters.sortBy,
-      desc: filters.sortOrder === 'desc'
-    }]
-
-    const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting) : updaterOrValue
-
-    if (newSorting.length > 0) {
-      const sort = newSorting[0]
-      navigate({
-        to: '.',
-        search: {
-          ...filters,
-          sortBy: sort.id as any,
-          sortOrder: sort.desc ? 'desc' : 'asc',
-          page: 1,
+  const handleSortingChange = React.useCallback(
+    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+      // Get the current sorting state from URL params (source of truth)
+      const currentSorting: SortingState = [
+        {
+          id: filters.sortBy,
+          desc: filters.sortOrder === 'desc',
         },
-      })
-    }
-  }, [filters, navigate])
+      ]
+
+      const newSorting =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(currentSorting)
+          : updaterOrValue
+
+      if (newSorting.length > 0) {
+        const sort = newSorting[0]
+        navigate({
+          to: '.',
+          search: {
+            ...filters,
+            sortBy: sort.id as any,
+            sortOrder: sort.desc ? 'desc' : 'asc',
+            page: 1,
+          },
+        })
+      }
+    },
+    [filters, navigate]
+  )
 
   const table = useReactTable({
     data,
@@ -192,44 +232,59 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
   })
 
   // Handle filter changes
-  const handleFilterChange = React.useCallback((filterId: string, value: string[] | undefined) => {
-    const newFilters = { ...filters };
+  const handleFilterChange = React.useCallback(
+    (filterId: string, value: string[] | undefined) => {
+      const newFilters = { ...filters }
 
-    if (filterId === 'category') {
-      const categoryIds = value && value.length > 0
-        ? value.filter(v => v !== "null").map(v => parseInt(v))
-        : undefined
-      newFilters.categoryIds = categoryIds && categoryIds.length > 0 ? categoryIds : undefined
-    } else if (filterId === 'isActive') {
-      newFilters.isActive = (value && value.length > 0) ? value.map(v => v === "true") : undefined
-    }
+      if (filterId === 'category') {
+        const categoryIds =
+          value && value.length > 0
+            ? value.filter((v) => v !== 'null').map((v) => parseInt(v))
+            : undefined
+        newFilters.categoryIds =
+          categoryIds && categoryIds.length > 0 ? categoryIds : undefined
+      } else if (filterId === 'isActive') {
+        newFilters.isActive =
+          value && value.length > 0 ? value.map((v) => v === 'true') : undefined
+      }
 
-    navigate({
-      to: '.',
-      search: {
-        ...newFilters,
-        page: 1,
-      },
-    })
-  }, [filters, navigate])
+      navigate({
+        to: '.',
+        search: {
+          ...newFilters,
+          page: 1,
+        },
+      })
+    },
+    [filters, navigate]
+  )
 
   // Handle pagination changes
-  const handlePageChange = React.useCallback((newPage: number) => {
-    navigate({
-      to: '.',
-      search: { ...filters, page: newPage },
-    })
-  }, [filters, navigate])
+  const handlePageChange = React.useCallback(
+    (newPage: number) => {
+      navigate({
+        to: '.',
+        search: { ...filters, page: newPage },
+      })
+    },
+    [filters, navigate]
+  )
 
   // Handle page size changes
-  const handlePageSizeChange = React.useCallback((newPageSize: number) => {
-    navigate({
-      to: '.',
-      search: { ...filters, limit: newPageSize, page: 1 },
-    })
-  }, [filters, navigate])
+  const handlePageSizeChange = React.useCallback(
+    (newPageSize: number) => {
+      navigate({
+        to: '.',
+        search: { ...filters, limit: newPageSize, page: 1 },
+      })
+    },
+    [filters, navigate]
+  )
 
-  const isFiltered = (filters.categoryIds && filters.categoryIds.length > 0) || (filters.isActive && filters.isActive.length > 0) || filters.searchQuery
+  const isFiltered =
+    (filters.categoryIds && filters.categoryIds.length > 0) ||
+    (filters.isActive && filters.isActive.length > 0) ||
+    filters.searchQuery
 
   const clearAllFilters = React.useCallback(() => {
     navigate({
@@ -245,7 +300,7 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
 
   const selectedEquipmentIds = React.useMemo(() => {
     return Object.keys(rowSelection)
-      .map(index => data[parseInt(index)]?.id)
+      .map((index) => data[parseInt(index)]?.id)
       .filter((id): id is number => id != null)
   }, [rowSelection, data])
 
@@ -265,15 +320,27 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
               <DataTableFacetedFilter
                 title="Category"
                 options={categoryOptions}
-                selectedValues={filters.categoryIds ? filters.categoryIds.map(id => id.toString()) : []}
-                onSelectionChange={(values) => handleFilterChange('category', values)}
+                selectedValues={
+                  filters.categoryIds
+                    ? filters.categoryIds.map((id) => id.toString())
+                    : []
+                }
+                onSelectionChange={(values) =>
+                  handleFilterChange('category', values)
+                }
               />
             )}
             <DataTableFacetedFilter
               title="Status"
               options={statusOptions}
-              selectedValues={filters.isActive ? filters.isActive.map(v => v.toString()) : []}
-              onSelectionChange={(values) => handleFilterChange('isActive', values)}
+              selectedValues={
+                filters.isActive
+                  ? filters.isActive.map((v) => v.toString())
+                  : []
+              }
+              onSelectionChange={(values) =>
+                handleFilterChange('isActive', values)
+              }
             />
             {isFiltered && (
               <Button
@@ -311,13 +378,16 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableHead
+                      key={header.id}
+                      className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   )
                 })}
@@ -329,10 +399,15 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() && 'selected'}
                   onClick={(event) => {
                     const target = event.target as HTMLElement
-                    if (target.closest('button, a, input, select, label, [role="combobox"]')) return
+                    if (
+                      target.closest(
+                        'button, a, input, select, label, [role="combobox"]'
+                      )
+                    )
+                      return
                     navigate({
                       to: '/admin/equipment/$equipmentId/edit',
                       params: { equipmentId: row.original.id.toString() },
@@ -341,7 +416,10 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
                   className="cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap">
+                    <TableCell
+                      key={cell.id}
+                      className="[&:has([role=checkbox])]:pl-3 whitespace-nowrap"
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -367,12 +445,14 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
       {/* Pagination - Responsive layout */}
       <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {pagination.total} row(s) selected.
         </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
+            <p className="text-sm font-medium whitespace-nowrap">
+              Rows per page
+            </p>
             <Select
               value={`${pagination.limit}`}
               onValueChange={(value) => handlePageSizeChange(Number(value))}
@@ -453,7 +533,9 @@ export function EquipmentDataTable({ columns, data, categories, pagination, filt
         }}
         onSuccess={() => {
           setRowSelection({})
-          queryClient.invalidateQueries({ queryKey: ['equipment', 'admin-list'] })
+          queryClient.invalidateQueries({
+            queryKey: ['equipment', 'admin-list'],
+          })
         }}
       />
     </div>

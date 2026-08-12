@@ -2,27 +2,27 @@ import { z } from 'zod'
 
 // User Profile Types
 export interface UserProfile {
-  id: string;
-  email: string;
-  emailVerified: boolean;
-  image: string | null;
-  name: string | null;
-  telegramChatId: string | null;
-  telegramUsername: string | null;
-  instagramUsername: string | null;
-  googleId: string | null;
-  nuId: number | null;
-  firstName: string | null;
-  lastName: string | null;
-  birthday: string | null;
-  major: string | null;
-  graduationYear: number | null;
-  status: string | null;
-  clearanceLevel: number | null;
-  role: string | null;
-  onboardingComplete: boolean | null;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  email: string
+  emailVerified: boolean
+  image: string | null
+  name: string | null
+  telegramChatId: string | null
+  telegramUsername: string | null
+  instagramUsername: string | null
+  googleId: string | null
+  nuId: number | null
+  firstName: string | null
+  lastName: string | null
+  birthday: string | null
+  major: string | null
+  graduationYear: number | null
+  status: string | null
+  clearanceLevel: number | null
+  role: string | null
+  onboardingComplete: boolean | null
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface User {
@@ -31,15 +31,15 @@ export interface User {
   role: 'user' | 'manager' | 'admin' | null
   clearanceLevel: number | null
   status:
-  | 'Active'
-  | 'Inactive'
-  | 'On Probation'
-  | 'Board'
-  | 'Ex-Board'
-  | 'Roommate'
-  | 'Ex-Roommate'
-  | 'Graduated'
-  | null
+    | 'Active'
+    | 'Inactive'
+    | 'On Probation'
+    | 'Board'
+    | 'Ex-Board'
+    | 'Roommate'
+    | 'Ex-Roommate'
+    | 'Graduated'
+    | null
   firstName: string | null
   lastName: string | null
   createdAt: Date
@@ -49,22 +49,34 @@ export interface User {
 // Admin User Management Schemas
 export const AdminUserFiltersSchema = z.object({
   role: z.array(z.enum(['user', 'manager', 'admin'])).optional(),
-  status: z.array(z.enum([
-    'Active',
-    'Inactive',
-    'On Probation',
-    'Board',
-    'Ex-Board',
-    'Roommate',
-    'Ex-Roommate',
-    'Graduated',
-  ])).optional(),
+  status: z
+    .array(
+      z.enum([
+        'Active',
+        'Inactive',
+        'On Probation',
+        'Board',
+        'Ex-Board',
+        'Roommate',
+        'Ex-Roommate',
+        'Graduated',
+      ])
+    )
+    .optional(),
   clearanceLevel: z.array(z.coerce.number()).optional(),
   search: z.string().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
   sortBy: z
-    .enum(['firstName', 'lastName', 'email', 'role', 'status', 'clearanceLevel', 'createdAt'])
+    .enum([
+      'firstName',
+      'lastName',
+      'email',
+      'role',
+      'status',
+      'clearanceLevel',
+      'createdAt',
+    ])
     .default('firstName'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
 })

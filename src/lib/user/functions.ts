@@ -24,7 +24,9 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
       return null
     }
 
-    const sessionUser = session.user as typeof session.user & { onboardingComplete?: boolean | null }
+    const sessionUser = session.user as typeof session.user & {
+      onboardingComplete?: boolean | null
+    }
 
     // Optimization: If user is not fully onboarded in the session, check the DB directly.
     // This allows us to catch the status change immediately without waiting for session refresh/expiry,
@@ -41,7 +43,7 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
         .from(user)
         .where(eq(user.id, session.user.id))
         .get()
-      
+
       if (freshUser) {
         return freshUser as UserProfile
       }
@@ -67,7 +69,8 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
-    const { like, or, and, count, desc, asc, inArray, sql } = await import('drizzle-orm')
+    const { like, or, and, count, desc, asc, inArray, sql } =
+      await import('drizzle-orm')
 
     const headers = getRequestHeaders()
 
@@ -104,7 +107,8 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     }
 
     // Combine conditions with AND logic
-    const whereCondition = conditions.length > 0 ? and(...conditions) : undefined
+    const whereCondition =
+      conditions.length > 0 ? and(...conditions) : undefined
 
     // Apply sorting
     const sortColumn = {
@@ -117,7 +121,11 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
       createdAt: user.createdAt,
     }[data.sortBy]
 
-    const orderBy = sortColumn ? (data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(user.firstName)
+    const orderBy = sortColumn
+      ? data.sortOrder === 'desc'
+        ? desc(sortColumn)
+        : asc(sortColumn)
+      : asc(user.firstName)
 
     // Build the main query
     const usersQuery = database
@@ -138,10 +146,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
       .$dynamic()
 
     // Get total count for pagination
-    const countQuery = database
-      .select({ count: count() })
-      .from(user)
-      .$dynamic()
+    const countQuery = database.select({ count: count() }).from(user).$dynamic()
 
     // Apply WHERE conditions and execute queries
     const offset = (data.page - 1) * data.limit
@@ -149,10 +154,11 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     // Execute queries in parallel
     const [totalCountResult, users] = await Promise.all([
       countQuery.where(whereCondition || sql`1=1`),
-      usersQuery.where(whereCondition || sql`1=1`)
+      usersQuery
+        .where(whereCondition || sql`1=1`)
         .orderBy(orderBy)
         .limit(data.limit)
-        .offset(offset)
+        .offset(offset),
     ])
 
     const totalCount = totalCountResult[0]?.count || 0
@@ -206,7 +212,9 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
     // Validate role assignment permissions
     if (data.role && ['admin', 'manager'].includes(data.role)) {
       if (adminUser.role !== 'admin') {
-        throw new Error('Insufficient permissions to assign admin or manager roles. Only admins can assign these roles.')
+        throw new Error(
+          'Insufficient permissions to assign admin or manager roles. Only admins can assign these roles.'
+        )
       }
     }
 
@@ -239,10 +247,7 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
     }
 
     // Perform the update
-    await database
-      .update(user)
-      .set(updateData)
-      .where(eq(user.id, data.userId))
+    await database.update(user).set(updateData).where(eq(user.id, data.userId))
 
     // Return updated user data
     const updatedUser = await database
