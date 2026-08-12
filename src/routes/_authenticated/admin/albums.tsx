@@ -1,9 +1,6 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import * as React from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
 import { AlbumListFiltersSchema, albumQueries } from '@/lib/albums'
-import type { AlbumListFilters } from '@/lib/albums'
-import { AlbumsPage } from '@/components/albums/albums-page'
+import { AdminAlbums } from '@/components/albums/admin'
 
 export const Route = createFileRoute('/_authenticated/admin/albums')({
   validateSearch: AlbumListFiltersSchema,
@@ -19,35 +16,10 @@ export const Route = createFileRoute('/_authenticated/admin/albums')({
       console.error('Failed to load albums:', error)
     }
   },
-  component: AdminAlbums,
+  component: RouteComponent,
 })
 
-function AdminAlbums() {
-  const navigate = useNavigate({ from: '/admin/albums' })
+function RouteComponent() {
   const search = Route.useSearch()
-
-  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useInfiniteQuery(albumQueries.manage(search))
-
-  const albums = React.useMemo(
-    () => data?.pages.flatMap((page) => page.albums) ?? [],
-    [data]
-  )
-
-  const handleFiltersChange = (next: Partial<AlbumListFilters>) => {
-    navigate({ search: (prev) => ({ ...prev, ...next }) })
-  }
-
-  return (
-    <AlbumsPage
-      mode="manage"
-      albums={albums}
-      filters={search}
-      onFiltersChange={handleFiltersChange}
-      hasNextPage={hasNextPage}
-      isFetchingNextPage={isFetchingNextPage}
-      fetchNextPage={fetchNextPage}
-      onCreated={() => {}}
-    />
-  )
+  return <AdminAlbums search={search} />
 }

@@ -42,7 +42,7 @@ import type { AdminBookingWithDetails } from "@/lib/booking/types"
 import { cn } from "@/lib/utils"
 import { isPast } from "date-fns"
 import { updateBookingStatusAdminFn } from "@/lib/booking"
-import { BulkCancelBookingsDialog } from "@/components/bookings/components/bulk-cancel-bookings-dialog"
+import { BulkCancelBookingsDialog } from "@/components/shared/bulk-cancel-bookings-dialog"
 import { toast } from "sonner"
 
 interface Pagination {

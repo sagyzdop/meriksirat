@@ -41,7 +41,7 @@ import { DataTableFacetedFilter } from "@/components/shared/data-table-faceted-f
 import { X, MessageCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { createTelegramBotLink } from "@/lib/telegram/client-utils"
 import { cancelBookingFn } from "@/lib/booking"
-import { BulkCancelBookingsDialog } from "@/components/bookings/components/bulk-cancel-bookings-dialog"
+import { BulkCancelBookingsDialog } from "@/components/shared/bulk-cancel-bookings-dialog"
 import { toast } from "sonner"
 
 interface Pagination {

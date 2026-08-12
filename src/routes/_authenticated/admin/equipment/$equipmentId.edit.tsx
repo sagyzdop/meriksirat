@@ -1,6 +1,6 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { getAdminEquipmentByIdFn, getCategoriesFn } from '@/lib/equipment'
-import { Page } from '@/components/admin/equipment/$.edit'
+import { Page } from '@/components/admin/equipment/$equipmentId.edit'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 
 export const Route = createFileRoute('/_authenticated/admin/equipment/$equipmentId/edit')({
