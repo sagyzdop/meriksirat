@@ -31,7 +31,7 @@ export function BookingDetailDialog({
 
   const status = booking.status as string
   const config = getBookingStatusConfig(status)
-  const canCancel = status === "booked" || status === "active"
+  const canCancel = status === "booked"
 
   return (
     <>

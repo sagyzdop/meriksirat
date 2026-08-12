@@ -215,7 +215,7 @@ export function BookingDataTable({
 
   const cancellableBookings = React.useMemo(() => {
     return selectedBookings.filter((booking) =>
-      booking.status === "booked" || booking.status === "active"
+      booking.status === "booked"
     )
   }, [selectedBookings])
 

@@ -181,7 +181,7 @@ export function getBookingColumns(): ColumnDef<BookingWithItems>[] {
     cell: ({ row }) => {
       const booking = row.original
       const [showCancelDialog, setShowCancelDialog] = React.useState(false)
-      const canCancel = booking.status === "booked" || booking.status === "active"
+      const canCancel = booking.status === "booked"
 
       return (
         <>

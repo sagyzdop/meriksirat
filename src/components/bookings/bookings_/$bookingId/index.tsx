@@ -117,8 +117,8 @@ export function Page({ booking, bookingId }: PageProps) {
     navigate({ to: '/bookings' })
   }
 
-  const canEdit = booking.status === 'booked' || booking.status === 'active'
-  const canCancel = booking.status !== 'cancelled' && booking.status !== 'returned'
+  const canEdit = booking.status === 'booked'
+  const canCancel = booking.status === 'booked'
 
   return (
     <PageContainer>
@@ -133,7 +133,7 @@ export function Page({ booking, bookingId }: PageProps) {
         {!canEdit && (
           <div className="rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
             This booking cannot be edited because it has been <strong>{booking.status}</strong>.
-            You can only edit bookings that are booked or active.
+            You can only edit bookings that have not started yet.
           </div>
         )}
 
