@@ -13,9 +13,10 @@ import type { BotContext } from '../context'
 import { getSession, setSession } from '../kv-session'
 import { withKeyboard } from '../server-utils'
 import { handleCancelCallback } from './cancel-booking'
+import { startBookingForChat } from './start-booking'
 import { db } from '@/db'
-import { bookingItem, equipment } from '@/db/schema'
-import { eq, and, inArray } from 'drizzle-orm'
+import { bookingItem, booking, equipment, user } from '@/db/schema'
+import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { BOOKING_STATUS } from '../types'
 
 /**
@@ -30,7 +31,63 @@ function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: strin
 }
 
 /**
- * Fetches the returnable items for a booking and prompts the user to select.
+ * Shows a confirmation prompt for starting a booking.
+ */
+async function promptStartConfirm(
+  ctx: BotContext,
+  bookingId: number
+): Promise<void> {
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const parent = await database
+    .select({
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+    })
+    .from(booking)
+    .where(eq(booking.id, bookingId))
+    .get()
+
+  if (!parent) {
+    await ctx.answerCbQuery('Booking not found')
+    return
+  }
+
+  const items = await database
+    .select({ equipmentName: equipment.modelName })
+    .from(bookingItem)
+    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .where(
+      and(
+        eq(bookingItem.bookingId, bookingId),
+        notInArray(bookingItem.status, ['cancelled', 'returned'])
+      )
+    )
+
+  const timeStart = parent.startTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  })
+  const timeEnd = parent.endTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  })
+  const equipmentLabel = items.map((i) => i.equipmentName).join(', ')
+
+  await ctx.editMessageText(
+    `Start booking #${bookingId} now?\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${timeStart} - ${timeEnd}`,
+    buildInlineKeyboard([
+      { text: '✅ Start Booking', callback_data: `start_confirm_${bookingId}` },
+      { text: 'Cancel', callback_data: 'start_cancel' },
+    ])
+  )
+  await ctx.answerCbQuery()
+}
+
+/**
+ * Handles inline keyboard button clicks (callback queries)
  */
 async function promptItemSelection(
   ctx: BotContext,
@@ -110,6 +167,71 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
     if (!session) {
       await ctx.answerCbQuery('Session expired or invalid')
       await ctx.reply('Please use /return_equipment first.', withKeyboard())
+      return
+    }
+
+    // Start booking flow
+    if (session.step === 'awaiting_start_selection' && callbackData.startsWith('start_')) {
+      const bookingIdStr = callbackData.substring('start_'.length)
+      const bookingId = parseInt(bookingIdStr, 10)
+
+      if (isNaN(bookingId)) {
+        await ctx.answerCbQuery('Invalid selection')
+        return
+      }
+
+      await setSession(ctx.env.meriksirat_kv, chatId, {
+        ...session,
+        startBookingId: bookingId,
+        step: 'awaiting_start_confirm',
+      })
+
+      await promptStartConfirm(ctx, bookingId)
+      return
+    }
+
+    if (session.step === 'awaiting_start_confirm') {
+      if (callbackData.startsWith('start_confirm_')) {
+        const bookingIdStr = callbackData.substring('start_confirm_'.length)
+        const bookingId = parseInt(bookingIdStr, 10)
+
+        if (isNaN(bookingId) || bookingId !== session.startBookingId) {
+          await ctx.answerCbQuery('Invalid selection')
+          return
+        }
+
+        const database = db(ctx.env.meriksirat_d1 as D1Database)
+        const userRecord = await database
+          .select({ email: user.email })
+          .from(user)
+          .where(eq(user.id, session.userId!))
+          .get()
+
+        try {
+          await startBookingForChat(bookingId, userRecord?.email || '', ctx)
+          await ctx.editMessageText(
+            `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Remember to use "End Booking" when returning it.`,
+            withKeyboard()
+          )
+          await ctx.answerCbQuery()
+        } catch (error) {
+          console.error('Failed to start booking:', error)
+          await ctx.editMessageText(
+            error instanceof Error ? error.message : 'Failed to start booking. Please try again.',
+            withKeyboard()
+          )
+          await ctx.answerCbQuery()
+        }
+        return
+      }
+
+      if (callbackData === 'start_cancel') {
+        await ctx.editMessageText('Start cancelled.', withKeyboard())
+        await ctx.answerCbQuery()
+        return
+      }
+
+      await ctx.answerCbQuery('Invalid selection')
       return
     }
 

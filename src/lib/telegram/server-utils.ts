@@ -23,8 +23,9 @@ import { eq } from 'drizzle-orm'
  */
 export const STANDARD_KEYBOARD = {
   keyboard: [
-    [{ text: '/return_equipment' }],
-    [{ text: '/my_bookings' }, { text: '/cancel_booking' }],
+    [{ text: 'Start Booking' }],
+    [{ text: 'End Booking' }, { text: 'My Bookings' }],
+    [{ text: 'Cancel Booking' }],
   ],
   resize_keyboard: true,
   persistent: true,
@@ -78,6 +79,7 @@ export async function getBookingDetailsForLogging(bookingId: number) {
       userId: booking.userId,
       startTime: booking.startTime,
       endTime: booking.endTime,
+      startedAt: booking.startedAt,
       notes: booking.userEventDetails,
       status: booking.status,
       userName: user.name,

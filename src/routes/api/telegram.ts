@@ -17,6 +17,7 @@ import { handleStart } from '@/lib/telegram/commands/start'
 import { handleEndBooking } from '@/lib/telegram/commands/end-booking'
 import { handleListBookings } from '@/lib/telegram/commands/list-bookings'
 import { handleCancelBooking } from '@/lib/telegram/commands/cancel-booking'
+import { handleStartBooking } from '@/lib/telegram/commands/start-booking'
 import { handleCallback } from '@/lib/telegram/commands/callback'
 import { handlePhoto } from '@/lib/telegram/commands/photo'
 
@@ -119,13 +120,24 @@ export const Route = createFileRoute('/api/telegram')({
           ) {
             const text = update.message.text
 
-            if (text && text.startsWith('/start')) {
-              await handleStart(ctx)
+            if (text && text.startsWith('/start_booking')) {
+              await handleStartBooking(ctx)
             } else if (text && text.startsWith('/return_equipment')) {
               await handleEndBooking(ctx)
             } else if (text && text.startsWith('/my_bookings')) {
               await handleListBookings(ctx)
             } else if (text && text.startsWith('/cancel_booking')) {
+              await handleCancelBooking(ctx)
+            } else if (text && text.startsWith('/start')) {
+              // /start (bare) or /start <token> deep link (account linking)
+              await handleStart(ctx)
+            } else if (text === 'Start Booking') {
+              await handleStartBooking(ctx)
+            } else if (text === 'End Booking') {
+              await handleEndBooking(ctx)
+            } else if (text === 'My Bookings') {
+              await handleListBookings(ctx)
+            } else if (text === 'Cancel Booking') {
               await handleCancelBooking(ctx)
             }
           } else if ('callback_query' in update) {

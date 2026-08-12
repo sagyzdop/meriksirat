@@ -89,49 +89,12 @@ async function fetchReturnableBookings(
 }
 
 /**
- * Present the item-selection keyboard for a single booking.
- */
-async function promptItemSelection(
-  ctx: BotContext,
-  chatId: string,
-  userId: string,
-  bookingInfo: BookingWithItems
-): Promise<void> {
-  const returnableItems = bookingInfo.items.filter(
-    (it) => it.itemStatus !== 'returned' && it.itemStatus !== 'cancelled'
-  )
-
-  await setSession(ctx.env.meriksirat_kv, chatId, {
-    step: 'awaiting_item_selection',
-    userId,
-    activeBookingIds: [bookingInfo.id],
-    selectedBookingIds: [bookingInfo.id],
-    createdAt: Date.now(),
-  })
-
-  const buttons = returnableItems.map((it) => ({
-    text: it.equipmentName,
-    callback_data: `item_${it.itemId}`,
-  }))
-  buttons.push({
-    text: 'Return All Items',
-    callback_data: `item_all_${bookingInfo.id}`,
-  })
-
-  await ctx.reply(
-    `Select which items to return for booking #${bookingInfo.id}:`,
-    buildInlineKeyboard(buttons)
-  )
-}
-
-/**
  * Handles the /return_equipment command to initiate equipment return flow
  *
  * Flow:
  * 1. Verify user is linked to Telegram account
  * 2. Fetch bookings with returnable items
- * 3. If a single booking exists, go straight to item selection
- * 4. If multiple bookings exist, show a booking list to pick from
+ * 3. Show a booking list to pick from
  *
  * @param ctx - Bot context with environment bindings
  */
@@ -171,13 +134,8 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
 
     const activeBookingIds = bookings.map((b) => b.id)
 
-    // Single booking: skip booking selection and go straight to items
-    if (bookings.length === 1) {
-      await promptItemSelection(ctx, chatId, userRecord.id, bookings[0])
-      return
-    }
-
-    // Multiple bookings: ask which booking to return
+    // Always show the booking list first so the user can confirm which booking
+    // they are returning equipment for.
     await setSession(ctx.env.meriksirat_kv, chatId, {
       step: 'awaiting_booking_selection',
       userId: userRecord.id,
