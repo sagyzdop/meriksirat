@@ -12,7 +12,8 @@ import {
 } from '../types'
 import type { BookingItemRow } from '../mappers'
 import { mapBookingsWithItems, itemSelect } from '../mappers'
-import { buildEventDescription, formatUserDisplayName } from '@/lib/utils'
+import { formatUserDisplayName } from '@/lib/utils'
+import { formatBookingDetailsPlain } from '../details'
 
 /**
  * Get all bookings with comprehensive filtering and pagination for admin oversight
@@ -72,6 +73,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
         endTime: booking.endTime,
         status: booking.status,
         userEventDetails: booking.userEventDetails,
+        startedAt: booking.startedAt,
         createdAt: booking.createdAt,
         updatedAt: booking.updatedAt,
         user: {
@@ -130,6 +132,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
             endTime: b.endTime,
             status: b.status,
             userEventDetails: b.userEventDetails,
+            startedAt: b.startedAt,
             createdAt: b.createdAt,
             updatedAt: b.updatedAt,
             itemId: 0,
@@ -156,6 +159,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
           endTime: b.endTime,
           status: b.status,
           userEventDetails: b.userEventDetails,
+          startedAt: b.startedAt,
           createdAt: b.createdAt,
           updatedAt: b.updatedAt,
           itemId: it.itemId,
@@ -226,6 +230,7 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
         endTime: booking.endTime,
         status: booking.status,
         userEventDetails: booking.userEventDetails,
+        startedAt: booking.startedAt,
         createdAt: booking.createdAt,
         updatedAt: booking.updatedAt,
         user: {
@@ -258,6 +263,7 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
       endTime: parent.endTime,
       status: parent.status,
       userEventDetails: parent.userEventDetails,
+      startedAt: parent.startedAt,
       createdAt: parent.createdAt,
       updatedAt: parent.updatedAt,
       itemId: it.itemId,
@@ -287,9 +293,11 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
   })
 
 /**
- * Update booking status with admin privileges and Google Calendar integration
- * Includes administrative notes capability and calendar synchronization
- * Applies to the whole booking (all items).
+ * Update booking with admin privileges and Google Calendar integration.
+ *
+ * Admins may only move a booking to `cancelled` (which deletes the calendar
+ * events). Without a status, this updates the booked schedule/notes. Other
+ * statuses are set automatically by the system and are rejected here.
  */
 export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingStatusAdminSchema)
@@ -299,7 +307,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } = await import('@/db/schema')
-    const { eq, and, inArray } = await import('drizzle-orm')
+    const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('../status')
 
@@ -312,6 +320,14 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       telegramUsername: adminUser.telegramUsername
     })
 
+    // Admins may only change a booking's status to `cancelled`. Other statuses
+    // are derived automatically (start/overdue/return) and are rejected here.
+    if (data.status && data.status !== 'cancelled') {
+      throw new Error(
+        'Admins can only change a booking status to "cancelled". Other statuses are set automatically.'
+      )
+    }
+
     const database = db(env.meriksirat_d1 as D1Database)
 
     // Get the booking with user details
@@ -322,6 +338,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         startTime: booking.startTime,
         endTime: booking.endTime,
         status: booking.status,
+        startedAt: booking.startedAt,
         userEventDetails: booking.userEventDetails,
         user: {
           email: user.email,
@@ -346,6 +363,8 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     const newStartTime = data.startTime || bookingData.startTime.toISOString()
     const newEndTime = data.endTime || bookingData.endTime.toISOString()
 
+    const timesChanged = Boolean(data.startTime || data.endTime)
+
     // Load items with equipment calendars
     const items = await database
       .select({
@@ -365,7 +384,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     }
 
     // If times are changing, check availability on all item calendars
-    if (data.startTime || data.endTime) {
+    if (timesChanged) {
       for (const item of items) {
         if (!item.equipmentCalendarId) continue
         const freeBusyResult = await checkCalendarFreeBusy({
@@ -384,7 +403,8 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Update booking notes and times
+    // Update booking notes; only adjust times when the admin explicitly rebooks
+    // the schedule (cancelling never changes the booked times).
     const updatedNotes = data.notes
       ? `${bookingData.userEventDetails || ''}\n\n[Admin Note by ${adminDisplayName}]: ${data.notes}`.trim()
       : bookingData.userEventDetails
@@ -393,50 +413,12 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       .update(booking)
       .set({
         userEventDetails: updatedNotes,
-        startTime: new Date(newStartTime),
-        endTime: new Date(newEndTime),
+        ...(timesChanged
+          ? { startTime: new Date(newStartTime), endTime: new Date(newEndTime) }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(booking.id, data.bookingId))
-
-    // Determine which items to apply the status change to
-    // - cancelled/returned apply to all non-terminal items
-    // - active/booked/overdue apply to items that are not returned/cancelled
-    const changedItems = items.filter((item) => {
-      if (item.status === 'cancelled' || item.status === 'returned') return false
-      return true
-    })
-
-    if (data.status === 'cancelled' || data.status === 'returned') {
-      const terminalStatus = data.status === 'cancelled' ? 'cancelled' : 'returned'
-      await database
-        .update(bookingItem)
-        .set({
-          status: terminalStatus,
-          returnedAt: terminalStatus === 'returned' ? new Date() : undefined,
-          updatedAt: new Date(),
-        })
-        .where(eq(bookingItem.bookingId, data.bookingId))
-    } else if (changedItems.length > 0) {
-      await database
-        .update(bookingItem)
-        .set({ status: data.status, updatedAt: new Date() })
-        .where(and(eq(bookingItem.bookingId, data.bookingId), inArray(bookingItem.id, changedItems.map((i) => i.id))))
-    }
-
-    // Recompute parent status
-    await recomputeBookingStatus(database, data.bookingId)
-
-    // Log booking status change to Telegram channel
-    try {
-      await logBookingActivityById(data.bookingId, 'updated', {
-        previousStatus,
-        newStatus: data.status,
-        notes: `Admin ${adminDisplayName} changed status from ${previousStatus} to ${data.status}${data.notes ? `. Notes: ${data.notes}` : ''}`
-      })
-    } catch (logError) {
-      console.error('Failed to log booking status update:', logError)
-    }
 
     // Handle Google Calendar integration
     const { settings } = await import('@/db/schema')
@@ -454,10 +436,27 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       telegramUsername: bookingData.user?.telegramUsername
     })
 
-    for (const item of items) {
-      if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
+    if (data.status === 'cancelled') {
+      // Cancel: mark all items cancelled, recompute parent, delete events.
+      await database
+        .update(bookingItem)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(bookingItem.bookingId, data.bookingId))
 
-      if (data.status === 'cancelled') {
+      await recomputeBookingStatus(database, data.bookingId)
+
+      try {
+        await logBookingActivityById(data.bookingId, 'cancelled', {
+          previousStatus,
+          newStatus: 'cancelled',
+          notes: `Booking cancelled by admin ${adminDisplayName}${data.notes ? `. Reason: ${data.notes}` : ''}`
+        })
+      } catch (logError) {
+        console.error('Failed to log booking cancellation:', logError)
+      }
+
+      for (const item of items) {
+        if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
         try {
           await deleteCalendarEvent({
             data: {
@@ -468,19 +467,41 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         } catch (calendarError) {
           console.error('Failed to delete calendar event:', calendarError)
         }
-        continue
       }
 
-      const description = buildEventDescription({
+      return { success: true, previousStatus, newStatus: 'cancelled' }
+    }
+
+    // Times / notes update only (status is unchanged)
+    await recomputeBookingStatus(database, data.bookingId)
+
+    try {
+      await logBookingActivityById(data.bookingId, 'updated', {
+        previousStatus,
+        newStatus: previousStatus,
+        notes: `Admin ${adminDisplayName} updated booking${timesChanged ? ' schedule' : ''}${data.notes ? `. Notes: ${data.notes}` : ''}`
+      })
+    } catch (logError) {
+      console.error('Failed to log booking update:', logError)
+    }
+
+    for (const item of items) {
+      if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
+
+      const description = formatBookingDetailsPlain({
         bookingId: data.bookingId,
         userDisplayName,
-        status: data.status,
+        equipmentNames: [item.equipmentModelName || `Equipment ${item.equipmentId}`],
+        startTime: newStartTime,
+        endTime: newEndTime,
+        startedAt: bookingData.startedAt,
+        status: previousStatus,
         notes: updatedNotes,
-        globalNote
+        globalNote,
       })
 
       const event = {
-        summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking (${data.status.toUpperCase()})`,
+        summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking (${previousStatus.toUpperCase()})`,
         description,
         start: { dateTime: newStartTime, timeZone: 'UTC' },
         end: { dateTime: newEndTime, timeZone: 'UTC' },
@@ -500,7 +521,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       }
     }
 
-    return { success: true, previousStatus, newStatus: data.status }
+    return { success: true, previousStatus, newStatus: previousStatus }
   })
 
 /**

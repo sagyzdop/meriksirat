@@ -13,7 +13,8 @@ import {
 } from '../types'
 import type { BookingItemRow } from '../mappers'
 import { mapBookingsWithItems, itemSelect } from '../mappers'
-import { buildEventDescription, formatUserDisplayName } from '@/lib/utils'
+import { formatUserDisplayName } from '@/lib/utils'
+import { formatBookingDetailsPlain } from '../details'
 
 type UserIdentity = {
   firstName?: string | null
@@ -184,11 +185,15 @@ export const createBookingFn = createServerFn({ method: 'POST' })
 
     try {
       for (const { equipmentId, calendarId } of resolvedCalendars) {
-        const description = buildEventDescription({
+        const description = formatBookingDetailsPlain({
           bookingId,
           userDisplayName,
+          equipmentNames: [equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`],
+          startTime,
+          endTime,
+          status: 'booked',
           notes,
-          globalNote
+          globalNote,
         })
 
         const event = {
@@ -346,6 +351,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
         endTime: booking.endTime,
         status: booking.status,
         userEventDetails: booking.userEventDetails,
+        startedAt: booking.startedAt,
         createdAt: booking.createdAt,
         updatedAt: booking.updatedAt,
         sortEquipmentName: sql<string | null>`min(${equipment.modelName})`,
@@ -398,6 +404,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
             endTime: b.endTime,
             status: b.status,
             userEventDetails: b.userEventDetails,
+            startedAt: b.startedAt,
             createdAt: b.createdAt,
             updatedAt: b.updatedAt,
             itemId: 0,
@@ -424,6 +431,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
           endTime: b.endTime,
           status: b.status,
           userEventDetails: b.userEventDetails,
+          startedAt: b.startedAt,
           createdAt: b.createdAt,
           updatedAt: b.updatedAt,
           itemId: it.itemId,
@@ -489,6 +497,7 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
         endTime: booking.endTime,
         status: booking.status,
         userEventDetails: booking.userEventDetails,
+        startedAt: booking.startedAt,
         createdAt: booking.createdAt,
         updatedAt: booking.updatedAt,
       })
@@ -517,6 +526,7 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
       endTime: parent.endTime,
       status: parent.status,
       userEventDetails: parent.userEventDetails,
+      startedAt: parent.startedAt,
       createdAt: parent.createdAt,
       updatedAt: parent.updatedAt,
       itemId: it.itemId,
@@ -763,11 +773,15 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     for (const item of items) {
       if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
 
-      const description = buildEventDescription({
+      const description = formatBookingDetailsPlain({
         bookingId: data.bookingId,
         userDisplayName,
+        equipmentNames: [item.equipmentModelName || `Equipment ${item.equipmentId}`],
+        startTime: newStartTime,
+        endTime: newEndTime,
+        status: bookingData.status,
         notes: newNotes,
-        globalNote
+        globalNote,
       })
 
       const event = {

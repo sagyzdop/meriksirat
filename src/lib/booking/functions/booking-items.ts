@@ -20,7 +20,7 @@ async function assertBookingAccess(params: {
   const { eq } = await import('drizzle-orm')
 
   const bookingRow = await params.database
-    .select({ userId: booking.userId })
+    .select({ userId: booking.userId, status: booking.status })
     .from(booking)
     .where(eq(booking.id, params.bookingId))
     .limit(1)
@@ -33,6 +33,11 @@ async function assertBookingAccess(params: {
   if (bookingData.userId !== params.sessionUserId) {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     await checkAdminPermission(params.headers, ['admin', 'manager'])
+  }
+
+  // Items may only be cancelled while the booking has not been started.
+  if (bookingData.status !== 'booked') {
+    throw new Error('Items can only be cancelled from a booking that has not started')
   }
 }
 
