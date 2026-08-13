@@ -89,7 +89,7 @@ function PersonLink({ person }: PersonLinkProps) {
           event.stopPropagation()
           router.navigate({ href: person.href! })
         }}
-        className="flex min-w-0 flex-1 items-center gap-2 font-medium hover:underline"
+        className="flex min-w-0 max-w-40 items-center gap-2 font-medium hover:underline lg:max-w-48"
       >
         {content}
       </a>
@@ -97,7 +97,7 @@ function PersonLink({ person }: PersonLinkProps) {
   }
 
   return (
-    <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
+    <span className="flex min-w-0 max-w-40 items-center gap-2 font-medium lg:max-w-48">
       {content}
     </span>
   )
@@ -156,12 +156,14 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
           {person ? (
             <PersonLink person={person} />
           ) : (
-            <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+            <span className="min-w-0 max-w-40 truncate font-medium lg:max-w-48">
+              {name}
+            </span>
           )}
 
           <div
             className={cn(
-              'flex min-w-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs tabular-nums',
+              'ml-auto flex min-w-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs tabular-nums',
               isOverdue && 'bg-destructive/10'
             )}
           >
@@ -193,7 +195,7 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
 
           <Badge
             variant="secondary"
-            className="h-6 shrink-0 rounded-full px-2.5 text-sm"
+            className="h-6 min-w-6 shrink-0 justify-center rounded-full px-2 text-sm tabular-nums sm:min-w-14"
             title={`${itemCount} ${itemLabel}`}
           >
             <span className="tabular-nums">{itemCount}</span>
@@ -208,6 +210,7 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
               endTime={booking.endTime}
               showOverdueIcon
               mobileDot
+              className="h-6 min-w-6 justify-center rounded-full sm:min-w-14"
             />
           </span>
 

@@ -18,7 +18,6 @@ import { Section } from '@/components/layout/section'
 import { EquipmentTable } from '@/components/shared/equipment-table'
 import { AddEquipmentButton } from '@/components/shared/add-equipment-button'
 import { BookingConfirmationDialog } from '@/components/bookings/new/components/booking-confirmation-dialog'
-import { Trash2 } from 'lucide-react'
 
 export function NewBookingPage() {
   const router = useRouter()
@@ -146,12 +145,11 @@ export function NewBookingPage() {
     action: (
       <Button
         variant="ghost"
-        size="icon"
+        size="sm"
         onClick={() => removeEquipment(item.id)}
-        aria-label={`Remove ${item.modelName}`}
         className="text-muted-foreground hover:text-destructive"
       >
-        <Trash2 className="h-4 w-4" />
+        Remove
       </Button>
     ),
   }))

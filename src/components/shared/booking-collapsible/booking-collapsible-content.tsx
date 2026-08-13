@@ -101,19 +101,30 @@ export function BookingCollapsibleContent({
 
       <Separator />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <ExtendBookingButton
           bookingId={booking.id}
           status={booking.status}
           onExtend={() => router.invalidate()}
+          className="w-full sm:w-auto"
         />
         {onViewDetails && (
-          <Button size="sm" variant="outline" onClick={onViewDetails}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={onViewDetails}
+          >
             View details
           </Button>
         )}
         {editable && onEdit && (
-          <Button size="sm" variant="outline" onClick={onEdit}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={onEdit}
+          >
             Edit
           </Button>
         )}
@@ -121,7 +132,7 @@ export function BookingCollapsibleContent({
           <Button
             size="sm"
             variant="destructive"
-            className="ml-auto"
+            className="w-full sm:ml-auto sm:w-auto"
             onClick={onCancel}
           >
             Cancel booking

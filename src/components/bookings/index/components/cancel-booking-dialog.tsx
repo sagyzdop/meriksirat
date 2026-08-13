@@ -46,6 +46,8 @@ export function CancelBookingDialog({
       // Refresh the bookings list in the background
       await queryClient.invalidateQueries({ queryKey: ['bookings'] })
 
+      onOpenChange(false)
+
       if (onSuccess) {
         onSuccess()
       }
