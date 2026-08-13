@@ -11,10 +11,8 @@ import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
@@ -199,17 +197,12 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
             </Alert>
           )}
 
-          <Section
-            title="Details"
-            description="Administrative context for this booking"
-            spacing="compact"
-          >
+          <Section title="Details" spacing="compact">
             <BookingInfoTable booking={booking} bookedBy={bookedBy} />
           </Section>
 
           <Section
             title="Equipment"
-            description="Cancel an item to remove it from this booking, or return equipment through Telegram once the booking is active."
             spacing="compact"
             actions={addEquipmentButton}
           >
@@ -220,17 +213,12 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
             />
           </Section>
 
-          <Section
-            title="Admin Notes"
-            description="Add administrative notes. Status changes are handled by the Cancel Booking button."
-            spacing="compact"
-          >
+          <Section title="Admin Notes" spacing="compact">
             <FormField
               control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Administrative Notes</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Add administrative notes about this booking update (optional)..."
@@ -239,11 +227,6 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
                       disabled={isSubmitting}
                     />
                   </FormControl>
-                  <FormDescription>
-                    These notes will be appended to the booking history and
-                    visible to other admins. Your email will be automatically
-                    included with the note.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

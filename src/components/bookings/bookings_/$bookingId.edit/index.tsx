@@ -7,7 +7,6 @@ import { getBookingSlots } from '@/lib/booking/slots'
 import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Loader2, Trash2 } from 'lucide-react'
 import {
   AlertDialog,
@@ -20,7 +19,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { format } from 'date-fns'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
@@ -165,11 +163,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Edit Booking"
-        description={`Booking ID: #${booking.id} • Created ${format(new Date(booking.createdAt), 'PPP')}`}
-        onBack={() => history.back()}
-      />
+      <PageHeader title="Edit Booking" onBack={() => history.back()} />
 
       <div className="space-y-8">
         <Section title="Details" spacing="compact">
@@ -178,7 +172,6 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
 
         <Section
           title="Equipment"
-          description="Cancel an item to remove it from this booking."
           spacing="compact"
           actions={addEquipmentButton}
         >
@@ -202,17 +195,13 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
             />
 
             <Section title="Update Notes" spacing="compact">
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Add any notes about your booking..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
-                  disabled={isSubmitting}
-                />
-              </div>
+              <Textarea
+                placeholder="Add any notes about your booking..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                disabled={isSubmitting}
+              />
             </Section>
           </>
         )}
