@@ -120,7 +120,6 @@ export const UpdateUserProfileSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   instagramUsername: z.string().optional(),
-  telegramUsername: z.string().optional(),
   birthday: z.string().optional(),
   major: z.string().optional(),
   graduationYear: z.number().min(1900).max(2100).optional(),

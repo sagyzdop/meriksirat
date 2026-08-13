@@ -38,7 +38,6 @@ const profileFormSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   instagramUsername: z.string().optional(),
-  telegramUsername: z.string().optional(),
   birthday: z.date().optional(),
   major: z.string().optional(),
   graduationYear: z.string().optional(),
@@ -59,7 +58,6 @@ export function ProfileContent({ user }: ProfileContentProps) {
       firstName: user.firstName || '',
       lastName: user.lastName || '',
       instagramUsername: user.instagramUsername || '',
-      telegramUsername: user.telegramUsername || '',
       birthday: user.birthday ? new Date(user.birthday) : undefined,
       major: user.major || '',
       graduationYear: user.graduationYear?.toString() || '',
@@ -100,10 +98,6 @@ export function ProfileContent({ user }: ProfileContentProps) {
             ? Number(data.graduationYear)
             : undefined,
         nuId: data.nuId && data.nuId !== '' ? Number(data.nuId) : undefined,
-        telegramUsername:
-          data.telegramUsername && data.telegramUsername !== ''
-            ? data.telegramUsername.replace(/^@/, '').trim()
-            : undefined,
       }
 
       await updateUserProfileFn({ data: updateData })
@@ -261,6 +255,12 @@ export function ProfileContent({ user }: ProfileContentProps) {
                   <FieldError>{form.formState.errors.nuId?.message}</FieldError>
                 </Field>
 
+                <Field>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
+                  <Input id="email" type="email" value={user.email} disabled />
+                  <FieldDescription>Email cannot be changed</FieldDescription>
+                </Field>
+
                 <Field className="md:col-span-2">
                   <FieldLabel htmlFor="telegramUsername">
                     Telegram Username
@@ -268,30 +268,26 @@ export function ProfileContent({ user }: ProfileContentProps) {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <Input
                       id="telegramUsername"
-                      placeholder="@username"
-                      {...form.register('telegramUsername')}
-                      disabled={!isEditing}
+                      value={
+                        user.telegramUsername ? `@${user.telegramUsername}` : ''
+                      }
+                      placeholder="Not connected"
+                      disabled
                     />
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handleUpdateTelegram}
-                      disabled={isUpdatingTelegram || isSaving}
+                      disabled={isUpdatingTelegram}
                       className="shrink-0"
                     >
                       {isUpdatingTelegram ? 'Opening...' : 'Update Telegram'}
                     </Button>
                   </div>
                   <FieldDescription>
-                    Update your username in Telegram, then tap this button and
-                    Start in the bot to re-link it
+                    Set by your Telegram account. Tap the button and Start in
+                    the bot to re-link it
                   </FieldDescription>
-                </Field>
-
-                <Field>
-                  <FieldLabel htmlFor="email">Email</FieldLabel>
-                  <Input id="email" type="email" value={user.email} disabled />
-                  <FieldDescription>Email cannot be changed</FieldDescription>
                 </Field>
               </div>
             </form>

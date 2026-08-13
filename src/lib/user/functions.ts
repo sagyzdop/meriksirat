@@ -420,10 +420,6 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
       updateData.instagramUsername = data.instagramUsername
     }
 
-    if (data.telegramUsername !== undefined) {
-      updateData.telegramUsername = data.telegramUsername
-    }
-
     if (data.nuId !== undefined) {
       updateData.nuId = data.nuId
     }
