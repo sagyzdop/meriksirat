@@ -27,7 +27,8 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user, category } =
       await import('@/db/schema')
-    const { eq, and, sql, desc, asc, inArray } = await import('drizzle-orm')
+    const { eq, and, sql, desc, asc, gte, lte, inArray } =
+      await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -39,6 +40,19 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
 
     if (data.status && data.status.length > 0) {
       conditions.push(inArray(booking.status, data.status))
+    }
+
+    if (data.startDate) {
+      conditions.push(gte(booking.startTime, new Date(data.startDate)))
+    }
+
+    if (data.endDate) {
+      conditions.push(
+        lte(
+          booking.endTime,
+          new Date(new Date(data.endDate).getTime() + 86_399_999)
+        )
+      )
     }
 
     const whereClause =

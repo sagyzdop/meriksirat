@@ -24,6 +24,8 @@ interface Pagination {
 
 interface Filters {
   status?: string[]
+  startDate?: string
+  endDate?: string
   page: number
   limit: number
   sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt'
@@ -43,6 +45,7 @@ const statusOptions = [
   { value: 'returned', label: 'Returned' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'overdue', label: 'Overdue' },
+  { value: 'partially_returned', label: 'Partially Returned' },
 ]
 
 export function Page({
@@ -108,6 +111,17 @@ export function Page({
           navigate({
             to: '.',
             search: { ...filters, status, page: 1 },
+          })
+        }
+        onDateFilterChange={(range) =>
+          navigate({
+            to: '.',
+            search: {
+              ...filters,
+              startDate: range?.from ? range.from.toISOString() : undefined,
+              endDate: range?.to ? range.to.toISOString() : undefined,
+              page: 1,
+            },
           })
         }
         onResetFilters={() =>

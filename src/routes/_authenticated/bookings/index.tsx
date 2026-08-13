@@ -5,6 +5,7 @@ import {
   bookingsQueries,
   bookingsEmptyResponse,
   getTelegramBotUsernameFn,
+  normalizeBookingFilters,
 } from '@/lib/booking'
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
@@ -38,7 +39,7 @@ export const Route = createFileRoute('/_authenticated/bookings/')({
   loader: async ({ deps, context }) => {
     try {
       await context.queryClient.ensureQueryData(
-        bookingsQueries.mine(deps.search)
+        bookingsQueries.mine(normalizeBookingFilters(deps.search))
       )
     } catch (error) {
       console.error('Failed to load bookings:', error)
@@ -58,9 +59,10 @@ export const Route = createFileRoute('/_authenticated/bookings/')({
 function RouteComponent() {
   const { telegramBotUsername } = Route.useLoaderData()
   const search = Route.useSearch()
+  const filters = normalizeBookingFilters(search)
   const { user } = Route.useRouteContext()
-  const { data, isFetching } = useQuery(bookingsQueries.mine(search))
-  const response = data ?? bookingsEmptyResponse(search)
+  const { data, isFetching } = useQuery(bookingsQueries.mine(filters))
+  const response = data ?? bookingsEmptyResponse(filters)
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })

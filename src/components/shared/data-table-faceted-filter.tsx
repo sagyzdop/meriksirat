@@ -29,6 +29,7 @@ interface DataTableFacetedFilterProps {
   }[]
   selectedValues: string[]
   onSelectionChange: (values: string[] | undefined) => void
+  triggerClassName?: string
 }
 
 export function DataTableFacetedFilter({
@@ -36,13 +37,18 @@ export function DataTableFacetedFilter({
   options,
   selectedValues,
   onSelectionChange,
+  triggerClassName,
 }: DataTableFacetedFilterProps) {
   const selectedSet = new Set(selectedValues)
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 border-dashed">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn('h-8 border-dashed', triggerClassName)}
+        >
           <Plus className="mr-2 h-4 w-4" />
           {title}
           {selectedSet.size > 0 && (

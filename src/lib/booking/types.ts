@@ -63,6 +63,15 @@ export const SETTABLE_BOOKING_STATUSES = [
   'overdue',
 ] as const
 
+// Statuses shown in the booking lists by default. Returned and Cancelled
+// bookings stay hidden unless explicitly selected via the status filter.
+export const DEFAULT_BOOKING_STATUS_FILTER = [
+  'booked',
+  'active',
+  'overdue',
+  'partially_returned',
+] as const
+
 export type BookingStatus = (typeof BOOKING_STATUSES)[number]
 export type SettableBookingStatus = (typeof SETTABLE_BOOKING_STATUSES)[number]
 
@@ -116,6 +125,8 @@ export interface PaginatedAdminBookingsResponse {
 // Admin booking oversight schemas
 export const AdminBookingFiltersSchema = z.object({
   status: z.array(z.enum(BOOKING_STATUSES)).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(50),
   sortBy: z

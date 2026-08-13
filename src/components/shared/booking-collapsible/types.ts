@@ -24,6 +24,8 @@ export interface BookingCollapsiblePagination {
 
 export interface BookingCollapsibleFilters {
   status?: string[]
+  startDate?: string
+  endDate?: string
   sortBy: string
   sortOrder: 'asc' | 'desc'
 }

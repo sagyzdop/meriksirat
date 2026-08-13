@@ -1,7 +1,11 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/bookings/index'
-import { bookingsQueries, adminBookingsEmptyResponse } from '@/lib/booking'
+import {
+  bookingsQueries,
+  adminBookingsEmptyResponse,
+  normalizeBookingFilters,
+} from '@/lib/booking'
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
 
@@ -16,6 +20,8 @@ const searchSchema = z.object({
       'partially_returned',
     ])
   ),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
   sortBy: z
@@ -31,7 +37,7 @@ export const Route = createFileRoute('/_authenticated/admin/bookings/')({
   loader: async ({ deps, context }) => {
     try {
       await context.queryClient.ensureQueryData(
-        bookingsQueries.adminList(deps.search)
+        bookingsQueries.adminList(normalizeBookingFilters(deps.search))
       )
     } catch (error) {
       console.error('Failed to load bookings:', error)
@@ -41,8 +47,9 @@ export const Route = createFileRoute('/_authenticated/admin/bookings/')({
 
 function RouteComponent() {
   const search = Route.useSearch()
-  const { data, isFetching } = useQuery(bookingsQueries.adminList(search))
-  const response = data ?? adminBookingsEmptyResponse(search)
+  const filters = normalizeBookingFilters(search)
+  const { data, isFetching } = useQuery(bookingsQueries.adminList(filters))
+  const response = data ?? adminBookingsEmptyResponse(filters)
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })
@@ -51,7 +58,7 @@ function RouteComponent() {
     <Page
       bookings={response.data}
       pagination={response.pagination}
-      filters={search}
+      filters={filters}
       isLoading={isRouterPending || isFetching}
     />
   )

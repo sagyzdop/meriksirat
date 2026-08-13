@@ -111,6 +111,17 @@ export function Page({
             search: { ...filters, status, page: 1 },
           })
         }
+        onDateFilterChange={(range) =>
+          navigate({
+            to: '.',
+            search: {
+              ...filters,
+              startDate: range?.from ? range.from.toISOString() : undefined,
+              endDate: range?.to ? range.to.toISOString() : undefined,
+              page: 1,
+            },
+          })
+        }
         onResetFilters={() =>
           navigate({
             to: '.',

@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { format, isPast } from 'date-fns'
+import type { DateRange } from 'react-day-picker'
 import {
   ArrowDown,
   ArrowRight,
@@ -24,6 +25,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
+import { DateRangeFilter } from '@/components/shared/date-range-filter'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import {
   BookingStatusBadge,
@@ -31,6 +33,7 @@ import {
 } from '@/components/shared/booking-status-badge'
 import { BulkCancelBookingsDialog } from '@/components/shared/bulk-cancel-bookings-dialog'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
+import { DEFAULT_BOOKING_STATUS_FILTER } from '@/lib/booking/types'
 import { cn } from '@/lib/utils'
 import type {
   BookingCollapsibleFilters,
@@ -44,7 +47,7 @@ const SELECT_W = 'w-4'
 const ID_W = 'w-14'
 const CHEVRON_W = 'w-4'
 
-const TOOLBAR_BUTTON_CLASS = 'h-8 border-dashed'
+const TOOLBAR_BUTTON_CLASS = 'h-8 w-full border-dashed sm:w-auto'
 
 function getInitials(name: string) {
   return name
@@ -249,6 +252,7 @@ interface BookingCollapsibleListProps<T extends BookingCollapsibleRowData> {
   renderCollapsibleContent: (booking: T) => React.ReactNode
   onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void
   onStatusFilterChange: (values: string[] | undefined) => void
+  onDateFilterChange: (range: DateRange | undefined) => void
   onResetFilters: () => void
   onPageChange: (page: number) => void
   onPageSizeChange: (limit: number) => void
@@ -270,6 +274,7 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
   renderCollapsibleContent,
   onSortChange,
   onStatusFilterChange,
+  onDateFilterChange,
   onResetFilters,
   onPageChange,
   onPageSizeChange,
@@ -290,7 +295,16 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
     ).length
   }, [bookings, showOverdueBanner])
 
-  const isFiltered = !!filters.status && filters.status.length > 0
+  const isFiltered = React.useMemo(() => {
+    const statuses = filters.status ?? []
+    const statusDiffers =
+      statuses.length !== DEFAULT_BOOKING_STATUS_FILTER.length ||
+      statuses.some(
+        (status) =>
+          !(DEFAULT_BOOKING_STATUS_FILTER as readonly string[]).includes(status)
+      )
+    return statusDiffers || !!(filters.startDate || filters.endDate)
+  }, [filters])
 
   const allPageSelected =
     bookings.length > 0 &&
@@ -370,7 +384,7 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
       )}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Button
             variant="outline"
             size="sm"
@@ -414,12 +428,19 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
             options={statusOptions}
             selectedValues={filters.status || []}
             onSelectionChange={(values) => onStatusFilterChange(values)}
+            triggerClassName="w-full sm:w-auto"
+          />
+          <DateRangeFilter
+            from={filters.startDate}
+            to={filters.endDate}
+            onChange={onDateFilterChange}
+            className="w-full sm:w-auto"
           />
           {isFiltered && (
             <Button
               variant="ghost"
               onClick={onResetFilters}
-              className="h-8 px-2 lg:px-3"
+              className="h-8 w-full px-2 sm:w-auto lg:px-3"
             >
               Reset
               <X className="ml-2 h-4 w-4" />

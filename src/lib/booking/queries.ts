@@ -8,6 +8,19 @@ import type {
   PaginatedBookingsResponse,
   PaginatedAdminBookingsResponse,
 } from './types'
+import { DEFAULT_BOOKING_STATUS_FILTER } from './types'
+
+/**
+ * Applies the default status filter (Booked, Active, Overdue, Partially
+ * Returned) when no explicit status was chosen, so returned/cancelled bookings
+ * stay hidden unless the user opts in via the status filter.
+ */
+export function normalizeBookingFilters<
+  T extends { status?: readonly string[] },
+>(filters: T): T {
+  if (filters.status && filters.status.length > 0) return filters
+  return { ...filters, status: [...DEFAULT_BOOKING_STATUS_FILTER] }
+}
 
 export function bookingsEmptyResponse(
   filters: BookingFilters
