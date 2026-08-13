@@ -30,65 +30,67 @@ function formatStatus(status: string): string {
  * Describes whether an action covered the whole booking or only some of its
  * items, based on the per-item statuses fetched after the action ran.
  */
-function describeBookingScope(data: BookingLogData): string | null {
+function getItemStatuses(data: BookingLogData): {
+  names: string[]
+  statuses: string[]
+  target: 'cancelled' | 'returned'
+  affected: string[]
+} {
   const names = data.equipmentNames?.length
     ? data.equipmentNames
     : data.equipmentName
       ? [data.equipmentName]
       : []
-  const statuses = data.itemStatuses
-  if (!statuses || statuses.length === 0 || statuses.length !== names.length) {
-    return null
-  }
-
+  const statuses = data.itemStatuses ?? []
   const target = data.action === 'cancelled' ? 'cancelled' : 'returned'
   const affected = names
     .map((name, i) => ({ name, status: statuses[i] }))
     .filter((item) => item.status === target)
+    .map((item) => item.name)
 
-  if (affected.length === 0) return null
-  if (affected.length === names.length) {
-    return target === 'cancelled'
-      ? 'Scope: Entire booking cancelled'
-      : 'Scope: Entire booking returned'
-  }
-
-  return `Scope: ${affected.length} of ${names.length} ${
-    names.length === 1 ? 'item' : 'items'
-  } ${target} (${affected.map((item) => item.name).join(', ')})`
+  return { names, statuses, target, affected }
 }
 
 function formatBookingLogMessage(data: BookingLogData): string {
-  const lines: string[] = [
-    `Booking #${data.bookingId} · ${ACTION_LABELS[data.action]}`,
-  ]
+  const { names, statuses, target, affected } = getItemStatuses(data)
 
-  lines.push(`User: ${data.userName}`)
+  const isPartialEvent =
+    statuses.length === names.length &&
+    names.length > 0 &&
+    affected.length > 0 &&
+    affected.length < names.length
 
-  if (
-    data.previousStatus &&
-    data.newStatus &&
-    data.previousStatus !== data.newStatus
-  ) {
+  const lines: string[] = []
+
+  if (isPartialEvent) {
+    lines.push(`Booking #${data.bookingId}`)
+    lines.push(`User: ${data.userName}`)
     lines.push(
-      `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
+      `Event: ${affected.length} of ${names.length} ${
+        names.length === 1 ? 'item' : 'items'
+      } ${target} (${affected.join(', ')})`
     )
-  } else if (data.newStatus) {
-    lines.push(`Status: ${formatStatus(data.newStatus)}`)
-  }
+    const remaining = names.filter((_, i) => statuses[i] !== target)
+    lines.push(`Remaining: ${remaining.join(', ')}`)
+  } else {
+    lines.push(`Booking #${data.bookingId} · ${ACTION_LABELS[data.action]}`)
+    lines.push(`User: ${data.userName}`)
 
-  const scope = describeBookingScope(data)
-  if (scope) {
-    lines.push(scope)
-  }
+    if (
+      data.previousStatus &&
+      data.newStatus &&
+      data.previousStatus !== data.newStatus
+    ) {
+      lines.push(
+        `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
+      )
+    } else if (data.newStatus) {
+      lines.push(`Status: ${formatStatus(data.newStatus)}`)
+    }
 
-  const equipmentNames = data.equipmentNames?.length
-    ? data.equipmentNames
-    : data.equipmentName
-      ? [data.equipmentName]
-      : []
-  if (equipmentNames.length > 0) {
-    lines.push(`Equipment: ${equipmentNames.join(', ')}`)
+    if (names.length > 0) {
+      lines.push(`Equipment: ${names.join(', ')}`)
+    }
   }
 
   if (data.startTime && data.endTime) {
