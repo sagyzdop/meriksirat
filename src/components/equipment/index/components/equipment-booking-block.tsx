@@ -1,19 +1,19 @@
-import * as React from "react";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import * as React from 'react'
+import { ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarProvider,
-} from "@/components/ui/sidebar";
-import { Equipment, Category } from "./types";
-import { EquipmentCategoryCombobox } from "./equipment-category-combobox";
-import { EquipmentCategoryNav } from "./equipment-category-nav";
-import { EquipmentGrid } from "./equipment-grid";
-import { EquipmentSearch } from "./equipment-search";
-import { useIsMobile } from "@/hooks/use-mobile";
+} from '@/components/ui/sidebar'
+import { Equipment, Category } from './types'
+import { EquipmentCategoryCombobox } from './equipment-category-combobox'
+import { EquipmentCategoryNav } from './equipment-category-nav'
+import { EquipmentGrid } from './equipment-grid'
+import { EquipmentSearch } from './equipment-search'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 interface EquipmentBookingBlockProps {
   equipment: Equipment[]
@@ -25,6 +25,7 @@ interface EquipmentBookingBlockProps {
     clearSelection: () => void
   }
   onBookSelected: () => void
+  onAddModeBack: () => void
   onSearchChange: (value: string) => void
   onCategorySelect: (categoryId?: number) => void
   isLoading?: boolean
@@ -45,6 +46,7 @@ export function EquipmentBookingBlock({
   filters,
   selection,
   onBookSelected,
+  onAddModeBack,
   onSearchChange,
   onCategorySelect,
   isLoading = false,
@@ -52,7 +54,7 @@ export function EquipmentBookingBlock({
   bookingId,
   ctaLabel = 'View & Book Selected',
 }: EquipmentBookingBlockProps) {
-  const searchQuery = filters.searchQuery?.trim() ?? ""
+  const searchQuery = filters.searchQuery?.trim() ?? ''
   const isSearching = searchQuery.length > 0
   const hasActiveFilters = isSearching || filters.categoryId !== undefined
   const selectedCount = selection.selectedIds.length
@@ -64,8 +66,8 @@ export function EquipmentBookingBlock({
       return equipment.filter(
         (item) =>
           item.modelName.toLowerCase().includes(query) ||
-          (item.description ?? "").toLowerCase().includes(query) ||
-          (item.category?.name ?? "").toLowerCase().includes(query)
+          (item.description ?? '').toLowerCase().includes(query) ||
+          (item.category?.name ?? '').toLowerCase().includes(query)
       )
     }
     if (filters.categoryId !== undefined) {
@@ -88,14 +90,14 @@ export function EquipmentBookingBlock({
     const grouped = new Map<string, EquipmentGroup>()
     for (const item of filteredEquipment) {
       const category = item.category
-      const key = category ? `category-${category.id}` : "uncategorized"
+      const key = category ? `category-${category.id}` : 'uncategorized'
       const existing = grouped.get(key)
       if (existing) {
         existing.items.push(item)
       } else {
         grouped.set(key, {
           key,
-          name: category?.name ?? "Uncategorized",
+          name: category?.name ?? 'Uncategorized',
           items: [item],
         })
       }
@@ -103,8 +105,7 @@ export function EquipmentBookingBlock({
 
     const sortedCategories = [...categories].sort(
       (a, b) =>
-        (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
-        a.name.localeCompare(b.name)
+        (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)
     )
 
     const result: EquipmentGroup[] = []
@@ -115,7 +116,7 @@ export function EquipmentBookingBlock({
         grouped.delete(`category-${category.id}`)
       }
     }
-    const uncategorized = grouped.get("uncategorized")
+    const uncategorized = grouped.get('uncategorized')
     if (uncategorized) {
       result.push(uncategorized)
     }
@@ -154,7 +155,7 @@ export function EquipmentBookingBlock({
                   variant="ghost"
                   size="sm"
                   className="gap-1.5 text-muted-foreground"
-                  onClick={() => history.back()}
+                  onClick={onAddModeBack}
                 >
                   <ArrowLeft className="size-4" aria-hidden="true" />
                   Back
@@ -183,7 +184,10 @@ export function EquipmentBookingBlock({
             {isLoading && equipment.length === 0 ? (
               <EquipmentGrid equipment={[]} isLoading />
             ) : groups.length === 0 ? (
-              <EquipmentGrid equipment={[]} hasActiveFilters={hasActiveFilters} />
+              <EquipmentGrid
+                equipment={[]}
+                hasActiveFilters={hasActiveFilters}
+              />
             ) : (
               groups.map((group) => (
                 <div key={group.key} className="mb-8 last:mb-0">
@@ -230,5 +234,5 @@ export function EquipmentBookingBlock({
         </footer>
       </div>
     </SidebarProvider>
-  );
+  )
 }

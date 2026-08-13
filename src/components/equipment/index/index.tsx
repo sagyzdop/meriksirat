@@ -1,8 +1,8 @@
-import * as React from "react";
-import { useNavigate, useRouter } from "@tanstack/react-router";
-import { EquipmentBookingBlock } from "./components/equipment-booking-block";
-import { Equipment, Category } from "./components/types";
-import { useSelection } from "@/hooks/use-selection";
+import * as React from 'react'
+import { useNavigate, useRouter } from '@tanstack/react-router'
+import { EquipmentBookingBlock } from './components/equipment-booking-block'
+import { Equipment, Category } from './components/types'
+import { useSelection } from '@/hooks/use-selection'
 
 interface Filters {
   categoryId?: number
@@ -19,14 +19,19 @@ interface PageProps {
   isLoading?: boolean
 }
 
-export function Page({ equipment, categories, filters, isLoading = false }: PageProps) {
+export function Page({
+  equipment,
+  categories,
+  filters,
+  isLoading = false,
+}: PageProps) {
   const navigate = useNavigate({ from: '/equipment/' })
   const router = useRouter()
   const isAddMode = filters.mode === 'add-to-booking'
   const selection = useSelection({
     items: equipment,
     getId: (item) => item.id,
-    storageKey: "equipment-selection",
+    storageKey: 'equipment-selection',
   })
 
   // Start with a fresh selection when arriving in add-to-booking mode so only
@@ -57,6 +62,14 @@ export function Page({ equipment, categories, filters, isLoading = false }: Page
     })
   }
 
+  const handleAddModeBack = () => {
+    if (isAddMode && filters.returnTo) {
+      router.navigate({ href: filters.returnTo, replace: true })
+      return
+    }
+    history.back()
+  }
+
   const handleSearchChange = (value: string) => {
     navigate({
       search: (prev) => ({ ...prev, searchQuery: value || undefined }),
@@ -84,9 +97,10 @@ export function Page({ equipment, categories, filters, isLoading = false }: Page
         clearSelection: selection.clearSelection,
       }}
       onBookSelected={handleBookSelected}
+      onAddModeBack={handleAddModeBack}
       onSearchChange={handleSearchChange}
       onCategorySelect={handleCategorySelect}
       isLoading={isLoading}
     />
-  );
+  )
 }
