@@ -1,6 +1,6 @@
 /**
  * Telegram Logging
- * 
+ *
  * Handles logging booking activities to Telegram channels for audit and notification purposes.
  */
 
@@ -10,45 +10,55 @@ import type { BookingLogData } from './types'
 import {
   createTelegramForLogging,
   isTelegramLoggingEnabled,
-  getBookingDetailsForLogging
+  getBookingDetailsForLogging,
 } from './server-utils'
 import { formatUserDisplayName } from '@/lib/utils'
 
-const ACTION_EMOJIS = {
-  created: '📅',
-  updated: '✏️',
-  cancelled: '❌',
-  returned: '✅',
-  deleted: '🗑️'
+const ACTION_LABELS = {
+  created: 'Created',
+  updated: 'Updated',
+  cancelled: 'Cancelled',
+  returned: 'Returned',
+  deleted: 'Deleted',
 } as const
 
+function formatStatus(status: string): string {
+  return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+
 function formatBookingLogMessage(data: BookingLogData): string {
-  const { action, bookingId, userName, equipmentName, equipmentNames, startTime, endTime, notes, previousStatus, newStatus } = data
+  const lines: string[] = [
+    `Booking #${data.bookingId} · ${ACTION_LABELS[data.action]}`,
+  ]
 
-  const emoji = ACTION_EMOJIS[action]
-  const actionText = action.charAt(0).toUpperCase() + action.slice(1).toLowerCase()
+  lines.push(`User: ${data.userName}`)
 
-  const equipmentLabel = (equipmentNames && equipmentNames.length > 0)
-    ? (equipmentNames.length === 1 ? equipmentNames[0] : `${equipmentNames.length} items: ${equipmentNames.join(', ')}`)
-    : equipmentName
-
-  let message = ''
-  
-  if (startTime && endTime) {
-    const date = startTime.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
-    const timeStart = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-    const timeEnd = endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-    message = `${emoji} **${equipmentLabel} ID#${bookingId} was ${actionText} for ${date} from ${timeStart} to ${timeEnd} by ${userName}**\n\n`
-  } else {
-    message = `${emoji} **Booking ID#${bookingId} was ${actionText}**\n\n`
-    message += `🔧 **Equipment:** ${equipmentLabel}\n`
-    message += `👤 **User:** ${userName}\n\n`
+  const equipmentNames = data.equipmentNames?.length
+    ? data.equipmentNames
+    : data.equipmentName
+      ? [data.equipmentName]
+      : []
+  if (equipmentNames.length > 0) {
+    lines.push(`Equipment: ${equipmentNames.join(', ')}`)
   }
 
-  if (action === 'updated' && previousStatus && newStatus) {
-    message += `🔄 **Status:** ${previousStatus} → ${newStatus}\n`
-  } else if (newStatus) {
-    message += `📊 **Status:** ${newStatus}\n`
+  if (data.startTime && data.endTime) {
+    const date = data.startTime.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+    const timeStart = data.startTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+    const timeEnd = data.endTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+    lines.push(`Time: ${date}, ${timeStart} – ${timeEnd}`)
   }
 
   if (data.startedAt) {
@@ -57,19 +67,29 @@ function formatBookingLogMessage(data: BookingLogData): string {
       minute: '2-digit',
       hour12: false,
     })
-    message += `🕐 **Started at:** ${started}\n`
+    lines.push(`Started at: ${started}`)
   }
 
-  if (notes) {
-    message += `📝 **Notes:** ${notes}\n`
+  if (
+    data.previousStatus &&
+    data.newStatus &&
+    data.previousStatus !== data.newStatus
+  ) {
+    lines.push(
+      `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
+    )
   }
 
-  return message
+  if (data.notes) {
+    lines.push(`Notes: ${data.notes}`)
+  }
+
+  return lines.join('\n')
 }
 
 /**
  * Sends a booking activity log to the Telegram channel
- * 
+ *
  * @param telegram - Telegram API instance
  * @param channelId - Telegram channel ID (from TELEGRAM_CLUB_CHANNEL_ID)
  * @param logData - Booking activity data
@@ -81,21 +101,22 @@ export async function logBookingActivity(
 ): Promise<void> {
   try {
     if (!channelId) {
-      console.warn('TELEGRAM_CLUB_CHANNEL_ID not configured, skipping booking log')
+      console.warn(
+        'TELEGRAM_CLUB_CHANNEL_ID not configured, skipping booking log'
+      )
       return
     }
 
     const message = formatBookingLogMessage(logData)
 
     await telegram.sendMessage(channelId, message, {
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true
+      disable_web_page_preview: true,
     } as any)
   } catch (error) {
     console.error('Failed to log booking activity to Telegram channel:', {
       bookingId: logData.bookingId,
       action: logData.action,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     })
     // Don't throw - logging failures shouldn't break the main flow
   }
@@ -131,7 +152,7 @@ export async function logBookingActivityById(
       firstName: bookingDetails.userFirstName,
       lastName: bookingDetails.userLastName,
       name: bookingDetails.userName,
-      telegramUsername: bookingDetails.userTelegramUsername
+      telegramUsername: bookingDetails.userTelegramUsername,
     })
 
     await logBookingActivity(telegram, env.TELEGRAM_CLUB_CHANNEL_ID!, {
@@ -146,20 +167,20 @@ export async function logBookingActivityById(
       startedAt: bookingDetails.startedAt,
       notes: options.notes || bookingDetails.notes,
       previousStatus: options.previousStatus,
-      newStatus: options.newStatus || bookingDetails.status
+      newStatus: options.newStatus || bookingDetails.status,
     })
   } catch (error) {
     console.error('Failed to log booking activity by ID:', {
       bookingId,
       action,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     })
   }
 }
 
 /**
  * Logs a booking status change to the Telegram channel
- * 
+ *
  * @param bookingId - The booking ID
  * @param previousStatus - The previous status
  * @param newStatus - The new status
@@ -173,7 +194,7 @@ export async function logBookingStatusChange(
 ): Promise<void> {
   await logBookingActivityById(bookingId, action, {
     previousStatus,
-    newStatus
+    newStatus,
   })
 }
 
@@ -198,6 +219,6 @@ export async function logMultipleBookingStatusChanges(
     )
 
     // Small delay between messages to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100))
   }
 }
