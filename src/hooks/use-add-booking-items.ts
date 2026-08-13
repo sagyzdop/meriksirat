@@ -38,12 +38,16 @@ export function useAddBookingItems(bookingId: number) {
 
     ;(async () => {
       try {
-        await addBookingItemsFn({
+        const result = await addBookingItemsFn({
           data: { bookingId, equipmentIds },
         })
         if (cancelled) return
+        const added = result?.added ?? equipmentIds.length
+        const skipped = equipmentIds.length - added
         toast.success(
-          `Added ${equipmentIds.length} item${equipmentIds.length === 1 ? '' : 's'} to this booking`
+          skipped > 0
+            ? `Added ${added} item${added === 1 ? '' : 's'} to this booking; ${skipped} already included`
+            : `Added ${added} item${added === 1 ? '' : 's'} to this booking`
         )
         await queryClient.invalidateQueries({ queryKey: ['bookings'] })
         router.invalidate()
