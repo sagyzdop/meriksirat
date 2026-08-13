@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useRouter, useSearch } from '@tanstack/react-router'
+import { Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { createBookingFn } from '@/lib/booking'
@@ -17,10 +18,12 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { EquipmentTable } from '@/components/shared/equipment-table'
 import { AddEquipmentButton } from '@/components/shared/add-equipment-button'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { BookingConfirmationDialog } from '@/components/bookings/new/components/booking-confirmation-dialog'
 
 export function NewBookingPage() {
   const router = useRouter()
+  const goBack = useBackNavigation('/equipment')
   const searchParams = useSearch({ strict: false }) as {
     equipmentId?: number
     equipmentIds?: number[]
@@ -144,11 +147,11 @@ export function NewBookingPage() {
     categoryName: item.category?.name,
     action: (
       <Button
-        variant="ghost"
+        variant="destructive"
         size="sm"
         onClick={() => removeEquipment(item.id)}
-        className="text-muted-foreground hover:text-destructive"
       >
+        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
         Remove
       </Button>
     ),
@@ -216,7 +219,7 @@ export function NewBookingPage() {
       <PageHeader
         title="New Booking"
         description="Select equipment and choose a time slot for your booking"
-        onBack={() => history.back()}
+        onBack={goBack}
       />
 
       <div className="space-y-8">

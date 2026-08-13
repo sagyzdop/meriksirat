@@ -81,7 +81,7 @@ export function BookingCollapsibleContent({
       : 'this item')
 
   return (
-    <div className="space-y-4 rounded-b-md border-t bg-muted/30 px-4 py-4">
+    <div className="space-y-4 rounded-b-md border-t bg-muted/50 px-4 py-4">
       <EquipmentTable
         rows={booking.items.map((item) => ({
           key: item.id.toString(),
