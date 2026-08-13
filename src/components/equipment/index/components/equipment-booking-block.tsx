@@ -28,6 +28,7 @@ interface EquipmentBookingBlockProps {
   onAddModeBack: () => void
   onSearchChange: (value: string) => void
   onCategorySelect: (categoryId?: number) => void
+  disabledEquipmentIds?: number[]
   isLoading?: boolean
   addMode?: boolean
   bookingId?: number
@@ -49,6 +50,7 @@ export function EquipmentBookingBlock({
   onAddModeBack,
   onSearchChange,
   onCategorySelect,
+  disabledEquipmentIds = [],
   isLoading = false,
   addMode = false,
   bookingId,
@@ -201,6 +203,7 @@ export function EquipmentBookingBlock({
                     equipment={group.items}
                     hasActiveFilters={hasActiveFilters}
                     selectedEquipmentIds={selection.selectedIds}
+                    disabledEquipmentIds={disabledEquipmentIds}
                     onToggleSelect={selection.toggleSelection}
                   />
                 </div>

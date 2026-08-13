@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { getUserBookingsFn } from './functions/user-bookings'
 import { getAdminBookingsFn } from './functions/admin-bookings'
+import { getBookingItemEquipmentIdsFn } from './functions/booking-items'
 import type {
   BookingFilters,
   AdminBookingFilters,
@@ -57,5 +58,17 @@ export const bookingsQueries = {
       queryFn: async (): Promise<PaginatedAdminBookingsResponse> =>
         (await getAdminBookingsFn({ data: filters })) ??
         adminBookingsEmptyResponse(filters),
+    }),
+  bookingItemEquipmentIds: (bookingId?: number) =>
+    queryOptions({
+      queryKey: [...bookingsQueries.all, 'item-equipment-ids', bookingId ?? -1],
+      queryFn: async () => {
+        if (bookingId === undefined) return []
+        const result = await getBookingItemEquipmentIdsFn({
+          data: { bookingId },
+        })
+        return result?.equipmentIds ?? []
+      },
+      enabled: bookingId !== undefined,
     }),
 }

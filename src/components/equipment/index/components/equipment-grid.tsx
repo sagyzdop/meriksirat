@@ -1,18 +1,25 @@
-import { EquipmentCard } from "./equipment-card";
-import { EquipmentSkeleton } from "./equipment-skeleton";
-import { Equipment } from "./types";
-import { ContentGrid } from "@/components/layout/content-grid";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
-import { PackageOpen, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { EquipmentCard } from './equipment-card'
+import { EquipmentSkeleton } from './equipment-skeleton'
+import { Equipment } from './types'
+import { ContentGrid } from '@/components/layout/content-grid'
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from '@/components/ui/empty'
+import { PackageOpen, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface EquipmentGridProps {
-  equipment: Equipment[];
-  hasActiveFilters?: boolean;
-  isLoading?: boolean;
-  className?: string;
-  selectedEquipmentIds?: number[];
-  onToggleSelect?: (equipmentId: number) => void;
+  equipment: Equipment[]
+  hasActiveFilters?: boolean
+  isLoading?: boolean
+  className?: string
+  selectedEquipmentIds?: number[]
+  disabledEquipmentIds?: number[]
+  onToggleSelect?: (equipmentId: number) => void
 }
 
 export function EquipmentGrid({
@@ -21,6 +28,7 @@ export function EquipmentGrid({
   isLoading = false,
   className,
   selectedEquipmentIds,
+  disabledEquipmentIds,
   onToggleSelect,
 }: EquipmentGridProps) {
   if (isLoading) {
@@ -38,7 +46,7 @@ export function EquipmentGrid({
           <EquipmentSkeleton key={index} />
         ))}
       </ContentGrid>
-    );
+    )
   }
 
   if (equipment.length === 0) {
@@ -53,12 +61,13 @@ export function EquipmentGrid({
               </EmptyMedia>
               <EmptyTitle>No results found</EmptyTitle>
               <EmptyDescription>
-                No equipment matches your current search or filter criteria. Try adjusting your filters or search terms.
+                No equipment matches your current search or filter criteria. Try
+                adjusting your filters or search terms.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
         </div>
-      );
+      )
     }
 
     // No equipment at all
@@ -71,12 +80,13 @@ export function EquipmentGrid({
             </EmptyMedia>
             <EmptyTitle>No equipment available</EmptyTitle>
             <EmptyDescription>
-              There is no equipment available at this time. Please check back later.
+              There is no equipment available at this time. Please check back
+              later.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>
-    );
+    )
   }
 
   return (
@@ -94,9 +104,10 @@ export function EquipmentGrid({
           key={item.id}
           equipment={item}
           isSelected={selectedEquipmentIds?.includes(item.id) || false}
+          disabled={disabledEquipmentIds?.includes(item.id) || false}
           onToggleSelect={onToggleSelect}
         />
       ))}
     </ContentGrid>
-  );
+  )
 }

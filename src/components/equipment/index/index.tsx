@@ -16,6 +16,7 @@ interface PageProps {
   equipment: Equipment[]
   categories: Category[]
   filters: Filters
+  disabledEquipmentIds?: number[]
   isLoading?: boolean
 }
 
@@ -23,6 +24,7 @@ export function Page({
   equipment,
   categories,
   filters,
+  disabledEquipmentIds = [],
   isLoading = false,
 }: PageProps) {
   const navigate = useNavigate({ from: '/equipment/' })
@@ -96,6 +98,7 @@ export function Page({
         toggleSelection: selection.toggleSelection,
         clearSelection: selection.clearSelection,
       }}
+      disabledEquipmentIds={disabledEquipmentIds}
       onBookSelected={handleBookSelected}
       onAddModeBack={handleAddModeBack}
       onSearchChange={handleSearchChange}

@@ -1,31 +1,41 @@
-import { Link } from '@tanstack/react-router';
-import { Check, Eye } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  Card, 
+import { Link } from '@tanstack/react-router'
+import { Check, Eye } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
   CardAction,
   CardDescription,
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Equipment } from "./types";
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Equipment } from './types'
 
 interface EquipmentCardProps {
-  equipment: Equipment;
-  isSelected?: boolean;
-  onToggleSelect?: (equipmentId: number) => void;
+  equipment: Equipment
+  isSelected?: boolean
+  disabled?: boolean
+  onToggleSelect?: (equipmentId: number) => void
 }
 
-export function EquipmentCard({ equipment, isSelected = false, onToggleSelect }: EquipmentCardProps) {
-  const placeholderImage = "/equipment-placeholder.svg";
-  const imageUrl = equipment.imagePath ? `/api/images/${equipment.imagePath}` : placeholderImage;
-  
-  const isAvailable = equipment.isActive !== false;
-  
+export function EquipmentCard({
+  equipment,
+  isSelected = false,
+  disabled = false,
+  onToggleSelect,
+}: EquipmentCardProps) {
+  const placeholderImage = '/equipment-placeholder.svg'
+  const imageUrl = equipment.imagePath
+    ? `/api/images/${equipment.imagePath}`
+    : placeholderImage
+
+  const isAvailable = equipment.isActive !== false
+
   return (
-    <Card className={`group relative mx-auto flex w-full flex-col overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? " ring-2 ring-primary/40" : ""}`}>
+    <Card
+      className={`group relative mx-auto flex w-full flex-col overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? ' ring-2 ring-primary/40' : ''}${disabled ? ' opacity-60' : ''}`}
+    >
       {/* Image Section */}
       <div className="relative aspect-video w-full overflow-hidden rounded-t-xl">
         <img
@@ -33,7 +43,7 @@ export function EquipmentCard({ equipment, isSelected = false, onToggleSelect }:
           alt={equipment.modelName}
           className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
           onError={(e) => {
-            e.currentTarget.src = placeholderImage;
+            e.currentTarget.src = placeholderImage
           }}
         />
       </div>
@@ -41,14 +51,22 @@ export function EquipmentCard({ equipment, isSelected = false, onToggleSelect }:
       <CardHeader>
         <CardAction>
           <Badge
-            className={isAvailable ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}
+            className={
+              disabled
+                ? 'bg-slate-100 text-slate-700'
+                : isAvailable
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-700'
+            }
           >
-            {isAvailable ? "Available" : "Unavailable"}
+            {disabled
+              ? 'In booking'
+              : isAvailable
+                ? 'Available'
+                : 'Unavailable'}
           </Badge>
         </CardAction>
-        <CardTitle className="line-clamp-1">
-          {equipment.modelName}
-        </CardTitle>
+        <CardTitle className="line-clamp-1">{equipment.modelName}</CardTitle>
         <CardDescription className="line-clamp-2 min-h-10">
           {equipment.description}
         </CardDescription>
@@ -62,15 +80,15 @@ export function EquipmentCard({ equipment, isSelected = false, onToggleSelect }:
           </Link>
         </Button>
         <Button
-          variant={isSelected ? "default" : "outline"}
+          variant={isSelected ? 'default' : 'outline'}
           className="flex-1"
-          disabled={!isAvailable}
+          disabled={!isAvailable || disabled}
           onClick={() => onToggleSelect?.(equipment.id)}
         >
           {isSelected && <Check className="mr-2 h-4 w-4" />}
-          {isSelected ? "Selected" : "Select"}
+          {isSelected ? 'Selected' : disabled ? 'In booking' : 'Select'}
         </Button>
       </CardFooter>
     </Card>
-  );
+  )
 }

@@ -1,6 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import { AddBookingItemsSchema, CancelBookingItemSchema } from '../types'
+import {
+  AddBookingItemsSchema,
+  CancelBookingItemSchema,
+  GetBookingByIdSchema,
+} from '../types'
 
 /**
  * Per-item booking action for the web UI.
@@ -361,4 +365,41 @@ export const cancelBookingItemFn = createServerFn({ method: 'POST' })
     }
 
     return { success: true }
+  })
+
+/**
+ * getBookingItemEquipmentIdsFn returns the equipment already attached to a
+ * booking. Used by the equipment catalog in add-to-booking mode so already
+ * booked items can be marked and excluded from selection.
+ */
+export const getBookingItemEquipmentIdsFn = createServerFn({ method: 'POST' })
+  .validator(GetBookingByIdSchema)
+  .handler(async ({ data }) => {
+    const { auth } = await import('@/lib/auth/auth')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db/index')
+    const { bookingItem } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const headers = getRequestHeaders()
+    const session = await auth.api.getSession({ headers })
+    if (!session?.user) {
+      throw new Error('Not authenticated')
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    await assertBookingAccess({
+      headers,
+      database,
+      bookingId: data.bookingId,
+      sessionUserId: session.user.id,
+    })
+
+    const items = await database
+      .select({ equipmentId: bookingItem.equipmentId })
+      .from(bookingItem)
+      .where(eq(bookingItem.bookingId, data.bookingId))
+
+    return { equipmentIds: items.map((item) => item.equipmentId) }
   })
