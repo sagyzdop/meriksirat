@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import { toast } from 'sonner'
-import { Eye, PackageCheck, Pencil, X } from 'lucide-react'
+import { CalendarDays, Eye, PackageCheck, Pencil, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -81,7 +82,19 @@ export function BookingCollapsibleContent({
       : 'this item')
 
   return (
-    <div className="space-y-4 rounded-b-md border-t bg-muted/50 px-4 py-4">
+    <div className="space-y-4 rounded-b-md border-t bg-muted px-4 py-4">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-card px-3 py-2.5 text-sm">
+        <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="font-medium">
+          {format(new Date(booking.startTime), 'EEEE, MMM d, yyyy')}
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="tabular-nums">
+          {format(new Date(booking.startTime), 'HH:mm')} –{' '}
+          {format(new Date(booking.endTime), 'HH:mm')}
+        </span>
+      </div>
+
       <EquipmentTable
         rows={booking.items.map((item) => ({
           key: item.id.toString(),

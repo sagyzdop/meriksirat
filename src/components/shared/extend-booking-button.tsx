@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Clock } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -82,7 +82,7 @@ export function ExtendBookingButton({
         onClick={() => setOpen(true)}
         className={className}
       >
-        <Clock className="mr-1.5 h-3.5 w-3.5" />
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
         Add 30 min
       </Button>
 

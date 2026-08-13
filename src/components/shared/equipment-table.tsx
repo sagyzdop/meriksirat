@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { ImageIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +20,34 @@ interface EquipmentTableProps {
   emptyDescription?: string
   emptyAction?: ReactNode
   className?: string
+}
+
+function EquipmentRowThumb({
+  imagePath,
+  title,
+}: {
+  imagePath?: string | null
+  title: string
+}) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const showPlaceholder = imageFailed || !imagePath
+
+  if (showPlaceholder) {
+    return (
+      <div className="flex h-10 w-14 shrink-0 items-center justify-center rounded-md border bg-muted">
+        <ImageIcon className="h-4 w-4 text-muted-foreground/60" />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={`/api/images/${imagePath}`}
+      alt={title}
+      onError={() => setImageFailed(true)}
+      className="h-10 w-14 shrink-0 rounded-md border object-cover"
+    />
+  )
 }
 
 /**
@@ -62,7 +92,7 @@ export function EquipmentTable({
       {rows.map((row) => (
         <div
           key={row.key}
-          className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 transition-colors hover:bg-muted/50"
+          className="flex cursor-pointer items-center gap-3 rounded-md border bg-card px-3 py-2.5 transition-colors hover:bg-muted/50"
           onClick={() =>
             router.navigate({
               to: '/equipment/$',
@@ -70,15 +100,7 @@ export function EquipmentTable({
             })
           }
         >
-          <img
-            src={
-              row.imagePath
-                ? `/api/images/${row.imagePath}`
-                : '/equipment-placeholder.svg'
-            }
-            alt={row.title}
-            className="h-10 w-14 shrink-0 rounded-md border object-cover"
-          />
+          <EquipmentRowThumb imagePath={row.imagePath} title={row.title} />
           <div className="min-w-0 flex-1">
             <p className="truncate font-medium">{row.title}</p>
             <Badge
