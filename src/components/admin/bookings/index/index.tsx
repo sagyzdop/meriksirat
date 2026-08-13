@@ -42,10 +42,10 @@ interface PageProps {
 const statusOptions = [
   { value: 'booked', label: 'Booked' },
   { value: 'active', label: 'Active' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'cancelled', label: 'Cancelled' },
   { value: 'overdue', label: 'Overdue' },
   { value: 'partially_returned', label: 'Partially Returned' },
+  { value: 'returned', label: 'Returned' },
+  { value: 'cancelled', label: 'Cancelled' },
 ]
 
 export function Page({

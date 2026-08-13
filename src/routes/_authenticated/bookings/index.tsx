@@ -76,7 +76,7 @@ function RouteComponent() {
     <Page
       bookings={response.data}
       pagination={response.pagination}
-      filters={search}
+      filters={filters}
       telegramBotUsername={telegramBotUsername}
       currentUserName={currentUserName}
       currentUserImage={user?.image}
