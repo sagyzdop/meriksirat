@@ -1,12 +1,15 @@
 import * as React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from '@tanstack/react-router'
 import { format, isPast } from 'date-fns'
 import {
-  AlertCircle,
   ArrowDown,
+  ArrowRight,
   ArrowUp,
   ArrowUpDown,
+  Check,
   ChevronRight,
+  Clock,
   MessageCircle,
   X,
 } from 'lucide-react'
@@ -14,6 +17,8 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
   CollapsibleContent,
@@ -32,71 +37,76 @@ import { cn } from '@/lib/utils'
 import type {
   BookingCollapsibleFilters,
   BookingCollapsiblePagination,
+  BookingCollapsiblePersonInfo,
   BookingCollapsibleRowData,
   BookingStatusOption,
 } from './types'
 
 const SELECT_W = 'w-4'
 const ID_W = 'w-14'
-const START_W = 'w-24'
-const END_W = 'w-24'
-const STATUS_W = 'min-w-[7rem]'
 const CHEVRON_W = 'w-4'
 
-interface SortableHeaderButtonProps {
-  label: string
-  column: string
-  sortBy: string
-  sortOrder: 'asc' | 'desc'
-  onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void
+const TOOLBAR_BUTTON_CLASS = 'h-8 border-dashed'
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 }
 
-const HEADER_CLASS =
-  'inline-flex h-6 items-center px-2 font-medium text-muted-foreground'
-
-function HeaderLabel({ label }: { label: string }) {
-  return <span className={HEADER_CLASS}>{label}</span>
+interface PersonLinkProps {
+  person: BookingCollapsiblePersonInfo
 }
 
-function SortableHeaderButton({
-  label,
-  column,
-  sortBy,
-  sortOrder,
-  onSortChange,
-}: SortableHeaderButtonProps) {
-  const active = sortBy === column
+function PersonLink({ person }: PersonLinkProps) {
+  const router = useRouter()
+
+  const content = (
+    <>
+      <Avatar className="h-6 w-6 shrink-0">
+        <AvatarImage
+          src={person.image ? `/api/images/${person.image}` : undefined}
+          alt={person.name}
+        />
+        <AvatarFallback className="text-[10px]">
+          {getInitials(person.name)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="hidden truncate sm:inline">{person.name}</span>
+    </>
+  )
+
+  if (person.href) {
+    return (
+      <a
+        href={person.href}
+        onClick={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          router.navigate({ href: person.href! })
+        }}
+        className="flex min-w-0 flex-1 items-center gap-2 font-medium hover:underline"
+      >
+        {content}
+      </a>
+    )
+  }
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={cn(
-        HEADER_CLASS,
-        'hover:text-foreground'
-      )}
-      onClick={() => {
-        const order = active ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'asc'
-        onSortChange(column, order)
-      }}
-    >
-      {label}
-      {active ? (
-        sortOrder === 'asc' ? (
-          <ArrowUp className="ml-1 h-3.5 w-3.5" />
-        ) : (
-          <ArrowDown className="ml-1 h-3.5 w-3.5" />
-        )
-      ) : (
-        <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-50" />
-      )}
-    </Button>
+    <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
+      {content}
+    </span>
   )
 }
 
 interface BookingCollapsibleRowProps<T extends BookingCollapsibleRowData> {
   booking: T
   name: string
+  person?: BookingCollapsiblePersonInfo
   selected: boolean
   onSelectedChange: (selected: boolean) => void
   renderCollapsibleContent: (booking: T) => React.ReactNode
@@ -105,11 +115,15 @@ interface BookingCollapsibleRowProps<T extends BookingCollapsibleRowData> {
 function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
   booking,
   name,
+  person,
   selected,
   onSelectedChange,
   renderCollapsibleContent,
 }: BookingCollapsibleRowProps<T>) {
   const isOverdue = isBookingOverdue(booking.endTime, booking.status)
+
+  const itemCount = booking.items.length
+  const itemLabel = itemCount === 1 ? 'item' : 'items'
 
   return (
     <Collapsible className="rounded-md border bg-card">
@@ -117,7 +131,7 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
         <div
           role="button"
           tabIndex={0}
-          className="group flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+          className="group flex cursor-pointer items-center gap-2 px-4 py-3 transition-colors hover:bg-muted/50 sm:gap-3"
         >
           <div
             className={cn(SELECT_W, 'flex items-center')}
@@ -129,6 +143,7 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
               aria-label={`Select booking ${booking.id}`}
             />
           </div>
+
           <span
             className={cn(
               ID_W,
@@ -137,44 +152,65 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
           >
             #{booking.id}
           </span>
-          <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {booking.items.length} item{booking.items.length === 1 ? '' : 's'}
-          </span>
-          <div className={cn(START_W, 'hidden text-right sm:block')}>
-            <p className="text-sm font-medium tabular-nums">
-              {format(new Date(booking.startTime), 'MMM dd, yyyy')}
-            </p>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {format(new Date(booking.startTime), 'HH:mm')}
-            </p>
-          </div>
-          <div className={cn(END_W, 'hidden text-right md:block')}>
-            <p
+
+          {person ? (
+            <PersonLink person={person} />
+          ) : (
+            <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+          )}
+
+          <div
+            className={cn(
+              'flex min-w-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs tabular-nums',
+              isOverdue && 'bg-destructive/10'
+            )}
+          >
+            <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
+            <span className="hidden min-w-0 truncate text-muted-foreground sm:inline">
+              {format(new Date(booking.startTime), 'MMM d')}
+            </span>
+            <span
               className={cn(
-                'text-sm font-medium tabular-nums',
+                'shrink-0 font-medium',
                 isOverdue && 'text-destructive'
               )}
             >
-              {format(new Date(booking.endTime), 'MMM dd, yyyy')}
-            </p>
-            <p
+              {format(new Date(booking.startTime), 'HH:mm')}
+            </span>
+            <ArrowRight
+              className="h-3 w-3 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span
               className={cn(
-                'flex items-center justify-end gap-1 text-xs tabular-nums',
-                isOverdue ? 'text-destructive' : 'text-muted-foreground'
+                'shrink-0 font-medium',
+                isOverdue && 'text-destructive'
               )}
             >
-              {isOverdue && <AlertCircle className="h-3 w-3" />}
               {format(new Date(booking.endTime), 'HH:mm')}
-            </p>
+            </span>
           </div>
-          <span className={cn(STATUS_W, 'flex justify-center')}>
+
+          <Badge
+            variant="secondary"
+            className="h-6 shrink-0 rounded-full px-2.5 text-sm"
+            title={`${itemCount} ${itemLabel}`}
+          >
+            <span className="tabular-nums">{itemCount}</span>
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              &nbsp;{itemLabel}
+            </span>
+          </Badge>
+
+          <span className="shrink-0">
             <BookingStatusBadge
               status={booking.status}
               endTime={booking.endTime}
               showOverdueIcon
+              mobileDot
             />
           </span>
+
           <ChevronRight
             className={cn(
               CHEVRON_W,
@@ -203,6 +239,7 @@ interface BookingCollapsibleListProps<T extends BookingCollapsibleRowData> {
   bulkCancelFn: (bookingId: number) => Promise<unknown>
   queryKey?: string[]
   getDisplayName: (booking: T) => string
+  getPersonInfo?: (booking: T) => BookingCollapsiblePersonInfo
   renderCollapsibleContent: (booking: T) => React.ReactNode
   onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void
   onStatusFilterChange: (values: string[] | undefined) => void
@@ -224,6 +261,7 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
   bulkCancelFn,
   queryKey = ['bookings'],
   getDisplayName,
+  getPersonInfo,
   renderCollapsibleContent,
   onSortChange,
   onStatusFilterChange,
@@ -252,9 +290,6 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
   const allPageSelected =
     bookings.length > 0 &&
     bookings.every((booking) => selectedIds.has(booking.id))
-  const somePageSelected = bookings.some((booking) =>
-    selectedIds.has(booking.id)
-  )
 
   const toggleAllRows = (selected: boolean) => {
     setSelectedIds((prev) => {
@@ -331,6 +366,44 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className={TOOLBAR_BUTTON_CLASS}
+            onClick={() => toggleAllRows(!allPageSelected)}
+            aria-label={
+              allPageSelected
+                ? 'Deselect all bookings on this page'
+                : 'Select all bookings on this page'
+            }
+          >
+            <Check
+              className={cn('h-4 w-4', !allPageSelected && 'opacity-40')}
+            />
+            {allPageSelected ? 'Deselect all' : 'Select all'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className={TOOLBAR_BUTTON_CLASS}
+            onClick={() =>
+              onSortChange(
+                'createdAt',
+                filters.sortOrder === 'asc' ? 'desc' : 'asc'
+              )
+            }
+          >
+            Created
+            {filters.sortBy === 'createdAt' ? (
+              filters.sortOrder === 'asc' ? (
+                <ArrowUp className="ml-1 h-3.5 w-3.5" />
+              ) : (
+                <ArrowDown className="ml-1 h-3.5 w-3.5" />
+              )
+            ) : (
+              <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-50" />
+            )}
+          </Button>
           <DataTableFacetedFilter
             title="Status"
             options={statusOptions}
@@ -380,51 +453,7 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 px-4">
-        <div className={cn(SELECT_W, 'flex items-center')}>
-          <Checkbox
-            checked={allPageSelected || (somePageSelected && 'indeterminate')}
-            onCheckedChange={(value) => toggleAllRows(!!value)}
-            aria-label="Select all bookings on this page"
-          />
-        </div>
-        <div className={cn(ID_W)}>
-          <HeaderLabel label="ID" />
-        </div>
-        <span className="min-w-0 flex-1">
-          <HeaderLabel label="Name" />
-        </span>
-        <div className={cn(START_W, 'hidden justify-end sm:flex')}>
-          <SortableHeaderButton
-            label="Start"
-            column="startTime"
-            sortBy={filters.sortBy}
-            sortOrder={filters.sortOrder}
-            onSortChange={onSortChange}
-          />
-        </div>
-        <div className={cn(END_W, 'hidden justify-end md:flex')}>
-          <SortableHeaderButton
-            label="End"
-            column="endTime"
-            sortBy={filters.sortBy}
-            sortOrder={filters.sortOrder}
-            onSortChange={onSortChange}
-          />
-        </div>
-        <div className={cn(STATUS_W, 'flex justify-center')}>
-          <SortableHeaderButton
-            label="Status"
-            column="status"
-            sortBy={filters.sortBy}
-            sortOrder={filters.sortOrder}
-            onSortChange={onSortChange}
-          />
-        </div>
-        <span className={CHEVRON_W} />
-      </div>
-
-      <div className="relative space-y-2">
+      <div className="relative space-y-3">
         {isLoading && <LoadingOverlay />}
 
         {!isLoading && bookings.length === 0 ? (
@@ -437,6 +466,7 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
               key={booking.id}
               booking={booking}
               name={getDisplayName(booking)}
+              person={getPersonInfo?.(booking)}
               selected={selectedIds.has(booking.id)}
               onSelectedChange={(selected) => toggleRow(booking.id, selected)}
               renderCollapsibleContent={renderCollapsibleContent}

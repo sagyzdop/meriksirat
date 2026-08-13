@@ -4,5 +4,6 @@ export type {
   BookingCollapsibleRowData,
   BookingCollapsiblePagination,
   BookingCollapsibleFilters,
+  BookingCollapsiblePersonInfo,
   BookingStatusOption,
 } from './types'

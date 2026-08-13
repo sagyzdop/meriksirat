@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -15,13 +14,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { BookingStatusBadge } from '@/components/shared/booking-status-badge'
 import { ExtendBookingButton } from '@/components/shared/extend-booking-button'
 import { EquipmentTable } from '@/components/shared/equipment-table'
 import { BookingItemAction } from '@/components/shared/booking-item-action'
 import { cancelBookingItemFn } from '@/lib/booking'
-import { cn } from '@/lib/utils'
-import { ArrowRight, Clock } from 'lucide-react'
 import type { BookingItemWithEquipment } from '@/lib/booking/types'
 import type { BookingCollapsibleRowData } from './types'
 
@@ -52,10 +48,6 @@ export function BookingCollapsibleContent({
   const [pendingCancelItem, setPendingCancelItem] =
     useState<BookingItemWithEquipment | null>(null)
   const [isCancellingItem, setIsCancellingItem] = useState(false)
-
-  const isOverdue =
-    booking.status === 'overdue' ||
-    booking.items.some((item) => item.status === 'overdue')
 
   const handleCancelItem = async () => {
     if (!pendingCancelItem) return
@@ -88,107 +80,24 @@ export function BookingCollapsibleContent({
 
   return (
     <div className="space-y-4 border-t px-4 py-4">
-      <div
-        className={cn(
-          'flex flex-col gap-2 rounded-md bg-muted px-4 py-3 sm:flex-row sm:items-center sm:justify-between',
-          isOverdue && 'bg-destructive/10'
-        )}
-      >
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          {format(new Date(booking.startTime), 'EEEE, MMMM d, yyyy')}
-        </div>
-        <div
-          className={cn(
-            'flex items-center gap-2 text-sm tabular-nums',
-            isOverdue ? 'text-destructive' : ''
-          )}
-        >
-          <span className="font-semibold">
-            {format(new Date(booking.startTime), 'HH:mm')}
-          </span>
-          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="font-semibold">
-            {format(new Date(booking.endTime), 'HH:mm')}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Created</p>
-          <p className="mt-0.5 tabular-nums">
-            {format(new Date(booking.createdAt), 'EEEE, MMM d, HH:mm')}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">
-            Booking ID
-          </p>
-          <p className="mt-0.5 font-mono tabular-nums">#{booking.id}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Status</p>
-          <div className="mt-0.5">
-            <BookingStatusBadge
-              status={booking.status}
-              endTime={booking.endTime}
-              showOverdueIcon
+      <EquipmentTable
+        rows={booking.items.map((item) => ({
+          key: item.id.toString(),
+          equipmentId: item.equipmentId,
+          title: item.equipment?.modelName ?? `Equipment ${item.equipmentId}`,
+          imagePath: item.equipment?.imagePath,
+          categoryName: item.equipment?.category?.name,
+          action: (
+            <BookingItemAction
+              item={item}
+              bookingStatus={booking.status}
+              telegramBotUsername={telegramBotUsername}
+              onCancelItem={setPendingCancelItem}
             />
-          </div>
-        </div>
-        {booking.user && (
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">
-              Booked by
-            </p>
-            <p className="mt-0.5 truncate">
-              {`${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim() ||
-                booking.user.email ||
-                'Unknown User'}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {booking.userEventDetails && (
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Notes</p>
-          <p className="mt-0.5 whitespace-pre-wrap text-sm">
-            {booking.userEventDetails}
-          </p>
-        </div>
-      )}
-
-      <div>
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-muted-foreground">Equipment</p>
-          <p className="text-xs text-muted-foreground">
-            {booking.items.length} item{booking.items.length === 1 ? '' : 's'}
-          </p>
-        </div>
-        <div className="mt-1.5">
-          <EquipmentTable
-            rows={booking.items.map((item) => ({
-              key: item.id.toString(),
-              equipmentId: item.equipmentId,
-              title:
-                item.equipment?.modelName ?? `Equipment ${item.equipmentId}`,
-              imagePath: item.equipment?.imagePath,
-              categoryName: item.equipment?.category?.name,
-              action: (
-                <BookingItemAction
-                  item={item}
-                  bookingStatus={booking.status}
-                  telegramBotUsername={telegramBotUsername}
-                  onCancelItem={setPendingCancelItem}
-                />
-              ),
-            }))}
-            emptyMessage="No equipment items"
-          />
-        </div>
-      </div>
+          ),
+        }))}
+        emptyMessage="No equipment items"
+      />
 
       <Separator />
 

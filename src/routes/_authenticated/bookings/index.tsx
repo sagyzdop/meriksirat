@@ -27,7 +27,7 @@ const searchSchema = z.object({
   limit: z.coerce.number().default(50),
   sortBy: z
     .enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment'])
-    .default('startTime'),
+    .default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 
@@ -77,6 +77,7 @@ function RouteComponent() {
       filters={search}
       telegramBotUsername={telegramBotUsername}
       currentUserName={currentUserName}
+      currentUserImage={user?.image}
       isLoading={isRouterPending || isFetching}
     />
   )

@@ -88,6 +88,11 @@ export function Page({
           })
         }
         getDisplayName={getDisplayName}
+        getPersonInfo={(booking) => ({
+          name: getDisplayName(booking),
+          image: booking.user?.image,
+          href: booking.user ? `/admin/users/${booking.user.id}` : undefined,
+        })}
         onSortChange={(sortBy, sortOrder) =>
           navigate({
             to: '.',
@@ -111,7 +116,7 @@ export function Page({
             search: {
               page: 1,
               limit: filters.limit,
-              sortBy: 'startTime',
+              sortBy: 'createdAt',
               sortOrder: 'desc',
             },
           })

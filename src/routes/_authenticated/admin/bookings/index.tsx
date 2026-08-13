@@ -20,7 +20,7 @@ const searchSchema = z.object({
   limit: z.coerce.number().default(50),
   sortBy: z
     .enum(['startTime', 'endTime', 'status', 'createdAt'])
-    .default('startTime'),
+    .default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 

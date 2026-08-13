@@ -37,6 +37,7 @@ interface PageProps {
   filters: Filters
   telegramBotUsername: string
   currentUserName: string
+  currentUserImage?: string | null
   isLoading?: boolean
 }
 
@@ -55,6 +56,7 @@ export function Page({
   filters,
   telegramBotUsername,
   currentUserName,
+  currentUserImage,
   isLoading = false,
 }: PageProps) {
   const navigate = useNavigate()
@@ -80,6 +82,11 @@ export function Page({
         isCancellable={(status) => status === 'booked'}
         bulkCancelFn={(bookingId) => cancelBookingFn({ data: { bookingId } })}
         getDisplayName={() => currentUserName}
+        getPersonInfo={() => ({
+          name: currentUserName,
+          image: currentUserImage,
+          href: '/profile',
+        })}
         onSortChange={(sortBy, sortOrder) =>
           navigate({
             to: '.',
@@ -103,7 +110,7 @@ export function Page({
             search: {
               page: 1,
               limit: filters.limit,
-              sortBy: 'startTime',
+              sortBy: 'createdAt',
               sortOrder: 'desc',
             },
           })

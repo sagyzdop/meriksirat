@@ -28,6 +28,12 @@ export interface BookingCollapsibleFilters {
   sortOrder: 'asc' | 'desc'
 }
 
+export interface BookingCollapsiblePersonInfo {
+  name: string
+  image?: string | null
+  href?: string
+}
+
 export interface BookingStatusOption {
   value: string
   label: string

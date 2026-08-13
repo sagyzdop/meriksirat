@@ -1,26 +1,64 @@
-import { Badge } from "@/components/ui/badge";
-import { isPast } from "date-fns";
-import { AlertCircle } from "lucide-react";
-import type { BookingStatus } from "@/lib/booking/types";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge'
+import { isPast } from 'date-fns'
+import { AlertCircle } from 'lucide-react'
+import type { BookingStatus } from '@/lib/booking/types'
+import { cn } from '@/lib/utils'
 
 export interface BookingStatusConfigEntry {
-  label: string;
-  variant: "default" | "secondary" | "destructive" | "outline";
-  color: string;
+  label: string
+  variant: 'default' | 'secondary' | 'destructive' | 'outline'
+  color: string
+  dot: string
 }
 
-export const bookingStatusConfig: Record<BookingStatus, BookingStatusConfigEntry> = {
-  booked: { label: "Booked", variant: "secondary", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  active: { label: "Active", variant: "default", color: "bg-green-50 text-green-700 border-green-200" },
-  returned: { label: "Returned", variant: "secondary", color: "bg-slate-50 text-slate-700 border-slate-200" },
-  cancelled: { label: "Cancelled", variant: "destructive", color: "bg-red-50 text-red-700 border-red-200" },
-  overdue: { label: "Overdue", variant: "destructive", color: "bg-red-50 text-red-700 border-red-200" },
-  partially_returned: { label: "Partially Returned", variant: "default", color: "bg-amber-50 text-amber-700 border-amber-200" },
-};
+export const bookingStatusConfig: Record<
+  BookingStatus,
+  BookingStatusConfigEntry
+> = {
+  booked: {
+    label: 'Booked',
+    variant: 'secondary',
+    color: 'bg-blue-50 text-blue-700 border-blue-200',
+    dot: 'bg-blue-500',
+  },
+  active: {
+    label: 'Active',
+    variant: 'default',
+    color: 'bg-green-50 text-green-700 border-green-200',
+    dot: 'bg-emerald-500',
+  },
+  returned: {
+    label: 'Returned',
+    variant: 'secondary',
+    color: 'bg-slate-50 text-slate-700 border-slate-200',
+    dot: 'bg-slate-400',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    variant: 'destructive',
+    color: 'bg-red-50 text-red-700 border-red-200',
+    dot: 'bg-red-500',
+  },
+  overdue: {
+    label: 'Overdue',
+    variant: 'destructive',
+    color: 'bg-red-50 text-red-700 border-red-200',
+    dot: 'bg-red-500',
+  },
+  partially_returned: {
+    label: 'Partially Returned',
+    variant: 'default',
+    color: 'bg-amber-50 text-amber-700 border-amber-200',
+    dot: 'bg-amber-500',
+  },
+}
 
-export function getBookingStatusConfig(status: string): BookingStatusConfigEntry {
-  return bookingStatusConfig[status as BookingStatus] ?? bookingStatusConfig.booked;
+export function getBookingStatusConfig(
+  status: string
+): BookingStatusConfigEntry {
+  return (
+    bookingStatusConfig[status as BookingStatus] ?? bookingStatusConfig.booked
+  )
 }
 
 export function isBookingOverdue(
@@ -29,45 +67,68 @@ export function isBookingOverdue(
 ): boolean {
   return (
     isPast(new Date(endTime)) &&
-    (status === "active" || status === "partially_returned")
-  );
+    (status === 'active' || status === 'partially_returned')
+  )
 }
 
-export function getDisplayBookingStatus(endTime: Date | string, status: string): BookingStatus {
-  return isBookingOverdue(endTime, status) ? "overdue" : (status as BookingStatus);
+export function getDisplayBookingStatus(
+  endTime: Date | string,
+  status: string
+): BookingStatus {
+  return isBookingOverdue(endTime, status)
+    ? 'overdue'
+    : (status as BookingStatus)
 }
 
 interface BookingStatusBadgeProps {
-  status: string;
-  endTime?: Date | string;
-  showOverdueIcon?: boolean;
-  colorized?: boolean;
-  className?: string;
+  status: string
+  endTime?: Date | string
+  showOverdueIcon?: boolean
+  colorized?: boolean
+  mobileDot?: boolean
+  className?: string
 }
 
 /**
  * BookingStatusBadge renders a consistent status badge for bookings.
  * When endTime is provided, past-due booked/active/partially_returned bookings
- * are displayed as "overdue".
+ * are displayed as "overdue". When mobileDot is set, the label is replaced by
+ * a colored status dot on small screens.
  */
 export function BookingStatusBadge({
   status,
   endTime,
   showOverdueIcon = false,
   colorized = false,
+  mobileDot = false,
   className,
 }: BookingStatusBadgeProps) {
-  const displayStatus = endTime != null ? getDisplayBookingStatus(endTime, status) : status;
-  const config = getBookingStatusConfig(displayStatus);
-  const isOverdue = endTime != null && isBookingOverdue(endTime, status);
+  const displayStatus =
+    endTime != null ? getDisplayBookingStatus(endTime, status) : status
+  const config = getBookingStatusConfig(displayStatus)
+  const isOverdue = endTime != null && isBookingOverdue(endTime, status)
 
   return (
     <Badge
       variant={config.variant}
-      className={cn(colorized && config.color, "w-fit", className)}
+      className={cn(colorized && config.color, 'w-fit', className)}
+      title={config.label}
     >
-      {isOverdue && showOverdueIcon && <AlertCircle className="h-3 w-3" aria-hidden="true" />}
-      {config.label}
+      {isOverdue && showOverdueIcon && (
+        <AlertCircle
+          className={cn('h-3 w-3', mobileDot && 'hidden sm:inline')}
+          aria-hidden="true"
+        />
+      )}
+      {mobileDot && (
+        <span
+          className={cn('size-1.5 shrink-0 rounded-full sm:hidden', config.dot)}
+          aria-hidden="true"
+        />
+      )}
+      <span className={cn(mobileDot && 'hidden sm:inline')}>
+        {config.label}
+      </span>
     </Badge>
-  );
+  )
 }
