@@ -51,6 +51,13 @@ interface SortableHeaderButtonProps {
   onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void
 }
 
+const HEADER_CLASS =
+  'inline-flex h-6 items-center px-2 font-medium text-muted-foreground'
+
+function HeaderLabel({ label }: { label: string }) {
+  return <span className={HEADER_CLASS}>{label}</span>
+}
+
 function SortableHeaderButton({
   label,
   column,
@@ -64,7 +71,10 @@ function SortableHeaderButton({
     <Button
       variant="ghost"
       size="sm"
-      className="h-6 px-2 font-medium text-muted-foreground hover:text-foreground"
+      className={cn(
+        HEADER_CLASS,
+        'hover:text-foreground'
+      )}
       onClick={() => {
         const order = active ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'asc'
         onSortChange(column, order)
@@ -128,6 +138,9 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
             #{booking.id}
           </span>
           <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {booking.items.length} item{booking.items.length === 1 ? '' : 's'}
+          </span>
           <div className={cn(START_W, 'hidden text-right sm:block')}>
             <p className="text-sm font-medium tabular-nums">
               {format(new Date(booking.startTime), 'MMM dd, yyyy')}
@@ -367,7 +380,7 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
         </div>
       </div>
 
-      <div className="hidden items-center gap-3 px-4 text-xs font-medium text-muted-foreground md:flex">
+      <div className="flex items-center gap-3 px-4">
         <div className={cn(SELECT_W, 'flex items-center')}>
           <Checkbox
             checked={allPageSelected || (somePageSelected && 'indeterminate')}
@@ -375,9 +388,13 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
             aria-label="Select all bookings on this page"
           />
         </div>
-        <span className={ID_W}>ID</span>
-        <span className="min-w-0 flex-1">Name</span>
-        <div className={cn(START_W, 'flex justify-end')}>
+        <div className={cn(ID_W)}>
+          <HeaderLabel label="ID" />
+        </div>
+        <span className="min-w-0 flex-1">
+          <HeaderLabel label="Name" />
+        </span>
+        <div className={cn(START_W, 'hidden justify-end sm:flex')}>
           <SortableHeaderButton
             label="Start"
             column="startTime"
@@ -386,7 +403,7 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
             onSortChange={onSortChange}
           />
         </div>
-        <div className={cn(END_W, 'flex justify-end')}>
+        <div className={cn(END_W, 'hidden justify-end md:flex')}>
           <SortableHeaderButton
             label="End"
             column="endTime"

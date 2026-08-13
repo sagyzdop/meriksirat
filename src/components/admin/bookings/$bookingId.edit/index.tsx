@@ -1,34 +1,49 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
-import { updateBookingStatusAdminFn } from '@/lib/booking'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { updateBookingStatusAdminFn, cancelBookingItemFn } from '@/lib/booking'
 import { getBookingSlots } from '@/lib/booking/slots'
+import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
-import { Save, Calendar, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Save, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
-import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { BookingEquipmentTable } from '@/components/shared/booking-equipment-table'
+import { BookingInfoTable } from '@/components/shared/booking-info-table'
 import { BookingSchedule } from '@/components/shared/booking-schedule'
-import { BookingStatusBadge } from '@/components/shared/booking-status-badge'
+import { ExtendBookingButton } from '@/components/shared/extend-booking-button'
 import { CancelBookingDialog } from '@/components/admin/bookings/$bookingId.edit/components/cancel-booking-dialog'
-import type { AdminBookingWithDetails } from '@/lib/booking/types'
+import type {
+  AdminBookingWithDetails,
+  BookingItemWithEquipment,
+} from '@/lib/booking/types'
 
 const editBookingSchema = z.object({
   notes: z.string().optional(),
@@ -39,14 +54,20 @@ type EditBookingForm = z.infer<typeof editBookingSchema>
 interface PageProps {
   booking: AdminBookingWithDetails
   bookingId: number
+  telegramBotUsername: string
 }
 
-export function Page({ booking, bookingId }: PageProps) {
+export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
   const navigate = useNavigate()
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [pendingCancelItem, setPendingCancelItem] =
+    useState<BookingItemWithEquipment | null>(null)
+  const [isCancellingItem, setIsCancellingItem] = useState(false)
 
   const initialSlots = getBookingSlots(booking.startTime, booking.endTime)
   const [selectedSlots, setSelectedSlots] = useState<string[]>(initialSlots)
@@ -61,10 +82,21 @@ export function Page({ booking, bookingId }: PageProps) {
     },
   })
 
-  const canEditSchedule =
-    booking.status === 'booked' || booking.status === 'active'
+  const canEditSchedule = booking.status === 'booked'
   const items = booking.items ?? []
   const hasCalendar = items.some((item) => item.equipment?.googleCalendarId)
+
+  const user = booking.user
+  const bookedBy = user
+    ? {
+        id: user.id,
+        name:
+          `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() ||
+          user.email ||
+          'Unknown',
+        image: user.image,
+      }
+    : null
 
   const onSubmit = async (data: EditBookingForm) => {
     const times =
@@ -125,9 +157,36 @@ export function Page({ booking, bookingId }: PageProps) {
     }
   }
 
-  const handleCancel = () => {
-    navigate({ to: '/admin/bookings' })
+  const handleCancelItem = async () => {
+    if (!pendingCancelItem) return
+    setIsCancellingItem(true)
+    try {
+      await cancelBookingItemFn({
+        data: {
+          bookingId,
+          itemId: pendingCancelItem.id,
+        },
+      })
+      toast.success('Item cancelled successfully')
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      router.invalidate()
+      setPendingCancelItem(null)
+    } catch (cancelError) {
+      toast.error(
+        cancelError instanceof Error
+          ? cancelError.message
+          : 'Failed to cancel item'
+      )
+    } finally {
+      setIsCancellingItem(false)
+    }
   }
+
+  const pendingItemName =
+    pendingCancelItem?.equipment?.modelName ??
+    (pendingCancelItem
+      ? `Equipment ${pendingCancelItem.equipmentId}`
+      : 'this item')
 
   const isOverdue =
     new Date(booking.endTime) < new Date() &&
@@ -141,212 +200,143 @@ export function Page({ booking, bookingId }: PageProps) {
         backLabel="Back to Bookings"
       />
 
-      <div className="space-y-8">
-        {isOverdue && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              This booking is overdue! The equipment was due on{' '}
-              {format(new Date(booking.endTime), 'PPP p')}.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Section
-          title="Details"
-          description="Administrative context for this booking"
-          spacing="compact"
-        >
-          <div className="relative rounded-md border overflow-x-auto">
-            <Table>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    ID
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {booking.id}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Status
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <BookingStatusBadge
-                      status={booking.status}
-                      endTime={booking.endTime}
-                      colorized
-                    />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Start Time
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {format(
-                      new Date(booking.startTime),
-                      'EEE, MMM d, yyyy HH:mm'
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    End Time
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {format(
-                      new Date(booking.endTime),
-                      'EEE, MMM d, yyyy HH:mm'
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Created At
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {format(new Date(booking.createdAt), 'MMM d, yyyy HH:mm')}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </Section>
-
-        <Section
-          title="User Info"
-          description="The user who booked this equipment"
-          spacing="compact"
-        >
-          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-            <div>
-              <span className="font-medium">User Name:</span>
-              <p className="mt-1 text-muted-foreground">
-                {`${booking.user?.firstName || ''} ${booking.user?.lastName || ''}`.trim() ||
-                  'Unknown'}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium">User Email:</span>
-              <p className="mt-1 break-all text-muted-foreground">
-                {booking.user?.email || 'Unknown'}
-              </p>
-            </div>
-          </div>
-        </Section>
-
-        <Section title="Equipment Details" spacing="compact">
-          {items.length > 0 ? (
-            <BookingEquipmentTable items={items} />
-          ) : (
-            <div className="relative rounded-md border py-12 text-center text-muted-foreground">
-              Equipment details not available
-            </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {isOverdue && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This booking is overdue! The equipment was due on{' '}
+                {format(new Date(booking.endTime), 'PPP p')}.
+              </AlertDescription>
+            </Alert>
           )}
-        </Section>
 
-        {/* Availability / Update Date & Time */}
-        <BookingSchedule
-          items={items}
-          startTime={booking.startTime}
-          endTime={booking.endTime}
-          canEdit={canEditSchedule}
-          warnWhenLocked
-          initialSlots={initialSlots}
-          disabled={isSubmitting}
-          onSlotsChange={(slots, date) => {
-            setSelectedSlots(slots)
-            setSelectedDate(date)
-          }}
-        />
+          <Section
+            title="Details"
+            description="Administrative context for this booking"
+            spacing="compact"
+          >
+            <BookingInfoTable booking={booking} bookedBy={bookedBy} />
+          </Section>
 
-        <Section
-          title="Admin Notes"
-          description="Add administrative notes and optionally update the schedule. Status changes are handled by the Cancel Booking button."
-          spacing="compact"
-        >
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Administrative Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Add administrative notes about this booking update (optional)..."
-                        className="min-h-[120px]"
-                        {...field}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      These notes will be appended to the booking history and
-                      visible to other admins. Your email will be automatically
-                      included with the note.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <Section
+            title="Equipment"
+            description="Cancel an item to remove it from this booking, or return equipment through Telegram once the booking is active."
+            spacing="compact"
+          >
+            {items.length > 0 ? (
+              <BookingEquipmentTable
+                items={items}
+                bookingStatus={booking.status}
+                telegramBotUsername={telegramBotUsername}
+                onCancelItem={
+                  canEditSchedule ? setPendingCancelItem : undefined
+                }
+                disabled={isSubmitting}
+                actionsFirst
               />
-
-              <Alert>
-                <Calendar className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Calendar Synchronization:</strong> Updates will be
-                  synchronized with Google Calendar, including schedule updates
-                  and administrative notes.
-                </AlertDescription>
-              </Alert>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {success && (
-                <Alert className="border-green-200 bg-green-50 text-green-800">
-                  <AlertDescription>{success}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-end">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setShowCancelDialog(true)}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto sm:mr-auto"
-                >
-                  Cancel Booking
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto"
-                >
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 w-full sm:w-auto"
-                >
-                  <Save className="h-4 w-4" />
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
+            ) : (
+              <div className="relative rounded-md border py-12 text-center text-muted-foreground">
+                Equipment details not available
               </div>
-            </form>
-          </Form>
-        </Section>
-      </div>
+            )}
+          </Section>
+
+          <Section
+            title="Admin Notes"
+            description="Add administrative notes. Status changes are handled by the Cancel Booking button."
+            spacing="compact"
+          >
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Administrative Notes</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Add administrative notes about this booking update (optional)..."
+                      className="min-h-[120px]"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    These notes will be appended to the booking history and
+                    visible to other admins. Your email will be automatically
+                    included with the note.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </Section>
+
+          {canEditSchedule && (
+            <BookingSchedule
+              items={items}
+              startTime={booking.startTime}
+              endTime={booking.endTime}
+              canEdit
+              initialSlots={initialSlots}
+              disabled={isSubmitting}
+              onSlotsChange={(slots, date) => {
+                setSelectedSlots(slots)
+                setSelectedDate(date)
+              }}
+            />
+          )}
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="border-green-200 bg-green-50 text-green-800">
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-end">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setShowCancelDialog(true)}
+              disabled={isSubmitting}
+              className="w-full sm:w-auto sm:mr-auto"
+            >
+              Cancel Booking
+            </Button>
+            <ExtendBookingButton
+              bookingId={booking.id}
+              status={booking.status}
+              disabled={isSubmitting}
+              onExtend={() => router.invalidate()}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate({ to: '/admin/bookings' })}
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
+              Back
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 w-full sm:w-auto"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </Form>
 
       <CancelBookingDialog
         open={showCancelDialog}
@@ -355,6 +345,36 @@ export function Page({ booking, bookingId }: PageProps) {
         onCancelled={() => navigate({ to: '/admin/bookings' })}
         onError={(message) => setError(message)}
       />
+
+      <AlertDialog
+        open={Boolean(pendingCancelItem)}
+        onOpenChange={(open) => {
+          if (!open) setPendingCancelItem(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel <strong>{pendingItemName}</strong>{' '}
+              from this booking? This cannot be undone and the calendar event
+              for this item will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancellingItem}>
+              Keep Item
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelItem}
+              disabled={isCancellingItem}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancellingItem ? 'Cancelling...' : 'Cancel Item'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   )
 }

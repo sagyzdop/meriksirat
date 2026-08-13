@@ -1,5 +1,5 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
-import { getBookingByIdFn } from '@/lib/booking'
+import { getBookingByIdFn, getTelegramBotUsernameFn } from '@/lib/booking'
 import { Page } from '@/components/bookings/bookings_/$bookingId.edit'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 
@@ -25,6 +25,7 @@ export const Route = createFileRoute(
       return {
         booking,
         bookingId: parseInt(bookingId),
+        telegramBotUsername: await getTelegramBotUsernameFn(),
       }
     } catch (error) {
       console.error('Failed to load booking:', error)
@@ -34,14 +35,18 @@ export const Route = createFileRoute(
 })
 
 function RouteComponent() {
-  const { booking, bookingId } = Route.useLoaderData()
+  const { booking, bookingId, telegramBotUsername } = Route.useLoaderData()
   const isLoading = useRouterState({
     select: (state) => state.status === 'pending',
   })
   return (
     <div className="relative">
       {isLoading && <LoadingOverlay />}
-      <Page booking={booking} bookingId={bookingId} />
+      <Page
+        booking={booking}
+        bookingId={bookingId}
+        telegramBotUsername={telegramBotUsername}
+      />
     </div>
   )
 }

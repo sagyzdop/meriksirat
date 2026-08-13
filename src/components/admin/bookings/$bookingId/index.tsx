@@ -4,12 +4,23 @@ import type { AdminBookingWithDetails } from '@/lib/booking/types'
 
 interface PageProps {
   booking: AdminBookingWithDetails
-  telegramBotUsername?: string
 }
 
-export function Page({ booking, telegramBotUsername }: PageProps) {
+export function Page({ booking }: PageProps) {
   const canCancel =
     booking.status !== 'returned' && booking.status !== 'cancelled'
+
+  const user = booking.user
+  const bookedBy = user
+    ? {
+        id: user.id,
+        name:
+          `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() ||
+          user.email ||
+          'Unknown',
+        image: user.image,
+      }
+    : null
 
   return (
     <BookingDetail
@@ -17,16 +28,7 @@ export function Page({ booking, telegramBotUsername }: PageProps) {
       backTo="/admin/bookings"
       backLabel="Back to Bookings"
       editTo="/admin/bookings/$bookingId/edit"
-      userDetails={
-        booking.user
-          ? {
-              name:
-                `${booking.user.firstName ?? ''} ${booking.user.lastName ?? ''}`.trim() ||
-                'Unknown',
-              email: booking.user.email,
-            }
-          : null
-      }
+      bookedBy={bookedBy}
       cancelDescription="Are you sure you want to cancel this booking? This action cannot be undone and the calendar event will be updated."
       canCancel={canCancel}
       onCancel={() =>
@@ -34,7 +36,6 @@ export function Page({ booking, telegramBotUsername }: PageProps) {
           data: { bookingId: booking.id, status: 'cancelled' },
         })
       }
-      telegramBotUsername={telegramBotUsername}
     />
   )
 }

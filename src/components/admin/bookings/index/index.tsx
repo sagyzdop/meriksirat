@@ -1,12 +1,13 @@
 import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 import {
   BookingCollapsibleContent,
   BookingCollapsibleList,
 } from '@/components/shared/booking-collapsible'
-import { DeleteBookingDialog } from './components/delete-booking-dialog'
+import { CancelBookingDialog } from '@/components/admin/bookings/$bookingId.edit/components/cancel-booking-dialog'
 import { updateBookingStatusAdminFn } from '@/lib/booking'
 import type { AdminBookingWithDetails } from '@/lib/booking/types'
 import { PageContainer } from '@/components/layout/page-container'
@@ -52,7 +53,7 @@ export function Page({
 }: PageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [deleteTarget, setDeleteTarget] =
+  const [cancelTarget, setCancelTarget] =
     React.useState<AdminBookingWithDetails | null>(null)
 
   const description =
@@ -136,34 +137,26 @@ export function Page({
                 params: { bookingId: booking.id.toString() },
               })
             }
-            onCopyId={() =>
-              navigator.clipboard.writeText(booking.id.toString())
-            }
-            onViewEquipment={
-              booking.items[0]?.equipment
-                ? () =>
-                    navigate({
-                      to: '/equipment/$',
-                      params: {
-                        _splat: booking.items[0].equipment!.id.toString(),
-                      },
-                    })
+            onCancel={
+              booking.status !== 'returned' && booking.status !== 'cancelled'
+                ? () => setCancelTarget(booking)
                 : undefined
             }
-            onDelete={() => setDeleteTarget(booking)}
           />
         )}
       />
 
-      <DeleteBookingDialog
-        booking={deleteTarget}
-        open={!!deleteTarget}
+      <CancelBookingDialog
+        open={!!cancelTarget}
         onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null)
+          if (!open) setCancelTarget(null)
         }}
-        onSuccess={() =>
+        bookingId={cancelTarget?.id ?? 0}
+        onCancelled={() => {
+          setCancelTarget(null)
           queryClient.invalidateQueries({ queryKey: ['bookings'] })
-        }
+        }}
+        onError={(message) => toast.error(message)}
       />
     </PageContainer>
   )

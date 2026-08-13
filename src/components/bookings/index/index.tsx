@@ -117,6 +117,7 @@ export function Page({
         renderCollapsibleContent={(booking) => (
           <BookingCollapsibleContent
             booking={booking}
+            telegramBotUsername={telegramBotUsername}
             onViewDetails={() =>
               navigate({
                 to: '/bookings/$bookingId',

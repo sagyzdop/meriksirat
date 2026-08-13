@@ -81,6 +81,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          image: user.image,
         },
       })
       .from(booking)
@@ -238,6 +239,7 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          image: user.image,
         },
       })
       .from(booking)

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { format } from "date-fns";
 import { Link, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,12 +7,6 @@ import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Section } from "@/components/layout/section";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,17 +18,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BookingEquipmentTable } from "./booking-equipment-table";
-import { BookingStatusBadge } from "./booking-status-badge";
-import { cancelBookingItemFn } from "@/lib/booking";
-import type {
-  BookingWithItems,
-  BookingItemWithEquipment,
-} from "@/lib/booking/types";
-
-export interface BookingDetailUserInfo {
-  name: string;
-  email: string;
-}
+import { BookingInfoTable } from "./booking-info-table";
+import type { BookingInfoTableBookedBy } from "./booking-info-table";
+import { ExtendBookingButton } from "./extend-booking-button";
+import type { BookingWithItems } from "@/lib/booking/types";
 
 interface BookingDetailProps {
   booking: BookingWithItems;
@@ -43,19 +29,18 @@ interface BookingDetailProps {
   backLabel?: string;
   editTo: string;
   editLabel?: string;
-  userDetails?: BookingDetailUserInfo | null;
+  bookedBy?: BookingInfoTableBookedBy | null;
   cancelDescription?: string;
   canCancel?: boolean;
   onCancel?: () => Promise<unknown>;
   canStart?: boolean;
   onStart?: () => Promise<unknown>;
-  telegramBotUsername?: string;
 }
 
 /**
  * BookingDetail renders a shared layout for viewing a single booking,
- * used by both the user and admin booking detail pages. Pass userDetails
- * to show the "User Details" section (admin context).
+ * used by both the user and admin booking detail pages. Pass bookedBy to
+ * show the "Booked by" row with a profile picture (admin context).
  */
 export function BookingDetail({
   booking,
@@ -63,13 +48,12 @@ export function BookingDetail({
   backLabel = "Back",
   editTo,
   editLabel = "Edit Booking",
-  userDetails,
+  bookedBy,
   cancelDescription = "Are you sure you want to cancel this booking? This action cannot be undone and the calendar event will be removed.",
   canCancel = false,
   onCancel,
   canStart = false,
   onStart,
-  telegramBotUsername,
 }: BookingDetailProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -77,14 +61,8 @@ export function BookingDetail({
   const [isCancelling, setIsCancelling] = useState(false);
   const [showStartDialog, setShowStartDialog] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  const [pendingCancelItem, setPendingCancelItem] =
-    useState<BookingItemWithEquipment | null>(null);
-  const [isCancellingItem, setIsCancellingItem] = useState(false);
 
-  const actualReturn = booking.items.reduce<Date | null>((max, item) => {
-    if (!item.returnedAt) return max;
-    return !max || item.returnedAt > max ? item.returnedAt : max;
-  }, null);
+  const editable = booking.status === "booked";
 
   const handleStart = async () => {
     if (!onStart) return;
@@ -122,32 +100,6 @@ export function BookingDetail({
     }
   };
 
-  const handleCancelItem = async () => {
-    if (!pendingCancelItem) return;
-    setIsCancellingItem(true);
-    try {
-      await cancelBookingItemFn({
-        data: { bookingId: booking.id, itemId: pendingCancelItem.id },
-      });
-      toast.success("Item cancelled successfully");
-      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      router.invalidate();
-      setPendingCancelItem(null);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to cancel item"
-      );
-    } finally {
-      setIsCancellingItem(false);
-    }
-  };
-
-  const pendingItemName =
-    pendingCancelItem?.equipment?.modelName ??
-    (pendingCancelItem
-      ? `Equipment ${pendingCancelItem.equipmentId}`
-      : "this item");
-
   return (
     <PageContainer>
       <PageHeader
@@ -158,112 +110,18 @@ export function BookingDetail({
 
       <div className="space-y-8">
         <Section title="Details" spacing="compact">
-          <div className="relative rounded-md border overflow-x-auto">
-            <Table>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    ID
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    #{booking.id}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Status
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <BookingStatusBadge
-                      status={booking.status}
-                      endTime={booking.endTime}
-                      colorized
-                    />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Start Time
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {format(
-                      new Date(booking.startTime),
-                      "EEE, MMM d, yyyy HH:mm"
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    End Time
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {format(new Date(booking.endTime), "EEE, MMM d, yyyy HH:mm")}
-                  </TableCell>
-                </TableRow>
-                {booking.startedAt && (
-                  <TableRow>
-                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                      Actual Start
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {format(new Date(booking.startedAt), "EEE, MMM d, yyyy HH:mm")}
-                    </TableCell>
-                  </TableRow>
-                )}
-                {actualReturn && (
-                  <TableRow>
-                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                      Actual Return
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {format(new Date(actualReturn), "EEE, MMM d, yyyy HH:mm")}
-                    </TableCell>
-                  </TableRow>
-                )}
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Created At
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {format(
-                      new Date(booking.createdAt),
-                      "MMM d, yyyy HH:mm"
-                    )}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <BookingInfoTable booking={booking} bookedBy={bookedBy} />
         </Section>
 
-        {booking.items.length > 0 ? (
-          <BookingEquipmentTable
-            items={booking.items}
-            bookingStatus={booking.status}
-            telegramBotUsername={telegramBotUsername}
-            onCancelItem={setPendingCancelItem}
-            disabled={isCancellingItem}
-          />
-        ) : (
-          <div className="relative rounded-md border py-12 text-center text-muted-foreground">
-            Equipment details not available
-          </div>
-        )}
-
-        {userDetails && (
-          <Section title="User Details" spacing="compact">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <span className="text-sm text-muted-foreground">Name</span>
-                <div className="font-medium">{userDetails.name}</div>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Email</span>
-                <div className="break-all font-medium">{userDetails.email}</div>
-              </div>
+        <Section title="Equipment" spacing="compact">
+          {booking.items.length > 0 ? (
+            <BookingEquipmentTable items={booking.items} />
+          ) : (
+            <div className="relative rounded-md border py-12 text-center text-muted-foreground">
+              Equipment details not available
             </div>
-          </Section>
-        )}
+          )}
+        </Section>
 
         <Section title="Notes" spacing="compact">
           {booking.userEventDetails ? (
@@ -286,6 +144,11 @@ export function BookingDetail({
               Start Pickup
             </Button>
           )}
+          <ExtendBookingButton
+            bookingId={booking.id}
+            status={booking.status}
+            onExtend={() => router.invalidate()}
+          />
           {canCancel && onCancel && (
             <Button
               variant="destructive"
@@ -294,9 +157,11 @@ export function BookingDetail({
               Cancel Booking
             </Button>
           )}
-          <Link to={editTo} params={{ bookingId: booking.id.toString() }}>
-            <Button variant="outline">{editLabel}</Button>
-          </Link>
+          {editable && (
+            <Link to={editTo} params={{ bookingId: booking.id.toString() }}>
+              <Button variant="outline">{editLabel}</Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -305,18 +170,16 @@ export function BookingDetail({
           <AlertDialogHeader>
             <AlertDialogTitle>Start Pickup</AlertDialogTitle>
             <AlertDialogDescription>
-              Start this booking now? The equipment will be marked as picked up and
-              the calendar event will be updated with the actual start time.
+              Start this booking now? The equipment will be marked as picked up
+              and the calendar event will be updated with the actual start
+              time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isStarting}>
               Not Now
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleStart}
-              disabled={isStarting}
-            >
+            <AlertDialogAction onClick={handleStart} disabled={isStarting}>
               {isStarting ? "Starting..." : "Start Booking"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -339,36 +202,6 @@ export function BookingDetail({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isCancelling ? "Cancelling..." : "Cancel Booking"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={pendingCancelItem !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingCancelItem(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Item</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel <strong>{pendingItemName}</strong>{" "}
-              from this booking? This action cannot be undone and the calendar
-              event for this item will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancellingItem}>
-              Keep Item
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelItem}
-              disabled={isCancellingItem}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isCancellingItem ? "Cancelling..." : "Cancel Item"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

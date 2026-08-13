@@ -43,6 +43,7 @@ export interface AdminBookingWithDetails extends BookingWithItems {
     email: string
     firstName: string | null
     lastName: string | null
+    image: string | null
   } | null
 }
 
@@ -134,6 +135,10 @@ export const CancelBookingSchema = z.object({
 export const CancelBookingItemSchema = z.object({
   bookingId: z.coerce.number(),
   itemId: z.coerce.number(),
+})
+
+export const ExtendBookingSchema = z.object({
+  bookingId: z.coerce.number(),
 })
 
 export const GetBookingByIdSchema = z.object({
