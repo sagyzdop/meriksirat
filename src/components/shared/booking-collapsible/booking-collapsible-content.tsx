@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Eye, PackageCheck, Pencil, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ interface BookingCollapsibleContentProps {
   onViewDetails?: () => void
   onEdit?: () => void
   onCancel?: () => void
+  onReturn?: () => void
 }
 
 function getDefaultCanEdit(booking: BookingCollapsibleRowData) {
@@ -41,6 +42,7 @@ export function BookingCollapsibleContent({
   onViewDetails,
   onEdit,
   onCancel,
+  onReturn,
 }: BookingCollapsibleContentProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -79,7 +81,7 @@ export function BookingCollapsibleContent({
       : 'this item')
 
   return (
-    <div className="space-y-4 border-t px-4 py-4">
+    <div className="space-y-4 rounded-b-md border-t bg-muted/30 px-4 py-4">
       <EquipmentTable
         rows={booking.items.map((item) => ({
           key: item.id.toString(),
@@ -99,45 +101,61 @@ export function BookingCollapsibleContent({
         emptyMessage="No equipment items"
       />
 
-      <Separator />
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <ExtendBookingButton
-          bookingId={booking.id}
-          status={booking.status}
-          onExtend={() => router.invalidate()}
-          className="w-full sm:w-auto"
-        />
-        {onViewDetails && (
-          <Button
-            size="sm"
-            variant="outline"
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {onViewDetails && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={onViewDetails}
+            >
+              <Eye className="mr-1.5 h-3.5 w-3.5" />
+              View details
+            </Button>
+          )}
+          {editable && onEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={onEdit}
+            >
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit
+            </Button>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:items-center">
+          <ExtendBookingButton
+            bookingId={booking.id}
+            status={booking.status}
+            onExtend={() => router.invalidate()}
             className="w-full sm:w-auto"
-            onClick={onViewDetails}
-          >
-            View details
-          </Button>
-        )}
-        {editable && onEdit && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={onEdit}
-          >
-            Edit
-          </Button>
-        )}
-        {onCancel && (
-          <Button
-            size="sm"
-            variant="destructive"
-            className="w-full sm:ml-auto sm:w-auto"
-            onClick={onCancel}
-          >
-            Cancel booking
-          </Button>
-        )}
+          />
+          {onReturn && (
+            <Button
+              size="sm"
+              variant="default"
+              className="w-full sm:w-auto"
+              onClick={onReturn}
+            >
+              <PackageCheck className="mr-1.5 h-3.5 w-3.5" />
+              Return booking
+            </Button>
+          )}
+          {onCancel && (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={onCancel}
+            >
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              Cancel booking
+            </Button>
+          )}
+        </div>
       </div>
 
       <AlertDialog

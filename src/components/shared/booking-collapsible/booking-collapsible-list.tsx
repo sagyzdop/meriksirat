@@ -10,7 +10,6 @@ import {
   Check,
   ChevronRight,
   Clock,
-  MessageCircle,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -32,7 +31,6 @@ import {
 } from '@/components/shared/booking-status-badge'
 import { BulkCancelBookingsDialog } from '@/components/shared/bulk-cancel-bookings-dialog'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
-import { createTelegramBotLink } from '@/lib/telegram/client-utils'
 import { cn } from '@/lib/utils'
 import type {
   BookingCollapsibleFilters,
@@ -58,6 +56,14 @@ function getInitials(name: string) {
     .slice(0, 2)
 }
 
+function resolveImageSrc(image?: string | null): string | undefined {
+  if (!image) return undefined
+  // User avatars are absolute URLs (e.g. Google OAuth) while R2-backed images
+  // are bare keys served through /api/images/{key}.
+  if (image.startsWith('http') || image.startsWith('/')) return image
+  return `/api/images/${image}`
+}
+
 interface PersonLinkProps {
   person: BookingCollapsiblePersonInfo
 }
@@ -68,10 +74,7 @@ function PersonLink({ person }: PersonLinkProps) {
   const content = (
     <>
       <Avatar className="h-6 w-6 shrink-0">
-        <AvatarImage
-          src={person.image ? `/api/images/${person.image}` : undefined}
-          alt={person.name}
-        />
+        <AvatarImage src={resolveImageSrc(person.image)} alt={person.name} />
         <AvatarFallback className="text-[10px]">
           {getInitials(person.name)}
         </AvatarFallback>
@@ -210,7 +213,8 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
               endTime={booking.endTime}
               showOverdueIcon
               mobileDot
-              className="h-6 min-w-6 justify-center rounded-full sm:min-w-14"
+              colorized
+              className="h-6 w-6 shrink-0 justify-center rounded-full sm:w-36"
             />
           </span>
 
@@ -236,7 +240,6 @@ interface BookingCollapsibleListProps<T extends BookingCollapsibleRowData> {
   statusOptions: BookingStatusOption[]
   isLoading?: boolean
   showOverdueBanner?: boolean
-  telegramBotUsername?: string
   calendarActionText: string
   isCancellable: (status: string) => boolean
   bulkCancelFn: (bookingId: number) => Promise<unknown>
@@ -258,7 +261,6 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
   statusOptions,
   isLoading = false,
   showOverdueBanner = false,
-  telegramBotUsername,
   calendarActionText,
   isCancellable,
   bulkCancelFn,
@@ -434,25 +436,6 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
           >
             Cancel Selected
           </Button>
-          {telegramBotUsername && (
-            <Button
-              variant="default"
-              size="sm"
-              className="h-8 w-full sm:w-auto"
-              asChild
-            >
-              <a
-                href={createTelegramBotLink(telegramBotUsername)}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open Telegram bot to return equipment. Send /return_equipment command."
-                className="flex items-center justify-center gap-2"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Return Equipment
-              </a>
-            </Button>
-          )}
         </div>
       </div>
 

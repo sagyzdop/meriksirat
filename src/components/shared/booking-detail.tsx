@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
+import { PackageCheck, Pencil } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
@@ -40,6 +41,8 @@ interface BookingDetailProps {
   onCancel?: () => Promise<unknown>
   canStart?: boolean
   onStart?: () => Promise<unknown>
+  canReturn?: boolean
+  onReturn?: () => Promise<unknown>
   canAddEquipment?: boolean
   returnTo?: string
   telegramBotUsername?: string
@@ -61,6 +64,8 @@ export function BookingDetail({
   onCancel,
   canStart = false,
   onStart,
+  canReturn = false,
+  onReturn,
   canAddEquipment = false,
   returnTo,
   telegramBotUsername,
@@ -71,6 +76,8 @@ export function BookingDetail({
   const [isCancelling, setIsCancelling] = useState(false)
   const [showStartDialog, setShowStartDialog] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
+  const [showReturnDialog, setShowReturnDialog] = useState(false)
+  const [isReturning, setIsReturning] = useState(false)
   const [pendingCancelItem, setPendingCancelItem] =
     useState<BookingItemWithEquipment | null>(null)
 
@@ -109,6 +116,24 @@ export function BookingDetail({
       )
     } finally {
       setIsCancelling(false)
+    }
+  }
+
+  const handleReturn = async () => {
+    if (!onReturn) return
+    setIsReturning(true)
+    try {
+      await onReturn()
+      toast.success('Booking returned successfully')
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      router.invalidate()
+      setShowReturnDialog(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to return booking'
+      )
+    } finally {
+      setIsReturning(false)
     }
   }
 
@@ -196,9 +221,18 @@ export function BookingDetail({
               Cancel Booking
             </Button>
           )}
+          {canReturn && onReturn && (
+            <Button variant="default" onClick={() => setShowReturnDialog(true)}>
+              <PackageCheck className="mr-1.5 h-4 w-4" />
+              Return Booking
+            </Button>
+          )}
           {editable && (
             <Link to={editTo} params={{ bookingId: booking.id.toString() }}>
-              <Button variant="outline">{editLabel}</Button>
+              <Button variant="outline">
+                <Pencil className="mr-1.5 h-4 w-4" />
+                {editLabel}
+              </Button>
             </Link>
           )}
         </div>
@@ -226,6 +260,27 @@ export function BookingDetail({
             <AlertDialogCancel disabled={isStarting}>Not Now</AlertDialogCancel>
             <AlertDialogAction onClick={handleStart} disabled={isStarting}>
               {isStarting ? 'Starting...' : 'Start Booking'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Return Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Mark this booking as returned now? All outstanding items will be
+              marked returned and the calendar events will be updated with the
+              actual return time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isReturning}>
+              Not Now
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleReturn} disabled={isReturning}>
+              {isReturning ? 'Returning...' : 'Confirm Return'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
