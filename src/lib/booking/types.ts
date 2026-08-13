@@ -47,8 +47,21 @@ export interface AdminBookingWithDetails extends BookingWithItems {
   } | null
 }
 
-export const BOOKING_STATUSES = ['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned'] as const
-export const SETTABLE_BOOKING_STATUSES = ['booked', 'active', 'returned', 'cancelled', 'overdue'] as const
+export const BOOKING_STATUSES = [
+  'booked',
+  'active',
+  'returned',
+  'cancelled',
+  'overdue',
+  'partially_returned',
+] as const
+export const SETTABLE_BOOKING_STATUSES = [
+  'booked',
+  'active',
+  'returned',
+  'cancelled',
+  'overdue',
+] as const
 
 export type BookingStatus = (typeof BOOKING_STATUSES)[number]
 export type SettableBookingStatus = (typeof SETTABLE_BOOKING_STATUSES)[number]
@@ -67,7 +80,10 @@ export const BookingFiltersSchema = z.object({
   endDate: z.string().optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(50),
-  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment']).optional().default('startTime'),
+  sortBy: z
+    .enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment'])
+    .optional()
+    .default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
@@ -102,7 +118,10 @@ export const AdminBookingFiltersSchema = z.object({
   status: z.array(z.enum(BOOKING_STATUSES)).optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(50),
-  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment', 'user']).optional().default('startTime'),
+  sortBy: z
+    .enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment', 'user'])
+    .optional()
+    .default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
@@ -129,7 +148,11 @@ export const UpdateBookingSchema = z.object({
 })
 
 export const CancelBookingSchema = z.object({
-  bookingId: z.coerce.number()
+  bookingId: z.coerce.number(),
+})
+
+export const ReturnBookingSchema = z.object({
+  bookingId: z.coerce.number(),
 })
 
 export const CancelBookingItemSchema = z.object({
@@ -147,9 +170,9 @@ export const ExtendBookingSchema = z.object({
 })
 
 export const GetBookingByIdSchema = z.object({
-  bookingId: z.coerce.number()
+  bookingId: z.coerce.number(),
 })
 
 export const DeleteBookingSchema = z.object({
-  bookingId: z.coerce.number()
+  bookingId: z.coerce.number(),
 })
