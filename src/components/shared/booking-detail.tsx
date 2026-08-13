@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { Link, useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState } from 'react'
+import { Link, useRouter } from '@tanstack/react-router'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 
-import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/layout/page-header";
-import { Section } from "@/components/layout/section";
-import { Button } from "@/components/ui/button";
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
+import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,33 +16,33 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { EquipmentTable } from "./equipment-table";
-import { BookingItemAction } from "./booking-item-action";
-import { CancelBookingItemDialog } from "./cancel-booking-item-dialog";
-import { AddEquipmentButton } from "./add-equipment-button";
-import { BookingInfoTable } from "./booking-info-table";
-import type { BookingInfoTableBookedBy } from "./booking-info-table";
-import { ExtendBookingButton } from "./extend-booking-button";
+} from '@/components/ui/alert-dialog'
+import { EquipmentTable } from './equipment-table'
+import { BookingItemAction } from './booking-item-action'
+import { CancelBookingItemDialog } from './cancel-booking-item-dialog'
+import { AddEquipmentButton } from './add-equipment-button'
+import { BookingInfoTable } from './booking-info-table'
+import type { BookingInfoTableBookedBy } from './booking-info-table'
+import { ExtendBookingButton } from './extend-booking-button'
 import type {
   BookingItemWithEquipment,
   BookingWithItems,
-} from "@/lib/booking/types";
+} from '@/lib/booking/types'
 
 interface BookingDetailProps {
-  booking: BookingWithItems;
-  onBack?: () => void;
-  editTo: string;
-  editLabel?: string;
-  bookedBy?: BookingInfoTableBookedBy | null;
-  cancelDescription?: string;
-  canCancel?: boolean;
-  onCancel?: () => Promise<unknown>;
-  canStart?: boolean;
-  onStart?: () => Promise<unknown>;
-  canAddEquipment?: boolean;
-  returnTo?: string;
-  telegramBotUsername?: string;
+  booking: BookingWithItems
+  onBack?: () => void
+  editTo: string
+  editLabel?: string
+  bookedBy?: BookingInfoTableBookedBy | null
+  cancelDescription?: string
+  canCancel?: boolean
+  onCancel?: () => Promise<unknown>
+  canStart?: boolean
+  onStart?: () => Promise<unknown>
+  canAddEquipment?: boolean
+  returnTo?: string
+  telegramBotUsername?: string
 }
 
 /**
@@ -54,9 +54,9 @@ export function BookingDetail({
   booking,
   onBack,
   editTo,
-  editLabel = "Edit Booking",
+  editLabel = 'Edit Booking',
   bookedBy,
-  cancelDescription = "Are you sure you want to cancel this booking? This action cannot be undone and the calendar event will be removed.",
+  cancelDescription = 'Are you sure you want to cancel this booking? This action cannot be undone and the calendar event will be removed.',
   canCancel = false,
   onCancel,
   canStart = false,
@@ -65,63 +65,62 @@ export function BookingDetail({
   returnTo,
   telegramBotUsername,
 }: BookingDetailProps) {
-  const queryClient = useQueryClient();
-  const router = useRouter();
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [showStartDialog, setShowStartDialog] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
+  const queryClient = useQueryClient()
+  const router = useRouter()
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [showStartDialog, setShowStartDialog] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
   const [pendingCancelItem, setPendingCancelItem] =
-    useState<BookingItemWithEquipment | null>(null);
+    useState<BookingItemWithEquipment | null>(null)
 
-  const editable = booking.status === "booked";
+  const editable = booking.status === 'booked'
 
   const handleStart = async () => {
-    if (!onStart) return;
-    setIsStarting(true);
+    if (!onStart) return
+    setIsStarting(true)
     try {
-      await onStart();
-      toast.success("Booking started successfully");
-      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      router.invalidate();
-      setShowStartDialog(false);
+      await onStart()
+      toast.success('Booking started successfully')
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      router.invalidate()
+      setShowStartDialog(false)
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to start booking"
-      );
+        error instanceof Error ? error.message : 'Failed to start booking'
+      )
     } finally {
-      setIsStarting(false);
+      setIsStarting(false)
     }
-  };
+  }
 
   const handleCancel = async () => {
-    if (!onCancel) return;
-    setIsCancelling(true);
+    if (!onCancel) return
+    setIsCancelling(true)
     try {
-      await onCancel();
-      toast.success("Booking cancelled successfully");
-      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      router.invalidate();
-      setShowCancelDialog(false);
+      await onCancel()
+      toast.success('Booking cancelled successfully')
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      router.invalidate()
+      setShowCancelDialog(false)
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to cancel booking"
-      );
+        error instanceof Error ? error.message : 'Failed to cancel booking'
+      )
     } finally {
-      setIsCancelling(false);
+      setIsCancelling(false)
     }
-  };
+  }
 
   const handleItemCancelled = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-    router.invalidate();
-  };
+    await queryClient.invalidateQueries({ queryKey: ['bookings'] })
+    router.invalidate()
+  }
 
   const rows = booking.items.map((item) => ({
     key: item.id.toString(),
     equipmentId: item.equipmentId,
     title: item.equipment?.modelName ?? `Equipment ${item.equipmentId}`,
-    subtitle: item.equipment?.description,
     imagePath: item.equipment?.imagePath,
     categoryName: item.equipment?.category?.name,
     action: (
@@ -132,7 +131,7 @@ export function BookingDetail({
         onCancelItem={editable ? setPendingCancelItem : undefined}
       />
     ),
-  }));
+  }))
 
   return (
     <PageContainer>
@@ -148,10 +147,7 @@ export function BookingDetail({
           spacing="compact"
           actions={
             canAddEquipment && editable ? (
-              <AddEquipmentButton
-                bookingId={booking.id}
-                returnTo={returnTo}
-              />
+              <AddEquipmentButton bookingId={booking.id} returnTo={returnTo} />
             ) : undefined
           }
         >
@@ -183,10 +179,7 @@ export function BookingDetail({
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           {canStart && onStart && (
-            <Button
-              variant="default"
-              onClick={() => setShowStartDialog(true)}
-            >
+            <Button variant="default" onClick={() => setShowStartDialog(true)}>
               Start Pickup
             </Button>
           )}
@@ -215,7 +208,7 @@ export function BookingDetail({
         bookingId={booking.id}
         item={pendingCancelItem}
         onOpenChange={(open) => {
-          if (!open) setPendingCancelItem(null);
+          if (!open) setPendingCancelItem(null)
         }}
         onCancelled={handleItemCancelled}
       />
@@ -226,16 +219,13 @@ export function BookingDetail({
             <AlertDialogTitle>Start Pickup</AlertDialogTitle>
             <AlertDialogDescription>
               Start this booking now? The equipment will be marked as picked up
-              and the calendar event will be updated with the actual start
-              time.
+              and the calendar event will be updated with the actual start time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isStarting}>
-              Not Now
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={isStarting}>Not Now</AlertDialogCancel>
             <AlertDialogAction onClick={handleStart} disabled={isStarting}>
-              {isStarting ? "Starting..." : "Start Booking"}
+              {isStarting ? 'Starting...' : 'Start Booking'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -256,11 +246,11 @@ export function BookingDetail({
               disabled={isCancelling}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isCancelling ? "Cancelling..." : "Cancel Booking"}
+              {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </PageContainer>
-  );
+  )
 }

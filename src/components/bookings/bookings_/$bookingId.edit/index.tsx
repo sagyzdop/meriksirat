@@ -2,10 +2,7 @@ import { useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  updateBookingFn,
-  cancelBookingFn,
-} from '@/lib/booking'
+import { updateBookingFn, cancelBookingFn } from '@/lib/booking'
 import { getBookingSlots } from '@/lib/booking/slots'
 import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { Button } from '@/components/ui/button'
@@ -76,7 +73,6 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
     key: item.id.toString(),
     equipmentId: item.equipmentId,
     title: item.equipment?.modelName ?? `Equipment ${item.equipmentId}`,
-    subtitle: item.equipment?.description,
     imagePath: item.equipment?.imagePath,
     categoryName: item.equipment?.category?.name,
     action: (

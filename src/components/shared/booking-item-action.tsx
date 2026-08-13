@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { createTelegramBotLink } from '@/lib/telegram/client-utils'
 import type { BookingItemWithEquipment } from '@/lib/booking/types'
@@ -12,7 +13,7 @@ interface BookingItemActionProps {
 
 /**
  * BookingItemAction renders the trailing action for a single booking item:
- * - already cancelled/returned → a plain status label
+ * - already cancelled/returned → a badge with the item status
  * - booking is "booked" → a "Cancel item" button (onCancelItem)
  * - booking is active / partially returned / overdue → a "Return" link that
  *   redirects to the Telegram bot (returns happen through Telegram)
@@ -25,12 +26,10 @@ export function BookingItemAction({
   disabled = false,
 }: BookingItemActionProps) {
   if (item.status === 'cancelled') {
-    return (
-      <span className="text-sm text-muted-foreground">Cancelled</span>
-    )
+    return <Badge variant="destructive">Cancelled</Badge>
   }
   if (item.status === 'returned') {
-    return <span className="text-sm text-muted-foreground">Returned</span>
+    return <Badge variant="outline">Returned</Badge>
   }
   if (bookingStatus === 'booked' && onCancelItem) {
     return (

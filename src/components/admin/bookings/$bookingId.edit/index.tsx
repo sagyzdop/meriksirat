@@ -83,7 +83,6 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
     key: item.id.toString(),
     equipmentId: item.equipmentId,
     title: item.equipment?.modelName ?? `Equipment ${item.equipmentId}`,
-    subtitle: item.equipment?.description,
     imagePath: item.equipment?.imagePath,
     categoryName: item.equipment?.category?.name,
     action: (
@@ -91,9 +90,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
         item={item}
         bookingStatus={booking.status}
         telegramBotUsername={telegramBotUsername}
-        onCancelItem={
-          canEditSchedule ? setPendingCancelItem : undefined
-        }
+        onCancelItem={canEditSchedule ? setPendingCancelItem : undefined}
         disabled={isSubmitting}
       />
     ),

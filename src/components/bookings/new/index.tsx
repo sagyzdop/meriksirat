@@ -137,18 +137,10 @@ export function NewBookingPage() {
     }
   }
 
-  const handleRowClick = (equipmentId: number) => {
-    router.navigate({
-      to: '/equipment/$',
-      params: { _splat: equipmentId.toString() },
-    })
-  }
-
   const rows = selectedEquipment.map((item) => ({
     key: item.id.toString(),
     equipmentId: item.id,
     title: item.modelName,
-    subtitle: item.description,
     imagePath: item.imagePath,
     categoryName: item.category?.name,
     action: (
@@ -240,7 +232,6 @@ export function NewBookingPage() {
             emptyMessage="No equipment selected"
             emptyDescription="Select equipment from the equipment page to continue"
             emptyAction={<AddEquipmentButton />}
-            onRowClick={handleRowClick}
           />
         </Section>
 

@@ -1,20 +1,13 @@
 import type { ReactNode } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
 export interface EquipmentTableRow {
   key: string
   equipmentId: number
   title: string
-  subtitle?: string | null
   imagePath?: string | null
   categoryName?: string | null
   action?: ReactNode
@@ -26,15 +19,13 @@ interface EquipmentTableProps {
   emptyDescription?: string
   emptyAction?: ReactNode
   className?: string
-  onRowClick?: (equipmentId: number) => void
-  actionColumn?: 'first' | 'last'
 }
 
 /**
- * EquipmentTable is the single shared table for rendering lists of equipment
- * across the app (booking creation, booking detail/edit, etc.). It renders a
- * bordered table with image, model name and category, plus an optional action
- * cell per row. Pass `onRowClick` to make rows navigate somewhere on click.
+ * EquipmentTable is the single shared, header-less table for rendering lists
+ * of equipment across the app (booking creation, booking detail/edit, booking
+ * list collapsibles). Columns are: action, image, and name with a category
+ * badge underneath. Rows navigate to the equipment detail page on click.
  */
 export function EquipmentTable({
   rows,
@@ -42,54 +33,53 @@ export function EquipmentTable({
   emptyDescription,
   emptyAction,
   className,
-  onRowClick,
-  actionColumn = 'last',
 }: EquipmentTableProps) {
-  const hasActions = rows.some((row) => row.action != null)
+  const router = useRouter()
 
   if (rows.length === 0) {
     return (
-      <div className={cn('relative rounded-md border py-12 text-center', className)}>
+      <div
+        className={cn(
+          'relative rounded-md border py-12 text-center',
+          className
+        )}
+      >
         <p className="text-muted-foreground">{emptyMessage}</p>
         {emptyDescription && (
-          <p className="mt-1 text-sm text-muted-foreground">{emptyDescription}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {emptyDescription}
+          </p>
         )}
-        {emptyAction && <div className="mt-4 flex justify-center">{emptyAction}</div>}
+        {emptyAction && (
+          <div className="mt-4 flex justify-center">{emptyAction}</div>
+        )}
       </div>
     )
   }
 
   return (
-    <div className={cn('relative overflow-x-auto rounded-md border', className)}>
+    <div
+      className={cn('relative overflow-x-auto rounded-md border', className)}
+    >
       <Table>
-        <TableHeader>
-          <TableRow>
-            {hasActions && actionColumn === 'first' && (
-              <TableHead className="whitespace-nowrap" />
-            )}
-            <TableHead className="whitespace-nowrap">Image</TableHead>
-            <TableHead className="whitespace-nowrap">Model Name</TableHead>
-            <TableHead className="whitespace-nowrap">Category</TableHead>
-            {hasActions && actionColumn === 'last' && (
-              <TableHead className="whitespace-nowrap" />
-            )}
-          </TableRow>
-        </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <TableRow
               key={row.key}
-              className={cn(onRowClick && 'cursor-pointer')}
-              onClick={onRowClick ? () => onRowClick(row.equipmentId) : undefined}
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() =>
+                router.navigate({
+                  to: '/equipment/$',
+                  params: { _splat: row.equipmentId.toString() },
+                })
+              }
             >
-              {hasActions && actionColumn === 'first' && (
-                <TableCell
-                  className="whitespace-nowrap"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {row.action}
-                </TableCell>
-              )}
+              <TableCell
+                className="whitespace-nowrap"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {row.action}
+              </TableCell>
               <TableCell className="whitespace-nowrap">
                 <img
                   src={
@@ -101,29 +91,17 @@ export function EquipmentTable({
                   className="h-10 w-14 rounded-md border object-cover"
                 />
               </TableCell>
-              <TableCell className="whitespace-nowrap">
-                <div className="flex flex-col">
+              <TableCell>
+                <div className="flex flex-col gap-1">
                   <span className="font-medium">{row.title}</span>
-                  {row.subtitle && (
-                    <span className="max-w-[280px] truncate text-sm text-muted-foreground">
-                      {row.subtitle}
-                    </span>
-                  )}
+                  <Badge
+                    variant="outline"
+                    className="w-fit text-xs text-muted-foreground"
+                  >
+                    {row.categoryName ?? 'Uncategorized'}
+                  </Badge>
                 </div>
               </TableCell>
-              <TableCell className="whitespace-nowrap">
-                <Badge variant="outline">
-                  {row.categoryName ?? 'Uncategorized'}
-                </Badge>
-              </TableCell>
-              {hasActions && actionColumn === 'last' && (
-                <TableCell
-                  className="whitespace-nowrap"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {row.action}
-                </TableCell>
-              )}
             </TableRow>
           ))}
         </TableBody>
