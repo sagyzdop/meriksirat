@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Check, Eye } from 'lucide-react'
+import { Check, Eye, ImageIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
   CardAction,
+  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -25,10 +27,8 @@ export function EquipmentCard({
   disabled = false,
   onToggleSelect,
 }: EquipmentCardProps) {
-  const placeholderImage = '/equipment-placeholder.svg'
-  const imageUrl = equipment.imagePath
-    ? `/api/images/${equipment.imagePath}`
-    : placeholderImage
+  const [imageFailed, setImageFailed] = useState(false)
+  const showPlaceholder = imageFailed || !equipment.imagePath
 
   const isAvailable = equipment.isActive !== false
 
@@ -36,16 +36,19 @@ export function EquipmentCard({
     <Card
       className={`group relative mx-auto flex w-full flex-col overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? ' ring-2 ring-primary/40' : ''}${disabled ? ' opacity-60' : ''}`}
     >
-      {/* Image Section */}
-      <div className="relative aspect-video w-full overflow-hidden rounded-t-xl">
-        <img
-          src={imageUrl}
-          alt={equipment.modelName}
-          className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
-          onError={(e) => {
-            e.currentTarget.src = placeholderImage
-          }}
-        />
+      <div className="relative aspect-square w-full overflow-hidden rounded-t-xl bg-muted">
+        {showPlaceholder ? (
+          <div className="flex h-full w-full items-center justify-center">
+            <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
+          </div>
+        ) : (
+          <img
+            src={`/api/images/${equipment.imagePath}`}
+            alt={equipment.modelName}
+            onError={() => setImageFailed(true)}
+            className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+          />
+        )}
       </div>
 
       <CardHeader>
@@ -67,9 +70,11 @@ export function EquipmentCard({
           </Badge>
         </CardAction>
         <CardTitle className="line-clamp-1">{equipment.modelName}</CardTitle>
-        <CardDescription className="line-clamp-2 min-h-10">
-          {equipment.description}
-        </CardDescription>
+        <CardContent className="p-0">
+          <CardDescription className="line-clamp-2">
+            {equipment.description}
+          </CardDescription>
+        </CardContent>
       </CardHeader>
 
       <CardFooter className="mt-auto flex gap-2">
