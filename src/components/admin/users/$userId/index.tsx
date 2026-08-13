@@ -6,6 +6,7 @@ import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -34,6 +35,46 @@ const formatDate = (value: string | number | null | undefined) => {
 const formatRole = (role: string | null | undefined) => {
   if (!role) return '—'
   return role.charAt(0).toUpperCase() + role.slice(1)
+}
+
+function RoleBadge({ role }: { role: string | null | undefined }) {
+  const label = formatRole(role)
+  if (label === '—') {
+    return <span className="text-muted-foreground">—</span>
+  }
+  if (role === 'admin') {
+    return <Badge variant="destructive">{label}</Badge>
+  }
+  if (role === 'manager') {
+    return (
+      <Badge variant="outline" className="bg-amber-100 text-amber-800">
+        {label}
+      </Badge>
+    )
+  }
+  return <Badge variant="outline">{label}</Badge>
+}
+
+function StatusBadge({ status }: { status: string | null | undefined }) {
+  const value = status || '—'
+  if (value === '—') {
+    return <span className="text-muted-foreground">—</span>
+  }
+  if (value === 'Active') {
+    return (
+      <Badge variant="outline" className="bg-green-100 text-green-800">
+        {value}
+      </Badge>
+    )
+  }
+  if (value === 'On Probation') {
+    return (
+      <Badge variant="outline" className="bg-amber-100 text-amber-800">
+        {value}
+      </Badge>
+    )
+  }
+  return <Badge variant="outline">{value}</Badge>
 }
 
 interface PageProps {
@@ -94,21 +135,34 @@ export function Page({ user }: PageProps) {
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
                     Role
                   </TableCell>
-                  <TableCell>{formatRole(user.role)}</TableCell>
+                  <TableCell>
+                    <RoleBadge role={user.role} />
+                  </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
                     Clearance Level
                   </TableCell>
                   <TableCell>
-                    {user.clearanceLevel ? `Level ${user.clearanceLevel}` : '—'}
+                    {user.clearanceLevel ? (
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-amber-700"
+                      >
+                        Level {user.clearanceLevel}
+                      </Badge>
+                    ) : (
+                      '—'
+                    )}
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
                     Status
                   </TableCell>
-                  <TableCell>{user.status || '—'}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={user.status} />
+                  </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">

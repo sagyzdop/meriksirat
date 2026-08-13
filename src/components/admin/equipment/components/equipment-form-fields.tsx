@@ -131,7 +131,7 @@ export function EquipmentFormFields({
           name="requiredClearanceLevel"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Required Clearance Level *</FormLabel>
+              <FormLabel>Clearance Level *</FormLabel>
               <FormControl>
                 <Input
                   type="number"

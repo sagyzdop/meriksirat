@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
+import { ImageIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
@@ -14,6 +16,34 @@ const statusConfig = {
     className:
       'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200',
   },
+}
+
+function EquipmentImageCell({
+  imagePath,
+  modelName,
+}: {
+  imagePath: string | null
+  modelName: string
+}) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const showPlaceholder = imageFailed || !imagePath
+
+  if (showPlaceholder) {
+    return (
+      <div className="flex h-10 w-14 items-center justify-center rounded-md border bg-muted">
+        <ImageIcon className="h-4 w-4 text-muted-foreground/60" />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={`/api/images/${imagePath}`}
+      alt={modelName}
+      onError={() => setImageFailed(true)}
+      className="h-10 w-14 rounded-md border object-cover"
+    />
+  )
 }
 
 export const createEquipmentColumns =
@@ -48,17 +78,12 @@ export const createEquipmentColumns =
       header: 'Image',
       enableSorting: false,
       cell: ({ row }) => {
-        const imagePath = row.original.imagePath
+        const equipment = row.original
 
         return (
-          <img
-            src={
-              imagePath
-                ? `/api/images/${imagePath}`
-                : '/equipment-placeholder.svg'
-            }
-            alt={row.original.modelName}
-            className="h-10 w-14 rounded-md border object-cover"
+          <EquipmentImageCell
+            imagePath={equipment.imagePath}
+            modelName={equipment.modelName}
           />
         )
       },

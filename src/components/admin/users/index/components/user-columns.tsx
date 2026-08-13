@@ -139,7 +139,7 @@ export const createUserColumns = ({
   {
     accessorKey: 'clearanceLevel',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Clearance" />
+      <DataTableColumnHeader column={column} title="Clearance Level" />
     ),
     cell: ({ row }) => {
       const user = row.original
