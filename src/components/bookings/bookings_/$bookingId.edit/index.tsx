@@ -27,6 +27,7 @@ import { BookingItemAction } from '@/components/shared/booking-item-action'
 import { CancelBookingItemDialog } from '@/components/shared/cancel-booking-item-dialog'
 import { AddEquipmentButton } from '@/components/shared/add-equipment-button'
 import { BookingInfoTable } from '@/components/shared/booking-info-table'
+import type { BookingInfoTableBookedBy } from '@/components/shared/booking-info-table'
 import { BookingSchedule } from '@/components/shared/booking-schedule'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
 import type {
@@ -38,9 +39,15 @@ interface PageProps {
   booking: BookingWithItems
   bookingId: number
   telegramBotUsername: string
+  bookedBy?: BookingInfoTableBookedBy | null
 }
 
-export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
+export function Page({
+  booking,
+  bookingId,
+  telegramBotUsername,
+  bookedBy,
+}: PageProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -167,7 +174,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
 
       <div className="space-y-8">
         <Section title="Details" spacing="compact">
-          <BookingInfoTable booking={booking} />
+          <BookingInfoTable booking={booking} bookedBy={bookedBy} />
         </Section>
 
         <Section
@@ -184,16 +191,6 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
 
         {canEdit && (
           <>
-            <BookingSchedule
-              items={items}
-              startTime={booking.startTime}
-              endTime={booking.endTime}
-              canEdit
-              initialSlots={initialSlots}
-              disabled={isSubmitting}
-              onSlotsChange={handleSlotsChange}
-            />
-
             <Section title="Update Notes" spacing="compact">
               <Textarea
                 placeholder="Add any notes about your booking..."
@@ -203,6 +200,16 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
                 disabled={isSubmitting}
               />
             </Section>
+
+            <BookingSchedule
+              items={items}
+              startTime={booking.startTime}
+              endTime={booking.endTime}
+              canEdit
+              initialSlots={initialSlots}
+              disabled={isSubmitting}
+              onSlotsChange={handleSlotsChange}
+            />
           </>
         )}
 

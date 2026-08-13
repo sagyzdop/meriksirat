@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { Link } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { BookingStatusBadge } from '@/components/shared/booking-status-badge'
@@ -9,6 +9,7 @@ export interface BookingInfoTableBookedBy {
   id: string
   name: string
   image?: string | null
+  href?: string
 }
 
 interface BookingInfoTableProps {
@@ -32,6 +33,7 @@ export function BookingInfoTable({
   bookedBy,
   showBookingDay = true,
 }: BookingInfoTableProps) {
+  const router = useRouter()
   const actualReturn = booking.items.reduce<Date | null>((max, item) => {
     if (!item.returnedAt) return max
     return !max || item.returnedAt > max ? item.returnedAt : max
@@ -64,19 +66,27 @@ export function BookingInfoTable({
                 Booked by
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                <Link
-                  to="/admin/users/$userId"
-                  params={{ userId: bookedBy.id }}
+                <a
+                  href={bookedBy.href ?? `/admin/users/${bookedBy.id}`}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    router.navigate({
+                      href: bookedBy.href ?? `/admin/users/${bookedBy.id}`,
+                    })
+                  }}
                   className="flex items-center gap-2 font-medium hover:underline"
                 >
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={bookedBy.image || undefined} alt={bookedBy.name} />
+                    <AvatarImage
+                      src={bookedBy.image || undefined}
+                      alt={bookedBy.name}
+                    />
                     <AvatarFallback className="text-[10px]">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
                   {bookedBy.name}
-                </Link>
+                </a>
               </TableCell>
             </TableRow>
           )}

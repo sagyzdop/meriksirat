@@ -1,14 +1,16 @@
 import { BookingDetail } from '@/components/shared/booking-detail'
 import { cancelBookingFn, startBookingFn } from '@/lib/booking'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
+import type { BookingInfoTableBookedBy } from '@/components/shared/booking-info-table'
 import type { BookingWithItems } from '@/lib/booking/types'
 
 interface PageProps {
   booking: BookingWithItems
   telegramBotUsername: string
+  bookedBy?: BookingInfoTableBookedBy | null
 }
 
-export function Page({ booking, telegramBotUsername }: PageProps) {
+export function Page({ booking, telegramBotUsername, bookedBy }: PageProps) {
   const now = new Date()
   const canCancel = booking.status === 'booked'
   const canStart =
@@ -24,6 +26,7 @@ export function Page({ booking, telegramBotUsername }: PageProps) {
       booking={booking}
       onBack={() => history.back()}
       editTo="/bookings/$bookingId/edit"
+      bookedBy={bookedBy}
       canAddEquipment={booking.status === 'booked'}
       returnTo={`/bookings/${booking.id}`}
       telegramBotUsername={telegramBotUsername}

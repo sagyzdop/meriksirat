@@ -40,14 +40,31 @@ export const Route = createFileRoute('/_authenticated/bookings/$bookingId/')({
 
 function RouteComponent() {
   const { booking, telegramBotUsername } = Route.useLoaderData()
+  const { user } = Route.useRouteContext()
   const isLoading = useRouterState({
     select: (state) => state.status === 'pending',
   })
 
+  const bookedBy = user
+    ? {
+        id: user.id,
+        name:
+          `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() ||
+          user.email ||
+          'Unknown',
+        image: user.image,
+        href: '/profile',
+      }
+    : null
+
   return (
     <div className="relative">
       {isLoading && <LoadingOverlay />}
-      <Page booking={booking} telegramBotUsername={telegramBotUsername} />
+      <Page
+        booking={booking}
+        telegramBotUsername={telegramBotUsername}
+        bookedBy={bookedBy}
+      />
     </div>
   )
 }
