@@ -1,6 +1,6 @@
 /**
  * Telegram Photo Handler
- * 
+ *
  * Handles photo messages for equipment return flow.
  */
 
@@ -10,13 +10,13 @@ import { db } from '@/db'
 import { bookingItem, booking, equipment, user } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { notifyAdmins } from '../admin'
-import { logBookingActivity } from '../logging'
+import { logBookingActivityById } from '../logging'
 import { withKeyboard } from '../server-utils'
 import { returnBookingItems } from '@/lib/booking/booking-items'
 
 /**
  * Handles photo messages for equipment return flow
- * 
+ *
  * Flow:
  * 1. Extract chat ID and photo file_id from the message
  * 2. Retrieve session from KV storage
@@ -29,7 +29,12 @@ import { returnBookingItems } from '@/lib/booking/booking-items'
  */
 export async function handlePhoto(ctx: BotContext): Promise<void> {
   try {
-    if (!ctx.message || !('photo' in ctx.message) || !ctx.message.photo || !ctx.chat) {
+    if (
+      !ctx.message ||
+      !('photo' in ctx.message) ||
+      !ctx.message.photo ||
+      !ctx.chat
+    ) {
       return
     }
 
@@ -79,9 +84,14 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
         throw new Error('No item details found after update')
       }
 
-      const userName = [itemDetails[0].userFirstName, itemDetails[0].userLastName].filter(Boolean).join(' ') || 'Unknown User'
+      const userName =
+        [itemDetails[0].userFirstName, itemDetails[0].userLastName]
+          .filter(Boolean)
+          .join(' ') || 'Unknown User'
 
-      const uniqueEquipmentNames = [...new Set(itemDetails.map((b) => b.equipmentName))]
+      const uniqueEquipmentNames = [
+        ...new Set(itemDetails.map((b) => b.equipmentName)),
+      ]
       const equipmentNames = uniqueEquipmentNames.join(', ')
       const itemCount = selectedItemIds.length
 
@@ -97,19 +107,13 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
         ctx.telegram
       )
 
-      // Log booking return to Telegram channel
+      // Log booking return to Telegram channel. Refetches the booking details
+      // (user with telegram handle, item statuses, current status) so the log
+      // shows whether the whole booking or only some items were returned.
       try {
-        if (ctx.env.TELEGRAM_CLUB_CHANNEL_ID) {
-          await logBookingActivity(ctx.telegram, ctx.env.TELEGRAM_CLUB_CHANNEL_ID, {
-            bookingId: itemDetails[0].bookingId,
-            userId: session.userId!,
-            userName,
-            equipmentName: equipmentNames,
-            equipmentNames: uniqueEquipmentNames,
-            action: 'returned',
-            newStatus: 'returned'
-          })
-        }
+        await logBookingActivityById(itemDetails[0].bookingId, 'returned', {
+          notes: `Returned ${itemCount} item(s) via Telegram`,
+        })
       } catch (logError) {
         console.error('Failed to log booking return:', logError)
       }
@@ -120,7 +124,6 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       )
 
       await deleteSession(ctx.env.meriksirat_kv, chatId)
-
     } catch (error) {
       console.error('Return processing error:', {
         chatId,
@@ -136,7 +139,6 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
 
       return
     }
-
   } catch (error) {
     console.error('Photo handler error:', {
       chatId: ctx.chat?.id,

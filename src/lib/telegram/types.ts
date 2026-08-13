@@ -1,6 +1,6 @@
 /**
  * Telegram Types and Constants
- * 
+ *
  * Shared types and constants used across telegram functionality.
  * This file is safe for both client and server-side imports.
  */
@@ -70,10 +70,10 @@ export const BOOKING_STATUS = {
   RETURNED: 'returned',
   CANCELLED: 'cancelled',
   OVERDUE: 'overdue',
-  PARTIALLY_RETURNED: 'partially_returned'
+  PARTIALLY_RETURNED: 'partially_returned',
 } as const
 
-export type BookingStatus = typeof BOOKING_STATUS[keyof typeof BOOKING_STATUS]
+export type BookingStatus = (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS]
 
 /**
  * Booking log data structure for telegram logging
@@ -84,6 +84,9 @@ export interface BookingLogData {
   userName: string
   equipmentName: string
   equipmentNames?: string[]
+  // Per-item statuses, aligned with equipmentNames. Used to distinguish
+  // whole-booking actions from partial (per-item) cancellations/returns.
+  itemStatuses?: string[]
   action: 'created' | 'updated' | 'cancelled' | 'returned' | 'deleted'
   startTime?: Date
   endTime?: Date
@@ -99,7 +102,7 @@ export interface BookingLogData {
 export interface AdminNotification {
   photoFileId: string
   userName: string
-  equipmentNames: string  // Already deduplicated, comma-separated
+  equipmentNames: string // Already deduplicated, comma-separated
   itemCount: number
 }
 
@@ -107,7 +110,12 @@ export interface AdminNotification {
  * Session data structure for KV storage
  */
 export interface SessionData {
-  step?: 'awaiting_booking_selection' | 'awaiting_item_selection' | 'awaiting_photo' | 'awaiting_start_selection' | 'awaiting_start_confirm'
+  step?:
+    | 'awaiting_booking_selection'
+    | 'awaiting_item_selection'
+    | 'awaiting_photo'
+    | 'awaiting_start_selection'
+    | 'awaiting_start_confirm'
   userId?: string
   activeBookingIds?: number[]
   selectedBookingIds?: number[]

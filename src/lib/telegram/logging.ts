@@ -26,12 +26,61 @@ function formatStatus(status: string): string {
   return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
 
+/**
+ * Describes whether an action covered the whole booking or only some of its
+ * items, based on the per-item statuses fetched after the action ran.
+ */
+function describeBookingScope(data: BookingLogData): string | null {
+  const names = data.equipmentNames?.length
+    ? data.equipmentNames
+    : data.equipmentName
+      ? [data.equipmentName]
+      : []
+  const statuses = data.itemStatuses
+  if (!statuses || statuses.length === 0 || statuses.length !== names.length) {
+    return null
+  }
+
+  const target = data.action === 'cancelled' ? 'cancelled' : 'returned'
+  const affected = names
+    .map((name, i) => ({ name, status: statuses[i] }))
+    .filter((item) => item.status === target)
+
+  if (affected.length === 0) return null
+  if (affected.length === names.length) {
+    return target === 'cancelled'
+      ? 'Scope: Entire booking cancelled'
+      : 'Scope: Entire booking returned'
+  }
+
+  return `Scope: ${affected.length} of ${names.length} ${
+    names.length === 1 ? 'item' : 'items'
+  } ${target} (${affected.map((item) => item.name).join(', ')})`
+}
+
 function formatBookingLogMessage(data: BookingLogData): string {
   const lines: string[] = [
     `Booking #${data.bookingId} · ${ACTION_LABELS[data.action]}`,
   ]
 
   lines.push(`User: ${data.userName}`)
+
+  if (
+    data.previousStatus &&
+    data.newStatus &&
+    data.previousStatus !== data.newStatus
+  ) {
+    lines.push(
+      `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
+    )
+  } else if (data.newStatus) {
+    lines.push(`Status: ${formatStatus(data.newStatus)}`)
+  }
+
+  const scope = describeBookingScope(data)
+  if (scope) {
+    lines.push(scope)
+  }
 
   const equipmentNames = data.equipmentNames?.length
     ? data.equipmentNames
@@ -58,7 +107,7 @@ function formatBookingLogMessage(data: BookingLogData): string {
       minute: '2-digit',
       hour12: false,
     })
-    lines.push(`Time: ${date}, ${timeStart} – ${timeEnd}`)
+    lines.push(`Booking Time: ${date}, ${timeStart} – ${timeEnd}`)
   }
 
   if (data.startedAt) {
@@ -68,16 +117,6 @@ function formatBookingLogMessage(data: BookingLogData): string {
       hour12: false,
     })
     lines.push(`Started at: ${started}`)
-  }
-
-  if (
-    data.previousStatus &&
-    data.newStatus &&
-    data.previousStatus !== data.newStatus
-  ) {
-    lines.push(
-      `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
-    )
   }
 
   if (data.notes) {
@@ -161,6 +200,7 @@ export async function logBookingActivityById(
       userName,
       equipmentName: bookingDetails.equipmentName,
       equipmentNames: bookingDetails.equipmentNames,
+      itemStatuses: bookingDetails.itemStatuses,
       action,
       startTime: bookingDetails.startTime,
       endTime: bookingDetails.endTime,

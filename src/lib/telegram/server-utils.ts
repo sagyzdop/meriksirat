@@ -1,9 +1,9 @@
 /**
  * Server-side Telegram utilities
- * 
+ *
  * This module provides telegram-related utilities that require server-side
  * access to environment variables and database connections.
- * 
+ *
  * WARNING: Do not import this module from client-side code!
  */
 
@@ -29,7 +29,7 @@ export const STANDARD_KEYBOARD = {
   ],
   resize_keyboard: true,
   persistent: true,
-  placeholder: 'Choose a command...'
+  placeholder: 'Choose a command...',
 } as const
 
 /**
@@ -38,7 +38,7 @@ export const STANDARD_KEYBOARD = {
 export function withKeyboard(options: any = {}) {
   return {
     ...options,
-    reply_markup: STANDARD_KEYBOARD
+    reply_markup: STANDARD_KEYBOARD,
   }
 }
 
@@ -99,6 +99,7 @@ export async function getBookingDetailsForLogging(bookingId: number) {
     .select({
       equipmentName: equipment.modelName,
       equipmentId: equipment.id,
+      status: bookingItem.status,
     })
     .from(bookingItem)
     .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
@@ -108,6 +109,7 @@ export async function getBookingDetailsForLogging(bookingId: number) {
     ...parent,
     equipmentNames: items.map((i) => i.equipmentName),
     equipmentName: items.map((i) => i.equipmentName).join(', '),
+    itemStatuses: items.map((i) => i.status),
   }
 }
 
@@ -117,7 +119,7 @@ export async function getBookingDetailsForLogging(bookingId: number) {
 
 /**
  * Sends a booking reminder to a user via Telegram
- * 
+ *
  * @param telegram - TelegramAPI instance
  * @param chatId - User's Telegram chat ID
  * @param bookingDetails - Booking information
@@ -134,21 +136,21 @@ export async function sendBookingReminder(
   }
 ): Promise<void> {
   const { userName, equipmentNames, startTime, endTime, notes } = bookingDetails
-  
-  const startTimeStr = startTime.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
+
+  const startTimeStr = startTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
   })
-  const endTimeStr = endTime.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
+  const endTimeStr = endTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
   })
-  const dateStr = startTime.toLocaleDateString('en-US', { 
+  const dateStr = startTime.toLocaleDateString('en-US', {
     weekday: 'short',
-    month: 'short', 
-    day: 'numeric' 
+    month: 'short',
+    day: 'numeric',
   })
 
   let message = `⏰ *Booking Reminder*\n\n`
@@ -160,11 +162,11 @@ export async function sendBookingReminder(
   }
   message += `📅 *Date:* ${dateStr}\n`
   message += `🕐 *Time:* ${startTimeStr} - ${endTimeStr}\n`
-  
+
   if (notes) {
     message += `\n📝 *Notes:* ${notes}\n`
   }
-  
+
   message += `\nPlease arrive on time to pick up your equipment. 🚀`
 
   await telegram.sendMessage(chatId, message, {
