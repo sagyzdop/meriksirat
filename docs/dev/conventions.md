@@ -18,14 +18,23 @@ export const Route = createFileRoute('/_authenticated/admin/bookings/')({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => ({ search }),
   loader: async ({ deps, context }) => {
-    await context.queryClient.ensureQueryData(bookingsQueries.adminList(deps.search))
+    await context.queryClient.ensureQueryData(
+      bookingsQueries.adminList(deps.search)
+    )
   },
 })
 
 function RouteComponent() {
   const search = Route.useSearch()
   const { data, isFetching } = useQuery(bookingsQueries.adminList(search))
-  return <Page bookings={response.data} pagination={response.pagination} filters={search} isLoading={isFetching} />
+  return (
+    <Page
+      bookings={response.data}
+      pagination={response.pagination}
+      filters={search}
+      isLoading={isFetching}
+    />
+  )
 }
 ```
 
@@ -33,12 +42,12 @@ function RouteComponent() {
 
 The component folder path equals the route file path minus `.tsx` (and dropping the `_authenticated`/`_public` group prefix):
 
-| Route file | Component |
-| --- | --- |
-| `routes/_authenticated/admin/bookings/$bookingId.edit.tsx` | `components/admin/bookings/$bookingId.edit/index.tsx` |
+| Route file                                                     | Component                                                 |
+| -------------------------------------------------------------- | --------------------------------------------------------- |
+| `routes/_authenticated/admin/bookings/$bookingId.edit.tsx`     | `components/admin/bookings/$bookingId.edit/index.tsx`     |
 | `routes/_authenticated/bookings/bookings_/$bookingId.edit.tsx` | `components/bookings/bookings_/$bookingId.edit/index.tsx` |
-| `routes/_authenticated/equipment/$/index.tsx` | `components/equipment/$/index.tsx` |
-| `routes/_authenticated/admin/dashboard.tsx` | `components/admin/dashboard/index.tsx` |
+| `routes/_authenticated/equipment/$/index.tsx`                  | `components/equipment/$/index.tsx`                        |
+| `routes/_authenticated/admin/dashboard.tsx`                    | `components/admin/dashboard/index.tsx`                    |
 
 The page's `index.tsx` exports a named `Page` (or a named function like `NewBookingPage`). The route imports it:
 
@@ -71,7 +80,9 @@ const searchSchema = z.object({
   categoryIds: numberArrayParam(),
   isActive: booleanArrayParam(),
   page: z.coerce.number().default(1),
-  sortBy: z.enum(['startTime', 'endTime', 'status', 'createdAt']).default('startTime'),
+  sortBy: z
+    .enum(['startTime', 'endTime', 'status', 'createdAt'])
+    .default('startTime'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 ```
@@ -98,6 +109,13 @@ See `docs/data-loading.md`. All list/detail data flows through TanStack Query `q
 - Format with `npx prettier --write` on touched files (`.prettierrc`: no semi, single quotes, tabWidth 2, printWidth 80).
 - `npx tsc --noEmit` must stay clean (currently 0 errors).
 - `npm run lint` is broken at baseline (TSX parser failures) — do not treat its output as actionable.
+
+## shadcn/ui everywhere
+
+- Build all UI from shadcn/ui components in `src/components/ui/` (Badge, Button, Card, Table, Dialog, AlertDialog, Form, Select, ...). Do not hand-roll layout primitives or status pills with raw `<div>` + custom Tailwind when a shadcn component fits.
+- Use Badge for labels/status in tables and cards — color-code them with the existing palette (`bg-green-100 text-green-800`, `bg-red-100 text-red-700`, `bg-amber-100 text-amber-800`, `variant="destructive"` for admin/role, etc.). Keep value badges readable on `bg-card`.
+- Placeholder images are lucide icons (`ImageIcon`), never static SVGs in `public/`.
+- Before creating a new component, check `src/components/ui/` and `src/components/shared/` first; reuse over recreate.
 
 ## Delete dialogs differ per context
 

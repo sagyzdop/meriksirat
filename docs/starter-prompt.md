@@ -22,6 +22,7 @@ You are working on **Meriksirat**, a full-stack equipment booking & management p
 5. **Data**: list/detail data goes through `queryOptions` factories (`src/lib/{equipment,booking,user}/queries.ts`) + `useQuery`. Mutations call `createServerFn` functions and invalidate by query-key prefix. Route loaders `ensureQueryData`.
 6. **No comments** in code. Self-documenting names and small components instead.
 7. Shared cross-page components go in `src/components/shared/`; page-local shared pieces in the page's own `components/`.
+8. **Build UI from shadcn/ui components** (`src/components/ui/`). No hand-rolled layout primitives or status pills; use Badge (color-coded) for labels/status in tables and cards, lucide icons for placeholders (never static SVGs in `public/`). See `docs/dev/conventions.md`. Apply this every time you create components.
 
 ## Project structure quick map
 
