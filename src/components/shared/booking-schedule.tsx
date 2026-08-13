@@ -56,7 +56,7 @@ export function BookingSchedule({
       {hasCalendar && (
         <Section title="Availability" spacing="compact">
           <GoogleCalendarView
-            calendarId={calendarIds[0]}
+            calendarIds={calendarIds}
             legendLabels={legendLabels}
           />
         </Section>
