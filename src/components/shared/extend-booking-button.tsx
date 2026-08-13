@@ -33,8 +33,9 @@ const EXTENDABLE_STATUSES = [
 /**
  * "Add 30 min" action for a booking. Runs the availability check on click via
  * the server; if all items are available the booking end time is extended by
- * 30 minutes and, for overdue bookings, the overdue counter increment is
- * undone. Available to both the booking owner and admins.
+ * 30 minutes. For overdue bookings, the overdue status and counter increment
+ * are only undone when the extended end time is still in the future. Available
+ * to both the booking owner and admins.
  */
 export function ExtendBookingButton({
   bookingId,
@@ -88,18 +89,22 @@ export function ExtendBookingButton({
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Extend this booking by 30 minutes?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Extend this booking by 30 minutes?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               The equipment availability is checked right now. If every item is
               free for the extra 30 minutes, the booking end time will be moved
               30 minutes later
               {status === 'overdue' &&
-                ' and the overdue counter increment will be undone'}
+                ' and, if the new end time is still in the future, the overdue status will be reset'}
               . Calendar events are updated automatically.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isExtending}>Not now</AlertDialogCancel>
+            <AlertDialogCancel disabled={isExtending}>
+              Not now
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault()

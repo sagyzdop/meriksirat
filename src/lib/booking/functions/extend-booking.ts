@@ -14,18 +14,22 @@ export const EXTEND_BOOKING_MINUTES = 30
  * - The availability check runs only when this function is called (on click).
  * - The booking end time is moved 30 minutes later and every item's calendar
  *   event is updated with the new end time.
- * - If the booking was overdue, the overdue items are reset to `active`, the
- *   parent status is recomputed, and the user's overdue counter is decremented
- *   once (undoing the increment made when the booking became overdue).
+ * - Overdue bookings are time-aware: the overdue items are only reset to
+ *   `active` and the user's overdue counter is only decremented when the
+ *   extended end time is still in the future. If the extended end time is
+ *   already in the past, the booking stays overdue until enough extensions are
+ *   added to push the end time past now.
  */
 export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
-    const { checkMultipleCalendarsFreeBusy, updateCalendarEvent } = await import('@/lib/google/google-caledar')
+    const { checkMultipleCalendarsFreeBusy, updateCalendarEvent } =
+      await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment, user } = await import('@/db/schema')
+    const { booking, bookingItem, equipment, user } =
+      await import('@/db/schema')
     const { eq, inArray, sql } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('../status')
@@ -99,9 +103,11 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       throw new Error('Booking has no items that can be extended')
     }
 
+    const now = new Date()
     const newEndTime = new Date(
       parent.endTime.getTime() + EXTEND_BOOKING_MINUTES * 60 * 1000
     )
+    const newEndIsInFuture = newEndTime > now
 
     const calendarIds = activeItems
       .map((item) => item.equipmentCalendarId)
@@ -119,9 +125,13 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       const conflicts = activeItems
         .filter((item) => item.equipmentCalendarId)
         .map((item) => {
-          const busy = freeBusyResult[item.equipmentCalendarId as string]?.busy || []
+          const busy =
+            freeBusyResult[item.equipmentCalendarId as string]?.busy || []
           return busy.length > 0
-            ? { equipmentName: item.equipmentName || `Equipment ${item.equipmentId}` }
+            ? {
+                equipmentName:
+                  item.equipmentName || `Equipment ${item.equipmentId}`,
+              }
             : null
         })
         .filter((item): item is { equipmentName: string } => Boolean(item))
@@ -140,25 +150,27 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       .set({ endTime: newEndTime, updatedAt: new Date() })
       .where(eq(booking.id, data.bookingId))
 
-    const overdueItemIds = items
-      .filter((item) => item.status === 'overdue')
-      .map((item) => item.id)
-
     let undidOverdue = false
-    if (overdueItemIds.length > 0) {
-      await database
-        .update(bookingItem)
-        .set({ status: 'active', updatedAt: new Date() })
-        .where(inArray(bookingItem.id, overdueItemIds))
+    if (newEndIsInFuture) {
+      const overdueItemIds = items
+        .filter((item) => item.status === 'overdue')
+        .map((item) => item.id)
 
-      await database
-        .update(user)
-        .set({
-          overdueCount: sql`CASE WHEN ${user.overdueCount} > 0 THEN ${user.overdueCount} - 1 ELSE 0 END`,
-        })
-        .where(eq(user.id, parent.userId))
+      if (overdueItemIds.length > 0) {
+        await database
+          .update(bookingItem)
+          .set({ status: 'active', updatedAt: new Date() })
+          .where(inArray(bookingItem.id, overdueItemIds))
 
-      undidOverdue = true
+        await database
+          .update(user)
+          .set({
+            overdueCount: sql`CASE WHEN ${user.overdueCount} > 0 THEN ${user.overdueCount} - 1 ELSE 0 END`,
+          })
+          .where(eq(user.id, parent.userId))
+
+        undidOverdue = true
+      }
     }
 
     await recomputeBookingStatus(database, data.bookingId)
@@ -209,11 +221,20 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       }
     }
 
+    const formattedNewEndTime = newEndTime.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+
     try {
       await logBookingActivityById(data.bookingId, 'updated', {
         previousStatus: parent.status,
         newStatus: undidOverdue ? 'active' : parent.status,
-        notes: `Booking extended by ${EXTEND_BOOKING_MINUTES} minutes to ${newEndTime.toISOString()}${undidOverdue ? '; overdue status reset' : ''}`,
+        notes: `Booking extended by ${EXTEND_BOOKING_MINUTES} minutes to ${formattedNewEndTime}${undidOverdue ? '; overdue status reset' : ''}`,
       })
     } catch (logError) {
       console.error('Failed to log booking extension:', logError)
