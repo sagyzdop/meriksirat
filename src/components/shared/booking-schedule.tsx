@@ -1,20 +1,23 @@
-import { Section } from "@/components/layout/section";
-import { GoogleCalendarView } from "./event-calendar/google-calendar-view";
-import { TimeSlotPicker } from "./time-slot-picker";
+import { Section } from '@/components/layout/section'
+import { GoogleCalendarView } from './event-calendar/google-calendar-view'
+import { TimeSlotPicker } from './time-slot-picker'
 
 export interface BookingScheduleItem {
-  equipment?: { googleCalendarId: string | null } | null;
+  equipment?: {
+    googleCalendarId: string | null
+    modelName?: string | null
+  } | null
 }
 
 interface BookingScheduleProps {
-  items: BookingScheduleItem[];
-  startTime: Date | string;
-  endTime: Date | string;
-  canEdit?: boolean;
-  initialSlots?: string[];
-  disabled?: boolean;
-  warnWhenLocked?: boolean;
-  onSlotsChange?: (slots: string[], date: Date | undefined) => void;
+  items: BookingScheduleItem[]
+  startTime: Date | string
+  endTime: Date | string
+  canEdit?: boolean
+  initialSlots?: string[]
+  disabled?: boolean
+  warnWhenLocked?: boolean
+  onSlotsChange?: (slots: string[], date: Date | undefined) => void
 }
 
 /**
@@ -35,16 +38,27 @@ export function BookingSchedule({
 }: BookingScheduleProps) {
   const calendarIds = items
     .map((item) => item.equipment?.googleCalendarId)
-    .filter((id): id is string => Boolean(id));
+    .filter((id): id is string => Boolean(id))
 
-  const hasCalendar = calendarIds.length > 0;
-  const showDateEditor = hasCalendar && (canEdit || warnWhenLocked);
+  const legendLabels = items.reduce<Record<string, string>>((acc, item) => {
+    const calendarId = item.equipment?.googleCalendarId
+    if (calendarId) {
+      acc[calendarId] = item.equipment?.modelName || calendarId
+    }
+    return acc
+  }, {})
+
+  const hasCalendar = calendarIds.length > 0
+  const showDateEditor = hasCalendar && (canEdit || warnWhenLocked)
 
   return (
     <>
       {hasCalendar && (
         <Section title="Availability" spacing="compact">
-          <GoogleCalendarView calendarId={calendarIds[0]} />
+          <GoogleCalendarView
+            calendarId={calendarIds[0]}
+            legendLabels={legendLabels}
+          />
         </Section>
       )}
 
@@ -55,18 +69,21 @@ export function BookingSchedule({
               googleCalendarIds={calendarIds}
               initialDate={new Date(startTime)}
               initialSlots={initialSlots}
-              excludeBookingPeriod={{ start: startTime.toString(), end: endTime.toString() }}
+              excludeBookingPeriod={{
+                start: startTime.toString(),
+                end: endTime.toString(),
+              }}
               onSlotsChange={onSlotsChange}
               disabled={disabled}
             />
           ) : (
             <div className="rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-              Schedule updates are only available for <strong>booked</strong> or{" "}
+              Schedule updates are only available for <strong>booked</strong> or{' '}
               <strong>active</strong> bookings.
             </div>
           )}
         </Section>
       )}
     </>
-  );
+  )
 }

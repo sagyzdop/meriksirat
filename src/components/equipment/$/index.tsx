@@ -49,10 +49,7 @@ export function Page() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title={equipment.modelName}
-        onBack={() => history.back()}
-      />
+      <PageHeader title={equipment.modelName} onBack={() => history.back()} />
 
       <div className="space-y-8">
         <div className="relative">
@@ -111,7 +108,12 @@ export function Page() {
         </Section>
 
         <Section title="Availability" spacing="compact">
-          <GoogleCalendarView calendarId={equipment.googleCalendarId} />
+          <GoogleCalendarView
+            calendarId={equipment.googleCalendarId}
+            legendLabels={{
+              [equipment.googleCalendarId]: equipment.modelName,
+            }}
+          />
         </Section>
       </div>
     </PageContainer>

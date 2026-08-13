@@ -242,17 +242,12 @@ export function NewBookingPage() {
                 .map((item) => item.googleCalendarId)
                 .filter((id): id is string => Boolean(id))}
               colorByCalendarId={equipmentColorMap}
+              legendLabels={Object.fromEntries(
+                selectedEquipment
+                  .filter((item) => item.googleCalendarId)
+                  .map((item) => [item.googleCalendarId, item.modelName])
+              )}
             />
-            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-              {selectedEquipment.map((item) => (
-                <div key={item.id} className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex size-2.5 rounded-full ${colorDotFor(item)}`}
-                  />
-                  <span>{item.modelName}</span>
-                </div>
-              ))}
-            </div>
           </Section>
         )}
 
