@@ -15,11 +15,10 @@ import {
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import {
-  SelectedEquipmentTable,
-  SelectedEquipmentSectionActions,
-} from '@/components/bookings/new/components/selected-equipment-table'
+import { EquipmentTable } from '@/components/shared/equipment-table'
+import { AddEquipmentButton } from '@/components/shared/add-equipment-button'
 import { BookingConfirmationDialog } from '@/components/bookings/new/components/booking-confirmation-dialog'
+import { Trash2 } from 'lucide-react'
 
 export function NewBookingPage() {
   const router = useRouter()
@@ -138,6 +137,33 @@ export function NewBookingPage() {
     }
   }
 
+  const handleRowClick = (equipmentId: number) => {
+    router.navigate({
+      to: '/equipment/$',
+      params: { _splat: equipmentId.toString() },
+    })
+  }
+
+  const rows = selectedEquipment.map((item) => ({
+    key: item.id.toString(),
+    equipmentId: item.id,
+    title: item.modelName,
+    subtitle: item.description,
+    imagePath: item.imagePath,
+    categoryName: item.category?.name,
+    action: (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => removeEquipment(item.id)}
+        aria-label={`Remove ${item.modelName}`}
+        className="text-muted-foreground hover:text-destructive"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    ),
+  }))
+
   const handleBooking = async () => {
     if (selectedEquipment.length === 0) return
 
@@ -160,8 +186,12 @@ export function NewBookingPage() {
       setIsDialogOpen(false)
       setSelectedSlots([])
       setNotes('')
-
-      router.navigate({ to: '/bookings' })
+      setSelectedEquipment([])
+      try {
+        window.localStorage.setItem('equipment-selection', JSON.stringify([]))
+      } catch {
+        // ignore storage errors
+      }
     } catch (error: any) {
       console.error('Booking failed:', error)
       if (error?.conflicts && Array.isArray(error.conflicts)) {
@@ -196,19 +226,21 @@ export function NewBookingPage() {
       <PageHeader
         title="New Booking"
         description="Select equipment and choose a time slot for your booking"
-        backTo="/equipment"
-        backLabel="Back to Equipment"
+        onBack={() => history.back()}
       />
 
       <div className="space-y-8">
         <Section
           title="Selected Equipment"
           spacing="compact"
-          actions={<SelectedEquipmentSectionActions />}
+          actions={<AddEquipmentButton />}
         >
-          <SelectedEquipmentTable
-            equipment={selectedEquipment}
-            onRemove={removeEquipment}
+          <EquipmentTable
+            rows={rows}
+            emptyMessage="No equipment selected"
+            emptyDescription="Select equipment from the equipment page to continue"
+            emptyAction={<AddEquipmentButton />}
+            onRowClick={handleRowClick}
           />
         </Section>
 

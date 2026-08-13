@@ -7,6 +7,9 @@ import { z } from 'zod'
 const searchSchema = z.object({
   categoryId: z.coerce.number().optional(),
   searchQuery: z.string().optional(),
+  mode: z.enum(['add-to-booking']).optional(),
+  bookingId: z.coerce.number().optional(),
+  returnTo: z.string().optional(),
 })
 
 export const Route = createFileRoute('/_authenticated/equipment/')({

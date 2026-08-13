@@ -120,8 +120,7 @@ export function Page({ categories }: PageProps) {
       <PageHeader
         title="Create New Equipment"
         description="Add new equipment to the catalog with model details and calendar integration"
-        backTo="/admin/equipment"
-        backLabel="Back to Equipment"
+        onBack={() => history.back()}
       />
 
       <Section spacing="compact">

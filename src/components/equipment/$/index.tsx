@@ -51,8 +51,7 @@ export function Page() {
     <PageContainer>
       <PageHeader
         title={equipment.modelName}
-        backTo="/equipment"
-        backLabel="Back to Equipment"
+        onBack={() => history.back()}
       />
 
       <div className="space-y-8">

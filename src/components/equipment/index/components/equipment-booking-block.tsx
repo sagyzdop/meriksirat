@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -27,6 +28,9 @@ interface EquipmentBookingBlockProps {
   onSearchChange: (value: string) => void
   onCategorySelect: (categoryId?: number) => void
   isLoading?: boolean
+  addMode?: boolean
+  bookingId?: number
+  ctaLabel?: string
 }
 
 interface EquipmentGroup {
@@ -44,6 +48,9 @@ export function EquipmentBookingBlock({
   onSearchChange,
   onCategorySelect,
   isLoading = false,
+  addMode = false,
+  bookingId,
+  ctaLabel = 'View & Book Selected',
 }: EquipmentBookingBlockProps) {
   const searchQuery = filters.searchQuery?.trim() ?? ""
   const isSearching = searchQuery.length > 0
@@ -141,6 +148,24 @@ export function EquipmentBookingBlock({
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <header className="flex shrink-0 flex-col gap-2 border-b px-4 py-2 md:h-16 md:flex-row md:items-center md:py-0">
+            {addMode && (
+              <div className="flex items-center gap-3 md:mr-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  onClick={() => history.back()}
+                >
+                  <ArrowLeft className="size-4" aria-hidden="true" />
+                  Back
+                </Button>
+                {bookingId !== undefined && (
+                  <span className="whitespace-nowrap text-sm text-muted-foreground">
+                    Adding to booking #{bookingId}
+                  </span>
+                )}
+              </div>
+            )}
             <EquipmentSearch
               searchQuery={filters.searchQuery}
               onSearchChange={onSearchChange}
@@ -199,7 +224,7 @@ export function EquipmentBookingBlock({
               onClick={onBookSelected}
               disabled={selectedCount === 0}
             >
-              View & Book Selected
+              {ctaLabel}
             </Button>
           </div>
         </footer>

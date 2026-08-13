@@ -137,6 +137,11 @@ export const CancelBookingItemSchema = z.object({
   itemId: z.coerce.number(),
 })
 
+export const AddBookingItemsSchema = z.object({
+  bookingId: z.coerce.number(),
+  equipmentIds: z.array(z.coerce.number()).min(1),
+})
+
 export const ExtendBookingSchema = z.object({
   bookingId: z.coerce.number(),
 })

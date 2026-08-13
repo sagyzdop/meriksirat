@@ -177,8 +177,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
       <PageHeader
         title="Edit Equipment"
         description="Modify equipment properties, status, and manage deletion"
-        backTo="/admin/equipment"
-        backLabel="Back to Equipment"
+        onBack={() => history.back()}
       />
 
       <div className="space-y-8">

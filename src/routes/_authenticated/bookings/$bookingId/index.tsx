@@ -1,11 +1,13 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { Page } from '@/components/bookings/$bookingId'
-import { getBookingByIdFn } from '@/lib/booking'
+import { getBookingByIdFn, getTelegramBotUsernameFn } from '@/lib/booking'
 import { z } from 'zod'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { numberArrayParam } from '@/lib/search-params'
 
 const BookingDetailSearchSchema = z.object({
   bookingId: z.coerce.number().optional(),
+  equipmentIds: numberArrayParam(),
 })
 
 export const Route = createFileRoute('/_authenticated/bookings/$bookingId/')({
@@ -25,7 +27,10 @@ export const Route = createFileRoute('/_authenticated/bookings/$bookingId/')({
         throw new Error('Booking not found')
       }
 
-      return { booking }
+      return {
+        booking,
+        telegramBotUsername: await getTelegramBotUsernameFn(),
+      }
     } catch (error) {
       console.error('Failed to load booking:', error)
       throw error
@@ -34,7 +39,7 @@ export const Route = createFileRoute('/_authenticated/bookings/$bookingId/')({
 })
 
 function RouteComponent() {
-  const { booking } = Route.useLoaderData()
+  const { booking, telegramBotUsername } = Route.useLoaderData()
   const isLoading = useRouterState({
     select: (state) => state.status === 'pending',
   })
@@ -42,7 +47,7 @@ function RouteComponent() {
   return (
     <div className="relative">
       {isLoading && <LoadingOverlay />}
-      <Page booking={booking} />
+      <Page booking={booking} telegramBotUsername={telegramBotUsername} />
     </div>
   )
 }

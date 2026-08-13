@@ -1,4 +1,5 @@
-import { useNavigate } from "@tanstack/react-router";
+import * as React from "react";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { EquipmentBookingBlock } from "./components/equipment-booking-block";
 import { Equipment, Category } from "./components/types";
 import { useSelection } from "@/hooks/use-selection";
@@ -6,6 +7,9 @@ import { useSelection } from "@/hooks/use-selection";
 interface Filters {
   categoryId?: number
   searchQuery?: string
+  mode?: 'add-to-booking'
+  bookingId?: number
+  returnTo?: string
 }
 
 interface PageProps {
@@ -17,14 +21,36 @@ interface PageProps {
 
 export function Page({ equipment, categories, filters, isLoading = false }: PageProps) {
   const navigate = useNavigate({ from: '/equipment/' })
+  const router = useRouter()
+  const isAddMode = filters.mode === 'add-to-booking'
   const selection = useSelection({
     items: equipment,
     getId: (item) => item.id,
     storageKey: "equipment-selection",
   })
 
+  // Start with a fresh selection when arriving in add-to-booking mode so only
+  // the newly chosen items are added to the booking.
+  const clearedOnMount = React.useRef(false)
+  React.useEffect(() => {
+    if (isAddMode && !clearedOnMount.current) {
+      clearedOnMount.current = true
+      selection.clearSelection()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddMode])
+
   const handleBookSelected = () => {
     if (selection.selectedIds.length === 0) return
+
+    if (isAddMode && filters.returnTo) {
+      const separator = filters.returnTo.includes('?') ? '&' : '?'
+      router.navigate({
+        href: `${filters.returnTo}${separator}equipmentIds=${selection.selectedIds.join(',')}`,
+      })
+      return
+    }
+
     navigate({
       to: '/bookings/new',
       search: { equipmentIds: selection.selectedIds },
@@ -49,6 +75,9 @@ export function Page({ equipment, categories, filters, isLoading = false }: Page
       equipment={equipment}
       categories={categories}
       filters={filters}
+      addMode={isAddMode}
+      bookingId={filters.bookingId}
+      ctaLabel={isAddMode ? 'Add to Booking' : 'View & Book Selected'}
       selection={{
         selectedIds: selection.selectedIds,
         toggleSelection: selection.toggleSelection,

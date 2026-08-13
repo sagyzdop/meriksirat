@@ -3,9 +3,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { updateBookingStatusAdminFn, cancelBookingItemFn } from '@/lib/booking'
+import { updateBookingStatusAdminFn } from '@/lib/booking'
 import { getBookingSlots } from '@/lib/booking/slots'
 import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { Button } from '@/components/ui/button'
@@ -20,26 +19,20 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Save, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { BookingEquipmentTable } from '@/components/shared/booking-equipment-table'
+import { EquipmentTable } from '@/components/shared/equipment-table'
+import { BookingItemAction } from '@/components/shared/booking-item-action'
+import { CancelBookingItemDialog } from '@/components/shared/cancel-booking-item-dialog'
+import { AddEquipmentButton } from '@/components/shared/add-equipment-button'
 import { BookingInfoTable } from '@/components/shared/booking-info-table'
 import { BookingSchedule } from '@/components/shared/booking-schedule'
 import { ExtendBookingButton } from '@/components/shared/extend-booking-button'
 import { CancelBookingDialog } from '@/components/admin/bookings/$bookingId.edit/components/cancel-booking-dialog'
+import { useAddBookingItems } from '@/hooks/use-add-booking-items'
 import type {
   AdminBookingWithDetails,
   BookingItemWithEquipment,
@@ -61,13 +54,13 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
+  useAddBookingItems(bookingId)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [pendingCancelItem, setPendingCancelItem] =
     useState<BookingItemWithEquipment | null>(null)
-  const [isCancellingItem, setIsCancellingItem] = useState(false)
 
   const initialSlots = getBookingSlots(booking.startTime, booking.endTime)
   const [selectedSlots, setSelectedSlots] = useState<string[]>(initialSlots)
@@ -85,6 +78,33 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
   const canEditSchedule = booking.status === 'booked'
   const items = booking.items ?? []
   const hasCalendar = items.some((item) => item.equipment?.googleCalendarId)
+
+  const rows = items.map((item) => ({
+    key: item.id.toString(),
+    equipmentId: item.equipmentId,
+    title: item.equipment?.modelName ?? `Equipment ${item.equipmentId}`,
+    subtitle: item.equipment?.description,
+    imagePath: item.equipment?.imagePath,
+    categoryName: item.equipment?.category?.name,
+    action: (
+      <BookingItemAction
+        item={item}
+        bookingStatus={booking.status}
+        telegramBotUsername={telegramBotUsername}
+        onCancelItem={
+          canEditSchedule ? setPendingCancelItem : undefined
+        }
+        disabled={isSubmitting}
+      />
+    ),
+  }))
+
+  const addEquipmentButton = canEditSchedule ? (
+    <AddEquipmentButton
+      bookingId={bookingId}
+      returnTo={`/admin/bookings/${bookingId}/edit`}
+    />
+  ) : undefined
 
   const user = booking.user
   const bookedBy = user
@@ -157,36 +177,10 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
     }
   }
 
-  const handleCancelItem = async () => {
-    if (!pendingCancelItem) return
-    setIsCancellingItem(true)
-    try {
-      await cancelBookingItemFn({
-        data: {
-          bookingId,
-          itemId: pendingCancelItem.id,
-        },
-      })
-      toast.success('Item cancelled successfully')
-      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      router.invalidate()
-      setPendingCancelItem(null)
-    } catch (cancelError) {
-      toast.error(
-        cancelError instanceof Error
-          ? cancelError.message
-          : 'Failed to cancel item'
-      )
-    } finally {
-      setIsCancellingItem(false)
-    }
+  const handleItemCancelled = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['bookings'] })
+    router.invalidate()
   }
-
-  const pendingItemName =
-    pendingCancelItem?.equipment?.modelName ??
-    (pendingCancelItem
-      ? `Equipment ${pendingCancelItem.equipmentId}`
-      : 'this item')
 
   const isOverdue =
     new Date(booking.endTime) < new Date() &&
@@ -194,11 +188,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Edit Booking"
-        backTo="/admin/bookings"
-        backLabel="Back to Bookings"
-      />
+      <PageHeader title="Edit Booking" onBack={() => history.back()} />
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -224,23 +214,13 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
             title="Equipment"
             description="Cancel an item to remove it from this booking, or return equipment through Telegram once the booking is active."
             spacing="compact"
+            actions={addEquipmentButton}
           >
-            {items.length > 0 ? (
-              <BookingEquipmentTable
-                items={items}
-                bookingStatus={booking.status}
-                telegramBotUsername={telegramBotUsername}
-                onCancelItem={
-                  canEditSchedule ? setPendingCancelItem : undefined
-                }
-                disabled={isSubmitting}
-                actionsFirst
-              />
-            ) : (
-              <div className="relative rounded-md border py-12 text-center text-muted-foreground">
-                Equipment details not available
-              </div>
-            )}
+            <EquipmentTable
+              rows={rows}
+              emptyMessage="Equipment details not available"
+              emptyAction={addEquipmentButton}
+            />
           </Section>
 
           <Section
@@ -346,35 +326,14 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
         onError={(message) => setError(message)}
       />
 
-      <AlertDialog
-        open={Boolean(pendingCancelItem)}
+      <CancelBookingItemDialog
+        bookingId={bookingId}
+        item={pendingCancelItem}
         onOpenChange={(open) => {
           if (!open) setPendingCancelItem(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Item</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel <strong>{pendingItemName}</strong>{' '}
-              from this booking? This cannot be undone and the calendar event
-              for this item will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancellingItem}>
-              Keep Item
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelItem}
-              disabled={isCancellingItem}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isCancellingItem ? 'Cancelling...' : 'Cancel Item'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onCancelled={handleItemCancelled}
+      />
     </PageContainer>
   )
 }

@@ -17,16 +17,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BookingEquipmentTable } from "./booking-equipment-table";
+import { EquipmentTable } from "./equipment-table";
+import { BookingItemAction } from "./booking-item-action";
+import { CancelBookingItemDialog } from "./cancel-booking-item-dialog";
+import { AddEquipmentButton } from "./add-equipment-button";
 import { BookingInfoTable } from "./booking-info-table";
 import type { BookingInfoTableBookedBy } from "./booking-info-table";
 import { ExtendBookingButton } from "./extend-booking-button";
-import type { BookingWithItems } from "@/lib/booking/types";
+import type {
+  BookingItemWithEquipment,
+  BookingWithItems,
+} from "@/lib/booking/types";
 
 interface BookingDetailProps {
   booking: BookingWithItems;
-  backTo: string;
-  backLabel?: string;
+  onBack?: () => void;
   editTo: string;
   editLabel?: string;
   bookedBy?: BookingInfoTableBookedBy | null;
@@ -35,6 +40,9 @@ interface BookingDetailProps {
   onCancel?: () => Promise<unknown>;
   canStart?: boolean;
   onStart?: () => Promise<unknown>;
+  canAddEquipment?: boolean;
+  returnTo?: string;
+  telegramBotUsername?: string;
 }
 
 /**
@@ -44,8 +52,7 @@ interface BookingDetailProps {
  */
 export function BookingDetail({
   booking,
-  backTo,
-  backLabel = "Back",
+  onBack,
   editTo,
   editLabel = "Edit Booking",
   bookedBy,
@@ -54,6 +61,9 @@ export function BookingDetail({
   onCancel,
   canStart = false,
   onStart,
+  canAddEquipment = false,
+  returnTo,
+  telegramBotUsername,
 }: BookingDetailProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -61,6 +71,8 @@ export function BookingDetail({
   const [isCancelling, setIsCancelling] = useState(false);
   const [showStartDialog, setShowStartDialog] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [pendingCancelItem, setPendingCancelItem] =
+    useState<BookingItemWithEquipment | null>(null);
 
   const editable = booking.status === "booked";
 
@@ -100,27 +112,61 @@ export function BookingDetail({
     }
   };
 
+  const handleItemCancelled = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    router.invalidate();
+  };
+
+  const rows = booking.items.map((item) => ({
+    key: item.id.toString(),
+    equipmentId: item.equipmentId,
+    title: item.equipment?.modelName ?? `Equipment ${item.equipmentId}`,
+    subtitle: item.equipment?.description,
+    imagePath: item.equipment?.imagePath,
+    categoryName: item.equipment?.category?.name,
+    action: (
+      <BookingItemAction
+        item={item}
+        bookingStatus={booking.status}
+        telegramBotUsername={telegramBotUsername}
+        onCancelItem={editable ? setPendingCancelItem : undefined}
+      />
+    ),
+  }));
+
   return (
     <PageContainer>
-      <PageHeader
-        title={`Booking #${booking.id}`}
-        backTo={backTo}
-        backLabel={backLabel}
-      />
+      <PageHeader title={`Booking #${booking.id}`} onBack={onBack} />
 
       <div className="space-y-8">
         <Section title="Details" spacing="compact">
           <BookingInfoTable booking={booking} bookedBy={bookedBy} />
         </Section>
 
-        <Section title="Equipment" spacing="compact">
-          {booking.items.length > 0 ? (
-            <BookingEquipmentTable items={booking.items} />
-          ) : (
-            <div className="relative rounded-md border py-12 text-center text-muted-foreground">
-              Equipment details not available
-            </div>
-          )}
+        <Section
+          title="Equipment"
+          spacing="compact"
+          actions={
+            canAddEquipment && editable ? (
+              <AddEquipmentButton
+                bookingId={booking.id}
+                returnTo={returnTo}
+              />
+            ) : undefined
+          }
+        >
+          <EquipmentTable
+            rows={rows}
+            emptyMessage="Equipment details not available"
+            emptyAction={
+              canAddEquipment && editable ? (
+                <AddEquipmentButton
+                  bookingId={booking.id}
+                  returnTo={returnTo}
+                />
+              ) : undefined
+            }
+          />
         </Section>
 
         <Section title="Notes" spacing="compact">
@@ -164,6 +210,15 @@ export function BookingDetail({
           )}
         </div>
       </div>
+
+      <CancelBookingItemDialog
+        bookingId={booking.id}
+        item={pendingCancelItem}
+        onOpenChange={(open) => {
+          if (!open) setPendingCancelItem(null);
+        }}
+        onCancelled={handleItemCancelled}
+      />
 
       <AlertDialog open={showStartDialog} onOpenChange={setShowStartDialog}>
         <AlertDialogContent>

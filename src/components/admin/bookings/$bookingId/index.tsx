@@ -1,12 +1,16 @@
 import { BookingDetail } from '@/components/shared/booking-detail'
 import { updateBookingStatusAdminFn } from '@/lib/booking'
+import { useAddBookingItems } from '@/hooks/use-add-booking-items'
 import type { AdminBookingWithDetails } from '@/lib/booking/types'
 
 interface PageProps {
   booking: AdminBookingWithDetails
+  telegramBotUsername: string
 }
 
-export function Page({ booking }: PageProps) {
+export function Page({ booking, telegramBotUsername }: PageProps) {
+  useAddBookingItems(booking.id)
+
   const canCancel =
     booking.status !== 'returned' && booking.status !== 'cancelled'
 
@@ -25,10 +29,12 @@ export function Page({ booking }: PageProps) {
   return (
     <BookingDetail
       booking={booking}
-      backTo="/admin/bookings"
-      backLabel="Back to Bookings"
+      onBack={() => history.back()}
       editTo="/admin/bookings/$bookingId/edit"
       bookedBy={bookedBy}
+      canAddEquipment={booking.status === 'booked'}
+      returnTo={`/admin/bookings/${booking.id}`}
+      telegramBotUsername={telegramBotUsername}
       cancelDescription="Are you sure you want to cancel this booking? This action cannot be undone and the calendar event will be updated."
       canCancel={canCancel}
       onCancel={() =>

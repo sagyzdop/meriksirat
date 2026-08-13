@@ -210,8 +210,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
       <PageHeader
         title={album.title}
         description={album.description || undefined}
-        backTo={isLoggedIn ? '/my-albums' : undefined}
-        backLabel="Back to albums"
+        onBack={isLoggedIn ? () => history.back() : undefined}
         actions={
           !canManage ? (
             <Button

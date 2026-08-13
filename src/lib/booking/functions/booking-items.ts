@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import { CancelBookingItemSchema } from '../types'
+import { AddBookingItemsSchema, CancelBookingItemSchema } from '../types'
 
 /**
  * Per-item booking action for the web UI.
@@ -35,11 +35,243 @@ async function assertBookingAccess(params: {
     await checkAdminPermission(params.headers, ['admin', 'manager'])
   }
 
-  // Items may only be cancelled while the booking has not been started.
+  // Items may only be added/cancelled while the booking has not been started.
   if (bookingData.status !== 'booked') {
-    throw new Error('Items can only be cancelled from a booking that has not started')
+    throw new Error('Items can only be added or cancelled while the booking has not started')
   }
 }
+
+/**
+ * addBookingItemsFn: adds one or more pieces of equipment to an existing
+ * booked booking. Each new item gets its own Google Calendar event within the
+ * booking's time window (after a free/busy conflict check). Only bookings that
+ * have not started can be extended this way.
+ */
+export const addBookingItemsFn = createServerFn({ method: 'POST' })
+  .validator(AddBookingItemsSchema)
+  .handler(async ({ data }) => {
+    const { auth } = await import('@/lib/auth/auth')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db/index')
+    const { booking, bookingItem, equipment, settings, user } = await import('@/db/schema')
+    const { eq, inArray } = await import('drizzle-orm')
+    const { logBookingActivityById } = await import('@/lib/telegram/logging')
+    const { createCalendarEvent, checkMultipleCalendarsFreeBusy, deleteCalendarEvent } = await import('@/lib/google/google-caledar')
+    const { getEquipmentCalendarId, retry } = await import('../server')
+    const { formatBookingDetailsPlain } = await import('../details')
+    const { formatUserDisplayName } = await import('@/lib/utils')
+
+    const headers = getRequestHeaders()
+    const session = await auth.api.getSession({ headers })
+    if (!session?.user) {
+      throw new Error('Not authenticated')
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    await assertBookingAccess({
+      headers,
+      database,
+      bookingId: data.bookingId,
+      sessionUserId: session.user.id,
+    })
+
+    const bookingRow = await database
+      .select({
+        userId: booking.userId,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        userEventDetails: booking.userEventDetails,
+      })
+      .from(booking)
+      .where(eq(booking.id, data.bookingId))
+      .get()
+
+    if (!bookingRow) {
+      throw new Error('Booking not found')
+    }
+
+    const ownerRow = await database
+      .select({
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        telegramUsername: user.telegramUsername,
+      })
+      .from(user)
+      .where(eq(user.id, bookingRow.userId))
+      .get()
+
+    const userEmail = ownerRow?.email || session.user.email || ''
+    const userDisplayName = formatUserDisplayName(ownerRow ?? {})
+
+    const existingItems = await database
+      .select({ equipmentId: bookingItem.equipmentId })
+      .from(bookingItem)
+      .where(eq(bookingItem.bookingId, data.bookingId))
+    const existingIds = new Set(existingItems.map((item) => item.equipmentId))
+
+    const equipmentIds = data.equipmentIds.filter((id) => !existingIds.has(id))
+    if (equipmentIds.length === 0) {
+      throw new Error('Selected equipment is already part of this booking')
+    }
+
+    const equipmentCalendarIds = await Promise.all(
+      equipmentIds.map(async (equipmentId) => ({
+        equipmentId,
+        calendarId: await getEquipmentCalendarId(equipmentId),
+      }))
+    )
+
+    const missingCalendar = equipmentCalendarIds.find((item) => !item.calendarId)
+    if (missingCalendar) {
+      throw new Error(`No calendar configured for equipment ${missingCalendar.equipmentId}`)
+    }
+
+    const resolvedCalendars = equipmentCalendarIds.map((item) => ({
+      equipmentId: item.equipmentId,
+      calendarId: item.calendarId as string,
+    }))
+
+    const calendarIds = resolvedCalendars.map((item) => item.calendarId)
+
+    const startTime = new Date(bookingRow.startTime).toISOString()
+    const endTime = new Date(bookingRow.endTime).toISOString()
+
+    const freeBusyResult = await checkMultipleCalendarsFreeBusy({
+      data: {
+        equipmentCalendarIds: calendarIds,
+        timeMin: startTime,
+        timeMax: endTime,
+      },
+    })
+
+    const conflicts = resolvedCalendars
+      .map(({ equipmentId, calendarId }) => {
+        const busy = freeBusyResult[calendarId]?.busy || []
+        return busy.length > 0 ? { equipmentId, conflict: busy[0] } : null
+      })
+      .filter((item): item is { equipmentId: number; conflict: { start: string; end: string } } => Boolean(item))
+
+    if (conflicts.length > 0) {
+      const err: any = new Error('Requested time conflicts with existing booking(s)')
+      err.conflicts = conflicts
+      throw err
+    }
+
+    const equipmentData = await database
+      .select({ id: equipment.id, modelName: equipment.modelName })
+      .from(equipment)
+      .where(inArray(equipment.id, equipmentIds))
+
+    const equipmentNameMap = new Map(equipmentData.map((item) => [item.id, item.modelName]))
+
+    const settingsData = await database
+      .select({ globalBookingNote: settings.globalBookingNote })
+      .from(settings)
+      .where(eq(settings.id, 'global'))
+      .get()
+
+    const globalNote = settingsData?.globalBookingNote
+    const notes = bookingRow.userEventDetails
+
+    const now = Date.now()
+    const createdItems: Array<{ bookingItemId: number; calendarId: string; eventId: string }> = []
+
+    try {
+      for (const { equipmentId, calendarId } of resolvedCalendars) {
+        const equipmentName = equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`
+        const description = formatBookingDetailsPlain({
+          bookingId: data.bookingId,
+          userDisplayName,
+          equipmentNames: [equipmentName],
+          startTime,
+          endTime,
+          status: 'booked',
+          notes,
+          globalNote,
+        })
+
+        const event = {
+          summary: `${equipmentName} - Booking`,
+          description,
+          start: { dateTime: startTime, timeZone: 'UTC' },
+          end: { dateTime: endTime, timeZone: 'UTC' },
+        }
+
+        const createdEvent = await retry(() =>
+          createCalendarEvent({
+            data: {
+              equipmentCalendarId: calendarId,
+              event,
+              userEmail,
+            },
+          }),
+          3,
+          400,
+        )
+
+        const gCalEventId = createdEvent?.eventId
+        if (!gCalEventId) {
+          throw new Error('Calendar API responded without event id')
+        }
+
+        const itemInsert = await database.insert(bookingItem).values({
+          bookingId: data.bookingId,
+          equipmentId,
+          status: 'booked',
+          googleCalendarEventId: gCalEventId,
+          createdAt: new Date(now),
+          updatedAt: new Date(now),
+        }).returning({ id: bookingItem.id })
+
+        const bookingItemId = itemInsert[0]?.id
+        if (!bookingItemId) {
+          throw new Error('Failed to create booking item record')
+        }
+
+        createdItems.push({ bookingItemId, calendarId, eventId: gCalEventId })
+      }
+    } catch (err) {
+      // Rollback: delete created events and items
+      for (const record of createdItems) {
+        try {
+          await deleteCalendarEvent({
+            data: {
+              equipmentCalendarId: record.calendarId,
+              eventId: record.eventId,
+            },
+          })
+        } catch (deleteError) {
+          console.error('Failed to delete calendar event during rollback:', deleteError)
+        }
+
+        try {
+          await database.delete(bookingItem).where(eq(bookingItem.id, record.bookingItemId))
+        } catch (dbDelErr) {
+          console.error('Rollback delete failed for booking item', record.bookingItemId, dbDelErr)
+        }
+      }
+
+      throw err
+    }
+
+    await database
+      .update(booking)
+      .set({ updatedAt: new Date(now) })
+      .where(eq(booking.id, data.bookingId))
+
+    try {
+      await logBookingActivityById(data.bookingId, 'updated', {
+        notes: `Added equipment to booking: ${equipmentIds.map((id) => equipmentNameMap.get(id) || `Equipment ${id}`).join(', ')}`,
+      })
+    } catch (logError) {
+      console.error('Failed to log booking update:', logError)
+    }
+
+    return { success: true, added: createdItems.length }
+  })
 
 export const cancelBookingItemFn = createServerFn({ method: 'POST' })
   .validator(CancelBookingItemSchema)

@@ -67,11 +67,7 @@ export function Page({ user }: PageProps) {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="User Details"
-        backTo="/admin/users"
-        backLabel="Back to Users"
-      />
+      <PageHeader title="User Details" onBack={() => history.back()} />
       <div className="space-y-8">
         <Section spacing="compact">
           <div className="relative rounded-md border overflow-x-auto">
