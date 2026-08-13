@@ -10,16 +10,16 @@ import { withKeyboard } from '../server-utils'
 
 /**
  * Handles the /start command for Telegram account linking (deeplink flow)
- * 
+ *
  * Flow:
  * 1. Extract token from command args (/start {token})
  * 2. Validate token against database (check expiration)
  * 3. Link Telegram account to user account
  * 4. Delete used token
  * 5. Send confirmation message
- * 
+ *
  * @param ctx - Telegraf bot context with environment bindings
- * 
+ *
  * @example
  * User sends: /start abc123-def456-ghi789
  * Bot responds: "Telegram linked ✅"
@@ -31,13 +31,13 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       console.warn('/start: Missing message or chat context')
       return
     }
-    
+
     // Extract command args from message text
     // Format: /start {token} or just /start
     const messageText = ('text' in ctx.message ? ctx.message.text : '') || ''
     const args = messageText.split(' ')
     const token = args[1] // Token is the second element after /start
-    
+
     // If no token provided, send welcome message with keyboard
     if (!token) {
       await ctx.reply(
@@ -46,14 +46,14 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       )
       return
     }
-    
+
     // Extract chat ID and username from Telegram context
     const chatId = String(ctx.chat.id)
     const username = ctx.from?.username
-    
+
     // Initialize database connection
     const database = db(ctx.env.meriksirat_d1 as D1Database)
-    
+
     // Query for valid, non-expired token
     const currentTime = new Date()
     const tokenRecord = await database
@@ -66,14 +66,14 @@ export async function handleStart(ctx: BotContext): Promise<void> {
         )
       )
       .limit(1)
-      .then(rows => rows[0])
-    
+      .then((rows) => rows[0])
+
     // If token is invalid or expired, send error message
     if (!tokenRecord) {
       await ctx.reply('Link expired or invalid.')
       return
     }
-    
+
     // Update user with Telegram account information
     await database
       .update(user)
@@ -83,18 +83,15 @@ export async function handleStart(ctx: BotContext): Promise<void> {
         onboardingComplete: true,
       })
       .where(eq(user.id, tokenRecord.userId))
-    
+
     // Delete the used token
-    await database
-      .delete(telegramToken)
-      .where(eq(telegramToken.token, token))
-    
+    await database.delete(telegramToken).where(eq(telegramToken.token, token))
+
     // Send success confirmation with persistent keyboard
     await ctx.reply(
       'Telegram linked ✅\n\nYou can now use the menu below to interact with the bot.',
       withKeyboard()
     )
-    
   } catch (error) {
     // Log error with context for debugging
     console.error('Start command error:', {
@@ -103,7 +100,7 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })
-    
+
     // Send user-friendly error message
     await ctx.reply('Error linking account. Please try again.')
   }
@@ -113,8 +110,8 @@ export async function handleStart(ctx: BotContext): Promise<void> {
  * Generates a Telegram deep link URL for account linking
  * Creates a temporary token and returns the bot link with the token
  */
-export const getTelegramLinkUrl = createServerFn({ method: 'POST' })
-  .handler(async () => {
+export const getTelegramLinkUrl = createServerFn({ method: 'POST' }).handler(
+  async () => {
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({
       headers,
@@ -134,10 +131,10 @@ export const getTelegramLinkUrl = createServerFn({ method: 'POST' })
       .get()
 
     if (userData?.telegramChatId) {
-      return { 
+      return {
         alreadyLinked: true,
         url: null,
-        token: null
+        token: null,
       }
     }
 
@@ -154,13 +151,53 @@ export const getTelegramLinkUrl = createServerFn({ method: 'POST' })
 
     // Get bot username from environment
     const botUsername = env.TELEGRAM_BOT_USERNAME || 'your_equipment_bot'
-    
+
     // Create deep link URL
     const url = `https://t.me/${botUsername}?start=${token}`
 
     return {
       alreadyLinked: false,
       url,
-      token
+      token,
     }
+  }
+)
+
+/**
+ * Generates a Telegram deep link URL for updating the linked Telegram
+ * username. Unlike getTelegramLinkUrl, this always creates a fresh token even
+ * when the account is already linked, so tapping /start re-syncs the username
+ * from the user's Telegram profile.
+ */
+export const getTelegramUpdateLinkUrl = createServerFn({
+  method: 'POST',
+}).handler(async () => {
+  const headers = getRequestHeaders()
+  const session = await auth.api.getSession({
+    headers,
   })
+
+  if (!session?.user) {
+    throw new Error('Unauthorized')
+  }
+
+  const database = db(env.meriksirat_d1 as D1Database)
+
+  // Generate a unique token
+  const token = crypto.randomUUID().replace(/-/g, '')
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+
+  // Store token in database
+  await database.insert(telegramToken).values({
+    token,
+    userId: session.user.id,
+    expiresAt,
+  })
+
+  // Get bot username from environment
+  const botUsername = env.TELEGRAM_BOT_USERNAME || 'your_equipment_bot'
+
+  return {
+    url: `https://t.me/${botUsername}?start=${token}`,
+  }
+})

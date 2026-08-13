@@ -1,82 +1,128 @@
-import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "sonner";
-import { Shield } from "lucide-react";
+import { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { toast } from 'sonner'
+import { Shield } from 'lucide-react'
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
-import { updateUserProfileFn } from "@/lib/user/functions";
-import { useRouter } from "@tanstack/react-router";
-import type { UserProfile } from "@/lib/user/types";
-import DatePicker from "@/components/shared/date-picker";
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldDescription,
+} from '@/components/ui/field'
+import { updateUserProfileFn } from '@/lib/user/functions'
+import { getTelegramUpdateLinkUrlFn } from '@/lib/auth/onboarding'
+import { useRouter } from '@tanstack/react-router'
+import type { UserProfile } from '@/lib/user/types'
+import DatePicker from '@/components/shared/date-picker'
 
 interface ProfileContentProps {
-  user: UserProfile;
+  user: UserProfile
 }
 
 const profileFormSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   instagramUsername: z.string().optional(),
+  telegramUsername: z.string().optional(),
   birthday: z.date().optional(),
   major: z.string().optional(),
   graduationYear: z.string().optional(),
   nuId: z.string().optional(),
-});
+})
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 export function ProfileContent({ user }: ProfileContentProps) {
-  const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter()
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isUpdatingTelegram, setIsUpdatingTelegram] = useState(false)
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
-      instagramUsername: user.instagramUsername || "",
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      instagramUsername: user.instagramUsername || '',
+      telegramUsername: user.telegramUsername || '',
       birthday: user.birthday ? new Date(user.birthday) : undefined,
-      major: user.major || "",
-      graduationYear: user.graduationYear?.toString() || "",
-      nuId: user.nuId?.toString() || "",
+      major: user.major || '',
+      graduationYear: user.graduationYear?.toString() || '',
+      nuId: user.nuId?.toString() || '',
     },
-  });
+  })
+
+  const handleUpdateTelegram = async () => {
+    setIsUpdatingTelegram(true)
+    try {
+      const { url } = await getTelegramUpdateLinkUrlFn()
+      if (!url) {
+        throw new Error('No Telegram link available')
+      }
+      window.open(url, '_blank')
+      toast.success(
+        'Open Telegram and tap Start to update your linked username'
+      )
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to open Telegram'
+      )
+    } finally {
+      setIsUpdatingTelegram(false)
+    }
+  }
 
   const onSubmit = async (data: ProfileFormValues) => {
-    setIsSaving(true);
+    setIsSaving(true)
     try {
       const updateData = {
         ...data,
-        birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : undefined,
-        graduationYear: data.graduationYear && data.graduationYear !== "" ? Number(data.graduationYear) : undefined,
-        nuId: data.nuId && data.nuId !== "" ? Number(data.nuId) : undefined,
-      };
-      
-      await updateUserProfileFn({ data: updateData });
-      toast.success("Profile updated successfully");
-      setIsEditing(false);
-      router.invalidate();
+        birthday: data.birthday
+          ? data.birthday.toISOString().split('T')[0]
+          : undefined,
+        graduationYear:
+          data.graduationYear && data.graduationYear !== ''
+            ? Number(data.graduationYear)
+            : undefined,
+        nuId: data.nuId && data.nuId !== '' ? Number(data.nuId) : undefined,
+        telegramUsername:
+          data.telegramUsername && data.telegramUsername !== ''
+            ? data.telegramUsername.replace(/^@/, '').trim()
+            : undefined,
+      }
+
+      await updateUserProfileFn({ data: updateData })
+      toast.success('Profile updated successfully')
+      setIsEditing(false)
+      router.invalidate()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update profile'
+      )
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   const handleCancel = () => {
-    form.reset();
-    setIsEditing(false);
-  };
+    form.reset()
+    setIsEditing(false)
+  }
 
   return (
     <Tabs defaultValue="editable" className="space-y-4">
@@ -92,17 +138,26 @@ export function ProfileContent({ user }: ProfileContentProps) {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Update your personal details and profile information.</CardDescription>
+                <CardDescription>
+                  Update your personal details and profile information.
+                </CardDescription>
               </div>
               {!isEditing ? (
                 <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
               ) : (
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={form.handleSubmit(onSubmit)} disabled={isSaving}>
-                    {isSaving ? "Saving..." : "Save Changes"}
+                  <Button
+                    onClick={form.handleSubmit(onSubmit)}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
               )}
@@ -117,10 +172,12 @@ export function ProfileContent({ user }: ProfileContentProps) {
                   </FieldLabel>
                   <Input
                     id="firstName"
-                    {...form.register("firstName")}
+                    {...form.register('firstName')}
                     disabled={!isEditing}
                   />
-                  <FieldError>{form.formState.errors.firstName?.message}</FieldError>
+                  <FieldError>
+                    {form.formState.errors.firstName?.message}
+                  </FieldError>
                 </Field>
 
                 <Field>
@@ -129,10 +186,12 @@ export function ProfileContent({ user }: ProfileContentProps) {
                   </FieldLabel>
                   <Input
                     id="lastName"
-                    {...form.register("lastName")}
+                    {...form.register('lastName')}
                     disabled={!isEditing}
                   />
-                  <FieldError>{form.formState.errors.lastName?.message}</FieldError>
+                  <FieldError>
+                    {form.formState.errors.lastName?.message}
+                  </FieldError>
                 </Field>
 
                 <Field>
@@ -151,11 +210,13 @@ export function ProfileContent({ user }: ProfileContentProps) {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="instagramUsername">Instagram Username</FieldLabel>
+                  <FieldLabel htmlFor="instagramUsername">
+                    Instagram Username
+                  </FieldLabel>
                   <Input
                     id="instagramUsername"
                     placeholder="username"
-                    {...form.register("instagramUsername")}
+                    {...form.register('instagramUsername')}
                     disabled={!isEditing}
                   />
                   <FieldDescription>Without the @ symbol</FieldDescription>
@@ -166,21 +227,25 @@ export function ProfileContent({ user }: ProfileContentProps) {
                   <Input
                     id="major"
                     placeholder="e.g., Computer Science"
-                    {...form.register("major")}
+                    {...form.register('major')}
                     disabled={!isEditing}
                   />
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="graduationYear">Graduation Year</FieldLabel>
+                  <FieldLabel htmlFor="graduationYear">
+                    Graduation Year
+                  </FieldLabel>
                   <Input
                     id="graduationYear"
                     type="number"
                     placeholder="e.g., 2025"
-                    {...form.register("graduationYear")}
+                    {...form.register('graduationYear')}
                     disabled={!isEditing}
                   />
-                  <FieldError>{form.formState.errors.graduationYear?.message}</FieldError>
+                  <FieldError>
+                    {form.formState.errors.graduationYear?.message}
+                  </FieldError>
                 </Field>
 
                 <Field>
@@ -189,11 +254,38 @@ export function ProfileContent({ user }: ProfileContentProps) {
                     id="nuId"
                     type="number"
                     placeholder="e.g., 123456"
-                    {...form.register("nuId")}
+                    {...form.register('nuId')}
                     disabled={!isEditing}
                   />
                   <FieldDescription>Your university ID number</FieldDescription>
                   <FieldError>{form.formState.errors.nuId?.message}</FieldError>
+                </Field>
+
+                <Field className="md:col-span-2">
+                  <FieldLabel htmlFor="telegramUsername">
+                    Telegram Username
+                  </FieldLabel>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Input
+                      id="telegramUsername"
+                      placeholder="@username"
+                      {...form.register('telegramUsername')}
+                      disabled={!isEditing}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleUpdateTelegram}
+                      disabled={isUpdatingTelegram || isSaving}
+                      className="shrink-0"
+                    >
+                      {isUpdatingTelegram ? 'Opening...' : 'Update Telegram'}
+                    </Button>
+                  </div>
+                  <FieldDescription>
+                    Update your username in Telegram, then tap this button and
+                    Start in the bot to re-link it
+                  </FieldDescription>
                 </Field>
 
                 <Field>
@@ -212,15 +304,22 @@ export function ProfileContent({ user }: ProfileContentProps) {
         <Card>
           <CardHeader>
             <CardTitle>Admin Managed Information</CardTitle>
-            <CardDescription>These settings are managed by administrators and cannot be changed by users.</CardDescription>
+            <CardDescription>
+              These settings are managed by administrators and cannot be changed
+              by users.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between py-2">
               <div className="space-y-0.5">
                 <Label className="text-base">Account Status</Label>
-                <p className="text-muted-foreground text-sm">Your current membership status</p>
+                <p className="text-muted-foreground text-sm">
+                  Your current membership status
+                </p>
               </div>
-              <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
+              <Badge
+                variant={user.status === 'Active' ? 'default' : 'secondary'}
+              >
                 {user.status || 'Unknown'}
               </Badge>
             </div>
@@ -228,28 +327,42 @@ export function ProfileContent({ user }: ProfileContentProps) {
             <div className="flex items-center justify-between py-2">
               <div className="space-y-0.5">
                 <Label className="text-base">Role</Label>
-                <p className="text-muted-foreground text-sm">Your access level in the system</p>
+                <p className="text-muted-foreground text-sm">
+                  Your access level in the system
+                </p>
               </div>
               <Badge variant="outline">
-                {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : user.role ? 'Member' : 'No Role'}
+                {user.role === 'admin'
+                  ? 'Admin'
+                  : user.role === 'manager'
+                    ? 'Manager'
+                    : user.role
+                      ? 'Member'
+                      : 'No Role'}
               </Badge>
             </div>
             <Separator />
             <div className="flex items-center justify-between py-2">
               <div className="space-y-0.5">
                 <Label className="text-base">Clearance Level</Label>
-                <p className="text-muted-foreground text-sm">Equipment access clearance</p>
+                <p className="text-muted-foreground text-sm">
+                  Equipment access clearance
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Shield className="size-4 text-muted-foreground" />
-                <Badge variant="secondary">Level {user.clearanceLevel || 1}</Badge>
+                <Badge variant="secondary">
+                  Level {user.clearanceLevel || 1}
+                </Badge>
               </div>
             </div>
             <Separator />
             <div className="flex items-center justify-between py-2">
               <div className="space-y-0.5">
                 <Label className="text-base">Email Verification</Label>
-                <p className="text-muted-foreground text-sm">Email verification status</p>
+                <p className="text-muted-foreground text-sm">
+                  Email verification status
+                </p>
               </div>
               <Badge variant={user.emailVerified ? 'default' : 'destructive'}>
                 {user.emailVerified ? 'Verified' : 'Not Verified'}
@@ -260,7 +373,9 @@ export function ProfileContent({ user }: ProfileContentProps) {
               <div className="space-y-0.5">
                 <Label className="text-base">Telegram</Label>
                 <p className="text-muted-foreground text-sm">
-                  {user.telegramUsername ? `@${user.telegramUsername}` : 'Not connected'}
+                  {user.telegramUsername
+                    ? `@${user.telegramUsername}`
+                    : 'Not connected'}
                 </p>
               </div>
               <Badge variant={user.telegramChatId ? 'default' : 'secondary'}>
@@ -272,7 +387,9 @@ export function ProfileContent({ user }: ProfileContentProps) {
               <div className="space-y-0.5">
                 <Label className="text-base">Google Account</Label>
                 <p className="text-muted-foreground text-sm">
-                  {user.googleId ? 'Connected for authentication' : 'Not connected'}
+                  {user.googleId
+                    ? 'Connected for authentication'
+                    : 'Not connected'}
                 </p>
               </div>
               <Badge variant={user.googleId ? 'default' : 'secondary'}>
@@ -306,5 +423,5 @@ export function ProfileContent({ user }: ProfileContentProps) {
         </Card>
       </TabsContent>
     </Tabs>
-  );
+  )
 }
