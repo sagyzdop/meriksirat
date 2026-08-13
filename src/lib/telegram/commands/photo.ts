@@ -13,6 +13,7 @@ import { notifyAdmins } from '../admin'
 import { logBookingActivityById } from '../logging'
 import { withKeyboard } from '../server-utils'
 import { returnBookingItems } from '@/lib/booking/booking-items'
+import { formatUserDisplayName } from '@/lib/utils'
 
 /**
  * Handles photo messages for equipment return flow
@@ -73,6 +74,7 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
           bookingId: bookingItem.bookingId,
           userFirstName: user.firstName,
           userLastName: user.lastName,
+          userTelegramUsername: user.telegramUsername,
         })
         .from(bookingItem)
         .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
@@ -84,10 +86,11 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
         throw new Error('No item details found after update')
       }
 
-      const userName =
-        [itemDetails[0].userFirstName, itemDetails[0].userLastName]
-          .filter(Boolean)
-          .join(' ') || 'Unknown User'
+      const userName = formatUserDisplayName({
+        firstName: itemDetails[0].userFirstName,
+        lastName: itemDetails[0].userLastName,
+        telegramUsername: itemDetails[0].userTelegramUsername,
+      })
 
       const uniqueEquipmentNames = [
         ...new Set(itemDetails.map((b) => b.equipmentName)),
