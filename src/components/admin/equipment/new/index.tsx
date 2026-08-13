@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { EquipmentFormFields } from '@/components/admin/equipment/components/equipment-form-fields'
 import { EquipmentImageField } from '@/components/admin/equipment/components/equipment-image-field'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { Save } from 'lucide-react'
 
 const createEquipmentSchema = z.object({
@@ -34,6 +35,7 @@ interface PageProps {
 
 export function Page({ categories }: PageProps) {
   const navigate = useNavigate()
+  const goBack = useBackNavigation('/admin/equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -120,7 +122,7 @@ export function Page({ categories }: PageProps) {
       <PageHeader
         title="Create New Equipment"
         description="Add new equipment to the catalog with model details and calendar integration"
-        onBack={() => history.back()}
+        onBack={goBack}
       />
 
       <Section spacing="compact">

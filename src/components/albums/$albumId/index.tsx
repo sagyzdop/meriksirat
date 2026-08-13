@@ -31,6 +31,7 @@ import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
 import { PhotoGrid } from '@/components/albums/photo-grid'
 import { PublicAlbumsLayout } from '@/components/albums/public-layout'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { toast } from 'sonner'
 
 interface AlbumPageProps {
@@ -43,6 +44,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const goBack = useBackNavigation('/albums')
   const { data: session } = authClient.useSession()
 
   const { data: album, isLoading } = useQuery(albumQueries.detail(albumId))
@@ -210,7 +212,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
       <PageHeader
         title={album.title}
         description={album.description || undefined}
-        onBack={isLoggedIn ? () => history.back() : undefined}
+        onBack={isLoggedIn ? goBack : undefined}
         actions={
           !canManage ? (
             <Button

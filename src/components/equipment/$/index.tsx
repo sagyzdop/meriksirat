@@ -7,11 +7,13 @@ import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 
 export function Page() {
   const { _splat: equipmentId } = useParams({ strict: false })
   const numericId = parseInt(equipmentId as string, 10)
   const hasValidId = !isNaN(numericId)
+  const goBack = useBackNavigation('/equipment')
 
   const {
     data: equipment,
@@ -49,7 +51,7 @@ export function Page() {
 
   return (
     <PageContainer>
-      <PageHeader title={equipment.modelName} onBack={() => history.back()} />
+      <PageHeader title={equipment.modelName} onBack={goBack} />
 
       <div className="space-y-8">
         <div className="relative">

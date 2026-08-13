@@ -3,6 +3,7 @@ import { useNavigate, useRouter } from '@tanstack/react-router'
 import { EquipmentBookingBlock } from './components/equipment-booking-block'
 import { Equipment, Category } from './components/types'
 import { useSelection } from '@/hooks/use-selection'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 
 interface Filters {
   categoryId?: number
@@ -29,6 +30,7 @@ export function Page({
 }: PageProps) {
   const navigate = useNavigate({ from: '/equipment/' })
   const router = useRouter()
+  const goBack = useBackNavigation('/equipment')
   const isAddMode = filters.mode === 'add-to-booking'
   const selection = useSelection({
     items: equipment,
@@ -69,7 +71,7 @@ export function Page({
       router.navigate({ href: filters.returnTo, replace: true })
       return
     }
-    history.back()
+    goBack()
   }
 
   const handleSearchChange = (value: string) => {

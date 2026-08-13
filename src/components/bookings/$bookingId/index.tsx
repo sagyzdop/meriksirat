@@ -1,6 +1,7 @@
 import { BookingDetail } from '@/components/shared/booking-detail'
 import { cancelBookingFn, returnBookingFn, startBookingFn } from '@/lib/booking'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 import type { BookingInfoTableBookedBy } from '@/components/shared/booking-info-table'
 import type { BookingWithItems } from '@/lib/booking/types'
 
@@ -12,6 +13,7 @@ interface PageProps {
 
 export function Page({ booking, telegramBotUsername, bookedBy }: PageProps) {
   const now = new Date()
+  const goBack = useBackNavigation('/bookings')
   const canCancel = booking.status === 'booked'
   const canReturn =
     booking.status === 'active' ||
@@ -28,7 +30,7 @@ export function Page({ booking, telegramBotUsername, bookedBy }: PageProps) {
   return (
     <BookingDetail
       booking={booking}
-      onBack={() => history.back()}
+      onBack={goBack}
       editTo="/bookings/$bookingId/edit"
       bookedBy={bookedBy}
       canAddEquipment={booking.status === 'booked'}

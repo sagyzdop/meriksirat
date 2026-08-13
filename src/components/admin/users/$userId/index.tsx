@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { resetUserViolationCountersFn } from '@/lib/user'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 
 const formatDate = (value: string | number | null | undefined) => {
   if (!value) return '—'
@@ -42,6 +43,7 @@ interface PageProps {
 export function Page({ user }: PageProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const goBack = useBackNavigation('/admin/users')
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
 
@@ -67,7 +69,7 @@ export function Page({ user }: PageProps) {
 
   return (
     <PageContainer>
-      <PageHeader title="User Details" onBack={() => history.back()} />
+      <PageHeader title="User Details" onBack={goBack} />
       <div className="space-y-8">
         <Section spacing="compact">
           <div className="relative rounded-md border overflow-x-auto">

@@ -30,6 +30,7 @@ import { BookingInfoTable } from '@/components/shared/booking-info-table'
 import type { BookingInfoTableBookedBy } from '@/components/shared/booking-info-table'
 import { BookingSchedule } from '@/components/shared/booking-schedule'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 import type {
   BookingWithItems,
   BookingItemWithEquipment,
@@ -51,6 +52,7 @@ export function Page({
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const goBack = useBackNavigation('/bookings')
   useAddBookingItems(bookingId)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isCancelling, setIsCancelling] = React.useState(false)
@@ -170,7 +172,7 @@ export function Page({
 
   return (
     <PageContainer>
-      <PageHeader title="Edit Booking" onBack={() => history.back()} />
+      <PageHeader title="Edit Booking" onBack={goBack} />
 
       <div className="space-y-8">
         <Section title="Details" spacing="compact">

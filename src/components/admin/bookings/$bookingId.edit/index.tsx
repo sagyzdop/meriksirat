@@ -31,6 +31,7 @@ import { BookingSchedule } from '@/components/shared/booking-schedule'
 import { ExtendBookingButton } from '@/components/shared/extend-booking-button'
 import { CancelBookingDialog } from '@/components/admin/bookings/$bookingId.edit/components/cancel-booking-dialog'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 import type {
   AdminBookingWithDetails,
   BookingItemWithEquipment,
@@ -52,6 +53,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const goBack = useBackNavigation('/admin/bookings')
   useAddBookingItems(bookingId)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -183,7 +185,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
 
   return (
     <PageContainer>
-      <PageHeader title="Edit Booking" onBack={() => history.back()} />
+      <PageHeader title="Edit Booking" onBack={goBack} />
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

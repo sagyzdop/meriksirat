@@ -34,6 +34,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { EquipmentFormFields } from '@/components/admin/equipment/components/equipment-form-fields'
 import { EquipmentImageField } from '@/components/admin/equipment/components/equipment-image-field'
+import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { Save, Trash2, AlertTriangle } from 'lucide-react'
 
 const editEquipmentSchema = z.object({
@@ -59,6 +60,7 @@ interface PageProps {
 
 export function Page({ equipment, categories, equipmentId }: PageProps) {
   const navigate = useNavigate()
+  const goBack = useBackNavigation('/admin/equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -177,7 +179,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
       <PageHeader
         title="Edit Equipment"
         description="Modify equipment properties, status, and manage deletion"
-        onBack={() => history.back()}
+        onBack={goBack}
       />
 
       <div className="space-y-8">
