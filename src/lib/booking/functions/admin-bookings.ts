@@ -25,7 +25,8 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment, user, category } = await import('@/db/schema')
+    const { booking, bookingItem, equipment, user, category } =
+      await import('@/db/schema')
     const { eq, and, sql, desc, asc, inArray } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
@@ -40,21 +41,32 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
       conditions.push(inArray(booking.status, data.status))
     }
 
-    const whereClause = conditions.length === 0 ? undefined :
-      conditions.length === 1 ? conditions[0] : and(...conditions)
+    const whereClause =
+      conditions.length === 0
+        ? undefined
+        : conditions.length === 1
+          ? conditions[0]
+          : and(...conditions)
 
     const offset = (data.page - 1) * data.limit
 
     const order = (() => {
       const dir = data.sortOrder === 'desc' ? desc : asc
       switch (data.sortBy) {
-        case 'startTime': return dir(booking.startTime)
-        case 'endTime': return dir(booking.endTime)
-        case 'status': return dir(booking.status)
-        case 'createdAt': return dir(booking.createdAt)
-        case 'equipment': return dir(sql`min(${equipment.modelName})`)
-        case 'user': return dir(user.email)
-        default: return dir(booking.startTime)
+        case 'startTime':
+          return dir(booking.startTime)
+        case 'endTime':
+          return dir(booking.endTime)
+        case 'status':
+          return dir(booking.status)
+        case 'createdAt':
+          return dir(booking.createdAt)
+        case 'equipment':
+          return dir(sql`min(${equipment.modelName})`)
+        case 'user':
+          return dir(user.email)
+        default:
+          return dir(booking.startTime)
       }
     })()
 
@@ -97,7 +109,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
 
     const [totalCountResult, pageBookings] = await Promise.all([
       countQuery,
-      bookingsQuery
+      bookingsQuery,
     ])
 
     const total = totalCountResult[0]?.count || 0
@@ -109,7 +121,10 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     let flatRows: BookingItemRow[] = []
     if (pageBookingIds.length > 0) {
       const itemRows = await database
-        .select({ bookingId: bookingItem.bookingId, ...itemSelect(bookingItem, equipment, category) })
+        .select({
+          bookingId: bookingItem.bookingId,
+          ...itemSelect(bookingItem, equipment, category),
+        })
         .from(bookingItem)
         .leftJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
         .leftJoin(category, eq(equipment.categoryId, category.id))
@@ -126,32 +141,34 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
       flatRows = pageBookings.flatMap((b) => {
         const items = itemsByBooking.get(b.id) ?? []
         if (items.length === 0) {
-          return [{
-            bookingId: b.id,
-            userId: b.userId,
-            startTime: b.startTime,
-            endTime: b.endTime,
-            status: b.status,
-            userEventDetails: b.userEventDetails,
-            startedAt: b.startedAt,
-            createdAt: b.createdAt,
-            updatedAt: b.updatedAt,
-            itemId: 0,
-            equipmentId: 0,
-            itemStatus: 'cancelled',
-            gcalEventId: null,
-            returnedAt: null,
-            itemCreatedAt: b.createdAt,
-            itemUpdatedAt: b.updatedAt,
-            eqId: null,
-            eqModelName: null,
-            eqDescription: null,
-            eqCategoryId: null,
-            eqImagePath: null,
-            eqGcalId: null,
-            catId: null,
-            catName: null,
-          } as BookingItemRow]
+          return [
+            {
+              bookingId: b.id,
+              userId: b.userId,
+              startTime: b.startTime,
+              endTime: b.endTime,
+              status: b.status,
+              userEventDetails: b.userEventDetails,
+              startedAt: b.startedAt,
+              createdAt: b.createdAt,
+              updatedAt: b.updatedAt,
+              itemId: 0,
+              equipmentId: 0,
+              itemStatus: 'cancelled',
+              gcalEventId: null,
+              returnedAt: null,
+              itemCreatedAt: b.createdAt,
+              itemUpdatedAt: b.updatedAt,
+              eqId: null,
+              eqModelName: null,
+              eqDescription: null,
+              eqCategoryId: null,
+              eqImagePath: null,
+              eqGcalId: null,
+              catId: null,
+              catName: null,
+            } as BookingItemRow,
+          ]
         }
         return items.map((it) => ({
           bookingId: b.id,
@@ -199,7 +216,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
         totalPages,
         hasNext: data.page < totalPages,
         hasPrev: data.page > 1,
-      }
+      },
     }
 
     return response
@@ -215,7 +232,8 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment, user, category } = await import('@/db/schema')
+    const { booking, bookingItem, equipment, user, category } =
+      await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
@@ -251,7 +269,10 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
     if (!parent) return null
 
     const itemRows = await database
-      .select({ bookingId: bookingItem.bookingId, ...itemSelect(bookingItem, equipment, category) })
+      .select({
+        bookingId: bookingItem.bookingId,
+        ...itemSelect(bookingItem, equipment, category),
+      })
       .from(bookingItem)
       .leftJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
       .leftJoin(category, eq(equipment.categoryId, category.id))
@@ -305,10 +326,12 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingStatusAdminSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { deleteCalendarEvent, updateCalendarEvent, checkCalendarFreeBusy } = await import('@/lib/google/google-caledar')
+    const { deleteCalendarEvent, updateCalendarEvent, checkCalendarFreeBusy } =
+      await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment, user } = await import('@/db/schema')
+    const { booking, bookingItem, equipment, user } =
+      await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('../status')
@@ -319,7 +342,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
       name: adminUser.name || adminUser.email,
-      telegramUsername: adminUser.telegramUsername
+      telegramUsername: adminUser.telegramUsername,
     })
 
     // Admins may only change a booking's status to `cancelled`. Other statuses
@@ -394,11 +417,13 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
             calendarId: item.equipmentCalendarId,
             timeMin: newStartTime,
             timeMax: newEndTime,
-          }
+          },
         })
 
         if (freeBusyResult.busy.length > 0) {
-          const err: any = new Error(`Requested time conflicts with existing booking for ${item.equipmentModelName || `equipment ${item.equipmentId}`}`)
+          const err: any = new Error(
+            `Requested time conflicts with existing booking for ${item.equipmentModelName || `equipment ${item.equipmentId}`}`
+          )
           err.conflict = freeBusyResult.busy[0]
           throw err
         }
@@ -406,10 +431,17 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     }
 
     // Update booking notes; only adjust times when the admin explicitly rebooks
-    // the schedule (cancelling never changes the booked times).
-    const updatedNotes = data.notes
-      ? `${bookingData.userEventDetails || ''}\n\n[Admin Note by ${adminDisplayName}]: ${data.notes}`.trim()
-      : bookingData.userEventDetails
+    // the schedule (cancelling never changes the booked times). When cancelling,
+    // keep the user's notes and append the admin reason; otherwise the admin
+    // edits the whole user_event_details, just like the user does.
+    const updatedNotes =
+      data.status === 'cancelled'
+        ? data.notes
+          ? `${bookingData.userEventDetails || ''}\n\n[Admin Note by ${adminDisplayName}]: ${data.notes}`.trim()
+          : bookingData.userEventDetails
+        : data.notes !== undefined
+          ? data.notes.trim() || null
+          : bookingData.userEventDetails
 
     await database
       .update(booking)
@@ -435,7 +467,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       firstName: bookingData.user?.firstName,
       lastName: bookingData.user?.lastName,
       name: bookingData.user?.name,
-      telegramUsername: bookingData.user?.telegramUsername
+      telegramUsername: bookingData.user?.telegramUsername,
     })
 
     if (data.status === 'cancelled') {
@@ -451,7 +483,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         await logBookingActivityById(data.bookingId, 'cancelled', {
           previousStatus,
           newStatus: 'cancelled',
-          notes: `Booking cancelled by admin ${adminDisplayName}${data.notes ? `. Reason: ${data.notes}` : ''}`
+          notes: `Booking cancelled by admin ${adminDisplayName}${data.notes ? `. Reason: ${data.notes}` : ''}`,
         })
       } catch (logError) {
         console.error('Failed to log booking cancellation:', logError)
@@ -464,7 +496,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
             data: {
               equipmentCalendarId: item.equipmentCalendarId,
               eventId: item.googleCalendarEventId,
-            }
+            },
           })
         } catch (calendarError) {
           console.error('Failed to delete calendar event:', calendarError)
@@ -481,7 +513,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       await logBookingActivityById(data.bookingId, 'updated', {
         previousStatus,
         newStatus: previousStatus,
-        notes: `Admin ${adminDisplayName} updated booking${timesChanged ? ' schedule' : ''}${data.notes ? `. Notes: ${data.notes}` : ''}`
+        notes: `Admin ${adminDisplayName} updated booking${timesChanged ? ' schedule' : ''}${data.notes ? `. Notes: ${data.notes}` : ''}`,
       })
     } catch (logError) {
       console.error('Failed to log booking update:', logError)
@@ -493,7 +525,9 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       const description = formatBookingDetailsPlain({
         bookingId: data.bookingId,
         userDisplayName,
-        equipmentNames: [item.equipmentModelName || `Equipment ${item.equipmentId}`],
+        equipmentNames: [
+          item.equipmentModelName || `Equipment ${item.equipmentId}`,
+        ],
         startTime: newStartTime,
         endTime: newEndTime,
         startedAt: bookingData.startedAt,
@@ -516,7 +550,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
             eventId: item.googleCalendarEventId,
             event,
             userEmail: bookingData.user?.email || '',
-          }
+          },
         })
       } catch (calendarError) {
         console.error('Failed to update calendar event:', calendarError)
@@ -574,10 +608,13 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
             data: {
               equipmentCalendarId: item.equipmentCalendarId,
               eventId: item.googleCalendarEventId,
-            }
+            },
           })
         } catch (calendarError) {
-          console.error('Failed to delete calendar event during booking deletion:', calendarError)
+          console.error(
+            'Failed to delete calendar event during booking deletion:',
+            calendarError
+          )
         }
       }
     }
@@ -585,17 +622,14 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
     // Log booking deletion to Telegram channel before deleting record
     try {
       await logBookingActivityById(data.bookingId, 'deleted', {
-        notes: 'Booking permanently deleted by administrator'
+        notes: 'Booking permanently deleted by administrator',
       })
     } catch (logError) {
       console.error('Failed to log booking deletion:', logError)
     }
 
     // Delete booking record from database (booking_item rows cascade)
-    await database
-      .delete(booking)
-      .where(eq(booking.id, data.bookingId))
+    await database.delete(booking).where(eq(booking.id, data.bookingId))
 
     return { success: true }
   })
-

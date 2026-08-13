@@ -131,7 +131,7 @@ export const UpdateBookingStatusAdminSchema = z.object({
   bookingId: z.coerce.number(),
   // Admins may only move a booking to `cancelled`; other statuses are rejected.
   status: z.literal('cancelled').optional(),
-  notes: z.string().optional(), // Admin notes will be stored in userEventDetails for now
+  notes: z.string().optional(), // Full replacement for user_event_details
   startTime: z.string().optional(),
   endTime: z.string().optional(),
 })

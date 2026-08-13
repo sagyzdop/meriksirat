@@ -7,7 +7,7 @@ import { getBookingSlots } from '@/lib/booking/slots'
 import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Trash2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,7 @@ import { AddEquipmentButton } from '@/components/shared/add-equipment-button'
 import { BookingInfoTable } from '@/components/shared/booking-info-table'
 import type { BookingInfoTableBookedBy } from '@/components/shared/booking-info-table'
 import { BookingSchedule } from '@/components/shared/booking-schedule'
+import { ExtendBookingButton } from '@/components/shared/extend-booking-button'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import type {
@@ -108,7 +109,7 @@ export function Page({
           bookingId,
           startTime: times.startTime.toISOString(),
           endTime: times.endTime.toISOString(),
-          notes: notes || undefined,
+          notes,
         },
       })
 
@@ -173,7 +174,6 @@ export function Page({
   return (
     <PageContainer>
       <PageHeader title="Edit Booking" onBack={goBack} />
-
       <div className="space-y-8">
         <Section title="Details" spacing="compact">
           <BookingInfoTable booking={booking} bookedBy={bookedBy} />
@@ -193,9 +193,9 @@ export function Page({
 
         {canEdit && (
           <>
-            <Section title="Update Notes" spacing="compact">
+            <Section title="Notes" spacing="compact">
               <Textarea
-                placeholder="Add any notes about your booking..."
+                placeholder="Add any notes about this booking..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={4}
@@ -216,13 +216,13 @@ export function Page({
         )}
 
         {canEdit && (
-          <div className="flex flex-col justify-end gap-4 sm:flex-row">
+          <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="destructive"
                   disabled={isSubmitting || isCancelling}
-                  className="flex w-full items-center gap-2 sm:w-auto"
+                  className="flex w-full items-center gap-2 sm:w-auto sm:mr-auto"
                 >
                   <Trash2 className="h-4 w-4" />
                   {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
@@ -251,27 +251,28 @@ export function Page({
               </AlertDialogContent>
             </AlertDialog>
 
-            <Button
-              onClick={onSubmit}
-              disabled={isSubmitting || selectedSlots.length === 0}
-              className="w-full sm:w-auto"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+            <ExtendBookingButton
+              bookingId={booking.id}
+              status={booking.status}
+              disabled={isSubmitting}
+              onExtend={() => router.invalidate()}
+            />
             <Button
               variant="outline"
               onClick={handleBack}
               disabled={isSubmitting}
-              className="w-full sm:w-auto"
+              className="flex w-full items-center gap-2 sm:w-auto"
             >
-              Cancel
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <Button
+              onClick={onSubmit}
+              disabled={isSubmitting || selectedSlots.length === 0}
+              className="flex w-full items-center gap-2 sm:w-auto"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         )}

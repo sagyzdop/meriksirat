@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Save, AlertCircle } from 'lucide-react'
+import { Save, AlertCircle, ArrowLeft, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
@@ -71,7 +71,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
   const form = useForm<EditBookingForm>({
     resolver: zodResolver(editBookingSchema),
     defaultValues: {
-      notes: '',
+      notes: booking.userEventDetails || '',
     },
   })
 
@@ -215,7 +215,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
             />
           </Section>
 
-          <Section title="Admin Notes" spacing="compact">
+          <Section title="Notes" spacing="compact">
             <FormField
               control={form.control}
               name="notes"
@@ -223,7 +223,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
                 <FormItem>
                   <FormControl>
                     <Textarea
-                      placeholder="Add administrative notes about this booking update (optional)..."
+                      placeholder="Add any notes about this booking..."
                       className="min-h-[120px]"
                       {...field}
                       disabled={isSubmitting}
@@ -269,8 +269,9 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
               variant="destructive"
               onClick={() => setShowCancelDialog(true)}
               disabled={isSubmitting}
-              className="w-full sm:w-auto sm:mr-auto"
+              className="flex w-full items-center gap-2 sm:w-auto sm:mr-auto"
             >
+              <Trash2 className="h-4 w-4" />
               Cancel Booking
             </Button>
             <ExtendBookingButton
@@ -282,16 +283,17 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate({ to: '/admin/bookings' })}
+              onClick={goBack}
               disabled={isSubmitting}
-              className="w-full sm:w-auto"
+              className="flex w-full items-center gap-2 sm:w-auto"
             >
+              <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 w-full sm:w-auto"
+              className="flex w-full items-center gap-2 sm:w-auto"
             >
               <Save className="h-4 w-4" />
               {isSubmitting ? 'Saving...' : 'Save Changes'}
