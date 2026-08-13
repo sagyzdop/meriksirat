@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
 export interface EquipmentTableRow {
@@ -22,10 +21,11 @@ interface EquipmentTableProps {
 }
 
 /**
- * EquipmentTable is the single shared, header-less table for rendering lists
- * of equipment across the app (booking creation, booking detail/edit, booking
- * list collapsibles). Columns are: action, image, and name with a category
- * badge underneath. Rows navigate to the equipment detail page on click.
+ * EquipmentTable renders lists of equipment as card rows across the app
+ * (booking creation, booking detail/edit, booking list collapsibles). Each row
+ * is a fixed-layout flex card (image, title with category badge, action) so the
+ * columns never drift regardless of action or content width. Rows navigate to
+ * the equipment detail page on click.
  */
 export function EquipmentTable({
   rows,
@@ -58,54 +58,46 @@ export function EquipmentTable({
   }
 
   return (
-    <div
-      className={cn('relative overflow-x-auto rounded-md border', className)}
-    >
-      <Table>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow
-              key={row.key}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() =>
-                router.navigate({
-                  to: '/equipment/$',
-                  params: { _splat: row.equipmentId.toString() },
-                })
-              }
+    <div className={cn('space-y-2', className)}>
+      {rows.map((row) => (
+        <div
+          key={row.key}
+          className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 transition-colors hover:bg-muted/50"
+          onClick={() =>
+            router.navigate({
+              to: '/equipment/$',
+              params: { _splat: row.equipmentId.toString() },
+            })
+          }
+        >
+          <img
+            src={
+              row.imagePath
+                ? `/api/images/${row.imagePath}`
+                : '/equipment-placeholder.svg'
+            }
+            alt={row.title}
+            className="h-10 w-14 shrink-0 rounded-md border object-cover"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium">{row.title}</p>
+            <Badge
+              variant="outline"
+              className="mt-1 w-fit text-xs text-muted-foreground"
             >
-              <TableCell
-                className="whitespace-nowrap"
-                onClick={(event) => event.stopPropagation()}
-              >
-                {row.action}
-              </TableCell>
-              <TableCell className="whitespace-nowrap">
-                <img
-                  src={
-                    row.imagePath
-                      ? `/api/images/${row.imagePath}`
-                      : '/equipment-placeholder.svg'
-                  }
-                  alt={row.title}
-                  className="h-10 w-14 rounded-md border object-cover"
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium">{row.title}</span>
-                  <Badge
-                    variant="outline"
-                    className="w-fit text-xs text-muted-foreground"
-                  >
-                    {row.categoryName ?? 'Uncategorized'}
-                  </Badge>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              {row.categoryName ?? 'Uncategorized'}
+            </Badge>
+          </div>
+          {row.action && (
+            <div
+              className="shrink-0"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {row.action}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
