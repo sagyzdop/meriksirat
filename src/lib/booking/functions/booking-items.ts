@@ -37,7 +37,9 @@ async function assertBookingAccess(params: {
 
   // Items may only be added/cancelled while the booking has not been started.
   if (bookingData.status !== 'booked') {
-    throw new Error('Items can only be added or cancelled while the booking has not started')
+    throw new Error(
+      'Items can only be added or cancelled while the booking has not started'
+    )
   }
 }
 
@@ -53,10 +55,15 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment, settings, user } = await import('@/db/schema')
+    const { booking, bookingItem, equipment, settings, user } =
+      await import('@/db/schema')
     const { eq, inArray } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
-    const { createCalendarEvent, checkMultipleCalendarsFreeBusy, deleteCalendarEvent } = await import('@/lib/google/google-caledar')
+    const {
+      createCalendarEvent,
+      checkMultipleCalendarsFreeBusy,
+      deleteCalendarEvent,
+    } = await import('@/lib/google/google-caledar')
     const { getEquipmentCalendarId, retry } = await import('../server')
     const { formatBookingDetailsPlain } = await import('../details')
     const { formatUserDisplayName } = await import('@/lib/utils')
@@ -124,9 +131,13 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       }))
     )
 
-    const missingCalendar = equipmentCalendarIds.find((item) => !item.calendarId)
+    const missingCalendar = equipmentCalendarIds.find(
+      (item) => !item.calendarId
+    )
     if (missingCalendar) {
-      throw new Error(`No calendar configured for equipment ${missingCalendar.equipmentId}`)
+      throw new Error(
+        `No calendar configured for equipment ${missingCalendar.equipmentId}`
+      )
     }
 
     const resolvedCalendars = equipmentCalendarIds.map((item) => ({
@@ -135,6 +146,15 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     }))
 
     const calendarIds = resolvedCalendars.map((item) => item.calendarId)
+
+    const equipmentData = await database
+      .select({ id: equipment.id, modelName: equipment.modelName })
+      .from(equipment)
+      .where(inArray(equipment.id, equipmentIds))
+
+    const equipmentNameMap = new Map(
+      equipmentData.map((item) => [item.id, item.modelName])
+    )
 
     const startTime = new Date(bookingRow.startTime).toISOString()
     const endTime = new Date(bookingRow.endTime).toISOString()
@@ -152,20 +172,28 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
         const busy = freeBusyResult[calendarId]?.busy || []
         return busy.length > 0 ? { equipmentId, conflict: busy[0] } : null
       })
-      .filter((item): item is { equipmentId: number; conflict: { start: string; end: string } } => Boolean(item))
+      .filter(
+        (
+          item
+        ): item is {
+          equipmentId: number
+          conflict: { start: string; end: string }
+        } => Boolean(item)
+      )
 
     if (conflicts.length > 0) {
-      const err: any = new Error('Requested time conflicts with existing booking(s)')
+      const conflictNames = conflicts
+        .map(
+          ({ equipmentId }) =>
+            equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`
+        )
+        .join(', ')
+      const err: any = new Error(
+        `Requested time conflicts with existing booking(s) for ${conflictNames}`
+      )
       err.conflicts = conflicts
       throw err
     }
-
-    const equipmentData = await database
-      .select({ id: equipment.id, modelName: equipment.modelName })
-      .from(equipment)
-      .where(inArray(equipment.id, equipmentIds))
-
-    const equipmentNameMap = new Map(equipmentData.map((item) => [item.id, item.modelName]))
 
     const settingsData = await database
       .select({ globalBookingNote: settings.globalBookingNote })
@@ -177,11 +205,16 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const notes = bookingRow.userEventDetails
 
     const now = Date.now()
-    const createdItems: Array<{ bookingItemId: number; calendarId: string; eventId: string }> = []
+    const createdItems: Array<{
+      bookingItemId: number
+      calendarId: string
+      eventId: string
+    }> = []
 
     try {
       for (const { equipmentId, calendarId } of resolvedCalendars) {
-        const equipmentName = equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`
+        const equipmentName =
+          equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`
         const description = formatBookingDetailsPlain({
           bookingId: data.bookingId,
           userDisplayName,
@@ -200,16 +233,17 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
           end: { dateTime: endTime, timeZone: 'UTC' },
         }
 
-        const createdEvent = await retry(() =>
-          createCalendarEvent({
-            data: {
-              equipmentCalendarId: calendarId,
-              event,
-              userEmail,
-            },
-          }),
+        const createdEvent = await retry(
+          () =>
+            createCalendarEvent({
+              data: {
+                equipmentCalendarId: calendarId,
+                event,
+                userEmail,
+              },
+            }),
           3,
-          400,
+          400
         )
 
         const gCalEventId = createdEvent?.eventId
@@ -217,14 +251,17 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
           throw new Error('Calendar API responded without event id')
         }
 
-        const itemInsert = await database.insert(bookingItem).values({
-          bookingId: data.bookingId,
-          equipmentId,
-          status: 'booked',
-          googleCalendarEventId: gCalEventId,
-          createdAt: new Date(now),
-          updatedAt: new Date(now),
-        }).returning({ id: bookingItem.id })
+        const itemInsert = await database
+          .insert(bookingItem)
+          .values({
+            bookingId: data.bookingId,
+            equipmentId,
+            status: 'booked',
+            googleCalendarEventId: gCalEventId,
+            createdAt: new Date(now),
+            updatedAt: new Date(now),
+          })
+          .returning({ id: bookingItem.id })
 
         const bookingItemId = itemInsert[0]?.id
         if (!bookingItemId) {
@@ -244,13 +281,22 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
             },
           })
         } catch (deleteError) {
-          console.error('Failed to delete calendar event during rollback:', deleteError)
+          console.error(
+            'Failed to delete calendar event during rollback:',
+            deleteError
+          )
         }
 
         try {
-          await database.delete(bookingItem).where(eq(bookingItem.id, record.bookingItemId))
+          await database
+            .delete(bookingItem)
+            .where(eq(bookingItem.id, record.bookingItemId))
         } catch (dbDelErr) {
-          console.error('Rollback delete failed for booking item', record.bookingItemId, dbDelErr)
+          console.error(
+            'Rollback delete failed for booking item',
+            record.bookingItemId,
+            dbDelErr
+          )
         }
       }
 
