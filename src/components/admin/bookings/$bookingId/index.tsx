@@ -13,8 +13,7 @@ export function Page({ booking, telegramBotUsername }: PageProps) {
   const goBack = useBackNavigation('/admin/bookings')
   useAddBookingItems(booking.id)
 
-  const canCancel =
-    booking.status !== 'returned' && booking.status !== 'cancelled'
+  const canCancel = booking.status === 'booked'
 
   const user = booking.user
   const bookedBy = user

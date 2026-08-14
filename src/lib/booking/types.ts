@@ -162,10 +162,6 @@ export const CancelBookingSchema = z.object({
   bookingId: z.coerce.number(),
 })
 
-export const ReturnBookingSchema = z.object({
-  bookingId: z.coerce.number(),
-})
-
 export const CancelBookingItemSchema = z.object({
   bookingId: z.coerce.number(),
   itemId: z.coerce.number(),

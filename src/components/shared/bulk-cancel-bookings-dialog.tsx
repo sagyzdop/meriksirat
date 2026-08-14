@@ -38,7 +38,7 @@ export function BulkCancelBookingsDialog({
               ? `This will cancel 1 booking and ${calendarActionText}.`
               : `This will cancel ${cancellableCount} bookings and ${calendarActionText}.`}
             {totalSelectedCount > cancellableCount &&
-              ' Bookings that are already cancelled or returned will be skipped.'}
+              ' Bookings that have already started (or are returned/cancelled) cannot be cancelled and will be skipped.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

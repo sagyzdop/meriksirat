@@ -6,7 +6,6 @@ import {
   BookingCollapsibleList,
 } from '@/components/shared/booking-collapsible'
 import { CancelBookingDialog } from './components/cancel-booking-dialog'
-import { ReturnBookingDialog } from './components/return-booking-dialog'
 import { cancelBookingFn } from '@/lib/booking'
 import type { BookingWithItems } from '@/lib/booking/types'
 import { PageContainer } from '@/components/layout/page-container'
@@ -63,18 +62,11 @@ export function Page({
   const navigate = useNavigate()
   const [cancelTarget, setCancelTarget] =
     React.useState<BookingWithItems | null>(null)
-  const [returnTarget, setReturnTarget] =
-    React.useState<BookingWithItems | null>(null)
 
   const description =
     pagination.total > 0
       ? `You have ${pagination.total} booking${pagination.total === 1 ? '' : 's'}`
       : 'No bookings found'
-
-  const isReturnable = (status: string) =>
-    status === 'active' ||
-    status === 'partially_returned' ||
-    status === 'overdue'
 
   return (
     <PageContainer>
@@ -160,11 +152,6 @@ export function Page({
                 ? () => setCancelTarget(booking)
                 : undefined
             }
-            onReturn={
-              isReturnable(booking.status)
-                ? () => setReturnTarget(booking)
-                : undefined
-            }
           />
         )}
       />
@@ -174,14 +161,6 @@ export function Page({
         open={!!cancelTarget}
         onOpenChange={(open) => {
           if (!open) setCancelTarget(null)
-        }}
-      />
-
-      <ReturnBookingDialog
-        booking={returnTarget}
-        open={!!returnTarget}
-        onOpenChange={(open) => {
-          if (!open) setReturnTarget(null)
         }}
       />
     </PageContainer>

@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { CalendarDays, Eye, PackageCheck, Pencil, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { createTelegramBotLink } from '@/lib/telegram/client-utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,11 +30,18 @@ interface BookingCollapsibleContentProps {
   onViewDetails?: () => void
   onEdit?: () => void
   onCancel?: () => void
-  onReturn?: () => void
 }
 
 function getDefaultCanEdit(booking: BookingCollapsibleRowData) {
   return booking.status === 'booked'
+}
+
+function isReturnable(status: string) {
+  return (
+    status === 'active' ||
+    status === 'partially_returned' ||
+    status === 'overdue'
+  )
 }
 
 export function BookingCollapsibleContent({
@@ -43,7 +51,6 @@ export function BookingCollapsibleContent({
   onViewDetails,
   onEdit,
   onCancel,
-  onReturn,
 }: BookingCollapsibleContentProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -82,7 +89,7 @@ export function BookingCollapsibleContent({
       : 'this item')
 
   return (
-    <div className="space-y-4 rounded-b-md border-t bg-muted px-4 py-4">
+    <div className="space-y-4 border-t px-4 py-4">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-card px-3 py-2.5 text-sm">
         <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="font-medium">
@@ -146,15 +153,22 @@ export function BookingCollapsibleContent({
             onExtend={() => router.invalidate()}
             className="w-full sm:w-auto"
           />
-          {onReturn && (
+          {isReturnable(booking.status) && telegramBotUsername && (
             <Button
               size="sm"
               variant="default"
               className="w-full sm:w-auto"
-              onClick={onReturn}
+              asChild
             >
-              <PackageCheck className="mr-1.5 h-3.5 w-3.5" />
-              Return booking
+              <a
+                href={createTelegramBotLink(telegramBotUsername)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open the Telegram bot to return this booking. Send /return_equipment."
+              >
+                <PackageCheck className="mr-1.5 h-3.5 w-3.5" />
+                Return booking
+              </a>
             </Button>
           )}
           {onCancel && (

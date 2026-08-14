@@ -3,6 +3,7 @@ import { Link, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { PackageCheck, Pencil } from 'lucide-react'
+import { createTelegramBotLink } from '@/lib/telegram/client-utils'
 
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
@@ -42,7 +43,6 @@ interface BookingDetailProps {
   canStart?: boolean
   onStart?: () => Promise<unknown>
   canReturn?: boolean
-  onReturn?: () => Promise<unknown>
   canAddEquipment?: boolean
   returnTo?: string
   telegramBotUsername?: string
@@ -65,7 +65,6 @@ export function BookingDetail({
   canStart = false,
   onStart,
   canReturn = false,
-  onReturn,
   canAddEquipment = false,
   returnTo,
   telegramBotUsername,
@@ -76,8 +75,6 @@ export function BookingDetail({
   const [isCancelling, setIsCancelling] = useState(false)
   const [showStartDialog, setShowStartDialog] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
-  const [showReturnDialog, setShowReturnDialog] = useState(false)
-  const [isReturning, setIsReturning] = useState(false)
   const [pendingCancelItem, setPendingCancelItem] =
     useState<BookingItemWithEquipment | null>(null)
 
@@ -116,24 +113,6 @@ export function BookingDetail({
       )
     } finally {
       setIsCancelling(false)
-    }
-  }
-
-  const handleReturn = async () => {
-    if (!onReturn) return
-    setIsReturning(true)
-    try {
-      await onReturn()
-      toast.success('Booking returned successfully')
-      await queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      router.invalidate()
-      setShowReturnDialog(false)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to return booking'
-      )
-    } finally {
-      setIsReturning(false)
     }
   }
 
@@ -221,10 +200,17 @@ export function BookingDetail({
               Cancel Booking
             </Button>
           )}
-          {canReturn && onReturn && (
-            <Button variant="default" onClick={() => setShowReturnDialog(true)}>
-              <PackageCheck className="mr-1.5 h-4 w-4" />
-              Return Booking
+          {canReturn && telegramBotUsername && (
+            <Button variant="default" asChild>
+              <a
+                href={createTelegramBotLink(telegramBotUsername)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open the Telegram bot to return this booking. Send /return_equipment."
+              >
+                <PackageCheck className="mr-1.5 h-4 w-4" />
+                Return Booking
+              </a>
             </Button>
           )}
           {editable && (
@@ -260,27 +246,6 @@ export function BookingDetail({
             <AlertDialogCancel disabled={isStarting}>Not Now</AlertDialogCancel>
             <AlertDialogAction onClick={handleStart} disabled={isStarting}>
               {isStarting ? 'Starting...' : 'Start Booking'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Return Booking</AlertDialogTitle>
-            <AlertDialogDescription>
-              Mark this booking as returned now? All outstanding items will be
-              marked returned and the calendar events will be updated with the
-              actual return time.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isReturning}>
-              Not Now
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleReturn} disabled={isReturning}>
-              {isReturning ? 'Returning...' : 'Confirm Return'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

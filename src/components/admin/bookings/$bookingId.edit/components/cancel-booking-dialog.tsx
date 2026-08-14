@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { updateBookingStatusAdminFn } from '@/lib/booking'
-import { FormLabel } from '@/components/ui/form'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   AlertDialog,
@@ -67,7 +67,7 @@ export function CancelBookingDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
-          <FormLabel>Reason (optional)</FormLabel>
+          <Label>Reason (optional)</Label>
           <Textarea
             value={cancelNotes}
             onChange={(e) => setCancelNotes(e.target.value)}

@@ -659,6 +659,12 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
       throw new Error('Booking is already cancelled')
     }
 
+    if (bookingData.status !== 'booked') {
+      throw new Error(
+        'Only upcoming bookings can be cancelled. This booking has already started and must be returned through the Telegram bot.'
+      )
+    }
+
     // Load items with equipment calendars for event cleanup
     const items = await database
       .select({

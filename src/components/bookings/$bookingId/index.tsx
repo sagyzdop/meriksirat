@@ -1,5 +1,5 @@
 import { BookingDetail } from '@/components/shared/booking-detail'
-import { cancelBookingFn, returnBookingFn, startBookingFn } from '@/lib/booking'
+import { cancelBookingFn, startBookingFn } from '@/lib/booking'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import type { BookingInfoTableBookedBy } from '@/components/shared/booking-info-table'
@@ -39,7 +39,6 @@ export function Page({ booking, telegramBotUsername, bookedBy }: PageProps) {
       canCancel={canCancel}
       onCancel={() => cancelBookingFn({ data: { bookingId: booking.id } })}
       canReturn={canReturn}
-      onReturn={() => returnBookingFn({ data: { bookingId: booking.id } })}
       canStart={canStart}
       onStart={() => startBookingFn({ data: { bookingId: booking.id } })}
     />

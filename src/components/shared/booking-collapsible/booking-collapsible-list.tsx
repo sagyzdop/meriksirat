@@ -132,7 +132,12 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
   const itemLabel = itemCount === 1 ? 'item' : 'items'
 
   return (
-    <Collapsible className="rounded-md border bg-card">
+    <Collapsible
+      className={cn(
+        'rounded-md border bg-card transition-shadow',
+        'data-[state=open]:ring-2 data-[state=open]:ring-primary/40'
+      )}
+    >
       <CollapsibleTrigger asChild>
         <div
           role="button"

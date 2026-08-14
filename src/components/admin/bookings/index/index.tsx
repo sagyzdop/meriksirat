@@ -82,9 +82,7 @@ export function Page({
         showOverdueBanner
         isLoading={isLoading}
         calendarActionText="update their calendar events"
-        isCancellable={(status) =>
-          status !== 'returned' && status !== 'cancelled'
-        }
+        isCancellable={(status) => status === 'booked'}
         bulkCancelFn={(bookingId) =>
           updateBookingStatusAdminFn({
             data: { bookingId, status: 'cancelled' },
@@ -157,7 +155,7 @@ export function Page({
               })
             }
             onCancel={
-              booking.status !== 'returned' && booking.status !== 'cancelled'
+              booking.status === 'booked'
                 ? () => setCancelTarget(booking)
                 : undefined
             }

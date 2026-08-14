@@ -264,16 +264,18 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
           )}
 
           <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-end">
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => setShowCancelDialog(true)}
-              disabled={isSubmitting}
-              className="flex w-full items-center gap-2 sm:w-auto sm:mr-auto"
-            >
-              <Trash2 className="h-4 w-4" />
-              Cancel Booking
-            </Button>
+            {canEditSchedule && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={isSubmitting}
+                className="flex w-full items-center gap-2 sm:w-auto sm:mr-auto"
+              >
+                <Trash2 className="h-4 w-4" />
+                Cancel Booking
+              </Button>
+            )}
             <ExtendBookingButton
               bookingId={booking.id}
               status={booking.status}

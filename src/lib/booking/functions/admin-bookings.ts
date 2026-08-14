@@ -398,6 +398,15 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       throw new Error('Booking not found')
     }
 
+    // Responsibility chain: a booking can only be cancelled before it has
+    // started. Once equipment is checked out (active/overdue/partially
+    // returned), it must be returned through the Telegram bot instead.
+    if (data.status === 'cancelled' && bookingData.status !== 'booked') {
+      throw new Error(
+        'Only upcoming bookings can be cancelled. This booking has already started and must be returned through the Telegram bot.'
+      )
+    }
+
     const previousStatus = bookingData.status
     const newStartTime = data.startTime || bookingData.startTime.toISOString()
     const newEndTime = data.endTime || bookingData.endTime.toISOString()
