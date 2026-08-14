@@ -11,7 +11,7 @@
 
 import type { BotContext } from '../context'
 import { getSession, setSession } from '../kv-session'
-import { withKeyboard } from '../server-utils'
+import { withKeyboard, clearInlineKeyboard } from '../server-utils'
 import { handleCancelCallback } from './cancel-booking'
 import { startBookingForChat } from './start-booking'
 import { db } from '@/db'
@@ -227,7 +227,7 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
           await startBookingForChat(bookingId, userRecord?.email || '', ctx)
           await ctx.editMessageText(
             `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Remember to use "End Booking" when returning it.`,
-            withKeyboard()
+            clearInlineKeyboard()
           )
         } catch (error) {
           console.error('Failed to start booking:', error)
@@ -236,7 +236,7 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
               error instanceof Error
                 ? error.message
                 : 'Failed to start booking. Please try again.',
-              withKeyboard()
+              clearInlineKeyboard()
             )
           } catch (editError) {
             console.error(
@@ -249,7 +249,7 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       }
 
       if (callbackData === 'start_cancel') {
-        await ctx.editMessageText('Start cancelled.', withKeyboard())
+        await ctx.editMessageText('Start cancelled.', clearInlineKeyboard())
         await ctx.answerCbQuery()
         return
       }
@@ -325,7 +325,8 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       })
 
       await ctx.editMessageText(
-        'Selected. Please send a photo of the equipment.'
+        'Selected. Please send a photo of the equipment.',
+        clearInlineKeyboard()
       )
       await ctx.answerCbQuery()
       return

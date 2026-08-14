@@ -42,6 +42,19 @@ export function withKeyboard(options: any = {}) {
   }
 }
 
+/**
+ * Clears the inline keyboard when editing a message that currently has one.
+ * Telegram rejects switching a message from an inline keyboard to a reply
+ * keyboard via editMessageText ("Bad Request: inline keyboard expected"), so
+ * pass an empty inline keyboard to remove the buttons instead.
+ */
+export function clearInlineKeyboard(options: any = {}) {
+  return {
+    ...options,
+    reply_markup: { inline_keyboard: [] },
+  }
+}
+
 // ============================================================================
 // TELEGRAM API UTILITIES
 // ============================================================================
