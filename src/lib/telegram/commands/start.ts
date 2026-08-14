@@ -3,9 +3,6 @@ import { env } from 'cloudflare:workers'
 import { db } from '@/db'
 import { eq, and, gt } from 'drizzle-orm'
 import { user, telegramToken } from '@/db/schema'
-import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
-import { auth } from '@/lib/auth/auth'
 import { removeKeyboard } from '../server-utils'
 import { showMainMenu } from '../menu'
 
@@ -119,80 +116,15 @@ export async function handleStart(ctx: BotContext): Promise<void> {
 }
 
 /**
- * Generates a Telegram deep link URL for account linking
- * Creates a temporary token and returns the bot link with the token
+ * Creates a temporary Telegram deep-link token for the given user and returns
+ * the bot link that carries it. Tapping the link sends /start <token>, which
+ * links (or re-syncs) the user's Telegram chat with their account.
+ *
+ * This is a plain server-side helper (not a server function) so it can be
+ * called directly from the onboarding server functions without an extra RPC
+ * round-trip.
  */
-export const getTelegramLinkUrl = createServerFn({ method: 'POST' }).handler(
-  async () => {
-    const headers = getRequestHeaders()
-    const session = await auth.api.getSession({
-      headers,
-    })
-
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    // Check if user already has Telegram linked
-    const userData = await database
-      .select({ telegramChatId: user.telegramChatId })
-      .from(user)
-      .where(eq(user.id, session.user.id))
-      .get()
-
-    if (userData?.telegramChatId) {
-      return {
-        alreadyLinked: true,
-        url: null,
-        token: null,
-      }
-    }
-
-    // Generate a unique token
-    const token = crypto.randomUUID().replace(/-/g, '')
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
-
-    // Store token in database
-    await database.insert(telegramToken).values({
-      token,
-      userId: session.user.id,
-      expiresAt,
-    })
-
-    // Get bot username from environment
-    const botUsername = env.TELEGRAM_BOT_USERNAME || 'your_equipment_bot'
-
-    // Create deep link URL
-    const url = `https://t.me/${botUsername}?start=${token}`
-
-    return {
-      alreadyLinked: false,
-      url,
-      token,
-    }
-  }
-)
-
-/**
- * Generates a Telegram deep link URL for updating the linked Telegram
- * username. Unlike getTelegramLinkUrl, this always creates a fresh token even
- * when the account is already linked, so tapping /start re-syncs the username
- * from the user's Telegram profile.
- */
-export const getTelegramUpdateLinkUrl = createServerFn({
-  method: 'POST',
-}).handler(async () => {
-  const headers = getRequestHeaders()
-  const session = await auth.api.getSession({
-    headers,
-  })
-
-  if (!session?.user) {
-    throw new Error('Unauthorized')
-  }
-
+export async function createTelegramLinkToken(userId: string): Promise<string> {
   const database = db(env.meriksirat_d1 as D1Database)
 
   // Generate a unique token
@@ -202,14 +134,12 @@ export const getTelegramUpdateLinkUrl = createServerFn({
   // Store token in database
   await database.insert(telegramToken).values({
     token,
-    userId: session.user.id,
+    userId,
     expiresAt,
   })
 
   // Get bot username from environment
   const botUsername = env.TELEGRAM_BOT_USERNAME || 'your_equipment_bot'
 
-  return {
-    url: `https://t.me/${botUsername}?start=${token}`,
-  }
-})
+  return `https://t.me/${botUsername}?start=${token}`
+}

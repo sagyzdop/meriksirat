@@ -132,13 +132,15 @@ export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' }).handler(
       return { alreadyLinked: false, url: null, isDevelopment: true }
     }
 
-    // Import the telegram function only on server side
-    const { getTelegramLinkUrl } = await import('@/lib/telegram/commands/start')
-    const result = await getTelegramLinkUrl()
+    // Import the telegram helper only on server side
+    const { createTelegramLinkToken } = await import(
+      '@/lib/telegram/commands/start'
+    )
+    const url = await createTelegramLinkToken(session.user.id)
 
     return {
       alreadyLinked: false,
-      url: result.url,
+      url,
       isDevelopment,
     }
   }
@@ -157,12 +159,13 @@ export const getTelegramUpdateLinkUrlFn = createServerFn({
     throw new Error('Unauthorized')
   }
 
-  // Import the telegram function only on server side
-  const { getTelegramUpdateLinkUrl } =
-    await import('@/lib/telegram/commands/start')
-  const result = await getTelegramUpdateLinkUrl()
+  // Import the telegram helper only on server side
+  const { createTelegramLinkToken } = await import(
+    '@/lib/telegram/commands/start'
+  )
+  const url = await createTelegramLinkToken(session.user.id)
 
   return {
-    url: result.url,
+    url,
   }
 })
