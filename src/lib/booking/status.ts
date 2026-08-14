@@ -7,7 +7,8 @@ import type { BookingStatus } from '@/lib/telegram/types'
  * - all items cancelled  -> cancelled
  * - all items returned   -> returned
  * - any item overdue     -> overdue
- * - some items returned  -> partially_returned
+ * - no active items left (every non-cancelled item is returned) -> returned
+ * - some items returned, others still active/booked -> partially_returned
  * - any item active      -> active
  * - otherwise            -> booked
  */
@@ -18,6 +19,13 @@ export function deriveParentBookingStatus(itemStatuses: string[]): BookingStatus
   if (statuses.size === 1 && statuses.has('cancelled')) return 'cancelled'
   if (statuses.size === 1 && statuses.has('returned')) return 'returned'
   if (statuses.has('overdue')) return 'overdue'
+
+  // Every item that was actually taken out has been returned; the only
+  // remaining items are cancelled ones, so the booking is fully done.
+  const activeItems = itemStatuses.filter(
+    (s) => s !== 'cancelled' && s !== 'returned'
+  )
+  if (activeItems.length === 0) return 'returned'
   if (statuses.has('returned')) return 'partially_returned'
   if (statuses.has('active')) return 'active'
   return 'booked'
