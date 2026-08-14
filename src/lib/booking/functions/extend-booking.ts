@@ -24,7 +24,7 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
-    const { checkMultipleCalendarsFreeBusy, updateCalendarEvent } =
+    const { checkMultipleCalendarsFreeBusy, updateCalendarEvent, toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
@@ -205,10 +205,10 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
               summary: `${item.equipmentName || `Equipment ${item.equipmentId}`}${undidOverdue ? '' : ` (${parent.status.toUpperCase()})`}`,
               description,
               start: {
-                dateTime: (parent.startedAt ?? parent.startTime).toISOString(),
-                timeZone: 'UTC',
+                dateTime: toCalendarDateTime(parent.startedAt ?? parent.startTime),
+                timeZone: CLUB_TIMEZONE,
               },
-              end: { dateTime: newEndTime.toISOString(), timeZone: 'UTC' },
+              end: { dateTime: toCalendarDateTime(newEndTime), timeZone: CLUB_TIMEZONE },
             },
             userEmail: parent.user?.email || '',
           },
@@ -228,6 +228,7 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+      timeZone: 'Asia/Karachi',
     })
 
     try {

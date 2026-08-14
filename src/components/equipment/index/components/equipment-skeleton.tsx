@@ -6,7 +6,7 @@ export function EquipmentSkeleton() {
     <Card>
       <CardHeader className="p-0">
         {/* Image skeleton */}
-        <Skeleton className="h-48 w-full rounded-t-lg rounded-b-none" />
+        <Skeleton className="aspect-video w-full rounded-t-lg rounded-b-none" />
       </CardHeader>
       <CardContent className="p-4 space-y-4">
         {/* Title skeleton */}

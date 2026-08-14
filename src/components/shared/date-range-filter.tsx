@@ -45,7 +45,7 @@ export function DateRangeFilter({
           data-empty={!fromDate}
           aria-label="Date range filter"
           className={cn(
-            'data-[empty=true]:text-muted-foreground h-8 justify-start border-dashed',
+            'data-[empty=true]:text-muted-foreground h-8 justify-center border-dashed sm:justify-start',
             className
           )}
         >

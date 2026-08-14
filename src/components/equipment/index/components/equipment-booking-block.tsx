@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sidebar,
@@ -175,10 +175,16 @@ export function EquipmentBookingBlock({
               className="w-full md:max-w-sm md:flex-1"
             />
             {isMobile && (
-              <EquipmentCategoryCombobox
-                {...categoryNavProps}
-                onSelect={onCategorySelect}
-              />
+              <div className="flex w-full items-center gap-2">
+                <SlidersHorizontal
+                  className="size-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <EquipmentCategoryCombobox
+                  {...categoryNavProps}
+                  onSelect={onCategorySelect}
+                />
+              </div>
             )}
           </header>
 

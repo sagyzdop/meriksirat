@@ -7,7 +7,7 @@ import { getBookingSlots } from '@/lib/booking/slots'
 import { getBookingTimesFromSlots } from '@/components/shared/time-slot-picker'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, X } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -224,7 +224,7 @@ export function Page({
                   disabled={isSubmitting || isCancelling}
                   className="flex w-full items-center gap-2 sm:w-auto sm:mr-auto"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                   {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
                 </Button>
               </AlertDialogTrigger>

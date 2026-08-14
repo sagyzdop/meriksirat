@@ -1,7 +1,7 @@
 import type { db } from '@/db'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, and, inArray, isNull } from 'drizzle-orm'
-import { updateCalendarEvent } from '@/lib/google/google-caledar'
+import { updateCalendarEvent, toCalendarDateTime, CLUB_TIMEZONE } from '@/lib/google/google-caledar'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
 import { logBookingActivityById } from '@/lib/telegram/logging'
@@ -145,10 +145,10 @@ export async function startBooking(
               status: 'active',
               notes: bookingData.userEventDetails,
             }),
-            start: { dateTime: now.toISOString(), timeZone: 'UTC' },
+            start: { dateTime: toCalendarDateTime(now), timeZone: CLUB_TIMEZONE },
             end: {
-              dateTime: bookingData.endTime.toISOString(),
-              timeZone: 'UTC',
+              dateTime: toCalendarDateTime(bookingData.endTime),
+              timeZone: CLUB_TIMEZONE,
             },
           },
           userEmail: bookingData.user?.email || '',

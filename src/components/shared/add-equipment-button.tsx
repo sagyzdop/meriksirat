@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface AddEquipmentButtonProps {
@@ -20,6 +21,7 @@ export function AddEquipmentButton({
         disabled={disabled}
       >
         <Button variant="outline" className="w-full sm:w-auto">
+          <Plus className="mr-1.5 h-4 w-4" />
           Add More
         </Button>
       </Link>
@@ -29,6 +31,7 @@ export function AddEquipmentButton({
   return (
     <Link to="/equipment" disabled={disabled}>
       <Button variant="outline" className="w-full sm:w-auto">
+        <Plus className="mr-1.5 h-4 w-4" />
         Add More
       </Button>
     </Link>

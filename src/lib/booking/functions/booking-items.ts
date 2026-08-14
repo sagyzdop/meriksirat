@@ -67,6 +67,8 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       createCalendarEvent,
       checkMultipleCalendarsFreeBusy,
       deleteCalendarEvent,
+      toCalendarDateTime,
+      CLUB_TIMEZONE,
     } = await import('@/lib/google/google-caledar')
     const { getEquipmentCalendarId, retry } = await import('../server')
     const { formatBookingDetailsPlain } = await import('../details')
@@ -233,8 +235,8 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
         const event = {
           summary: `${equipmentName} - Booking`,
           description,
-          start: { dateTime: startTime, timeZone: 'UTC' },
-          end: { dateTime: endTime, timeZone: 'UTC' },
+          start: { dateTime: toCalendarDateTime(startTime), timeZone: CLUB_TIMEZONE },
+          end: { dateTime: toCalendarDateTime(endTime), timeZone: CLUB_TIMEZONE },
         }
 
         const createdEvent = await retry(

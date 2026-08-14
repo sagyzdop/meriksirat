@@ -340,7 +340,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingStatusAdminSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { deleteCalendarEvent, updateCalendarEvent, checkCalendarFreeBusy } =
+    const { deleteCalendarEvent, updateCalendarEvent, checkCalendarFreeBusy, toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
@@ -588,8 +588,8 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       const event = {
         summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking (${previousStatus.toUpperCase()})`,
         description,
-        start: { dateTime: newStartTime, timeZone: 'UTC' },
-        end: { dateTime: newEndTime, timeZone: 'UTC' },
+        start: { dateTime: toCalendarDateTime(newStartTime), timeZone: CLUB_TIMEZONE },
+        end: { dateTime: toCalendarDateTime(newEndTime), timeZone: CLUB_TIMEZONE },
       }
 
       try {

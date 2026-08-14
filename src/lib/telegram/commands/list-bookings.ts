@@ -82,16 +82,19 @@ function formatTimeRange(startTime: Date, endTime: Date): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'Asia/Karachi',
   })
   const timeStart = startTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Asia/Karachi',
   })
   const timeEnd = endTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Asia/Karachi',
   })
   return `${date}, ${timeStart} - ${timeEnd}`
 }
@@ -133,11 +136,17 @@ export async function renderMyBookings(ctx: BotContext): Promise<void> {
     return
   }
 
-  const now = new Date()
   const lines: string[] = ['Your bookings:']
   for (const b of bookings) {
-    const label = b.startTime <= now ? 'Active' : 'Upcoming'
-    lines.push(`\n${label} - Booking #${b.id} (${b.status.replace(/_/g, ' ')})`)
+    const label =
+      b.status === BOOKING_STATUS.ACTIVE
+        ? 'Active'
+        : b.status === BOOKING_STATUS.OVERDUE
+          ? 'Overdue'
+          : b.status === BOOKING_STATUS.PARTIALLY_RETURNED
+            ? 'Partially Returned'
+            : 'Upcoming'
+    lines.push(`\n${label} - Booking #${b.id}`)
     lines.push(`  ${formatTimeRange(b.startTime, b.endTime)}`)
     for (const it of b.items) {
       lines.push(

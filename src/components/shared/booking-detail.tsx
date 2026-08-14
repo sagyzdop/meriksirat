@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { PackageCheck, Pencil } from 'lucide-react'
+import { PackageCheck, Pencil, X } from 'lucide-react'
 import { createTelegramBotLink } from '@/lib/telegram/client-utils'
 
 import { PageContainer } from '@/components/layout/page-container'
@@ -196,7 +196,9 @@ export function BookingDetail({
             <Button
               variant="destructive"
               onClick={() => setShowCancelDialog(true)}
+              className="flex w-full items-center gap-2 sm:w-auto sm:mr-auto"
             >
+              <X className="h-4 w-4" />
               Cancel Booking
             </Button>
           )}
@@ -214,8 +216,12 @@ export function BookingDetail({
             </Button>
           )}
           {editable && (
-            <Link to={editTo} params={{ bookingId: booking.id.toString() }}>
-              <Button variant="outline">
+            <Link
+              to={editTo}
+              params={{ bookingId: booking.id.toString() }}
+              className="w-full sm:w-auto"
+            >
+              <Button variant="outline" className="w-full sm:w-auto">
                 <Pencil className="mr-1.5 h-4 w-4" />
                 {editLabel}
               </Button>

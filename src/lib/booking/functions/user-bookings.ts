@@ -79,6 +79,8 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       createCalendarEvent,
       checkMultipleCalendarsFreeBusy,
       deleteCalendarEvent,
+      toCalendarDateTime,
+      CLUB_TIMEZONE,
     } = await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
@@ -226,8 +228,8 @@ export const createBookingFn = createServerFn({ method: 'POST' })
         const event = {
           summary: `${equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`} - Booking`,
           description,
-          start: { dateTime: startTime, timeZone: 'UTC' },
-          end: { dateTime: endTime, timeZone: 'UTC' },
+          start: { dateTime: toCalendarDateTime(startTime), timeZone: CLUB_TIMEZONE },
+          end: { dateTime: toCalendarDateTime(endTime), timeZone: CLUB_TIMEZONE },
         }
 
         const createdEvent = await retry(
@@ -724,7 +726,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
-    const { checkCalendarFreeBusy, updateCalendarEvent } =
+    const { checkCalendarFreeBusy, updateCalendarEvent, toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
@@ -883,8 +885,8 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
       const event = {
         summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking`,
         description,
-        start: { dateTime: newStartTime, timeZone: 'UTC' },
-        end: { dateTime: newEndTime, timeZone: 'UTC' },
+        start: { dateTime: toCalendarDateTime(newStartTime), timeZone: CLUB_TIMEZONE },
+        end: { dateTime: toCalendarDateTime(newEndTime), timeZone: CLUB_TIMEZONE },
       }
 
       try {

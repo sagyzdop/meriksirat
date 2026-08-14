@@ -29,6 +29,12 @@ export interface BookingDetailInput {
   globalNote?: string | null
 }
 
+/**
+ * Club timezone (UTC+5). Used for all rendered booking timestamps so calendar
+ * event descriptions and channel logs show the club's local time.
+ */
+const CLUB_TIMEZONE = 'Asia/Karachi'
+
 export function formatBookingTimestamp(
   value: Date | string | number
 ): string {
@@ -41,6 +47,7 @@ export function formatBookingTimestamp(
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZone: CLUB_TIMEZONE,
   })
 }
 

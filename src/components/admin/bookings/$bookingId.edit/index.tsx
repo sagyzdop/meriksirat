@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Save, AlertCircle, ArrowLeft, Trash2 } from 'lucide-react'
+import { Save, AlertCircle, ArrowLeft, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
@@ -272,7 +272,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
                 disabled={isSubmitting}
                 className="flex w-full items-center gap-2 sm:w-auto sm:mr-auto"
               >
-                <Trash2 className="h-4 w-4" />
+                <X className="h-4 w-4" />
                 Cancel Booking
               </Button>
             )}

@@ -41,7 +41,7 @@ export function EquipmentCard({
         disabled && 'opacity-60'
       )}
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-t-xl bg-muted">
+      <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted">
         {showPlaceholder ? (
           <div className="flex h-full w-full items-center justify-center">
             <ImageIcon className="h-10 w-10 text-muted-foreground/50" />

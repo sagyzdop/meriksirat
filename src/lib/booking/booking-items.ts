@@ -5,6 +5,8 @@ import { recomputeBookingStatus } from '@/lib/booking/status'
 import {
   deleteCalendarEvent,
   updateCalendarEvent,
+  toCalendarDateTime,
+  CLUB_TIMEZONE,
 } from '@/lib/google/google-caledar'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
@@ -220,8 +222,8 @@ export async function returnBookingItems(
           event: {
             summary: `${it.equipmentName} (RETURNED)`,
             description: buildItemEventDetails(it, 'returned', returnedAt),
-            start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' },
-            end: { dateTime: returnedAt.toISOString(), timeZone: 'UTC' },
+            start: { dateTime: toCalendarDateTime(eventStart), timeZone: CLUB_TIMEZONE },
+            end: { dateTime: toCalendarDateTime(returnedAt), timeZone: CLUB_TIMEZONE },
           },
           userEmail: it.userEmail || '',
         },

@@ -72,11 +72,13 @@ async function promptStartConfirm(
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Asia/Karachi',
   })
   const timeEnd = parent.endTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Asia/Karachi',
   })
   const equipmentLabel = items.map((i) => i.equipmentName).join(', ')
 
