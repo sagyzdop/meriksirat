@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm run db:migrate-local && npm run build && wrangler dev --local --test-scheduled --port 3000",
-    "dev:vite": "vite dev --port 3000",
+    "dev": "npm run db:migrate-local && VITE_ENABLE_DEVTOOLS=true npm run build && wrangler dev --local --test-scheduled --port 3000",
+    "dev:vite": "VITE_ENABLE_DEVTOOLS=true vite dev --port 3000",
     "build": "vite build",
     "serve": "vite preview",
     "test": "vitest run",
