@@ -682,8 +682,14 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
       .set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(bookingItem.bookingId, data.bookingId))
 
-    // Recompute and persist parent status
-    await recomputeBookingStatus(database, data.bookingId)
+    // Recompute and persist parent status. A failure here must not stop the
+    // calendar event cleanup below, otherwise the equipment stays busy after
+    // the booking was already cancelled.
+    try {
+      await recomputeBookingStatus(database, data.bookingId)
+    } catch (err) {
+      console.error('Failed to recompute booking status on cancel:', err)
+    }
 
     // Log booking cancellation to Telegram channel
     try {
@@ -752,6 +758,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
         userId: booking.userId,
         startTime: booking.startTime,
         endTime: booking.endTime,
+        startedAt: booking.startedAt,
         userEventDetails: booking.userEventDetails,
         status: booking.status,
       })
@@ -805,11 +812,22 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
           },
         })
 
-        if (freeBusyResult.busy.length > 0) {
+        // The booking's own events still occupy the calendar until they are
+        // moved below, so exclude them before reporting conflicts. Without
+        // this, rescheduling to an overlapping time fails with a false
+        // "Requested time conflicts with existing booking" error.
+        const { excludeOwnBookingPeriod } = await import('../availability')
+        const conflicts = excludeOwnBookingPeriod(
+          freeBusyResult.busy,
+          bookingData.startedAt ?? bookingData.startTime,
+          bookingData.endTime
+        )
+
+        if (conflicts.length > 0) {
           const err: any = new Error(
             `Requested time conflicts with existing booking for ${item.equipmentModelName || `equipment ${item.equipmentId}`}`
           )
-          err.conflict = freeBusyResult.busy[0]
+          err.conflict = conflicts[0]
           throw err
         }
       }

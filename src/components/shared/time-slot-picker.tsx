@@ -100,6 +100,18 @@ export function TimeSlotPicker({
         }
         const allSlots = generateTimeSlots()
 
+        // Slots whose start time has already passed cannot be booked. This
+        // prevents retroactive bookings when today is selected.
+        const now = Date.now()
+        const pastSlotTimes = new Set(
+          allSlots.filter((time) => {
+            const [hour, minute] = time.split(":").map(Number)
+            const slotStart = new Date(selectedDate)
+            slotStart.setHours(hour, minute, 0, 0)
+            return slotStart.getTime() <= now
+          })
+        )
+
         // Check each slot against busy periods
         const slotsWithAvailability: TimeSlot[] = allSlots.map((time) => {
           const [hour, minute] = time.split(":").map(Number)
@@ -109,8 +121,10 @@ export function TimeSlotPicker({
           const slotEnd = new Date(slotStart)
           slotEnd.setMinutes(slotEnd.getMinutes() + 30)
 
+          const isPast = pastSlotTimes.has(time)
+
           // Check if this slot overlaps with any busy period
-          const isAvailable = !busySlots.some((busy: any) => {
+          const isAvailable = !isPast && !busySlots.some((busy: any) => {
             const busyStart = new Date(busy.start)
             const busyEnd = new Date(busy.end)
 
@@ -137,6 +151,11 @@ export function TimeSlotPicker({
         })
 
         setTimeSlots(slotsWithAvailability)
+
+        // Drop any previously selected slots that are now in the past (e.g. an
+        // existing booking edited during its start window), so the derived
+        // booking times can never start in the past.
+        setSelectedSlots((prev) => prev.filter((t) => !pastSlotTimes.has(t)))
       } catch (error) {
         console.error("Failed to check availability:", error)
         toast.error("Failed to load availability")
