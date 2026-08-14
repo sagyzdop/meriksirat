@@ -39,18 +39,31 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     const args = messageText.split(' ')
     const token = args[1] // Token is the second element after /start
 
-    // If no token provided, send welcome message
-    if (!token) {
-      await ctx.reply(
-        'Welcome! Please use the link from the web app to connect your account.',
-        removeKeyboard()
-      )
-      return
-    }
-
     // Extract chat ID and username from Telegram context
     const chatId = String(ctx.chat.id)
     const username = ctx.from?.username
+
+    // If no token provided: linked users get the main menu, new users get the
+    // welcome message (linking happens via the web app deep link /start <token>)
+    if (!token) {
+      const database = db(ctx.env.meriksirat_d1 as D1Database)
+      const linkedUser = await database
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.telegramChatId, chatId))
+        .limit(1)
+        .then((rows) => rows[0])
+
+      if (linkedUser) {
+        await showMainMenu(ctx)
+      } else {
+        await ctx.reply(
+          'Welcome! Please use the link from the web app to connect your account.',
+          removeKeyboard()
+        )
+      }
+      return
+    }
 
     // Initialize database connection
     const database = db(ctx.env.meriksirat_d1 as D1Database)
