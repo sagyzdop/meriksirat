@@ -1,6 +1,6 @@
 /**
  * Telegram API Helper using native fetch
- * 
+ *
  * This module provides a simple wrapper around Telegram Bot API using native fetch()
  * instead of Telegraf's HTTP client which doesn't work in Cloudflare Workers.
  */
@@ -13,15 +13,17 @@ async function callAPI(token: string, method: string, data: any = {}) {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   })
-  
-  const result = await response.json() as any
-  
+
+  const result = (await response.json()) as any
+
   if (!result.ok) {
-    throw new Error(`Telegram API error: ${result.description || 'Unknown error'}`)
+    throw new Error(
+      `Telegram API error: ${result.description || 'Unknown error'}`
+    )
   }
-  
+
   return result.result
 }
 
@@ -35,7 +37,7 @@ export class TelegramAPI {
     return await callAPI(this.token, 'sendMessage', {
       chat_id: chatId,
       text,
-      ...extra
+      ...extra,
     })
   }
 
@@ -43,45 +45,72 @@ export class TelegramAPI {
     return await callAPI(this.token, 'sendPhoto', {
       chat_id: chatId,
       photo,
-      ...extra
+      ...extra,
     })
   }
 
-  async answerCallbackQuery(callbackQueryId: string, text?: string, extra?: any) {
+  async answerCallbackQuery(
+    callbackQueryId: string,
+    text?: string,
+    extra?: any
+  ) {
     return await callAPI(this.token, 'answerCallbackQuery', {
       callback_query_id: callbackQueryId,
       text,
-      ...extra
+      ...extra,
     })
   }
 
   async getFile(fileId: string) {
     return await callAPI(this.token, 'getFile', {
-      file_id: fileId
+      file_id: fileId,
     })
   }
 
-  async editMessageText(chatId: number | string, messageId: number, text: string, extra?: any) {
+  async editMessageText(
+    chatId: number | string,
+    messageId: number,
+    text: string,
+    extra?: any
+  ) {
     return await callAPI(this.token, 'editMessageText', {
       chat_id: chatId,
       message_id: messageId,
       text,
-      ...extra
+      ...extra,
     })
   }
 
-  async editMessageReplyMarkup(chatId: number | string, messageId: number, replyMarkup?: any) {
+  async editMessageReplyMarkup(
+    chatId: number | string,
+    messageId: number,
+    replyMarkup?: any
+  ) {
     return await callAPI(this.token, 'editMessageReplyMarkup', {
       chat_id: chatId,
       message_id: messageId,
-      reply_markup: replyMarkup
+      reply_markup: replyMarkup,
     })
   }
 
   async deleteMessage(chatId: number | string, messageId: number) {
     return await callAPI(this.token, 'deleteMessage', {
       chat_id: chatId,
-      message_id: messageId
+      message_id: messageId,
+    })
+  }
+
+  async setMyCommands(
+    commands: Array<{ command: string; description: string }>
+  ) {
+    return await callAPI(this.token, 'setMyCommands', {
+      commands,
+    })
+  }
+
+  async setChatMenuButton(menuButton: any) {
+    return await callAPI(this.token, 'setChatMenuButton', {
+      menu_button: menuButton,
     })
   }
 }

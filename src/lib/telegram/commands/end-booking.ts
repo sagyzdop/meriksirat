@@ -4,7 +4,8 @@ import { eq, and, inArray, lt } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { BOOKING_STATUS } from '../types'
-import { withKeyboard } from '../server-utils'
+import { inlineKeyboard, removeKeyboard } from '../server-utils'
+import { renderInPlace, backToMenuMarkup, backToMenuButton } from '../menu'
 
 interface BookingWithItems {
   id: number
@@ -16,17 +17,6 @@ interface BookingWithItems {
     itemStatus: string
     equipmentName: string
   }>
-}
-
-/**
- * Builds a shared inline keyboard helper: 2 buttons per row.
- */
-function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: string }>) {
-  const rows: Array<Array<{ text: string; callback_data: string }>> = []
-  for (let i = 0; i < buttons.length; i += 2) {
-    rows.push(buttons.slice(i, i + 2))
-  }
-  return { reply_markup: { inline_keyboard: rows } }
 }
 
 /**
@@ -89,6 +79,67 @@ async function fetchReturnableBookings(
 }
 
 /**
+ * Renders the "select which booking to return" list. Used by both the text
+ * command and the main-menu button so the flow renders in place.
+ */
+export async function renderEndBookingList(ctx: BotContext): Promise<void> {
+  const chatId = String(ctx.chat?.id)
+  if (!chatId) return
+
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const userRecord = await database
+    .select()
+    .from(user)
+    .where(eq(user.telegramChatId, chatId))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!userRecord) {
+    await renderInPlace(
+      ctx,
+      'Please link your account via /start first.',
+      removeKeyboard()
+    )
+    return
+  }
+
+  const bookings = await fetchReturnableBookings(ctx, userRecord.id)
+
+  if (bookings.length === 0) {
+    await renderInPlace(
+      ctx,
+      'You have no active bookings to return.',
+      backToMenuMarkup()
+    )
+    return
+  }
+
+  const activeBookingIds = bookings.map((b) => b.id)
+
+  // Always show the booking list first so the user can confirm which booking
+  // they are returning equipment for.
+  await setSession(ctx.env.meriksirat_kv, chatId, {
+    step: 'awaiting_booking_selection',
+    userId: userRecord.id,
+    activeBookingIds,
+    createdAt: Date.now(),
+  })
+
+  const buttons = bookings.map((b) => ({
+    text: `#${b.id} — ${b.items.map((it) => it.equipmentName).join(', ')}`,
+    callback_data: `book_${b.id}`,
+  }))
+  buttons.push(backToMenuButton())
+
+  await renderInPlace(
+    ctx,
+    'Select which booking to return:',
+    inlineKeyboard(buttons)
+  )
+}
+
+/**
  * Handles the /return_equipment command to initiate equipment return flow
  *
  * Flow:
@@ -104,55 +155,7 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
       return
     }
 
-    const chatId = String(ctx.chat.id)
-    const database = db(ctx.env.meriksirat_d1 as D1Database)
-
-    const userRecord = await database
-      .select()
-      .from(user)
-      .where(eq(user.telegramChatId, chatId))
-      .limit(1)
-      .then(rows => rows[0])
-
-    if (!userRecord) {
-      await ctx.reply(
-        'Please link your account via /start first.',
-        withKeyboard()
-      )
-      return
-    }
-
-    const bookings = await fetchReturnableBookings(ctx, userRecord.id)
-
-    if (bookings.length === 0) {
-      await ctx.reply(
-        'You have no active bookings to return.',
-        withKeyboard()
-      )
-      return
-    }
-
-    const activeBookingIds = bookings.map((b) => b.id)
-
-    // Always show the booking list first so the user can confirm which booking
-    // they are returning equipment for.
-    await setSession(ctx.env.meriksirat_kv, chatId, {
-      step: 'awaiting_booking_selection',
-      userId: userRecord.id,
-      activeBookingIds,
-      createdAt: Date.now(),
-    })
-
-    const buttons = bookings.map((b) => ({
-      text: `#${b.id} — ${b.items.map((it) => it.equipmentName).join(', ')}`,
-      callback_data: `book_${b.id}`,
-    }))
-
-    await ctx.reply(
-      'Select which booking to return:',
-      buildInlineKeyboard(buttons)
-    )
-
+    await renderEndBookingList(ctx)
   } catch (error) {
     console.error('End booking command error:', {
       chatId: ctx.chat?.id,

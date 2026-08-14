@@ -11,7 +11,7 @@ import { bookingItem, booking, equipment, user } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { notifyAdmins } from '../admin'
 import { logBookingActivityById } from '../logging'
-import { withKeyboard } from '../server-utils'
+import { backToMenuMarkup } from '../menu'
 import { returnBookingItems } from '@/lib/booking/booking-items'
 import { formatUserDisplayName } from '@/lib/utils'
 
@@ -121,10 +121,24 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
         console.error('Failed to log booking return:', logError)
       }
 
-      await ctx.reply(
-        `Return logged for ${itemCount} item(s). Summary sent to admins.`,
-        withKeyboard()
-      )
+      // Confirm in place by editing the "please send a photo" prompt, keeping
+      // the conversation message-sparse.
+      const confirmation = `✅ Return logged for ${itemCount} item(s).\n\nSummary sent to admins.`
+      if (session.photoPromptMessageId) {
+        try {
+          await ctx.telegram.editMessageText(
+            chatId,
+            session.photoPromptMessageId,
+            confirmation,
+            backToMenuMarkup()
+          )
+        } catch (editError) {
+          console.error('Failed to edit photo prompt after return:', editError)
+          await ctx.reply(confirmation)
+        }
+      } else {
+        await ctx.reply(confirmation)
+      }
 
       await deleteSession(ctx.env.meriksirat_kv, chatId)
     } catch (error) {
@@ -135,10 +149,22 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
         stack: error instanceof Error ? error.stack : undefined,
       })
 
-      await ctx.reply(
-        '❌ Error processing return. Please try again.',
-        withKeyboard()
-      )
+      const errorText = '❌ Error processing return. Please try again.'
+      if (session.photoPromptMessageId) {
+        try {
+          await ctx.telegram.editMessageText(
+            chatId,
+            session.photoPromptMessageId,
+            errorText,
+            backToMenuMarkup()
+          )
+        } catch (editError) {
+          console.error('Failed to edit photo prompt after error:', editError)
+          await ctx.reply(errorText)
+        }
+      } else {
+        await ctx.reply(errorText)
+      }
 
       return
     }

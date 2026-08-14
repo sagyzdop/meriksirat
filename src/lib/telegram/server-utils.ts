@@ -18,40 +18,26 @@ import { eq } from 'drizzle-orm'
 // ============================================================================
 
 /**
- * Standard reply keyboard markup for the bot
- * Shows persistent keyboard with common commands
+ * Builds an inline keyboard from a flat button list, 2 buttons per row.
+ * Buttons are `{ text, callback_data }` objects.
  */
-export const STANDARD_KEYBOARD = {
-  keyboard: [
-    [{ text: 'Start Booking' }],
-    [{ text: 'End Booking' }, { text: 'My Bookings' }],
-    [{ text: 'Cancel Booking' }],
-  ],
-  resize_keyboard: true,
-  persistent: true,
-  placeholder: 'Choose a command...',
-} as const
-
-/**
- * Creates reply options with the standard keyboard
- */
-export function withKeyboard(options: any = {}) {
-  return {
-    ...options,
-    reply_markup: STANDARD_KEYBOARD,
+export function inlineKeyboard(
+  buttons: Array<{ text: string; callback_data: string }>
+) {
+  const rows: Array<Array<{ text: string; callback_data: string }>> = []
+  for (let i = 0; i < buttons.length; i += 2) {
+    rows.push(buttons.slice(i, i + 2))
   }
+  return { reply_markup: { inline_keyboard: rows } }
 }
 
 /**
- * Clears the inline keyboard when editing a message that currently has one.
- * Telegram rejects switching a message from an inline keyboard to a reply
- * keyboard via editMessageText ("Bad Request: inline keyboard expected"), so
- * pass an empty inline keyboard to remove the buttons instead.
+ * Removes the persistent reply keyboard from the chat.
  */
-export function clearInlineKeyboard(options: any = {}) {
+export function removeKeyboard(options: any = {}) {
   return {
     ...options,
-    reply_markup: { inline_keyboard: [] },
+    reply_markup: { remove_keyboard: true },
   }
 }
 

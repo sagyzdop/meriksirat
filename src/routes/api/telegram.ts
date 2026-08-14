@@ -20,6 +20,7 @@ import { handleCancelBooking } from '@/lib/telegram/commands/cancel-booking'
 import { handleStartBooking } from '@/lib/telegram/commands/start-booking'
 import { handleCallback } from '@/lib/telegram/commands/callback'
 import { handlePhoto } from '@/lib/telegram/commands/photo'
+import { showMainMenu } from '@/lib/telegram/menu'
 
 export const Route = createFileRoute('/api/telegram')({
   server: {
@@ -139,6 +140,9 @@ export const Route = createFileRoute('/api/telegram')({
               await handleListBookings(ctx)
             } else if (text === 'Cancel Booking') {
               await handleCancelBooking(ctx)
+            } else {
+              // Unknown text: show the main menu
+              await showMainMenu(ctx)
             }
           } else if ('callback_query' in update) {
             await handleCallback(ctx)

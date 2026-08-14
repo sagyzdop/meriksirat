@@ -1,36 +1,33 @@
 /**
  * Telegram Callback Query Handler
  *
- * Handles inline keyboard button clicks during equipment return flow.
+ * Handles inline keyboard button clicks. The bot is menu-driven: main menu
+ * callbacks (menu / menu_*) are handled first and render in place, then the
+ * start-booking flow, then the return flow.
  *
  * Callback data format:
- * - book_<bookingId>   : selects a booking (step: awaiting_booking_selection)
- * - item_<itemId>      : selects a specific item (step: awaiting_item_selection)
- * - item_all_<bookingId> : selects all returnable items of a booking
+ * - menu                          : show the main menu
+ * - menu_bookings / menu_start / menu_end / menu_cancel : sub-lists
+ * - start_<bookingId>             : confirms a booking to start
+ * - start_confirm_<bookingId>     : performs the start
+ * - start_cancel                  : aborts the start
+ * - book_<bookingId>              : selects a booking (return flow)
+ * - item_<itemId>                 : selects a specific item (return flow)
+ * - item_all_<bookingId>          : selects all returnable items of a booking
  */
 
 import type { BotContext } from '../context'
-import { getSession, setSession } from '../kv-session'
-import { withKeyboard, clearInlineKeyboard } from '../server-utils'
-import { handleCancelCallback } from './cancel-booking'
-import { startBookingForChat } from './start-booking'
+import { getSession, setSession, deleteSession } from '../kv-session'
+import { inlineKeyboard } from '../server-utils'
+import { showMainMenu, backToMenuButton, backToMenuMarkup } from '../menu'
+import { handleCancelCallback, renderCancelBookingList } from './cancel-booking'
+import { startBookingForChat, renderStartBookingList } from './start-booking'
+import { renderEndBookingList } from './end-booking'
+import { renderMyBookings } from './list-bookings'
 import { db } from '@/db'
 import { bookingItem, booking, equipment, user } from '@/db/schema'
 import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { BOOKING_STATUS } from '../types'
-
-/**
- * Builds a shared inline keyboard helper: 2 buttons per row.
- */
-function buildInlineKeyboard(
-  buttons: Array<{ text: string; callback_data: string }>
-) {
-  const rows: Array<Array<{ text: string; callback_data: string }>> = []
-  for (let i = 0; i < buttons.length; i += 2) {
-    rows.push(buttons.slice(i, i + 2))
-  }
-  return { reply_markup: { inline_keyboard: rows } }
-}
 
 /**
  * Shows a confirmation prompt for starting a booking.
@@ -80,7 +77,7 @@ async function promptStartConfirm(
 
   await ctx.editMessageText(
     `Start booking #${bookingId} now?\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${timeStart} - ${timeEnd}`,
-    buildInlineKeyboard([
+    inlineKeyboard([
       { text: '✅ Start Booking', callback_data: `start_confirm_${bookingId}` },
       { text: 'Cancel', callback_data: 'start_cancel' },
     ])
@@ -89,7 +86,7 @@ async function promptStartConfirm(
 }
 
 /**
- * Handles inline keyboard button clicks (callback queries)
+ * Shows the item selection for a booking during the return flow.
  */
 async function promptItemSelection(
   ctx: BotContext,
@@ -134,10 +131,11 @@ async function promptItemSelection(
     text: 'Return All Items',
     callback_data: `item_all_${bookingId}`,
   })
+  buttons.push(backToMenuButton())
 
   await ctx.editMessageText(
     `Select which items to return for booking #${bookingId}:`,
-    buildInlineKeyboard(buttons)
+    inlineKeyboard(buttons)
   )
   await ctx.answerCbQuery()
 }
@@ -163,16 +161,52 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       return
     }
 
-    const session = await getSession(ctx.env.meriksirat_kv, chatId)
+    // Main menu actions always take precedence, regardless of session state.
+    if (callbackData === 'menu') {
+      await deleteSession(ctx.env.meriksirat_kv, chatId)
+      await showMainMenu(ctx)
+      await ctx.answerCbQuery()
+      return
+    }
+
+    if (callbackData === 'menu_bookings') {
+      await deleteSession(ctx.env.meriksirat_kv, chatId)
+      await renderMyBookings(ctx)
+      await ctx.answerCbQuery()
+      return
+    }
+
+    if (callbackData === 'menu_start') {
+      await deleteSession(ctx.env.meriksirat_kv, chatId)
+      await renderStartBookingList(ctx)
+      await ctx.answerCbQuery()
+      return
+    }
+
+    if (callbackData === 'menu_end') {
+      await deleteSession(ctx.env.meriksirat_kv, chatId)
+      await renderEndBookingList(ctx)
+      await ctx.answerCbQuery()
+      return
+    }
+
+    if (callbackData === 'menu_cancel') {
+      await deleteSession(ctx.env.meriksirat_kv, chatId)
+      await renderCancelBookingList(ctx)
+      await ctx.answerCbQuery()
+      return
+    }
 
     // Cancel booking flow handles its own callbacks without a session
     if (await handleCancelCallback(ctx)) {
       return
     }
 
+    const session = await getSession(ctx.env.meriksirat_kv, chatId)
+
     if (!session) {
-      await ctx.answerCbQuery('Session expired or invalid')
-      await ctx.reply('Please use /return_equipment first.', withKeyboard())
+      await ctx.answerCbQuery('Session expired')
+      await showMainMenu(ctx)
       return
     }
 
@@ -226,9 +260,10 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
         try {
           await startBookingForChat(bookingId, userRecord?.email || '', ctx)
           await ctx.editMessageText(
-            `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Remember to use "End Booking" when returning it.`,
-            clearInlineKeyboard()
+            `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Return it via the End Booking flow when done.`,
+            backToMenuMarkup()
           )
+          await deleteSession(ctx.env.meriksirat_kv, chatId)
         } catch (error) {
           console.error('Failed to start booking:', error)
           try {
@@ -236,7 +271,7 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
               error instanceof Error
                 ? error.message
                 : 'Failed to start booking. Please try again.',
-              clearInlineKeyboard()
+              backToMenuMarkup()
             )
           } catch (editError) {
             console.error(
@@ -249,8 +284,9 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       }
 
       if (callbackData === 'start_cancel') {
-        await ctx.editMessageText('Start cancelled.', clearInlineKeyboard())
+        await ctx.editMessageText('Start cancelled.', backToMenuMarkup())
         await ctx.answerCbQuery()
+        await deleteSession(ctx.env.meriksirat_kv, chatId)
         return
       }
 
@@ -322,11 +358,12 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
         ...session,
         selectedItemIds,
         step: 'awaiting_photo',
+        photoPromptMessageId: ctx.callbackQuery.message.message_id,
       })
 
       await ctx.editMessageText(
         'Selected. Please send a photo of the equipment.',
-        clearInlineKeyboard()
+        inlineKeyboard([{ text: '🔁 Cancel', callback_data: 'menu' }])
       )
       await ctx.answerCbQuery()
       return
@@ -351,9 +388,6 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       console.error('Failed to answer callback query:', answerError)
     }
 
-    await ctx.reply(
-      'Error processing selection. Please try again.',
-      withKeyboard()
-    )
+    await ctx.reply('Error processing selection. Please try again.')
   }
 }

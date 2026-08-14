@@ -6,7 +6,8 @@ import { user, telegramToken } from '@/db/schema'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '@/lib/auth/auth'
-import { withKeyboard } from '../server-utils'
+import { removeKeyboard } from '../server-utils'
+import { showMainMenu } from '../menu'
 
 /**
  * Handles the /start command for Telegram account linking (deeplink flow)
@@ -38,11 +39,11 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     const args = messageText.split(' ')
     const token = args[1] // Token is the second element after /start
 
-    // If no token provided, send welcome message with keyboard
+    // If no token provided, send welcome message
     if (!token) {
       await ctx.reply(
         'Welcome! Please use the link from the web app to connect your account.',
-        withKeyboard()
+        removeKeyboard()
       )
       return
     }
@@ -87,11 +88,9 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     // Delete the used token
     await database.delete(telegramToken).where(eq(telegramToken.token, token))
 
-    // Send success confirmation with persistent keyboard
-    await ctx.reply(
-      'Telegram linked ✅\n\nYou can now use the menu below to interact with the bot.',
-      withKeyboard()
-    )
+    // Send success confirmation, then show the main menu
+    await ctx.reply('Telegram linked ✅', removeKeyboard())
+    await showMainMenu(ctx)
   } catch (error) {
     // Log error with context for debugging
     console.error('Start command error:', {

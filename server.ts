@@ -37,12 +37,27 @@ export default {
         cancelUnstartedBookings(env),
         updateOverdueBookings(env),
         sendBookingReminders(env),
+        configureTelegramBot(env),
       ])
     )
   },
 }
 
 const GRACE_MS = 15 * 60 * 1000
+
+/**
+ * Keeps the bot's global configuration in sync (clears the command menu so the
+ * bot is driven purely by the inline-button interface).
+ */
+async function configureTelegramBot(env: Env): Promise<void> {
+  try {
+    const { configureTelegramBot: configure } =
+      await import('./src/lib/telegram/configure')
+    await configure(env)
+  } catch (error) {
+    console.error('Error in configureTelegramBot:', error)
+  }
+}
 
 /**
  * Auto-cancel bookings that were never started.
@@ -55,8 +70,10 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
     const { db } = await import('./src/db/index')
     const { booking, bookingItem, user } = await import('./src/db/schema')
     const { eq, and, isNull, lte, sql } = await import('drizzle-orm')
-    const { cancelBookingItems } = await import('./src/lib/booking/booking-items')
-    const { logBookingActivityById } = await import('./src/lib/telegram/logging')
+    const { cancelBookingItems } =
+      await import('./src/lib/booking/booking-items')
+    const { logBookingActivityById } =
+      await import('./src/lib/telegram/logging')
     const { TelegramAPI } = await import('./src/lib/telegram/api')
 
     const database = db(env.meriksirat_d1)
@@ -95,19 +112,25 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
           .where(eq(bookingItem.bookingId, stale.id))
 
         if (items.length > 0) {
-          await cancelBookingItems(database, items.map((it) => it.id))
+          await cancelBookingItems(
+            database,
+            items.map((it) => it.id)
+          )
         }
 
         await database
           .update(user)
-          .set({ cancelledInStartWindowCount: sql`${user.cancelledInStartWindowCount} + 1` })
+          .set({
+            cancelledInStartWindowCount: sql`${user.cancelledInStartWindowCount} + 1`,
+          })
           .where(eq(user.id, stale.userId))
 
         try {
           await logBookingActivityById(stale.id, 'cancelled', {
             previousStatus: 'booked',
             newStatus: 'cancelled',
-            notes: 'Booking auto-cancelled: equipment was not picked up within 15 minutes of the start time',
+            notes:
+              'Booking auto-cancelled: equipment was not picked up within 15 minutes of the start time',
           })
         } catch (logError) {
           console.error('Failed to log auto-cancel:', logError)
@@ -125,7 +148,10 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
               `❌ Booking #${stale.id} was auto-cancelled.\n\nYou did not pick up your equipment within 15 minutes of the start time (${time}). If this wasn't intentional, please make a new booking.`
             )
           } catch (sendError) {
-            console.error(`Failed to notify auto-cancel for booking ${stale.id}:`, sendError)
+            console.error(
+              `Failed to notify auto-cancel for booking ${stale.id}:`,
+              sendError
+            )
           }
         }
       } catch (error) {
@@ -147,12 +173,16 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
 async function updateOverdueBookings(env: Env): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
-    const { booking, bookingItem, equipment, user } = await import('./src/db/schema')
+    const { booking, bookingItem, equipment, user } =
+      await import('./src/db/schema')
     const { eq, and, lte, sql } = await import('drizzle-orm')
-    const { updateCalendarEvent } = await import('./src/lib/google/google-caledar')
-    const { logBookingActivityById } = await import('./src/lib/telegram/logging')
+    const { updateCalendarEvent } =
+      await import('./src/lib/google/google-caledar')
+    const { logBookingActivityById } =
+      await import('./src/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('./src/lib/booking/status')
-    const { formatBookingDetailsPlain } = await import('./src/lib/booking/details')
+    const { formatBookingDetailsPlain } =
+      await import('./src/lib/booking/details')
     const { formatUserDisplayName } = await import('./src/lib/utils')
     const { TelegramAPI } = await import('./src/lib/telegram/api')
 
@@ -198,7 +228,14 @@ async function updateOverdueBookings(env: Env): Promise<void> {
         )
       )
 
-    const touchedBookings = new Map<number, { userId: string; telegramChatId?: string | null; firstName?: string | null }>()
+    const touchedBookings = new Map<
+      number,
+      {
+        userId: string
+        telegramChatId?: string | null
+        firstName?: string | null
+      }
+    >()
 
     for (const item of overdueItems) {
       try {
@@ -230,7 +267,9 @@ async function updateOverdueBookings(env: Env): Promise<void> {
             description: formatBookingDetailsPlain({
               bookingId: item.bookingId,
               userDisplayName,
-              equipmentNames: [item.equipment.modelName || `Equipment ${item.equipment.id}`],
+              equipmentNames: [
+                item.equipment.modelName || `Equipment ${item.equipment.id}`,
+              ],
               startTime: item.booking.startTime,
               endTime: item.booking.endTime,
               startedAt: item.booking.startedAt,
@@ -239,7 +278,10 @@ async function updateOverdueBookings(env: Env): Promise<void> {
             }),
             // Times are never changed by the overdue transition.
             start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' },
-            end: { dateTime: item.booking.endTime.toISOString(), timeZone: 'UTC' },
+            end: {
+              dateTime: item.booking.endTime.toISOString(),
+              timeZone: 'UTC',
+            },
           }
 
           await updateCalendarEvent({
@@ -248,7 +290,7 @@ async function updateOverdueBookings(env: Env): Promise<void> {
               eventId: item.googleCalendarEventId,
               event,
               userEmail: item.user?.email || '',
-            }
+            },
           })
         }
 
@@ -256,7 +298,7 @@ async function updateOverdueBookings(env: Env): Promise<void> {
           await logBookingActivityById(item.bookingId, 'updated', {
             previousStatus: 'active',
             newStatus: 'overdue',
-            notes: `Automatically marked as overdue by system (item ${item.id})`
+            notes: `Automatically marked as overdue by system (item ${item.id})`,
           })
         } catch (logError) {
           console.error('Failed to log overdue booking:', logError)
@@ -271,7 +313,10 @@ async function updateOverdueBookings(env: Env): Promise<void> {
       try {
         await recomputeBookingStatus(database, bookingId)
       } catch (error) {
-        console.error(`Failed to recompute status for booking ${bookingId}:`, error)
+        console.error(
+          `Failed to recompute status for booking ${bookingId}:`,
+          error
+        )
       }
 
       try {
@@ -280,7 +325,10 @@ async function updateOverdueBookings(env: Env): Promise<void> {
           .set({ overdueCount: sql`${user.overdueCount} + 1` })
           .where(eq(user.id, info.userId))
       } catch (error) {
-        console.error(`Failed to increment overdue count for user ${info.userId}:`, error)
+        console.error(
+          `Failed to increment overdue count for user ${info.userId}:`,
+          error
+        )
       }
     }
 
@@ -316,8 +364,10 @@ async function updateOverdueBookings(env: Env): Promise<void> {
 async function sendBookingReminders(env: Env): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
-    const { booking, bookingItem, equipment, user } = await import('./src/db/schema')
-    const { eq, and, gte, lte, isNull, notInArray } = await import('drizzle-orm')
+    const { booking, bookingItem, equipment, user } =
+      await import('./src/db/schema')
+    const { eq, and, gte, lte, isNull, notInArray } =
+      await import('drizzle-orm')
 
     const database = db(env.meriksirat_d1)
     const now = new Date()
@@ -332,7 +382,9 @@ async function sendBookingReminders(env: Env): Promise<void> {
       return
     }
 
-    const telegram = new (await import('./src/lib/telegram/api')).TelegramAPI(botToken)
+    const telegram = new (await import('./src/lib/telegram/api')).TelegramAPI(
+      botToken
+    )
 
     const HELD: ('returned' | 'cancelled')[] = ['returned', 'cancelled']
 
@@ -405,14 +457,17 @@ async function sendBookingReminders(env: Env): Promise<void> {
           .leftJoin(user, eq(booking.userId, user.id))
           .where(kind.condition)
 
-        const bookingsMap = new Map<number, {
-          startTime: Date
-          endTime: Date
-          status: string
-          equipmentNames: string[]
-          telegramChatId?: string | null
-          firstName?: string | null
-        }>()
+        const bookingsMap = new Map<
+          number,
+          {
+            startTime: Date
+            endTime: Date
+            status: string
+            equipmentNames: string[]
+            telegramChatId?: string | null
+            firstName?: string | null
+          }
+        >()
 
         for (const row of rows) {
           const entry = bookingsMap.get(row.bookingId) ?? {
@@ -440,7 +495,10 @@ async function sendBookingReminders(env: Env): Promise<void> {
               .set({ [TRACKING_COLUMNS[kind.name]]: new Date() })
               .where(eq(booking.id, bookingId))
           } catch (error) {
-            console.error(`Failed to send ${kind.name} reminder for booking ${bookingId}:`, error)
+            console.error(
+              `Failed to send ${kind.name} reminder for booking ${bookingId}:`,
+              error
+            )
           }
         }
       } catch (error) {
@@ -461,7 +519,11 @@ function buildReminderMessage(
   }
 ): string {
   const time = (d: Date) =>
-    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    d.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
   const equipmentLabel =
     info.equipmentNames.length === 1
       ? info.equipmentNames[0]

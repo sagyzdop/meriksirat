@@ -9,7 +9,8 @@ import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
-import { withKeyboard } from '../server-utils'
+import { removeKeyboard } from '../server-utils'
+import { renderInPlace, backToMenuMarkup } from '../menu'
 import { BOOKING_STATUS } from '../types'
 
 interface BookingListItem {
@@ -96,6 +97,59 @@ function formatTimeRange(startTime: Date, endTime: Date): string {
 }
 
 /**
+ * Renders the user's active/upcoming bookings list. Used by both the text
+ * command and the main-menu button so the flow renders in place.
+ */
+export async function renderMyBookings(ctx: BotContext): Promise<void> {
+  const chatId = String(ctx.chat?.id)
+  if (!chatId) return
+
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const userRecord = await database
+    .select()
+    .from(user)
+    .where(eq(user.telegramChatId, chatId))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!userRecord) {
+    await renderInPlace(
+      ctx,
+      'Please link your account via /start first.',
+      removeKeyboard()
+    )
+    return
+  }
+
+  const bookings = await fetchListableBookings(ctx, userRecord.id)
+
+  if (bookings.length === 0) {
+    await renderInPlace(
+      ctx,
+      'You have no active or upcoming bookings.',
+      backToMenuMarkup()
+    )
+    return
+  }
+
+  const now = new Date()
+  const lines: string[] = ['Your bookings:']
+  for (const b of bookings) {
+    const label = b.startTime <= now ? 'Active' : 'Upcoming'
+    lines.push(`\n${label} - Booking #${b.id} (${b.status.replace(/_/g, ' ')})`)
+    lines.push(`  ${formatTimeRange(b.startTime, b.endTime)}`)
+    for (const it of b.items) {
+      lines.push(
+        `  - ${it.equipmentName} (${it.itemStatus.replace(/_/g, ' ')})`
+      )
+    }
+  }
+
+  await renderInPlace(ctx, lines.join('\n'), backToMenuMarkup())
+}
+
+/**
  * Handles the /my_bookings command
  *
  * Flow:
@@ -111,46 +165,7 @@ export async function handleListBookings(ctx: BotContext): Promise<void> {
       return
     }
 
-    const chatId = String(ctx.chat.id)
-    const database = db(ctx.env.meriksirat_d1 as D1Database)
-
-    const userRecord = await database
-      .select()
-      .from(user)
-      .where(eq(user.telegramChatId, chatId))
-      .limit(1)
-      .then((rows) => rows[0])
-
-    if (!userRecord) {
-      await ctx.reply(
-        'Please link your account via /start first.',
-        withKeyboard()
-      )
-      return
-    }
-
-    const bookings = await fetchListableBookings(ctx, userRecord.id)
-
-    if (bookings.length === 0) {
-      await ctx.reply(
-        'You have no active or upcoming bookings.',
-        withKeyboard()
-      )
-      return
-    }
-
-    const now = new Date()
-    const lines: string[] = ['Your bookings:']
-    for (const b of bookings) {
-      const label = b.startTime <= now ? 'Active' : 'Upcoming'
-      lines.push(`\n${label} - Booking #${b.id} (${b.status.replace(/_/g, ' ')})`)
-      lines.push(`  ${formatTimeRange(b.startTime, b.endTime)}`)
-      for (const it of b.items) {
-        lines.push(`  - ${it.equipmentName} (${it.itemStatus.replace(/_/g, ' ')})`)
-      }
-    }
-
-    await ctx.reply(lines.join('\n'), withKeyboard())
+    await renderMyBookings(ctx)
   } catch (error) {
     console.error('List bookings command error:', {
       chatId: ctx.chat?.id,

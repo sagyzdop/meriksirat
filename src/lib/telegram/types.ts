@@ -121,5 +121,6 @@ export interface SessionData {
   selectedBookingIds?: number[]
   selectedItemIds?: number[]
   startBookingId?: number
+  photoPromptMessageId?: number
   createdAt?: number
 }

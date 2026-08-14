@@ -10,24 +10,12 @@ import { db } from '@/db'
 import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { user, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
-import { withKeyboard } from '../server-utils'
+import { inlineKeyboard, removeKeyboard } from '../server-utils'
+import { renderInPlace, backToMenuMarkup, backToMenuButton } from '../menu'
 import {
   listStartableBookings,
   startBooking,
 } from '@/lib/booking/start-booking'
-
-/**
- * Builds a shared inline keyboard helper: 2 buttons per row.
- */
-function buildInlineKeyboard(
-  buttons: Array<{ text: string; callback_data: string }>
-) {
-  const rows: Array<Array<{ text: string; callback_data: string }>> = []
-  for (let i = 0; i < buttons.length; i += 2) {
-    rows.push(buttons.slice(i, i + 2))
-  }
-  return { reply_markup: { inline_keyboard: rows } }
-}
 
 /**
  * Fetches the bookings whose start window is currently open for the user,
@@ -88,6 +76,63 @@ async function fetchStartableBookings(
 }
 
 /**
+ * Renders the "select which booking to start" list. Used by both the text
+ * command and the main-menu button so the flow renders in place.
+ */
+export async function renderStartBookingList(ctx: BotContext): Promise<void> {
+  const chatId = String(ctx.chat?.id)
+  if (!chatId) return
+
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const userRecord = await database
+    .select()
+    .from(user)
+    .where(eq(user.telegramChatId, chatId))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!userRecord) {
+    await renderInPlace(
+      ctx,
+      'Please link your account via /start first.',
+      removeKeyboard()
+    )
+    return
+  }
+
+  const bookings = await fetchStartableBookings(ctx, userRecord.id)
+
+  if (bookings.length === 0) {
+    await renderInPlace(
+      ctx,
+      'You have no bookings to start right now.\n\nYour booking can be started up to 15 minutes before its start time, and up to 15 minutes after.',
+      backToMenuMarkup()
+    )
+    return
+  }
+
+  await setSession(ctx.env.meriksirat_kv, chatId, {
+    step: 'awaiting_start_selection',
+    userId: userRecord.id,
+    activeBookingIds: bookings.map((b) => b.id),
+    createdAt: Date.now(),
+  })
+
+  const buttons = bookings.map((b) => ({
+    text: `#${b.id} — ${b.equipmentNames.join(', ')}`,
+    callback_data: `start_${b.id}`,
+  }))
+  buttons.push(backToMenuButton())
+
+  await renderInPlace(
+    ctx,
+    'Select which booking to start:',
+    inlineKeyboard(buttons)
+  )
+}
+
+/**
  * Handles the "Start Booking" command / button.
  *
  * Flow:
@@ -101,50 +146,7 @@ export async function handleStartBooking(ctx: BotContext): Promise<void> {
       return
     }
 
-    const chatId = String(ctx.chat.id)
-    const database = db(ctx.env.meriksirat_d1 as D1Database)
-
-    const userRecord = await database
-      .select()
-      .from(user)
-      .where(eq(user.telegramChatId, chatId))
-      .limit(1)
-      .then((rows) => rows[0])
-
-    if (!userRecord) {
-      await ctx.reply(
-        'Please link your account via /start first.',
-        withKeyboard()
-      )
-      return
-    }
-
-    const bookings = await fetchStartableBookings(ctx, userRecord.id)
-
-    if (bookings.length === 0) {
-      await ctx.reply(
-        'You have no bookings to start right now.\n\nYour booking can be started up to 15 minutes before its start time, and up to 15 minutes after.',
-        withKeyboard()
-      )
-      return
-    }
-
-    await setSession(ctx.env.meriksirat_kv, chatId, {
-      step: 'awaiting_start_selection',
-      userId: userRecord.id,
-      activeBookingIds: bookings.map((b) => b.id),
-      createdAt: Date.now(),
-    })
-
-    const buttons = bookings.map((b) => ({
-      text: `#${b.id} — ${b.equipmentNames.join(', ')}`,
-      callback_data: `start_${b.id}`,
-    }))
-
-    await ctx.reply(
-      'Select which booking to start:',
-      buildInlineKeyboard(buttons)
-    )
+    await renderStartBookingList(ctx)
   } catch (error) {
     console.error('Start booking command error:', {
       chatId: ctx.chat?.id,
