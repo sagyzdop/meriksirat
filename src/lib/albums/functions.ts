@@ -565,7 +565,7 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
     })
 
     const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-    void logAlbumActivityByUser(currentUser.id, {
+    await logAlbumActivityByUser(currentUser.id, {
       albumId,
       albumTitle: data.title,
       action: 'created',
@@ -828,7 +828,7 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
 
     if (currentUser && detailParts.length > 0) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-      void logAlbumActivityByUser(currentUser.id, {
+      await logAlbumActivityByUser(currentUser.id, {
         albumId: data.albumId,
         albumTitle: row.title,
         action: 'updated',
@@ -874,7 +874,7 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-      void logAlbumActivityByUser(currentUser.id, {
+      await logAlbumActivityByUser(currentUser.id, {
         albumId: data.albumId,
         albumTitle: row.title,
         action: 'deleted',
@@ -919,7 +919,7 @@ export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-      void logAlbumActivityByUser(currentUser.id, {
+      await logAlbumActivityByUser(currentUser.id, {
         albumId: data.albumId,
         albumTitle: row.title,
         action: data.shared ? 'shared' : 'unshared',
@@ -957,7 +957,7 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
         .onConflictDoNothing()
 
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-      void logAlbumActivityByUser(currentUser.id, {
+      await logAlbumActivityByUser(currentUser.id, {
         albumId: row.id,
         albumTitle: row.title,
         action: 'member_added',
@@ -994,7 +994,7 @@ export const rotateEditTokenFn = createServerFn({ method: 'POST' })
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-      void logAlbumActivityByUser(currentUser.id, {
+      await logAlbumActivityByUser(currentUser.id, {
         albumId: data.albumId,
         albumTitle: row.title,
         action: 'token_rotated',
@@ -1100,7 +1100,7 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-      void logAlbumActivityByUser(currentUser.id, {
+      await logAlbumActivityByUser(currentUser.id, {
         albumId: data.albumId,
         albumTitle: row.title,
         action: 'photo_deleted',
@@ -1184,7 +1184,7 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
           import('@/lib/telegram/logging'),
           import('@/lib/utils'),
         ])
-      void logAlbumActivityByUser(currentUser.id, {
+      await logAlbumActivityByUser(currentUser.id, {
         albumId: data.albumId,
         albumTitle: row.title,
         action: 'member_removed',
