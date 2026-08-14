@@ -9,8 +9,7 @@ import { getSession, deleteSession } from '../kv-session'
 import { db } from '@/db'
 import { bookingItem, booking, equipment, user } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
-import { notifyAdmins } from '../admin'
-import { logBookingActivityById } from '../logging'
+import { logBookingActivityById, logReturnPhotoToChannel } from '../logging'
 import { backToMenuMarkup } from '../menu'
 import { returnBookingItems } from '@/lib/booking/booking-items'
 import { formatUserDisplayName } from '@/lib/utils'
@@ -98,17 +97,11 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       const equipmentNames = uniqueEquipmentNames.join(', ')
       const itemCount = selectedItemIds.length
 
-      // Send notifications to all admins
-      await notifyAdmins(
-        ctx.env.meriksirat_d1,
-        {
-          photoFileId,
-          userName,
-          equipmentNames,
-          itemCount,
-        },
-        ctx.telegram
-      )
+      // Log the return photo to the club channel.
+      await logReturnPhotoToChannel({
+        photoFileId,
+        caption: `Return photo — Booking #${itemDetails[0].bookingId}\nUser: ${userName}\nItems: ${equipmentNames}`,
+      })
 
       // Log booking return to Telegram channel. Refetches the booking details
       // (user with telegram handle, item statuses, current status) so the log
@@ -123,7 +116,7 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
 
       // Confirm in place by editing the "please send a photo" prompt, keeping
       // the conversation message-sparse.
-      const confirmation = `✅ Return logged for ${itemCount} item(s).\n\nSummary sent to admins.`
+      const confirmation = `✅ Return logged for ${itemCount} item(s).\n\nPhoto sent to the club channel.`
       if (session.photoPromptMessageId) {
         try {
           await ctx.telegram.editMessageText(

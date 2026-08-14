@@ -4,25 +4,29 @@ Inventory of every message the system can send over Telegram, grouped by
 destination. This is the current implementation; the formats below are the
 source of truth for the logging logic.
 
+Formatting conventions:
+- People are always rendered as `Name Surname (@telegram)` (no emails, no roles).
+- All times are UTC, rendered as `Aug 14, 2026` for dates and `09:00` for times.
+
 ---
 
 ## 1. Audit channel logs (booking activity)
 
 Destination: `TELEGRAM_CLUB_CHANNEL_ID` (audit channel).
 Implementation: `src/lib/telegram/logging.ts` (`formatBookingLogMessage`).
-All booking activity goes through `logBookingActivityById(bookingId, action, { previousStatus, newStatus, notes })`, which auto-fetches the booking details (user display name, equipment names, per-item statuses, times) and renders the message.
+All booking activity goes through `logBookingActivityById(bookingId, action, { previousStatus, newStatus, notes, actorName })`, which auto-fetches the booking details (user display name, equipment names, per-item statuses, times) and renders the message.
 
 ### 1a. Full booking event (all items affected together)
 
 ```
 Booking #{bookingId} · {Action}
-User: {userDisplayName}
-Status: {Previous} → {New}      ← only when previousStatus != newStatus
-Status: {New}                    ← only when newStatus present and unchanged
+User: {Name Surname (@telegram)}
+By: {Name Surname (@telegram)}     ← only when actorName is set and differs from the booking's user
+Status: {Previous} → {New}         ← only when previousStatus != newStatus
 Equipment: {name1}, {name2}
-Booking Time: {date}, {HH:MM} – {HH:MM}
-Started at: {HH:MM}              ← only when startedAt present
-Notes: {notes}                   ← only when notes present
+Time: {Mon} {day}, {year}, {HH:MM} – {HH:MM}
+Started: {HH:MM}                   ← only when startedAt present
+Notes: {notes}                     ← only when notes present
 ```
 
 Action labels: `created` → Created, `updated` → Updated, `cancelled` → Cancelled, `returned` → Returned, `deleted` → Deleted.
@@ -33,13 +37,15 @@ Statuses are shown title-cased with underscores replaced by spaces (`booked`, `a
 When the item statuses show that fewer than all items changed:
 
 ```
-Booking #{bookingId}
-User: {userDisplayName}
-Event: {n} of {total} items {cancelled|returned} ({name1}, {name2})
-Remaining: {name3}
-Booking Time: {date}, {HH:MM} – {HH:MM}   ← optional
-Started at: {HH:MM}                       ← optional
-Notes: {notes}                            ← optional
+Booking #{bookingId} · {Action}
+User: {Name Surname (@telegram)}
+By: {Name Surname (@telegram)}     ← optional
+Status: {Previous} → {New}         ← optional
+Items {cancelled|returned}: {name1} ({n} of {total})
+Remaining: {name3}                 ← only when some items remain
+Time: {Mon} {day}, {year}, {HH:MM} – {HH:MM}   ← optional
+Started: {HH:MM}                   ← optional
+Notes: {notes}                     ← optional
 ```
 
 ### Emitters of `logBookingActivityById`
@@ -48,41 +54,70 @@ Notes: {notes}                            ← optional
 | --- | --- | --- | --- |
 | `created` | User creates a booking (web) | `src/lib/booking/functions/user-bookings.ts` | `newStatus: 'booked'`, `notes` |
 | `updated` | User edits schedule/notes (web) | `user-bookings.ts` | `newStatus` (current), `notes` (new notes) |
-| `updated` | Admin edits schedule/notes | `src/lib/booking/functions/admin-bookings.ts` | `notes: "Admin {name} updated booking{ schedule}{. Notes: {notes}}"` |
+| `updated` | Admin edits schedule/notes | `src/lib/booking/functions/admin-bookings.ts` | `actorName`, `notes: "Schedule updated" / "Notes: {notes}"` |
 | `updated` | Admin adds equipment to booking | `src/lib/booking/functions/booking-items.ts` | `notes: "Added equipment to booking: {name1}, {name2}"` |
 | `updated` | Booking extended +30 min (web) | `src/lib/booking/functions/extend-booking.ts` | `notes: "Booking extended by 30 minutes to {time}{; overdue status reset}"` |
-| `updated` | Booking started (web or Telegram) | `src/lib/booking/start-booking.ts` | `previousStatus: 'booked'`, `newStatus: 'active'`, `notes: "Booking started{ by {email}} at {ISO-timestamp}"` |
+| `updated` | Booking started (web or Telegram) | `src/lib/booking/start-booking.ts` | `previousStatus: 'booked'`, `newStatus: 'active'` (start time comes from `Started:`) |
 | `cancelled` | User cancels whole booking (web) | `user-bookings.ts` | `previousStatus` (current), `newStatus: 'cancelled'` |
-| `cancelled` | Admin cancels booking | `admin-bookings.ts` | `previousStatus`, `newStatus: 'cancelled'`, `notes: "Booking cancelled by admin {name}{. Reason: {reason}}"` |
+| `cancelled` | Admin cancels booking | `admin-bookings.ts` | `previousStatus`, `newStatus: 'cancelled'`, `actorName`, `notes: "Reason: {reason}"` |
 | `cancelled` | User cancels one item (Telegram) | `src/lib/telegram/commands/cancel-booking.ts` | `previousStatus` (item status), `newStatus: 'cancelled'` |
 | `cancelled` | User cancels one item (web) | `src/lib/booking/functions/booking-items.ts` | `newStatus: 'cancelled'`, `notes: "Item cancelled via web"` |
 | `cancelled` | Cron auto-cancel (never started) | `server.ts` | `previousStatus: 'booked'`, `newStatus: 'cancelled'`, `notes: "Booking auto-cancelled: equipment was not picked up within 15 minutes of the start time"` |
 | `returned` | User returns items (Telegram photo) | `src/lib/telegram/commands/photo.ts` | `notes: "Returned {n} item(s) via Telegram"` |
-| `deleted` | Admin deletes booking (web) | `admin-bookings.ts` | `notes: "Booking permanently deleted by administrator"` |
+| `deleted` | Admin deletes booking (web) | `admin-bookings.ts` | `actorName` |
 
 ---
 
-## 2. Admin return notifications
+## 2. Return photos
 
-Destination: every user with `role = 'admin'` and a linked `telegramChatId`.
-Implementation: `src/lib/telegram/admin.ts` (`notifyAdmins`), sent as a photo (`sendPhoto`) when equipment is returned via the Telegram bot.
+Destination: `TELEGRAM_CLUB_CHANNEL_ID` (audit channel).
+Implementation: `src/lib/telegram/logging.ts` (`logReturnPhotoToChannel`), sent as a photo when equipment is returned via the Telegram bot.
 
 Caption:
 
 ```
-Return from {userDisplayName}
+Return photo — Booking #{bookingId}
+User: {Name Surname (@telegram)}
 Items: {equipmentNames joined ", "}
-Count: {itemCount}
 ```
 
 ---
 
-## 3. System notifications to users (cron)
+## 3. Album activity logs
+
+Destination: `TELEGRAM_CLUB_CHANNEL_ID` (audit channel).
+Implementation: `src/lib/telegram/logging.ts` (`logAlbumActivityByUser`), called from `src/lib/albums/functions.ts` for every album mutation.
+
+```
+Album "{title}" · {Action}
+By: {Name Surname (@telegram)}
+{detail}                              ← action-specific, optional
+```
+
+Action labels and details:
+
+| Action | Emitter | Detail |
+| --- | --- | --- |
+| `created` | `createAlbumFn` | — |
+| `updated` | `updateAlbumFn` | `Title: {old} → {new}` and/or `Description updated` |
+| `deleted` | `deleteAlbumFn` | — |
+| `shared` / `unshared` | `toggleAlbumShareFn` | — |
+| `photo_deleted` | `deletePhotoFn` | — |
+| `member_added` | `claimEditAccessFn` | — |
+| `member_removed` | `removeMemberFn` | `Removed: {Name Surname (@telegram)}` |
+| `token_rotated` | `rotateEditTokenFn` | — |
+
+Photo uploads go straight from the browser to Google Drive and have no
+server-side completion hook, so individual uploads are not logged.
+
+---
+
+## 4. System notifications to users (cron)
 
 Destination: the affected user's `telegramChatId`.
 Implementation: `server.ts`.
 
-### 3a. Auto-cancel notification (`cancelUnstartedBookings`)
+### 4a. Auto-cancel notification (`cancelUnstartedBookings`)
 
 Sent when a booking is auto-cancelled after not being started within 15 min of its start time:
 
@@ -92,7 +127,7 @@ Sent when a booking is auto-cancelled after not being started within 15 min of i
 You did not pick up your equipment within 15 minutes of the start time ({HH:MM}). If this wasn't intentional, please make a new booking.
 ```
 
-### 3b. Overdue notification (`updateOverdueBookings`)
+### 4b. Overdue notification (`updateOverdueBookings`)
 
 Sent once per booking when items become overdue:
 
@@ -102,7 +137,7 @@ Sent once per booking when items become overdue:
 Please return the equipment as soon as possible via the End Booking flow.
 ```
 
-### 3c. Booking reminders (`sendBookingReminders`)
+### 4c. Booking reminders (`sendBookingReminders`)
 
 Four idempotent reminders (`buildReminderMessage`). `{equipmentLabel}` is a single name or `"{n} items: {name1}, {name2}"`.
 
@@ -158,11 +193,11 @@ Please return it now via the "End Booking" button.
 
 ---
 
-## 4. Bot conversation messages (user-facing)
+## 5. Bot conversation messages (user-facing)
 
 Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `src/lib/telegram/commands/callback.ts`.
 
-### 4a. Account linking (`start.ts`)
+### 5a. Account linking (`start.ts`)
 
 | Message |
 | --- |
@@ -171,13 +206,13 @@ Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `s
 | `Telegram linked ✅\n\nYou can now use the menu below to interact with the bot.` |
 | `Error linking account. Please try again.` |
 
-### 4b. Shared guard (`list-bookings.ts`, `start-booking.ts`, `end-booking.ts`, `cancel-booking.ts`)
+### 5b. Shared guard (`list-bookings.ts`, `start-booking.ts`, `end-booking.ts`, `cancel-booking.ts`)
 
 | Message |
 | --- |
 | `Please link your account via /start first.` |
 
-### 4c. My Bookings (`list-bookings.ts`)
+### 5c. My Bookings (`list-bookings.ts`)
 
 | Message |
 | --- |
@@ -185,7 +220,7 @@ Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `s
 | `Your bookings:` + per booking `\n{Active|Upcoming} - Booking #{id} ({status})\n  {date}, {HH:MM} - {HH:MM}\n  - {equipment} ({itemStatus})` |
 | `Error fetching bookings. Please try again.` |
 
-### 4d. Start Booking (`start-booking.ts`)
+### 5d. Start Booking (`start-booking.ts`)
 
 | Message |
 | --- |
@@ -193,7 +228,7 @@ Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `s
 | `Select which booking to start:` + buttons `#{id} — {equipment names}` |
 | `Error fetching bookings. Please try again.` |
 
-### 4e. End Booking / return flow (`end-booking.ts`, `callback.ts`, `photo.ts`)
+### 5e. End Booking / return flow (`end-booking.ts`, `callback.ts`, `photo.ts`)
 
 | Message |
 | --- |
@@ -201,11 +236,11 @@ Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `s
 | `Select which booking to return:` + buttons `#{id} — {equipment names}` |
 | `Select which items to return for booking #{id}:` + buttons `{equipment}` / `Return All Items` |
 | `Selected. Please send a photo of the equipment.` |
-| `Return logged for {n} item(s). Summary sent to admins.` |
+| `Return logged for {n} item(s).\n\nPhoto sent to the club channel.` |
 | `❌ Error processing return. Please try again.` |
 | `Error fetching bookings. Please try again.` |
 
-### 4f. Cancel Booking (`cancel-booking.ts`)
+### 5f. Cancel Booking (`cancel-booking.ts`)
 
 | Message |
 | --- |
@@ -217,7 +252,7 @@ Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `s
 | `Cancellation aborted.` |
 | `Error fetching bookings. Please try again.` |
 
-### 4g. Callback query confirmations (`callback.ts`)
+### 5g. Callback query confirmations (`callback.ts`)
 
 | Message |
 | --- |

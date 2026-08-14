@@ -1,7 +1,8 @@
 /**
  * Telegram Logging
  *
- * Handles logging booking activities to Telegram channels for audit and notification purposes.
+ * Handles logging booking and album activity to the club Telegram channel for
+ * audit and notification purposes.
  */
 
 import { TelegramAPI } from './api'
@@ -13,6 +14,9 @@ import {
   getBookingDetailsForLogging,
 } from './server-utils'
 import { formatUserDisplayName } from '@/lib/utils'
+import { db } from '@/db'
+import { user } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 
 const ACTION_LABELS = {
   created: 'Created',
@@ -22,8 +26,42 @@ const ACTION_LABELS = {
   deleted: 'Deleted',
 } as const
 
+const ALBUM_ACTION_LABELS = {
+  created: 'Created',
+  updated: 'Updated',
+  deleted: 'Deleted',
+  shared: 'Shared',
+  unshared: 'Unshared',
+  photo_deleted: 'Photo deleted',
+  member_added: 'Editor added',
+  member_removed: 'Editor removed',
+  token_rotated: 'Share link rotated',
+} as const
+
+export type AlbumLogAction = keyof typeof ALBUM_ACTION_LABELS
+
 function formatStatus(status: string): string {
   return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+
+// All log timestamps are rendered in UTC so channel text matches the rest of
+// the app and never depends on the worker's local timezone.
+function formatLogDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
+}
+
+function formatLogTime(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  }).format(date)
 }
 
 /**
@@ -62,63 +100,43 @@ function formatBookingLogMessage(data: BookingLogData): string {
 
   const lines: string[] = []
 
-  if (isPartialEvent) {
-    lines.push(`Booking #${data.bookingId}`)
-    lines.push(`User: ${data.userName}`)
+  lines.push(`Booking #${data.bookingId} · ${ACTION_LABELS[data.action]}`)
+  lines.push(`User: ${data.userName}`)
+
+  if (data.actorName && data.actorName !== data.userName) {
+    lines.push(`By: ${data.actorName}`)
+  }
+
+  if (
+    data.previousStatus &&
+    data.newStatus &&
+    data.previousStatus !== data.newStatus
+  ) {
     lines.push(
-      `Event: ${affected.length} of ${names.length} ${
-        names.length === 1 ? 'item' : 'items'
-      } ${target} (${affected.join(', ')})`
+      `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
+    )
+  }
+
+  if (isPartialEvent) {
+    lines.push(
+      `Items ${target}: ${affected.join(', ')} (${affected.length} of ${names.length})`
     )
     const remaining = names.filter((_, i) => statuses[i] !== target)
-    lines.push(`Remaining: ${remaining.join(', ')}`)
-  } else {
-    lines.push(`Booking #${data.bookingId} · ${ACTION_LABELS[data.action]}`)
-    lines.push(`User: ${data.userName}`)
-
-    if (
-      data.previousStatus &&
-      data.newStatus &&
-      data.previousStatus !== data.newStatus
-    ) {
-      lines.push(
-        `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
-      )
-    } else if (data.newStatus) {
-      lines.push(`Status: ${formatStatus(data.newStatus)}`)
+    if (remaining.length > 0) {
+      lines.push(`Remaining: ${remaining.join(', ')}`)
     }
-
-    if (names.length > 0) {
-      lines.push(`Equipment: ${names.join(', ')}`)
-    }
+  } else if (names.length > 0) {
+    lines.push(`Equipment: ${names.join(', ')}`)
   }
 
   if (data.startTime && data.endTime) {
-    const date = data.startTime.toLocaleDateString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-    const timeStart = data.startTime.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-    const timeEnd = data.endTime.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-    lines.push(`Booking Time: ${date}, ${timeStart} – ${timeEnd}`)
+    lines.push(
+      `Time: ${formatLogDate(data.startTime)}, ${formatLogTime(data.startTime)} – ${formatLogTime(data.endTime)}`
+    )
   }
 
   if (data.startedAt) {
-    const started = data.startedAt.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-    lines.push(`Started at: ${started}`)
+    lines.push(`Started: ${formatLogTime(data.startedAt)}`)
   }
 
   if (data.notes) {
@@ -174,6 +192,7 @@ export async function logBookingActivityById(
     previousStatus?: string
     newStatus?: string
     notes?: string
+    actorName?: string
   } = {}
 ): Promise<void> {
   try {
@@ -210,6 +229,7 @@ export async function logBookingActivityById(
       notes: options.notes || bookingDetails.notes,
       previousStatus: options.previousStatus,
       newStatus: options.newStatus || bookingDetails.status,
+      actorName: options.actorName,
     })
   } catch (error) {
     console.error('Failed to log booking activity by ID:', {
@@ -262,5 +282,129 @@ export async function logMultipleBookingStatusChanges(
 
     // Small delay between messages to avoid rate limiting
     await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Generic channel messages (albums, return photos, ...)
+// ---------------------------------------------------------------------------
+
+/**
+ * Sends a text message to the club Telegram channel. Never throws.
+ */
+async function sendChannelText(text: string): Promise<void> {
+  if (!isTelegramLoggingEnabled()) return
+  try {
+    const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
+    await telegram.sendMessage(env.TELEGRAM_CLUB_CHANNEL_ID!, text, {
+      disable_web_page_preview: true,
+    } as any)
+  } catch (error) {
+    console.error('Failed to send Telegram channel log:', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * Builds the "Name Surname (@telegram)" form of a user record.
+ */
+function formatLogActor(user: {
+  firstName?: string | null
+  lastName?: string | null
+  name?: string | null
+  telegramUsername?: string | null
+}): string {
+  return formatUserDisplayName({
+    firstName: user.firstName ?? undefined,
+    lastName: user.lastName ?? undefined,
+    name: user.name ?? undefined,
+    telegramUsername: user.telegramUsername ?? undefined,
+  })
+}
+
+/**
+ * Logs album activity to the club Telegram channel. Never throws.
+ */
+export async function logAlbumActivity(input: {
+  albumId: string
+  albumTitle: string
+  action: AlbumLogAction
+  actor: {
+    firstName?: string | null
+    lastName?: string | null
+    name?: string | null
+    telegramUsername?: string | null
+  } | null
+  detail?: string
+}): Promise<void> {
+  if (!isTelegramLoggingEnabled()) return
+
+  const lines = [
+    `Album "${input.albumTitle}" · ${ALBUM_ACTION_LABELS[input.action]}`,
+  ]
+  if (input.actor) {
+    lines.push(`By: ${formatLogActor(input.actor)}`)
+  }
+  if (input.detail) {
+    lines.push(input.detail)
+  }
+
+  await sendChannelText(lines.join('\n'))
+}
+
+/**
+ * Logs album activity performed by a user, loading their display info from
+ * the database. Never throws.
+ */
+export async function logAlbumActivityByUser(
+  userId: string,
+  input: Omit<
+    Parameters<typeof logAlbumActivity>[0],
+    'actor'
+  >
+): Promise<void> {
+  try {
+    if (!isTelegramLoggingEnabled()) return
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    const actor = await database
+      .select({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        telegramUsername: user.telegramUsername,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .get()
+
+    await logAlbumActivity({ ...input, actor: actor ?? null })
+  } catch (error) {
+    console.error('Failed to log album activity:', {
+      albumId: input.albumId,
+      action: input.action,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * Logs a return photo to the club Telegram channel. Never throws.
+ */
+export async function logReturnPhotoToChannel(input: {
+  photoFileId: string
+  caption: string
+}): Promise<void> {
+  if (!isTelegramLoggingEnabled()) return
+  try {
+    const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
+    await telegram.sendPhoto(env.TELEGRAM_CLUB_CHANNEL_ID!, input.photoFileId, {
+      caption: input.caption,
+    })
+  } catch (error) {
+    console.error('Failed to log return photo to Telegram channel:', {
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }

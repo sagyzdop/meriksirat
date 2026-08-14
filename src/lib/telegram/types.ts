@@ -94,16 +94,9 @@ export interface BookingLogData {
   notes?: string | null
   previousStatus?: string
   newStatus?: string
-}
-
-/**
- * Admin notification data structure
- */
-export interface AdminNotification {
-  photoFileId: string
-  userName: string
-  equipmentNames: string // Already deduplicated, comma-separated
-  itemCount: number
+  // Who performed the action, when it wasn't the booking's own user (e.g.
+  // admin edits). Only rendered when it differs from `userName`.
+  actorName?: string
 }
 
 /**

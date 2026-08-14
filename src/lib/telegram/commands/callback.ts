@@ -30,7 +30,7 @@ import { startBookingForChat, renderStartBookingList } from './start-booking'
 import { renderEndBookingList } from './end-booking'
 import { renderMyBookings } from './list-bookings'
 import { db } from '@/db'
-import { bookingItem, booking, equipment, user } from '@/db/schema'
+import { bookingItem, booking, equipment } from '@/db/schema'
 import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { BOOKING_STATUS } from '../types'
 
@@ -253,13 +253,6 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
           return
         }
 
-        const database = db(ctx.env.meriksirat_d1 as D1Database)
-        const userRecord = await database
-          .select({ email: user.email })
-          .from(user)
-          .where(eq(user.id, session.userId!))
-          .get()
-
         // Answer the callback query right away: Telegram expires callback
         // queries after a few seconds, and starting a booking performs slow
         // database + calendar work. Answering late makes answerCbQuery throw,
@@ -268,7 +261,7 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
         await ctx.answerCbQuery('Starting booking...')
 
         try {
-          await startBookingForChat(bookingId, userRecord?.email || '', ctx)
+          await startBookingForChat(bookingId, ctx)
           await ctx.editMessageText(
             `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Return it via the End Booking flow when done.`,
             backToMenuMarkup()

@@ -165,9 +165,8 @@ export async function handleStartBooking(ctx: BotContext): Promise<void> {
  */
 export async function startBookingForChat(
   bookingId: number,
-  startedByEmail: string,
   ctx: BotContext
 ): Promise<void> {
   const database = db(ctx.env.meriksirat_d1 as D1Database)
-  await startBooking(database, bookingId, { startedBy: startedByEmail })
+  await startBooking(database, bookingId)
 }

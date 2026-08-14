@@ -523,7 +523,8 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         await logBookingActivityById(data.bookingId, 'cancelled', {
           previousStatus,
           newStatus: 'cancelled',
-          notes: `Booking cancelled by admin ${adminDisplayName}${data.notes ? `. Reason: ${data.notes}` : ''}`,
+          actorName: adminDisplayName,
+          notes: data.notes ? `Reason: ${data.notes}` : undefined,
         })
       } catch (logError) {
         console.error('Failed to log booking cancellation:', logError)
@@ -549,11 +550,19 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     // Times / notes update only (status is unchanged)
     await recomputeBookingStatus(database, data.bookingId)
 
+    const updateLogNotes = [
+      timesChanged ? 'Schedule updated' : null,
+      data.notes ? `Notes: ${data.notes}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+
     try {
       await logBookingActivityById(data.bookingId, 'updated', {
         previousStatus,
         newStatus: previousStatus,
-        notes: `Admin ${adminDisplayName} updated booking${timesChanged ? ' schedule' : ''}${data.notes ? `. Notes: ${data.notes}` : ''}`,
+        actorName: adminDisplayName,
+        notes: updateLogNotes || undefined,
       })
     } catch (logError) {
       console.error('Failed to log booking update:', logError)
@@ -616,7 +625,13 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
 
     const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
+    const adminUser = await checkAdminPermission(headers, ['admin', 'manager'])
+    const adminDisplayName = formatUserDisplayName({
+      firstName: adminUser.firstName,
+      lastName: adminUser.lastName,
+      name: adminUser.name || adminUser.email,
+      telegramUsername: adminUser.telegramUsername,
+    })
 
     const database = db(env.meriksirat_d1 as D1Database)
 
@@ -662,7 +677,7 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
     // Log booking deletion to Telegram channel before deleting record
     try {
       await logBookingActivityById(data.bookingId, 'deleted', {
-        notes: 'Booking permanently deleted by administrator',
+        actorName: adminDisplayName,
       })
     } catch (logError) {
       console.error('Failed to log booking deletion:', logError)

@@ -564,6 +564,13 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       isShared: true,
     })
 
+    const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+    void logAlbumActivityByUser(currentUser.id, {
+      albumId,
+      albumTitle: data.title,
+      action: 'created',
+    })
+
     return { id: albumId }
   })
 
@@ -781,7 +788,7 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
+    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
     // Keep the Drive folder name in sync with the album title.
@@ -811,6 +818,24 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
         .where(eq(album.id, data.albumId))
     }
 
+    const detailParts: string[] = []
+    if (data.title !== undefined && data.title.trim() !== row.title) {
+      detailParts.push(`Title: ${row.title} → ${data.title.trim()}`)
+    }
+    if (data.description !== undefined) {
+      detailParts.push('Description updated')
+    }
+
+    if (currentUser && detailParts.length > 0) {
+      const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+      void logAlbumActivityByUser(currentUser.id, {
+        albumId: data.albumId,
+        albumTitle: row.title,
+        action: 'updated',
+        detail: detailParts.join('\n'),
+      })
+    }
+
     return { success: true }
   })
 
@@ -832,7 +857,7 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
+    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'manager'])
 
     const accessToken = await getGoogleAccessToken()
@@ -846,6 +871,15 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
     }
     await invalidateCachedListing(row.driveFolderId)
     await database.delete(album).where(eq(album.id, data.albumId))
+
+    if (currentUser) {
+      const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+      void logAlbumActivityByUser(currentUser.id, {
+        albumId: data.albumId,
+        albumTitle: row.title,
+        action: 'deleted',
+      })
+    }
 
     return { success: true }
   })
@@ -867,7 +901,7 @@ export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
+    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
     // `is_shared` only controls whether the album link works in the app.
@@ -882,6 +916,15 @@ export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
       .update(album)
       .set({ isShared: data.shared, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
+
+    if (currentUser) {
+      const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+      void logAlbumActivityByUser(currentUser.id, {
+        albumId: data.albumId,
+        albumTitle: row.title,
+        action: data.shared ? 'shared' : 'unshared',
+      })
+    }
 
     return { success: true, isShared: data.shared }
   })
@@ -912,6 +955,13 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
         .insert(albumMember)
         .values({ id: newId(12), albumId: row.id, userId: currentUser.id })
         .onConflictDoNothing()
+
+      const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+      void logAlbumActivityByUser(currentUser.id, {
+        albumId: row.id,
+        albumTitle: row.title,
+        action: 'member_added',
+      })
     }
 
     return { success: true, access: 'editor' }
@@ -932,7 +982,7 @@ export const rotateEditTokenFn = createServerFn({ method: 'POST' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
+    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'manager'])
 
     // A fresh token invalidates every previously shared edit link.
@@ -941,6 +991,15 @@ export const rotateEditTokenFn = createServerFn({ method: 'POST' })
       .update(album)
       .set({ editShareToken, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
+
+    if (currentUser) {
+      const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+      void logAlbumActivityByUser(currentUser.id, {
+        albumId: data.albumId,
+        albumTitle: row.title,
+        action: 'token_rotated',
+      })
+    }
 
     return { success: true, editShareToken }
   })
@@ -1025,7 +1084,7 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
+    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
     const accessToken = await getGoogleAccessToken()
@@ -1037,6 +1096,15 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
         .update(album)
         .set({ coverFileId: null, updatedAt: new Date() })
         .where(eq(album.id, data.albumId))
+    }
+
+    if (currentUser) {
+      const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+      void logAlbumActivityByUser(currentUser.id, {
+        albumId: data.albumId,
+        albumTitle: row.title,
+        action: 'photo_deleted',
+      })
     }
 
     return { success: true }
@@ -1073,7 +1141,7 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { albumMember } = await import('@/db/schema')
+    const { albumMember, user } = await import('@/db/schema')
     const { and, eq } = await import('drizzle-orm')
     const { resolveAlbumAccess } = await import('./server')
 
@@ -1090,6 +1158,17 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
       throw new Error('Insufficient permissions')
     }
 
+    const removedUser = await database
+      .select({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        telegramUsername: user.telegramUsername,
+      })
+      .from(user)
+      .where(eq(user.id, data.userId))
+      .get()
+
     await database
       .delete(albumMember)
       .where(
@@ -1098,6 +1177,27 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
           eq(albumMember.userId, data.userId)
         )
       )
+
+    if (currentUser) {
+      const [{ logAlbumActivityByUser }, { formatUserDisplayName }] =
+        await Promise.all([
+          import('@/lib/telegram/logging'),
+          import('@/lib/utils'),
+        ])
+      void logAlbumActivityByUser(currentUser.id, {
+        albumId: data.albumId,
+        albumTitle: row.title,
+        action: 'member_removed',
+        detail: removedUser
+          ? `Removed: ${formatUserDisplayName({
+              firstName: removedUser.firstName ?? undefined,
+              lastName: removedUser.lastName ?? undefined,
+              name: removedUser.name ?? undefined,
+              telegramUsername: removedUser.telegramUsername ?? undefined,
+            })}`
+          : undefined,
+      })
+    }
 
     return { success: true }
   })

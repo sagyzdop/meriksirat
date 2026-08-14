@@ -41,9 +41,7 @@ export const startBookingFn = createServerFn({ method: 'POST' })
       throw new Error('You can only start your own bookings')
     }
 
-    await startBooking(database, data.bookingId, {
-      startedBy: session.user.email ?? undefined,
-    })
+    await startBooking(database, data.bookingId)
 
     return { success: true }
   })

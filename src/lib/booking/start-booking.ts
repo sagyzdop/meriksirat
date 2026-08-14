@@ -25,8 +25,7 @@ export const START_WINDOW_GRACE_MS = 15 * 60 * 1000
  */
 export async function startBooking(
   database: BookingDatabase,
-  bookingId: number,
-  options: { startedBy?: string } = {}
+  bookingId: number
 ): Promise<{ bookingId: number }> {
   const now = new Date()
 
@@ -167,7 +166,6 @@ export async function startBooking(
     await logBookingActivityById(bookingId, 'updated', {
       previousStatus: 'booked',
       newStatus: 'active',
-      notes: `Booking started${options.startedBy ? ` by ${options.startedBy}` : ''} at ${now.toISOString()}`,
     })
   } catch (error) {
     console.error('Failed to log booking start:', error)
