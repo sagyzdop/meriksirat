@@ -24,15 +24,17 @@ function emptyPage(): AlbumListPage {
 
 export interface AlbumListQueryInput {
   search?: string
-  ownership?: AlbumOwnershipFilter
-  visibility?: AlbumVisibilityFilter
+  ownership?: AlbumOwnershipFilter[]
+  visibility?: AlbumVisibilityFilter[]
 }
 
-export function normalizeFilters(filters: AlbumListQueryInput): AlbumListFilters {
+export function normalizeFilters(
+  filters: AlbumListQueryInput
+): AlbumListFilters {
   return {
     search: filters.search ?? '',
-    ownership: filters.ownership ?? 'all',
-    visibility: filters.visibility ?? 'all',
+    ownership: filters.ownership ?? [],
+    visibility: filters.visibility ?? [],
   }
 }
 
@@ -58,8 +60,9 @@ export const albumQueries = {
       refetchOnWindowFocus: true,
       initialPageParam: null as string | null,
       queryFn: async ({ pageParam }): Promise<AlbumListPage> =>
-        (await getPublicAlbumsFn({ data: { ...filters, cursor: pageParam } })) ??
-        emptyPage(),
+        (await getPublicAlbumsFn({
+          data: { ...filters, cursor: pageParam },
+        })) ?? emptyPage(),
       getNextPageParam: (last) => last.nextCursor,
     }),
   manage: (filters: AlbumListQueryInput = {}) =>

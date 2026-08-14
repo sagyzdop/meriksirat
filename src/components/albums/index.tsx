@@ -38,8 +38,8 @@ export function PublicAlbumsIndex({ user }: PublicAlbumsIndexProps) {
 
   const filters: AlbumListFilters = {
     search: search.search,
-    ownership: 'all',
-    visibility: 'all',
+    ownership: [],
+    visibility: [],
   }
 
   const handleFiltersChange = (next: Partial<AlbumListFilters>) => {

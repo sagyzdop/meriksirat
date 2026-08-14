@@ -208,12 +208,30 @@ async function listAlbumsPaginated({
     )
   }
 
-  if (query.visibility === 'public') conditions.push(eq(album.isShared, true))
-  if (query.visibility === 'private') conditions.push(eq(album.isShared, false))
+  // Visibility is multi-select: both values selected (or none) means no
+  // filter, otherwise match the shared flag.
+  if (query.visibility?.length === 1) {
+    if (query.visibility[0] === 'public')
+      conditions.push(eq(album.isShared, true))
+    else conditions.push(eq(album.isShared, false))
+  } else if ((query.visibility?.length ?? 0) > 1) {
+    conditions.push(
+      or(
+        ...query.visibility.map((v) =>
+          v === 'public' ? eq(album.isShared, true) : eq(album.isShared, false)
+        )
+      )!
+    )
+  }
 
-  if (query.ownership !== 'all' && ownershipWhere) {
-    const own = ownershipWhere(query.ownership)
-    if (own) conditions.push(own)
+  // Ownership is multi-select too: each selected value contributes its
+  // predicate and they are OR-ed together.
+  if (query.ownership?.length && ownershipWhere) {
+    const own = query.ownership
+      .map((o) => ownershipWhere(o))
+      .filter((c): c is NonNullable<typeof c> => !!c)
+    if (own.length === 1) conditions.push(own[0])
+    else if (own.length > 1) conditions.push(or(...own)!)
   }
 
   const decoded = decodeAlbumCursor(query.cursor)

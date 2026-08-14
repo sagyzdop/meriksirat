@@ -127,8 +127,8 @@ export function AlbumsPage({
               {mode === 'manage'
                 ? 'All albums across the club appear here.'
                 : !filters.search &&
-                    filters.ownership === 'all' &&
-                    filters.visibility === 'all'
+                    filters.ownership.length === 0 &&
+                    filters.visibility.length === 0
                   ? 'Create your first album to start sharing photos.'
                   : 'No albums match your search and filters.'}
             </EmptyDescription>

@@ -167,7 +167,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
     })
     navigate({
       to: '/my-albums',
-      search: { search: '', ownership: 'all', visibility: 'all' },
+      search: { search: '', ownership: [], visibility: [] },
     })
   }
 

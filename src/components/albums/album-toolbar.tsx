@@ -51,22 +51,17 @@ export function AlbumToolbar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch])
 
-  // Single-select semantics: the faceted filter toggles, so the last item in
-  // the returned array is the one the user just chose; empty means cleared.
-  const single = (values: string[] | undefined) =>
-    values && values.length > 0 ? values[values.length - 1] : 'all'
-
-  const ownershipSelected =
-    filters.ownership !== 'all' ? [filters.ownership] : []
-  const visibilitySelected =
-    filters.visibility !== 'all' ? [filters.visibility] : []
+  // Multi-select semantics: the faceted filter toggles individual values and
+  // an empty array (or undefined) means no filter.
+  const ownershipSelected = filters.ownership ?? []
+  const visibilitySelected = filters.visibility ?? []
   const isFiltered =
     !!filters.search ||
-    filters.ownership !== 'all' ||
-    filters.visibility !== 'all'
+    (filters.ownership?.length ?? 0) > 0 ||
+    (filters.visibility?.length ?? 0) > 0
 
   const reset = () =>
-    onFiltersChange({ search: '', ownership: 'all', visibility: 'all' })
+    onFiltersChange({ search: '', ownership: [], visibility: [] })
 
   return (
     <div className="-mt-2 mb-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -84,7 +79,7 @@ export function AlbumToolbar({
             selectedValues={ownershipSelected}
             onSelectionChange={(values) =>
               onFiltersChange({
-                ownership: single(values) as AlbumOwnershipFilter,
+                ownership: (values ?? []) as AlbumOwnershipFilter[],
               })
             }
           />
@@ -96,7 +91,7 @@ export function AlbumToolbar({
             selectedValues={visibilitySelected}
             onSelectionChange={(values) =>
               onFiltersChange({
-                visibility: single(values) as AlbumVisibilityFilter,
+                visibility: (values ?? []) as AlbumVisibilityFilter[],
               })
             }
           />

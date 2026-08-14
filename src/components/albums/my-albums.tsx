@@ -39,7 +39,7 @@ export function MyAlbumsIndex({ user, search }: MyAlbumsIndexProps) {
     })
     navigate({
       to: '/my-albums',
-      search: { search: '', ownership: 'all', visibility: 'all' },
+      search: { search: '', ownership: [], visibility: [] },
     })
   }
 

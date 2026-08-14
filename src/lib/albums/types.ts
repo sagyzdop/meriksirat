@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { stringArrayParam } from '@/lib/search-params'
 
 /**
  * Minimum user clearance level required to create a new album. Users below
@@ -6,23 +7,20 @@ import { z } from 'zod'
  */
 export const ALBUM_CREATE_MIN_CLEARANCE = 3
 
-export const AlbumOwnershipFilterSchema = z
-  .enum(['owner', 'co-author', 'all'])
-  .default('all')
+export const AlbumOwnershipFilterSchema = z.enum(['owner', 'co-author'])
 export type AlbumOwnershipFilter = z.infer<typeof AlbumOwnershipFilterSchema>
 
-export const AlbumVisibilityFilterSchema = z
-  .enum(['public', 'private', 'all'])
-  .default('all')
+export const AlbumVisibilityFilterSchema = z.enum(['public', 'private'])
 export type AlbumVisibilityFilter = z.infer<typeof AlbumVisibilityFilterSchema>
 
 /**
- * User-facing list filters (mirrored into the URL search params).
+ * User-facing list filters (mirrored into the URL search params). Ownership
+ * and visibility are multi-select arrays; an empty array means "no filter".
  */
 export const AlbumListFiltersSchema = z.object({
   search: z.string().trim().max(200).optional().default(''),
-  ownership: AlbumOwnershipFilterSchema,
-  visibility: AlbumVisibilityFilterSchema,
+  ownership: stringArrayParam(AlbumOwnershipFilterSchema).default([]),
+  visibility: stringArrayParam(AlbumVisibilityFilterSchema).default([]),
 })
 export type AlbumListFilters = z.infer<typeof AlbumListFiltersSchema>
 
