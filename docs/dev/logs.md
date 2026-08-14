@@ -7,6 +7,8 @@ source of truth for the logging logic.
 Formatting conventions:
 - People are always rendered as `Name Surname (@telegram)` (no emails, no roles).
 - All times are UTC, rendered as `Aug 14, 2026` for dates and `09:00` for times.
+- Every log opens with a shared `Event:` line (what happened) followed by a
+  `Resource:` line linking to the affected record in the web app.
 
 ---
 
@@ -14,12 +16,13 @@ Formatting conventions:
 
 Destination: `TELEGRAM_CLUB_CHANNEL_ID` (audit channel).
 Implementation: `src/lib/telegram/logging.ts` (`formatBookingLogMessage`).
-All booking activity goes through `logBookingActivityById(bookingId, action, { previousStatus, newStatus, notes, actorName })`, which auto-fetches the booking details (user display name, equipment names, per-item statuses, times) and renders the message.
+All booking activity goes through `logBookingActivityById(bookingId, action, { previousStatus, newStatus, notes, actorName })`, which auto-fetches the booking details (user display name, equipment names, per-item statuses, times) and renders the message. `Resource:` links to the booking details page (`{origin}/bookings/{id}`).
 
 ### 1a. Full booking event (all items affected together)
 
 ```
-Booking #{bookingId} · {Action}
+Event: {Action} — Booking #{bookingId}
+Resource: {origin}/bookings/{bookingId}
 User: {Name Surname (@telegram)}
 By: {Name Surname (@telegram)}     ← only when actorName is set and differs from the booking's user
 Status: {Previous} → {New}         ← only when previousStatus != newStatus
@@ -37,11 +40,12 @@ Statuses are shown title-cased with underscores replaced by spaces (`booked`, `a
 When the item statuses show that fewer than all items changed:
 
 ```
-Booking #{bookingId} · {Action}
+Event: {n} of {total} items {cancelled|returned} — Booking #{bookingId}
+Resource: {origin}/bookings/{bookingId}
 User: {Name Surname (@telegram)}
 By: {Name Surname (@telegram)}     ← optional
 Status: {Previous} → {New}         ← optional
-Items {cancelled|returned}: {name1} ({n} of {total})
+Items {cancelled|returned}: {name1}, {name2}
 Remaining: {name3}                 ← only when some items remain
 Time: {Mon} {day}, {year}, {HH:MM} – {HH:MM}   ← optional
 Started: {HH:MM}                   ← optional
@@ -71,14 +75,23 @@ Notes: {notes}                     ← optional
 ## 2. Return photos
 
 Destination: `TELEGRAM_CLUB_CHANNEL_ID` (audit channel).
-Implementation: `src/lib/telegram/logging.ts` (`logReturnPhotoToChannel`), sent as a photo when equipment is returned via the Telegram bot.
+Implementation: `src/lib/telegram/logging.ts` (`logReturnPhotoToChannel`).
+When equipment is returned via the Telegram bot, a single photo message is sent;
+the caption is the full booking `returned` log (identical to section 1), so a
+return never produces a separate text log. `Resource:` links to the booking
+details page.
 
-Caption:
+Caption (same as 1a/1b with `action = returned`):
 
 ```
-Return photo — Booking #{bookingId}
+Event: {n} of {total} items returned — Booking #{bookingId}   (or "Event: Returned — Booking #{bookingId}")
+Resource: {origin}/bookings/{bookingId}
 User: {Name Surname (@telegram)}
-Items: {equipmentNames joined ", "}
+Items returned: {name1}, {name2}
+Remaining: {name3}
+Time: {Mon} {day}, {year}, {HH:MM} – {HH:MM}
+Started: {HH:MM}
+Notes: {notes}
 ```
 
 ---
@@ -86,10 +99,11 @@ Items: {equipmentNames joined ", "}
 ## 3. Album activity logs
 
 Destination: `TELEGRAM_CLUB_CHANNEL_ID` (audit channel).
-Implementation: `src/lib/telegram/logging.ts` (`logAlbumActivityByUser`), called from `src/lib/albums/functions.ts` for every album mutation.
+Implementation: `src/lib/telegram/logging.ts` (`logAlbumActivityByUser`), called from `src/lib/albums/functions.ts` for every album mutation. `Resource:` links to the album's public page (`{origin}/albums/{albumId}`).
 
 ```
-Album "{title}" · {Action}
+Event: {Action} — Album "{title}"
+Resource: {origin}/albums/{albumId}
 By: {Name Surname (@telegram)}
 {detail}                              ← action-specific, optional
 ```

@@ -7,12 +7,11 @@
 import type { BotContext } from '../context'
 import { getSession, deleteSession } from '../kv-session'
 import { db } from '@/db'
-import { bookingItem, booking, equipment, user } from '@/db/schema'
-import { eq, inArray } from 'drizzle-orm'
-import { logBookingActivityById, logReturnPhotoToChannel } from '../logging'
+import { bookingItem } from '@/db/schema'
+import { inArray } from 'drizzle-orm'
+import { logReturnPhotoToChannel } from '../logging'
 import { backToMenuMarkup } from '../menu'
 import { returnBookingItems } from '@/lib/booking/booking-items'
-import { formatUserDisplayName } from '@/lib/utils'
 
 /**
  * Handles photo messages for equipment return flow
@@ -23,7 +22,7 @@ import { formatUserDisplayName } from '@/lib/utils'
  * 3. Validate session exists and step is 'awaiting_photo'
  * 4. Mark the selected booking items as returned
  * 5. Recompute parent booking statuses
- * 6. Notify admins and log the return
+ * 6. Log the return to the club channel as a single photo message
  *
  * @param ctx - Bot context with environment bindings
  */
@@ -66,53 +65,25 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       // Google Calendar events with the actual return time).
       await returnBookingItems(database, selectedItemIds)
 
-      // Query returned item details with equipment and user for notification
-      const itemDetails = await database
-        .select({
-          equipmentName: equipment.modelName,
-          bookingId: bookingItem.bookingId,
-          userFirstName: user.firstName,
-          userLastName: user.lastName,
-          userTelegramUsername: user.telegramUsername,
-        })
+      // Resolve the booking this return belongs to, for the channel log.
+      const bookingRows = await database
+        .select({ bookingId: bookingItem.bookingId })
         .from(bookingItem)
-        .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-        .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
-        .innerJoin(user, eq(booking.userId, user.id))
         .where(inArray(bookingItem.id, selectedItemIds))
+        .limit(1)
 
-      if (itemDetails.length === 0) {
+      if (bookingRows.length === 0) {
         throw new Error('No item details found after update')
       }
-
-      const userName = formatUserDisplayName({
-        firstName: itemDetails[0].userFirstName,
-        lastName: itemDetails[0].userLastName,
-        telegramUsername: itemDetails[0].userTelegramUsername,
-      })
-
-      const uniqueEquipmentNames = [
-        ...new Set(itemDetails.map((b) => b.equipmentName)),
-      ]
-      const equipmentNames = uniqueEquipmentNames.join(', ')
+      const bookingId = bookingRows[0].bookingId
       const itemCount = selectedItemIds.length
 
-      // Log the return photo to the club channel.
+      // Log the return to the club channel as a single photo message: the
+      // caption is the full "Returned" booking log.
       await logReturnPhotoToChannel({
         photoFileId,
-        caption: `Return photo — Booking #${itemDetails[0].bookingId}\nUser: ${userName}\nItems: ${equipmentNames}`,
+        bookingId,
       })
-
-      // Log booking return to Telegram channel. Refetches the booking details
-      // (user with telegram handle, item statuses, current status) so the log
-      // shows whether the whole booking or only some items were returned.
-      try {
-        await logBookingActivityById(itemDetails[0].bookingId, 'returned', {
-          notes: `Returned ${itemCount} item(s) via Telegram`,
-        })
-      } catch (logError) {
-        console.error('Failed to log booking return:', logError)
-      }
 
       // Confirm in place by editing the "please send a photo" prompt, keeping
       // the conversation message-sparse.

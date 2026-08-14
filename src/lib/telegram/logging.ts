@@ -65,6 +65,24 @@ function formatLogTime(date: Date): string {
 }
 
 /**
+ * Public app origin used to build resource links in log messages.
+ * Reads BETTER_AUTH_URL (same origin the web app is served from).
+ */
+function appOrigin(): string {
+  return (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
+}
+
+function bookingUrl(bookingId: number): string {
+  const origin = appOrigin()
+  return origin ? `${origin}/bookings/${bookingId}` : ''
+}
+
+function albumUrl(albumId: string): string {
+  const origin = appOrigin()
+  return origin ? `${origin}/albums/${albumId}` : ''
+}
+
+/**
  * Describes whether an action covered the whole booking or only some of its
  * items, based on the per-item statuses fetched after the action ran.
  */
@@ -98,9 +116,21 @@ function formatBookingLogMessage(data: BookingLogData): string {
     affected.length > 0 &&
     affected.length < names.length
 
+  const eventText = isPartialEvent
+    ? `${affected.length} of ${names.length} ${
+        names.length === 1 ? 'item' : 'items'
+      } ${target}`
+    : ACTION_LABELS[data.action]
+
   const lines: string[] = []
 
-  lines.push(`Booking #${data.bookingId} · ${ACTION_LABELS[data.action]}`)
+  lines.push(`Event: ${eventText} — Booking #${data.bookingId}`)
+
+  const url = bookingUrl(data.bookingId)
+  if (url) {
+    lines.push(`Resource: ${url}`)
+  }
+
   lines.push(`User: ${data.userName}`)
 
   if (data.actorName && data.actorName !== data.userName) {
@@ -118,9 +148,7 @@ function formatBookingLogMessage(data: BookingLogData): string {
   }
 
   if (isPartialEvent) {
-    lines.push(
-      `Items ${target}: ${affected.join(', ')} (${affected.length} of ${names.length})`
-    )
+    lines.push(`Items ${target}: ${affected.join(', ')}`)
     const remaining = names.filter((_, i) => statuses[i] !== target)
     if (remaining.length > 0) {
       lines.push(`Remaining: ${remaining.join(', ')}`)
@@ -341,8 +369,12 @@ export async function logAlbumActivity(input: {
   if (!isTelegramLoggingEnabled()) return
 
   const lines = [
-    `Album "${input.albumTitle}" · ${ALBUM_ACTION_LABELS[input.action]}`,
+    `Event: ${ALBUM_ACTION_LABELS[input.action]} — Album "${input.albumTitle}"`,
   ]
+  const url = albumUrl(input.albumId)
+  if (url) {
+    lines.push(`Resource: ${url}`)
+  }
   if (input.actor) {
     lines.push(`By: ${formatLogActor(input.actor)}`)
   }
@@ -390,20 +422,48 @@ export async function logAlbumActivityByUser(
 }
 
 /**
- * Logs a return photo to the club Telegram channel. Never throws.
+ * Logs an equipment return to the club Telegram channel as a single photo
+ * message. The caption is the full booking-return log — Event, Resource, user,
+ * items, times — rendered by the same formatter the text logs use, so a return
+ * produces exactly one channel message. Never throws.
  */
 export async function logReturnPhotoToChannel(input: {
   photoFileId: string
-  caption: string
+  bookingId: number
 }): Promise<void> {
   if (!isTelegramLoggingEnabled()) return
   try {
+    const bookingDetails = await getBookingDetailsForLogging(input.bookingId)
+    if (!bookingDetails) {
+      console.warn(`Booking ${input.bookingId} not found for return photo log`)
+      return
+    }
+
+    const message = formatBookingLogMessage({
+      bookingId: bookingDetails.bookingId,
+      userId: bookingDetails.userId,
+      userName: formatUserDisplayName({
+        firstName: bookingDetails.userFirstName,
+        lastName: bookingDetails.userLastName,
+        name: bookingDetails.userName,
+        telegramUsername: bookingDetails.userTelegramUsername,
+      }),
+      equipmentName: bookingDetails.equipmentName,
+      equipmentNames: bookingDetails.equipmentNames,
+      itemStatuses: bookingDetails.itemStatuses,
+      action: 'returned',
+      startTime: bookingDetails.startTime,
+      endTime: bookingDetails.endTime,
+      startedAt: bookingDetails.startedAt,
+    })
+
     const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
     await telegram.sendPhoto(env.TELEGRAM_CLUB_CHANNEL_ID!, input.photoFileId, {
-      caption: input.caption,
+      caption: message,
     })
   } catch (error) {
     console.error('Failed to log return photo to Telegram channel:', {
+      bookingId: input.bookingId,
       error: error instanceof Error ? error.message : String(error),
     })
   }
