@@ -1,8 +1,8 @@
 /**
  * Telegram Callback Query Handler
- * 
+ *
  * Handles inline keyboard button clicks during equipment return flow.
- * 
+ *
  * Callback data format:
  * - book_<bookingId>   : selects a booking (step: awaiting_booking_selection)
  * - item_<itemId>      : selects a specific item (step: awaiting_item_selection)
@@ -22,7 +22,9 @@ import { BOOKING_STATUS } from '../types'
 /**
  * Builds a shared inline keyboard helper: 2 buttons per row.
  */
-function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: string }>) {
+function buildInlineKeyboard(
+  buttons: Array<{ text: string; callback_data: string }>
+) {
   const rows: Array<Array<{ text: string; callback_data: string }>> = []
   for (let i = 0; i < buttons.length; i += 2) {
     rows.push(buttons.slice(i, i + 2))
@@ -145,7 +147,11 @@ async function promptItemSelection(
  */
 export async function handleCallback(ctx: BotContext): Promise<void> {
   try {
-    if (!ctx.callbackQuery || !('data' in ctx.callbackQuery) || !ctx.callbackQuery.message) {
+    if (
+      !ctx.callbackQuery ||
+      !('data' in ctx.callbackQuery) ||
+      !ctx.callbackQuery.message
+    ) {
       return
     }
 
@@ -171,7 +177,10 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
     }
 
     // Start booking flow
-    if (session.step === 'awaiting_start_selection' && callbackData.startsWith('start_')) {
+    if (
+      session.step === 'awaiting_start_selection' &&
+      callbackData.startsWith('start_')
+    ) {
       const bookingIdStr = callbackData.substring('start_'.length)
       const bookingId = parseInt(bookingIdStr, 10)
 
@@ -207,20 +216,34 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
           .where(eq(user.id, session.userId!))
           .get()
 
+        // Answer the callback query right away: Telegram expires callback
+        // queries after a few seconds, and starting a booking performs slow
+        // database + calendar work. Answering late makes answerCbQuery throw,
+        // which previously surfaced a misleading "Error processing selection"
+        // even though the booking was started successfully.
+        await ctx.answerCbQuery('Starting booking...')
+
         try {
           await startBookingForChat(bookingId, userRecord?.email || '', ctx)
           await ctx.editMessageText(
             `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Remember to use "End Booking" when returning it.`,
             withKeyboard()
           )
-          await ctx.answerCbQuery()
         } catch (error) {
           console.error('Failed to start booking:', error)
-          await ctx.editMessageText(
-            error instanceof Error ? error.message : 'Failed to start booking. Please try again.',
-            withKeyboard()
-          )
-          await ctx.answerCbQuery()
+          try {
+            await ctx.editMessageText(
+              error instanceof Error
+                ? error.message
+                : 'Failed to start booking. Please try again.',
+              withKeyboard()
+            )
+          } catch (editError) {
+            console.error(
+              'Failed to edit message after start booking error:',
+              editError
+            )
+          }
         }
         return
       }
@@ -236,7 +259,10 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
     }
 
     // Step 1: awaiting_booking_selection -> select a booking, then prompt items
-    if (session.step === 'awaiting_booking_selection' && callbackData.startsWith('book_')) {
+    if (
+      session.step === 'awaiting_booking_selection' &&
+      callbackData.startsWith('book_')
+    ) {
       const bookingIdStr = callbackData.substring(5)
       const bookingId = parseInt(bookingIdStr, 10)
 
@@ -253,7 +279,10 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
     if (session.step === 'awaiting_item_selection') {
       let selectedItemIds: number[]
 
-      if (callbackData === 'item_all_' + (session.selectedBookingIds?.[0] ?? 'x')) {
+      if (
+        callbackData ===
+        'item_all_' + (session.selectedBookingIds?.[0] ?? 'x')
+      ) {
         // "Return All Items" - collect all returnable items for the booking
         const database = db(ctx.env.meriksirat_d1 as D1Database)
         const bookingId = session.selectedBookingIds![0]
@@ -295,7 +324,9 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
         step: 'awaiting_photo',
       })
 
-      await ctx.editMessageText('Selected. Please send a photo of the equipment.')
+      await ctx.editMessageText(
+        'Selected. Please send a photo of the equipment.'
+      )
       await ctx.answerCbQuery()
       return
     }
@@ -304,7 +335,10 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
   } catch (error) {
     console.error('Callback query handler error:', {
       chatId: ctx.callbackQuery?.message?.chat.id,
-      callbackData: ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : undefined,
+      callbackData:
+        ctx.callbackQuery && 'data' in ctx.callbackQuery
+          ? ctx.callbackQuery.data
+          : undefined,
       username: ctx.from?.username,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
@@ -316,6 +350,9 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       console.error('Failed to answer callback query:', answerError)
     }
 
-    await ctx.reply('Error processing selection. Please try again.', withKeyboard())
+    await ctx.reply(
+      'Error processing selection. Please try again.',
+      withKeyboard()
+    )
   }
 }

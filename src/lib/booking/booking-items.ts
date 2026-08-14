@@ -2,7 +2,10 @@ import type { db } from '@/db'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { recomputeBookingStatus } from '@/lib/booking/status'
-import { deleteCalendarEvent, updateCalendarEvent } from '@/lib/google/google-caledar'
+import {
+  deleteCalendarEvent,
+  updateCalendarEvent,
+} from '@/lib/google/google-caledar'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
 
@@ -19,8 +22,8 @@ type BookingDatabase = ReturnType<typeof db>
  * - Cancel always deletes the event.
  * - Return updates the event end time to the ACTUAL return time (uncapped, so
  *   a late return is reflected exactly). The event is kept once the booking
- *   has started. If the booking was never started (defensive path; never-started
- *   bookings are force-cancelled instead), the event is deleted.
+ *   has started. If the booking was never started, the event is kept with the
+ *   booked start time as its start so the return history is preserved.
  */
 
 export interface BookingItemActionResult {
@@ -80,7 +83,11 @@ async function selectItemsWithContext(
     .where(inArray(bookingItem.id, itemIds))
 }
 
-function buildItemEventDetails(item: BookingItemWithContext, status: string) {
+function buildItemEventDetails(
+  item: BookingItemWithContext,
+  status: string,
+  returnedAt?: Date | null
+) {
   const userDisplayName = formatUserDisplayName({
     firstName: item.userFirstName,
     lastName: item.userLastName,
@@ -95,6 +102,7 @@ function buildItemEventDetails(item: BookingItemWithContext, status: string) {
     startTime: item.bookingStartTime,
     endTime: item.bookingEndTime,
     startedAt: item.startedAt,
+    returnedAt,
     status,
     notes: item.userEventDetails,
   })
@@ -117,7 +125,12 @@ export async function cancelBookingItems(
   await database
     .update(bookingItem)
     .set({ status: 'cancelled', updatedAt: new Date() })
-    .where(inArray(bookingItem.id, cancellable.map((it) => it.id)))
+    .where(
+      inArray(
+        bookingItem.id,
+        cancellable.map((it) => it.id)
+      )
+    )
 
   const touchedBookings = [...new Set(cancellable.map((it) => it.bookingId))]
 
@@ -139,7 +152,10 @@ export async function cancelBookingItems(
           },
         })
       } catch (err) {
-        console.error('Failed to delete calendar event for cancelled item:', err)
+        console.error(
+          'Failed to delete calendar event for cancelled item:',
+          err
+        )
       }
     }
   }
@@ -174,7 +190,12 @@ export async function returnBookingItems(
   await database
     .update(bookingItem)
     .set({ status: 'returned', returnedAt, updatedAt: new Date() })
-    .where(inArray(bookingItem.id, returnable.map((it) => it.id)))
+    .where(
+      inArray(
+        bookingItem.id,
+        returnable.map((it) => it.id)
+      )
+    )
 
   const touchedBookings = [...new Set(returnable.map((it) => it.bookingId))]
 
@@ -190,28 +211,21 @@ export async function returnBookingItems(
     if (!it.googleCalendarEventId || !it.equipmentCalendarId) continue
 
     try {
-      if (it.startedAt) {
-        await updateCalendarEvent({
-          data: {
-            equipmentCalendarId: it.equipmentCalendarId,
-            eventId: it.googleCalendarEventId,
-            event: {
-              summary: `${it.equipmentName} (RETURNED)`,
-              description: buildItemEventDetails(it, 'returned'),
-              start: { dateTime: it.startedAt.toISOString(), timeZone: 'UTC' },
-              end: { dateTime: returnedAt.toISOString(), timeZone: 'UTC' },
-            },
-            userEmail: it.userEmail || '',
+      const eventStart = it.startedAt ?? it.bookingStartTime
+
+      await updateCalendarEvent({
+        data: {
+          equipmentCalendarId: it.equipmentCalendarId,
+          eventId: it.googleCalendarEventId,
+          event: {
+            summary: `${it.equipmentName} (RETURNED)`,
+            description: buildItemEventDetails(it, 'returned', returnedAt),
+            start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' },
+            end: { dateTime: returnedAt.toISOString(), timeZone: 'UTC' },
           },
-        })
-      } else {
-        await deleteCalendarEvent({
-          data: {
-            equipmentCalendarId: it.equipmentCalendarId,
-            eventId: it.googleCalendarEventId,
-          },
-        })
-      }
+          userEmail: it.userEmail || '',
+        },
+      })
     } catch (err) {
       console.error('Failed to update calendar event for returned item:', err)
     }

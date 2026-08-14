@@ -1,6 +1,16 @@
 import { Section } from '@/components/layout/section'
 import { GoogleCalendarView } from './event-calendar/google-calendar-view'
+import type { EventColor } from './event-calendar'
 import { TimeSlotPicker } from './time-slot-picker'
+
+const CALENDAR_PALETTE: EventColor[] = [
+  'sky',
+  'amber',
+  'violet',
+  'rose',
+  'emerald',
+  'orange',
+]
 
 export interface BookingScheduleItem {
   equipment?: {
@@ -48,6 +58,13 @@ export function BookingSchedule({
     return acc
   }, {})
 
+  const colorByCalendarId = Object.keys(legendLabels).reduce<
+    Record<string, EventColor>
+  >((acc, calendarId, index) => {
+    acc[calendarId] = CALENDAR_PALETTE[index % CALENDAR_PALETTE.length]
+    return acc
+  }, {})
+
   const hasCalendar = calendarIds.length > 0
   const showDateEditor = hasCalendar && (canEdit || warnWhenLocked)
 
@@ -57,6 +74,7 @@ export function BookingSchedule({
         <Section title="Availability" spacing="compact">
           <GoogleCalendarView
             calendarIds={calendarIds}
+            colorByCalendarId={colorByCalendarId}
             legendLabels={legendLabels}
           />
         </Section>

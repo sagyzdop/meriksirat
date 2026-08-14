@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useRouter, useSearch } from '@tanstack/react-router'
+import { useRouter, useNavigate, useSearch } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ import { BookingConfirmationDialog } from '@/components/bookings/new/components/
 
 export function NewBookingPage() {
   const router = useRouter()
+  const navigate = useNavigate()
   const goBack = useBackNavigation('/equipment')
   const searchParams = useSearch({ strict: false }) as {
     equipmentId?: number
@@ -185,6 +186,10 @@ export function NewBookingPage() {
       } catch {
         // ignore storage errors
       }
+      navigate({
+        to: '/bookings/$bookingId',
+        params: { bookingId: result.bookingId.toString() },
+      })
     } catch (error: any) {
       console.error('Booking failed:', error)
       if (error?.conflicts && Array.isArray(error.conflicts)) {

@@ -54,8 +54,11 @@ export function Page({
 
     if (isAddMode && filters.returnTo) {
       const separator = filters.returnTo.includes('?') ? '&' : '?'
+      // Replace the equipment page history entry so Back from the booking page
+      // never lands on the add-to-booking equipment screen again.
       router.navigate({
         href: `${filters.returnTo}${separator}equipmentIds=${selection.selectedIds.join(',')}`,
+        replace: true,
       })
       return
     }

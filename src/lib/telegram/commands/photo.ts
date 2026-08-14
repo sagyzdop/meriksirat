@@ -63,8 +63,8 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       const database = db(ctx.env.meriksirat_d1 as D1Database)
 
       // Mark selected items as returned (reuses the shared return logic:
-      // updates the items, recomputes parent booking statuses, deletes the
-      // Google Calendar events for the returned items).
+      // updates the items, recomputes parent booking statuses, and updates the
+      // Google Calendar events with the actual return time).
       await returnBookingItems(database, selectedItemIds)
 
       // Query returned item details with equipment and user for notification
