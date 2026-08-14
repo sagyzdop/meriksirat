@@ -11,12 +11,17 @@ import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { user, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { withKeyboard } from '../server-utils'
-import { listStartableBookings, startBooking } from '@/lib/booking/start-booking'
+import {
+  listStartableBookings,
+  startBooking,
+} from '@/lib/booking/start-booking'
 
 /**
  * Builds a shared inline keyboard helper: 2 buttons per row.
  */
-function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: string }>) {
+function buildInlineKeyboard(
+  buttons: Array<{ text: string; callback_data: string }>
+) {
   const rows: Array<Array<{ text: string; callback_data: string }>> = []
   for (let i = 0; i < buttons.length; i += 2) {
     rows.push(buttons.slice(i, i + 2))
@@ -31,7 +36,14 @@ function buildInlineKeyboard(buttons: Array<{ text: string; callback_data: strin
 async function fetchStartableBookings(
   ctx: BotContext,
   userId: string
-): Promise<Array<{ id: number; startTime: Date; endTime: Date; equipmentNames: string[] }>> {
+): Promise<
+  Array<{
+    id: number
+    startTime: Date
+    endTime: Date
+    equipmentNames: string[]
+  }>
+> {
   const database = db(ctx.env.meriksirat_d1 as D1Database)
   const startable = await listStartableBookings(database, userId)
 
@@ -42,7 +54,12 @@ async function fetchStartableBookings(
     { id: number; startTime: Date; endTime: Date; equipmentNames: string[] }
   >()
   for (const b of startable) {
-    bookingsMap.set(b.id, { id: b.id, startTime: b.startTime, endTime: b.endTime, equipmentNames: [] })
+    bookingsMap.set(b.id, {
+      id: b.id,
+      startTime: b.startTime,
+      endTime: b.endTime,
+      equipmentNames: [],
+    })
   }
 
   const rows = await database
@@ -95,7 +112,10 @@ export async function handleStartBooking(ctx: BotContext): Promise<void> {
       .then((rows) => rows[0])
 
     if (!userRecord) {
-      await ctx.reply('Please link your account via /start first.', withKeyboard())
+      await ctx.reply(
+        'Please link your account via /start first.',
+        withKeyboard()
+      )
       return
     }
 
@@ -103,7 +123,7 @@ export async function handleStartBooking(ctx: BotContext): Promise<void> {
 
     if (bookings.length === 0) {
       await ctx.reply(
-        'You have no bookings to start right now.\n\nYour booking can be started within 15 minutes of its start time.',
+        'You have no bookings to start right now.\n\nYour booking can be started up to 15 minutes before its start time, and up to 15 minutes after.',
         withKeyboard()
       )
       return
@@ -121,7 +141,10 @@ export async function handleStartBooking(ctx: BotContext): Promise<void> {
       callback_data: `start_${b.id}`,
     }))
 
-    await ctx.reply('Select which booking to start:', buildInlineKeyboard(buttons))
+    await ctx.reply(
+      'Select which booking to start:',
+      buildInlineKeyboard(buttons)
+    )
   } catch (error) {
     console.error('Start booking command error:', {
       chatId: ctx.chat?.id,

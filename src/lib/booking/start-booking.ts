@@ -17,7 +17,7 @@ export const START_WINDOW_GRACE_MS = 15 * 60 * 1000
  *
  * Starting a booking:
  * - Requires status `booked` and an open start window (now within
- *   [startTime, startTime + 15min]).
+ *   [startTime - 15min, startTime + 15min]).
  * - Records `startedAt` (actual pickup time).
  * - Activates all non-cancelled items.
  * - Updates each Google Calendar event: start becomes the ACTUAL start time,
@@ -58,19 +58,30 @@ export async function startBooking(
   }
 
   if (bookingData.status !== 'booked') {
-    throw new Error(`Booking cannot be started from status "${bookingData.status}"`)
+    throw new Error(
+      `Booking cannot be started from status "${bookingData.status}"`
+    )
   }
 
   if (bookingData.startedAt) {
     throw new Error('Booking has already been started')
   }
 
-  const windowEnd = new Date(bookingData.startTime.getTime() + START_WINDOW_GRACE_MS)
-  if (now < bookingData.startTime) {
-    throw new Error('Booking start time has not arrived yet')
+  const windowStart = new Date(
+    bookingData.startTime.getTime() - START_WINDOW_GRACE_MS
+  )
+  const windowEnd = new Date(
+    bookingData.startTime.getTime() + START_WINDOW_GRACE_MS
+  )
+  if (now < windowStart) {
+    throw new Error(
+      'Booking can be started up to 15 minutes before the start time'
+    )
   }
   if (now > windowEnd) {
-    throw new Error('Booking start window has passed; the booking will be auto-cancelled')
+    throw new Error(
+      'Booking start window has passed; the booking will be auto-cancelled'
+    )
   }
 
   const items = await database
@@ -102,7 +113,12 @@ export async function startBooking(
   await database
     .update(bookingItem)
     .set({ status: 'active', updatedAt: now })
-    .where(inArray(bookingItem.id, startable.map((it) => it.id)))
+    .where(
+      inArray(
+        bookingItem.id,
+        startable.map((it) => it.id)
+      )
+    )
 
   await recomputeBookingStatus(database, bookingId)
 
@@ -121,7 +137,9 @@ export async function startBooking(
             description: formatBookingDetailsPlain({
               bookingId,
               userDisplayName,
-              equipmentNames: [item.equipmentName || `Equipment ${item.equipmentId}`],
+              equipmentNames: [
+                item.equipmentName || `Equipment ${item.equipmentId}`,
+              ],
               startTime: bookingData.startTime,
               endTime: bookingData.endTime,
               startedAt: now,
@@ -129,13 +147,19 @@ export async function startBooking(
               notes: bookingData.userEventDetails,
             }),
             start: { dateTime: now.toISOString(), timeZone: 'UTC' },
-            end: { dateTime: bookingData.endTime.toISOString(), timeZone: 'UTC' },
+            end: {
+              dateTime: bookingData.endTime.toISOString(),
+              timeZone: 'UTC',
+            },
           },
           userEmail: bookingData.user?.email || '',
         },
       })
     } catch (error) {
-      console.error(`Failed to update calendar event on start for item ${item.id}:`, error)
+      console.error(
+        `Failed to update calendar event on start for item ${item.id}:`,
+        error
+      )
     }
   }
 
@@ -154,14 +178,17 @@ export async function startBooking(
 
 /**
  * Returns bookings whose start window is currently open (now within
- * [startTime, startTime + 15min]) and that can still be started.
+ * [startTime - 15min, startTime + 15min]) and that can still be started.
  */
 export async function listStartableBookings(
   database: BookingDatabase,
   userId: string
-): Promise<Array<{ id: number; startTime: Date; endTime: Date; status: string }>> {
+): Promise<
+  Array<{ id: number; startTime: Date; endTime: Date; status: string }>
+> {
   const now = new Date()
   const windowStart = new Date(now.getTime() - START_WINDOW_GRACE_MS)
+  const windowEnd = new Date(now.getTime() + START_WINDOW_GRACE_MS)
 
   const rows = await database
     .select({
@@ -180,5 +207,7 @@ export async function listStartableBookings(
     )
     .orderBy(booking.startTime)
 
-  return rows.filter((b) => b.startTime <= now && b.startTime >= windowStart)
+  return rows.filter(
+    (b) => b.startTime <= windowEnd && b.startTime >= windowStart
+  )
 }

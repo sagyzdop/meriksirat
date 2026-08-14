@@ -22,7 +22,7 @@ export function Page({ booking, telegramBotUsername, bookedBy }: PageProps) {
   const canStart =
     booking.status === 'booked' &&
     !booking.startedAt &&
-    new Date(booking.startTime) <= now &&
+    new Date(booking.startTime).getTime() - 15 * 60 * 1000 <= now.getTime() &&
     now.getTime() <= new Date(booking.startTime).getTime() + 15 * 60 * 1000
 
   useAddBookingItems(booking.id)
