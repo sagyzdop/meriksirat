@@ -34,7 +34,7 @@ function EquipmentRowThumb({
 
   if (showPlaceholder) {
     return (
-      <div className="flex h-10 w-14 shrink-0 items-center justify-center rounded-md border bg-muted">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-muted">
         <ImageIcon className="h-4 w-4 text-muted-foreground/60" />
       </div>
     )
@@ -45,7 +45,7 @@ function EquipmentRowThumb({
       src={`/api/images/${imagePath}`}
       alt={title}
       onError={() => setImageFailed(true)}
-      className="h-10 w-14 shrink-0 rounded-md border object-cover"
+      className="h-10 w-10 shrink-0 rounded-md border object-contain"
     />
   )
 }

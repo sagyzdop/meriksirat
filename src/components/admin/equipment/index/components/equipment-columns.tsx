@@ -1,10 +1,17 @@
 import { useState } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
-import { ImageIcon } from 'lucide-react'
+import { CalendarDays, ImageIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { EquipmentWithCategory } from '@/lib/equipment'
+
+export function getGoogleCalendarEmbedUrl(calendarId: string): string {
+  return `https://calendar.google.com/calendar/u/2/newembed?src=${encodeURIComponent(
+    calendarId
+  )}&ctz=Asia/Almaty&csspa=1`
+}
 
 const statusConfig = {
   true: {
@@ -30,7 +37,7 @@ function EquipmentImageCell({
 
   if (showPlaceholder) {
     return (
-      <div className="flex h-10 w-14 items-center justify-center rounded-md border bg-muted">
+      <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-muted">
         <ImageIcon className="h-4 w-4 text-muted-foreground/60" />
       </div>
     )
@@ -41,7 +48,7 @@ function EquipmentImageCell({
       src={`/api/images/${imagePath}`}
       alt={modelName}
       onError={() => setImageFailed(true)}
-      className="h-10 w-14 rounded-md border object-cover"
+      className="h-10 w-10 rounded-md border object-contain"
     />
   )
 }
@@ -168,6 +175,30 @@ export const createEquipmentColumns =
         const isActive = row.getValue(id) as boolean | null
         const status = isActive === null ? 'true' : isActive.toString()
         return value.includes(status)
+      },
+    },
+    {
+      id: 'calendar',
+      accessorFn: (row) => row.googleCalendarId,
+      header: 'Calendar',
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const googleCalendarId = row.original.googleCalendarId
+
+        return (
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <a
+              href={getGoogleCalendarEmbedUrl(googleCalendarId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View in Google Calendar"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              View
+            </a>
+          </Button>
+        )
       },
     },
   ]

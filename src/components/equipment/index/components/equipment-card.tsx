@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { Equipment } from './types'
 
 interface EquipmentCardProps {
@@ -34,7 +35,11 @@ export function EquipmentCard({
 
   return (
     <Card
-      className={`group relative mx-auto flex w-full flex-col overflow-hidden pt-0 transition-all hover:shadow-lg${isSelected ? ' ring-2 ring-primary/40' : ''}${disabled ? ' opacity-60' : ''}`}
+      className={cn(
+        'group relative mx-auto flex w-full flex-col overflow-hidden pt-0 transition-all hover:shadow-lg @container',
+        isSelected && 'ring-2 ring-primary/40',
+        disabled && 'opacity-60'
+      )}
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-t-xl bg-muted">
         {showPlaceholder ? (
@@ -46,7 +51,7 @@ export function EquipmentCard({
             src={`/api/images/${equipment.imagePath}`}
             alt={equipment.modelName}
             onError={() => setImageFailed(true)}
-            className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-contain transition-transform group-hover:scale-105"
           />
         )}
       </div>
@@ -79,9 +84,13 @@ export function EquipmentCard({
 
       <CardFooter className="mt-auto flex gap-2">
         <Button asChild variant="outline" className="flex-1">
-          <Link to="/equipment/$" params={{ _splat: equipment.id.toString() }}>
-            <Eye className="mr-2 h-4 w-4" />
-            Details
+          <Link
+            to="/equipment/$"
+            params={{ _splat: equipment.id.toString() }}
+            aria-label={`View details for ${equipment.modelName}`}
+          >
+            <Eye className="@[17rem]:mr-2 h-4 w-4" />
+            <span className="hidden @[17rem]:inline">Details</span>
           </Link>
         </Button>
         <Button
@@ -89,9 +98,12 @@ export function EquipmentCard({
           className="flex-1"
           disabled={!isAvailable || disabled}
           onClick={() => onToggleSelect?.(equipment.id)}
+          title={isSelected ? 'Selected' : disabled ? 'In booking' : 'Select'}
         >
-          {isSelected && <Check className="mr-2 h-4 w-4" />}
-          {isSelected ? 'Selected' : disabled ? 'In booking' : 'Select'}
+          <Check className="@[17rem]:mr-2 h-4 w-4" />
+          <span className="hidden @[17rem]:inline">
+            {isSelected ? 'Selected' : disabled ? 'In booking' : 'Select'}
+          </span>
         </Button>
       </CardFooter>
     </Card>
