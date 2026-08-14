@@ -8,7 +8,7 @@
  */
 
 import type { BotContext } from './context'
-import { inlineKeyboard, removeKeyboard } from './server-utils'
+import { inlineKeyboard } from './server-utils'
 
 export const MENU_TEXT = '📋 Main Menu\n\nChoose an action below:'
 
@@ -38,43 +38,27 @@ export function isCallback(ctx: BotContext): boolean {
 
 /**
  * Renders a flow step either by editing the tapped message (callback context)
- * or by sending a new message (plain text command context). New messages with
- * inline buttons first remove the old persistent reply keyboard, then attach
- * the buttons via an edit.
+ * or by sending a new message (plain text command context).
+ *
+ * NOTE: a message must be sent with its inline keyboard in a single
+ * sendMessage call. Telegram only allows editing messages sent without a
+ * reply markup or with an inline keyboard; a message sent with
+ * remove_keyboard cannot be edited afterwards ("message can't be edited").
  */
 export async function renderInPlace(
   ctx: BotContext,
   text: string,
   markup?: any
 ): Promise<void> {
-  // Editing the tapped message: a remove_keyboard markup makes no sense here.
-  const effectiveMarkup = markup?.reply_markup?.remove_keyboard
-    ? undefined
-    : markup
+  const isRemoveKeyboard = markup?.reply_markup?.remove_keyboard === true
 
   if (isCallback(ctx)) {
-    await ctx.editMessageText(text, effectiveMarkup)
+    // Editing a tapped message: a remove_keyboard markup is meaningless here.
+    await ctx.editMessageText(text, isRemoveKeyboard ? undefined : markup)
     return
   }
 
-  const chatId = ctx.chat?.id
-  if (chatId === undefined || chatId === null) return
-
-  const hasInlineKeyboard = !!effectiveMarkup?.reply_markup?.inline_keyboard
-
-  if (hasInlineKeyboard) {
-    const sent = await ctx.reply(text, removeKeyboard())
-    if (sent?.message_id) {
-      await ctx.telegram.editMessageText(
-        chatId,
-        sent.message_id,
-        text,
-        effectiveMarkup
-      )
-    }
-  } else {
-    await ctx.reply(text, effectiveMarkup)
-  }
+  await ctx.reply(text, markup)
 }
 
 /**
