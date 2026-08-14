@@ -1,6 +1,6 @@
 import type { BotContext } from '../context'
 import { db } from '@/db'
-import { eq, and, inArray, lt } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { BOOKING_STATUS } from '../types'
@@ -11,17 +11,20 @@ interface BookingWithItems {
   id: number
   startTime: Date
   endTime: Date
-  status: string
   items: Array<{
     itemId: number
-    itemStatus: string
     equipmentName: string
   }>
 }
 
 /**
- * Fetch the user's bookings that still have returnable items
- * (items that are not yet returned or cancelled).
+ * Fetch the user's bookings that still have returnable items.
+ *
+ * Only items that were actually picked up (`active` or `overdue`) are
+ * returnable. Items still `booked` were never picked up and must be cancelled
+ * through the cancel flow instead. There is deliberately no time filter here:
+ * a booking started up to 15 minutes early has `active` items while its start
+ * time is still in the future, and those must still be returnable.
  */
 async function fetchReturnableBookings(
   ctx: BotContext,
@@ -34,9 +37,7 @@ async function fetchReturnableBookings(
       bookingId: booking.id,
       startTime: booking.startTime,
       endTime: booking.endTime,
-      status: booking.status,
       itemId: bookingItem.id,
-      itemStatus: bookingItem.status,
       equipmentName: equipment.modelName,
     })
     .from(booking)
@@ -45,9 +46,7 @@ async function fetchReturnableBookings(
     .where(
       and(
         eq(booking.userId, userId),
-        lt(booking.startTime, new Date()),
         inArray(bookingItem.status, [
-          BOOKING_STATUS.BOOKED,
           BOOKING_STATUS.ACTIVE,
           BOOKING_STATUS.OVERDUE,
         ])
@@ -63,14 +62,12 @@ async function fetchReturnableBookings(
         id: row.bookingId,
         startTime: row.startTime,
         endTime: row.endTime,
-        status: row.status,
         items: [],
       }
       bookingsMap.set(row.bookingId, entry)
     }
     entry.items.push({
       itemId: row.itemId,
-      itemStatus: row.itemStatus,
       equipmentName: row.equipmentName,
     })
   }

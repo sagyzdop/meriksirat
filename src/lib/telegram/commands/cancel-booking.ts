@@ -2,15 +2,22 @@
  * Telegram Cancel Booking Command
  *
  * Handles /cancel_booking - per-item or per-booking (all items) cancellation
- * of upcoming/active bookings.
+ * of upcoming bookings. Cancellation is only allowed for items still in the
+ * `booked` status (equipment that was never picked up). Once a booking has
+ * been started (items `active`/`overdue`) the equipment must be returned
+ * through the return flow instead.
+ *
+ * The flow is nested, matching the return flow: the user first picks a
+ * booking, then individual items or all of them.
  *
  * Callback data format:
- * - cancel_item_<itemId>              : shows a confirmation prompt
- * - confirm_cancel_item_<itemId>      : performs the cancellation
- * - deny_cancel_item_<itemId>         : aborts the cancellation
- * - cancel_all_<bookingId>            : shows a confirmation prompt for a booking
- * - confirm_cancel_all_<bookingId>    : cancels all items of the booking
- * - deny_cancel_all_<bookingId>       : aborts the cancellation
+ * - cancel_book_<bookingId>            : opens the item list of a booking
+ * - cancel_book_list                   : back to the booking list
+ * - cancel_item_<itemId>               : shows a confirmation prompt
+ * - confirm_cancel_item_<itemId>       : performs the cancellation
+ * - cancel_all_<bookingId>             : shows a confirmation prompt for a booking
+ * - confirm_cancel_all_<bookingId>     : cancels all items of the booking
+ * - deny_cancel_<bookingId>            : aborts and re-shows the booking's items
  */
 
 import type { BotContext } from '../context'
@@ -46,8 +53,8 @@ async function getUserIdByChatId(
 }
 
 /**
- * Fetch the user's bookings that still have cancellable items
- * (items that are not yet returned or cancelled).
+ * Fetch the user's bookings that still have cancellable (not yet picked up)
+ * items, i.e. items still in the `booked` status.
  */
 async function fetchCancellableBookings(
   ctx: BotContext,
@@ -67,11 +74,7 @@ async function fetchCancellableBookings(
     .where(
       and(
         eq(booking.userId, userId),
-        inArray(bookingItem.status, [
-          BOOKING_STATUS.BOOKED,
-          BOOKING_STATUS.ACTIVE,
-          BOOKING_STATUS.OVERDUE,
-        ])
+        eq(bookingItem.status, BOOKING_STATUS.BOOKED)
       )
     )
     .orderBy(booking.startTime, bookingItem.id)
@@ -95,6 +98,10 @@ async function fetchCancellableBookings(
 /**
  * Cancel a set of booking items, reusing the shared per-item cancellation
  * logic (recompute parent statuses, log activity, delete gcal events).
+ *
+ * Only items still in the `booked` status can be cancelled. This is re-checked
+ * here so a stale callback (e.g. the booking was started between listing and
+ * confirming) cannot cancel picked-up equipment.
  */
 async function cancelItems(
   ctx: BotContext,
@@ -109,7 +116,7 @@ async function cancelItems(
 
   // Verify ownership and keep only the caller's items
   const ownedRows = await database
-    .select({ id: bookingItem.id })
+    .select({ id: bookingItem.id, status: bookingItem.status })
     .from(bookingItem)
     .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
     .where(and(inArray(bookingItem.id, itemIds), eq(booking.userId, userId)))
@@ -118,9 +125,21 @@ async function cancelItems(
     return { ok: false, message: 'Item not found.' }
   }
 
+  const bookedRows = ownedRows.filter(
+    (r) => r.status === BOOKING_STATUS.BOOKED
+  )
+
+  if (bookedRows.length === 0) {
+    return {
+      ok: false,
+      message:
+        'This item has already been picked up and can only be cancelled while it is still booked. Return it via the End Booking flow instead.',
+    }
+  }
+
   const result = await cancelBookingItems(
     database,
-    ownedRows.map((r) => r.id)
+    bookedRows.map((r) => r.id)
   )
 
   if (result.updated.length === 0) {
@@ -155,7 +174,7 @@ async function cancelItems(
 }
 
 /**
- * Cancel all cancellable items of a single booking.
+ * Cancel all cancellable items of a single booking (items still `booked`).
  */
 async function cancelAllItems(
   ctx: BotContext,
@@ -172,11 +191,7 @@ async function cancelAllItems(
       and(
         eq(bookingItem.bookingId, bookingId),
         eq(booking.userId, userId),
-        inArray(bookingItem.status, [
-          BOOKING_STATUS.BOOKED,
-          BOOKING_STATUS.ACTIVE,
-          BOOKING_STATUS.OVERDUE,
-        ])
+        eq(bookingItem.status, BOOKING_STATUS.BOOKED)
       )
     )
 
@@ -188,8 +203,8 @@ async function cancelAllItems(
 }
 
 /**
- * Renders the "select item(s) to cancel" list. Used by both the text command
- * and the main-menu button so the flow renders in place.
+ * Renders the "select which booking to cancel" list. Used by both the text
+ * command and the main-menu button so the flow renders in place.
  */
 export async function renderCancelBookingList(ctx: BotContext): Promise<void> {
   const chatId = String(ctx.chat?.id)
@@ -211,34 +226,102 @@ export async function renderCancelBookingList(ctx: BotContext): Promise<void> {
   if (bookings.length === 0) {
     await renderInPlace(
       ctx,
-      'You have no upcoming or active bookings to cancel.',
+      'You have no upcoming bookings to cancel.',
       backToMenuMarkup()
     )
     return
   }
 
-  const buttons: Array<{ text: string; callback_data: string }> = []
-  const messageLines: string[] = ['Select the item(s) you want to cancel:']
-
-  for (const b of bookings) {
-    messageLines.push(`\nBooking #${b.id}`)
-    for (const it of b.items) {
-      messageLines.push(`  • ${it.equipmentName}`)
-    }
-    for (const it of b.items) {
-      buttons.push({
-        text: it.equipmentName,
-        callback_data: `cancel_item_${it.itemId}`,
-      })
-    }
-    buttons.push({
-      text: `Cancel all items (${b.items.length})`,
-      callback_data: `cancel_all_${b.id}`,
-    })
-  }
+  const buttons = bookings.map((b) => ({
+    text: `#${b.id} — ${b.items.map((it) => it.equipmentName).join(', ')}`,
+    callback_data: `cancel_book_${b.id}`,
+  }))
   buttons.push(backToMenuButton())
 
-  await renderInPlace(ctx, messageLines.join('\n'), inlineKeyboard(buttons))
+  await renderInPlace(
+    ctx,
+    'Select which booking to cancel:',
+    inlineKeyboard(buttons)
+  )
+}
+
+/**
+ * Renders the "select item(s) to cancel" list for a single booking. Only
+ * items still in the `booked` status are shown. Always invoked from a
+ * callback context, so it edits the tapped message in place.
+ */
+async function renderCancelBookingItems(
+  ctx: BotContext,
+  bookingId: number
+): Promise<void> {
+  const chatId = String(ctx.chat?.id)
+  if (!chatId) return
+
+  const userId = await getUserIdByChatId(ctx, chatId)
+
+  if (!userId) {
+    await ctx.editMessageText(
+      'Please link your account via /start first.',
+      backToMenuMarkup()
+    )
+    return
+  }
+
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const items = await database
+    .select({
+      itemId: bookingItem.id,
+      equipmentName: equipment.modelName,
+    })
+    .from(bookingItem)
+    .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
+    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .where(
+      and(
+        eq(bookingItem.bookingId, bookingId),
+        eq(booking.userId, userId),
+        eq(bookingItem.status, BOOKING_STATUS.BOOKED)
+      )
+    )
+    .orderBy(bookingItem.id)
+
+  if (items.length === 0) {
+    await ctx.editMessageText(
+      `Booking #${bookingId} has no cancellable items left.`,
+      backToMenuMarkup()
+    )
+    return
+  }
+
+  const messageLines: string[] = [
+    `Booking #${bookingId}`,
+    ...items.map((it) => `  • ${it.equipmentName}`),
+    '',
+    'Select the item(s) you want to cancel:',
+  ]
+
+  const buttons: Array<{ text: string; callback_data: string }> = []
+  for (const it of items) {
+    buttons.push({
+      text: it.equipmentName,
+      callback_data: `cancel_item_${it.itemId}`,
+    })
+  }
+  buttons.push({
+    text: `Cancel all items (${items.length})`,
+    callback_data: `cancel_all_${bookingId}`,
+  })
+  buttons.push({
+    text: '⬅️ Back to bookings',
+    callback_data: 'cancel_book_list',
+  })
+  buttons.push(backToMenuButton())
+
+  await ctx.editMessageText(
+    messageLines.join('\n'),
+    inlineKeyboard(buttons)
+  )
 }
 
 /**
@@ -290,6 +373,24 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
 
   const chatId = String(ctx.callbackQuery.message.chat.id)
 
+  if (callbackData === 'cancel_book_list') {
+    await renderCancelBookingList(ctx)
+    await ctx.answerCbQuery()
+    return true
+  }
+
+  if (callbackData.startsWith('cancel_book_')) {
+    const bookingId = parseInt(callbackData.substring('cancel_book_'.length), 10)
+    if (isNaN(bookingId)) {
+      await ctx.answerCbQuery('Invalid selection')
+      return true
+    }
+
+    await renderCancelBookingItems(ctx, bookingId)
+    await ctx.answerCbQuery()
+    return true
+  }
+
   if (callbackData.startsWith('cancel_item_')) {
     const itemId = parseInt(callbackData.substring('cancel_item_'.length), 10)
     if (isNaN(itemId)) {
@@ -297,11 +398,23 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
       return true
     }
 
+    const database = db(ctx.env.meriksirat_d1 as D1Database)
+    const item = await database
+      .select({ bookingId: bookingItem.bookingId })
+      .from(bookingItem)
+      .where(eq(bookingItem.id, itemId))
+      .get()
+
+    if (!item) {
+      await ctx.answerCbQuery('Item not found')
+      return true
+    }
+
     await ctx.editMessageText(
       'Cancel this item?',
       inlineKeyboard([
         { text: 'Yes, cancel', callback_data: `confirm_cancel_item_${itemId}` },
-        { text: 'No', callback_data: `deny_cancel_item_${itemId}` },
+        { text: 'No', callback_data: `deny_cancel_${item.bookingId}` },
       ])
     )
     await ctx.answerCbQuery()
@@ -322,7 +435,7 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
           text: 'Yes, cancel all',
           callback_data: `confirm_cancel_all_${bookingId}`,
         },
-        { text: 'No', callback_data: `deny_cancel_all_${bookingId}` },
+        { text: 'No', callback_data: `deny_cancel_${bookingId}` },
       ])
     )
     await ctx.answerCbQuery()
@@ -357,12 +470,15 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
     return true
   }
 
-  if (
-    callbackData.startsWith('deny_cancel_item_') ||
-    callbackData.startsWith('deny_cancel_all_')
-  ) {
+  if (callbackData.startsWith('deny_cancel_')) {
+    const bookingId = parseInt(callbackData.substring('deny_cancel_'.length), 10)
+    if (isNaN(bookingId)) {
+      await ctx.answerCbQuery('Invalid selection')
+      return true
+    }
+
     await ctx.answerCbQuery()
-    await renderCancelBookingList(ctx)
+    await renderCancelBookingItems(ctx, bookingId)
     return true
   }
 

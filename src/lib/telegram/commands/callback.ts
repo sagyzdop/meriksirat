@@ -14,6 +14,11 @@
  * - book_<bookingId>              : selects a booking (return flow)
  * - item_<itemId>                 : selects a specific item (return flow)
  * - item_all_<bookingId>          : selects all returnable items of a booking
+ * - cancel_book_<bookingId>       : selects a booking (cancel flow)
+ * - cancel_book_list              : back to the cancel booking list
+ * - cancel_item_<itemId>          : confirms a specific item (cancel flow)
+ * - cancel_all_<bookingId>        : confirms all items of a booking (cancel flow)
+ * - deny_cancel_<bookingId>       : aborts a cancel and re-shows the items
  */
 
 import type { BotContext } from '../context'
@@ -107,13 +112,18 @@ async function promptItemSelection(
       and(
         eq(bookingItem.bookingId, bookingId),
         inArray(bookingItem.status, [
-          BOOKING_STATUS.BOOKED,
           BOOKING_STATUS.ACTIVE,
           BOOKING_STATUS.OVERDUE,
         ])
       )
     )
     .orderBy(bookingItem.id)
+
+  if (items.length === 0) {
+    await ctx.answerCbQuery('No items to return')
+    await renderEndBookingList(ctx)
+    return
+  }
 
   await setSession(ctx.env.meriksirat_kv, chatId, {
     step: 'awaiting_item_selection',
@@ -329,7 +339,6 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
             and(
               eq(bookingItem.bookingId, bookingId),
               inArray(bookingItem.status, [
-                BOOKING_STATUS.BOOKED,
                 BOOKING_STATUS.ACTIVE,
                 BOOKING_STATUS.OVERDUE,
               ])
