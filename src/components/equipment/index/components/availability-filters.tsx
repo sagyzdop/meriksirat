@@ -1,9 +1,8 @@
-import { Clock } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
-import { minutesToTime, timeToMinutes } from '@/lib/booking'
+import { TimeRangePicker } from './time-range-picker'
+import { getClubLocalParts } from '@/lib/booking'
 
 function dateKeyToDate(dateKey?: string): Date | undefined {
   if (!dateKey) return undefined
@@ -25,6 +24,8 @@ interface AvailabilityFiltersProps {
   endTime?: string
   defaultStartTime: string
   defaultEndTime: string
+  operatingHoursStart: number
+  operatingHoursEnd: number
   availableOnly: boolean
   onStartDateChange: (value?: string) => void
   onEndDateChange: (value?: string) => void
@@ -40,6 +41,8 @@ export function AvailabilityFilters({
   endTime,
   defaultStartTime,
   defaultEndTime,
+  operatingHoursStart,
+  operatingHoursEnd,
   availableOnly,
   onStartDateChange,
   onEndDateChange,
@@ -47,59 +50,53 @@ export function AvailabilityFilters({
   onEndTimeChange,
   onAvailableOnlyChange,
 }: AvailabilityFiltersProps) {
-  const shownStartTime = startTime ?? defaultStartTime
-  const shownEndTime =
-    endTime ??
-    (startTime ? minutesToTime(timeToMinutes(startTime) + 30) : defaultEndTime)
+  // The date filter defaults to today (club-local) so the calendar and the
+  // button always show a concrete date even before the user picks one.
+  const todayKey = getClubLocalParts(new Date()).dateKey
+  const effectiveStartDate = startDate ?? todayKey
+  const effectiveEndDate = endDate ?? todayKey
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <DateRangeFilter
-        from={startDate ? dateKeyToDate(startDate)!.toISOString() : undefined}
-        to={endDate ? dateKeyToDate(endDate)!.toISOString() : undefined}
-        onChange={(range) => {
-          onStartDateChange(range?.from ? dateToDateKey(range.from) : undefined)
-          onEndDateChange(range?.to ? dateToDateKey(range.to) : undefined)
-        }}
-        className="w-full sm:w-auto"
-      />
-      <div className="relative">
-        <Clock
-          className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          type="time"
-          value={shownStartTime}
-          onChange={(event) =>
-            onStartTimeChange(event.target.value || undefined)
-          }
-          aria-label="Availability start time"
-          className="h-8 w-32 pl-8"
-        />
-      </div>
-      <span className="text-muted-foreground" aria-hidden="true">
-        –
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Availability
       </span>
-      <div className="relative">
-        <Input
-          type="time"
-          value={shownEndTime}
-          onChange={(event) => onEndTimeChange(event.target.value || undefined)}
-          aria-label="Availability end time"
-          className="h-8 w-32 pl-8"
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <DateRangeFilter
+          from={dateKeyToDate(effectiveStartDate)!.toISOString()}
+          to={dateKeyToDate(effectiveEndDate)!.toISOString()}
+          onChange={(range) => {
+            onStartDateChange(
+              range?.from ? dateToDateKey(range.from) : undefined
+            )
+            onEndDateChange(range?.to ? dateToDateKey(range.to) : undefined)
+          }}
+          disablePastDates
+          className="w-full md:w-auto"
         />
-      </div>
-      <div className="flex h-8 items-center gap-2">
-        <Switch
-          id="available-only"
-          size="sm"
-          checked={availableOnly}
-          onCheckedChange={onAvailableOnlyChange}
+        <TimeRangePicker
+          startTime={startTime}
+          endTime={endTime}
+          defaultStartTime={defaultStartTime}
+          defaultEndTime={defaultEndTime}
+          startDate={effectiveStartDate}
+          operatingHoursStart={operatingHoursStart}
+          operatingHoursEnd={operatingHoursEnd}
+          onStartTimeChange={onStartTimeChange}
+          onEndTimeChange={onEndTimeChange}
+          className="w-full md:w-auto"
         />
-        <Label htmlFor="available-only" className="cursor-pointer text-sm">
-          Available only
-        </Label>
+        <div className="flex h-8 items-center gap-2">
+          <Switch
+            id="available-only"
+            size="sm"
+            checked={availableOnly}
+            onCheckedChange={onAvailableOnlyChange}
+          />
+          <Label htmlFor="available-only" className="cursor-pointer text-sm">
+            Show Available Only
+          </Label>
+        </div>
       </div>
     </div>
   )

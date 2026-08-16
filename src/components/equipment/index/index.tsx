@@ -230,6 +230,8 @@ export function Page({
       onAvailabilityOnlyChange={handleAvailabilityOnlyChange}
       defaultStartTime={defaultWindow.startTime}
       defaultEndTime={defaultWindow.endTime}
+      operatingHoursStart={operatingHoursStart}
+      operatingHoursEnd={operatingHoursEnd}
       isLoading={isLoading}
     />
   )

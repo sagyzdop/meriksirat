@@ -5,10 +5,11 @@ import {
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
-} from "@/components/ui/combobox";
-import { Button } from "@/components/ui/button";
-import { Category } from "./types";
-import { getCategoryIcon } from "./category-icons";
+} from '@/components/ui/combobox'
+import { Button } from '@/components/ui/button'
+import { ChevronDown } from 'lucide-react'
+import { Category } from './types'
+import { getCategoryIcon } from './category-icons'
 
 interface EquipmentCategoryComboboxProps {
   categories: Category[]
@@ -29,32 +30,40 @@ export function EquipmentCategoryCombobox({
 }: EquipmentCategoryComboboxProps) {
   const sortedCategories = [...categories].sort(
     (a, b) =>
-      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
-      a.name.localeCompare(b.name)
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)
   )
 
   const optionLookup = new Map<string, { label: string; count: number }>([
-    ["all", { label: "All Equipment", count: totalCount }],
-    ...sortedCategories.map((category) => [
-      String(category.id),
-      { label: category.name, count: equipmentCounts[category.id] ?? 0 },
-    ] as [string, { label: string; count: number }]),
+    ['all', { label: 'All Equipment', count: totalCount }],
+    ...sortedCategories.map(
+      (category) =>
+        [
+          String(category.id),
+          { label: category.name, count: equipmentCounts[category.id] ?? 0 },
+        ] as [string, { label: string; count: number }]
+    ),
   ])
 
-  const items = ["all", ...sortedCategories.map((category) => String(category.id))]
+  const items = [
+    'all',
+    ...sortedCategories.map((category) => String(category.id)),
+  ]
 
   const selectedCategory =
     !isSearching && activeCategoryId !== undefined
       ? (categories.find((c) => c.id === activeCategoryId) ?? null)
       : null
 
-  const selectedLabel = selectedCategory?.name ?? "All Equipment"
+  const selectedLabel = selectedCategory?.name ?? 'All Equipment'
 
-  const TriggerIcon = selectedCategory ? getCategoryIcon(selectedCategory.name) : null
+  const TriggerIcon = selectedCategory
+    ? getCategoryIcon(selectedCategory.name)
+    : null
 
-  const value = isSearching || activeCategoryId === undefined
-    ? "all"
-    : String(activeCategoryId)
+  const value =
+    isSearching || activeCategoryId === undefined
+      ? 'all'
+      : String(activeCategoryId)
 
   return (
     <Combobox
@@ -62,15 +71,18 @@ export function EquipmentCategoryCombobox({
       value={value}
       filter={() => true}
       onValueChange={(next) => {
-        if (next === null || next === "all") onSelect(undefined)
+        if (next === null || next === 'all') onSelect(undefined)
         else onSelect(Number(next))
       }}
     >
       <ComboboxTrigger
         render={
-          <Button variant="outline" size="sm" className="w-full">
+          <Button variant="outline" size="sm" className="w-full border-dashed">
             {TriggerIcon && <TriggerIcon />}
-            <span className="truncate">{selectedLabel}</span>
+            <span className="min-w-0 flex-1 truncate text-left">
+              {selectedLabel}
+            </span>
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
           </Button>
         }
       />
@@ -80,7 +92,7 @@ export function EquipmentCategoryCombobox({
           {(item: string) => {
             const option = optionLookup.get(item)
             if (!option) return null
-            const Icon = item === "all" ? null : getCategoryIcon(option.label)
+            const Icon = item === 'all' ? null : getCategoryIcon(option.label)
             return (
               <ComboboxItem key={item} value={item}>
                 {Icon && <Icon className="size-4" />}

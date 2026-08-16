@@ -1,18 +1,21 @@
-import * as React from "react"
-import { addDays, format } from "date-fns"
-import { useQuery } from "@tanstack/react-query"
-import { CheckCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent } from "@/components/ui/card"
-import { checkCalendarFreeBusy, checkMultipleCalendarsFreeBusy } from "@/lib/google/google-caledar"
-import { bookingsQueries } from "@/lib/booking/queries"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { addDays, format } from 'date-fns'
+import { useQuery } from '@tanstack/react-query'
+import { CheckCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  checkCalendarFreeBusy,
+  checkMultipleCalendarsFreeBusy,
+} from '@/lib/google/google-caledar'
+import { bookingsQueries } from '@/lib/booking/queries'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 /** Converts "HH:MM" to minutes since midnight. */
 function timeToMinutes(time: string): number {
-  const [hour, minute] = time.split(":").map(Number)
+  const [hour, minute] = time.split(':').map(Number)
   return hour * 60 + minute
 }
 
@@ -32,7 +35,7 @@ interface TimeSlotPickerProps {
   }
   onSlotsChange?: (slots: string[], date: Date | undefined) => void
   disabled?: boolean
-  layout?: "horizontal" | "vertical"
+  layout?: 'horizontal' | 'vertical'
   withCard?: boolean
 }
 
@@ -44,10 +47,10 @@ export function TimeSlotPicker({
   excludeBookingPeriod,
   onSlotsChange,
   disabled = false,
-  layout = "horizontal",
+  layout = 'horizontal',
   withCard = true,
 }: TimeSlotPickerProps) {
-  const isVerticalLayout = layout === "vertical"
+  const isVerticalLayout = layout === 'vertical'
   const excludeStart = excludeBookingPeriod?.start ?? null
   const excludeEnd = excludeBookingPeriod?.end ?? null
   const { data: bookingSettings } = useQuery(bookingsQueries.settings())
@@ -55,7 +58,9 @@ export function TimeSlotPicker({
   const operatingHoursEnd = bookingSettings?.operatingHoursEnd ?? 1439
   const [date, setDate] = React.useState<Date | undefined>(initialDate)
   const [month, setMonth] = React.useState<Date | undefined>(initialDate)
-  const [selectedSlots, setSelectedSlots] = React.useState<string[]>([...initialSlots].sort())
+  const [selectedSlots, setSelectedSlots] = React.useState<string[]>(
+    [...initialSlots].sort()
+  )
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([])
   const isInitialMount = React.useRef(true)
 
@@ -65,7 +70,7 @@ export function TimeSlotPicker({
     const slots: string[] = []
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
         const slotMinutes = timeToMinutes(time)
         if (
           slotMinutes >= operatingHoursStart &&
@@ -95,9 +100,12 @@ export function TimeSlotPicker({
   // Check availability for selected date
   const checkAvailability = React.useCallback(
     async (selectedDate: Date) => {
-      const resolvedCalendarIds = (googleCalendarIds && googleCalendarIds.length > 0)
-        ? googleCalendarIds
-        : (googleCalendarId ? [googleCalendarId] : [])
+      const resolvedCalendarIds =
+        googleCalendarIds && googleCalendarIds.length > 0
+          ? googleCalendarIds
+          : googleCalendarId
+            ? [googleCalendarId]
+            : []
 
       if (!selectedDate || resolvedCalendarIds.length === 0) {
         setTimeSlots([])
@@ -129,7 +137,9 @@ export function TimeSlotPicker({
               timeMax: endOfDay.toISOString(),
             },
           })
-          busySlots = resolvedCalendarIds.flatMap((calendarId) => result[calendarId]?.busy || [])
+          busySlots = resolvedCalendarIds.flatMap(
+            (calendarId) => result[calendarId]?.busy || []
+          )
         }
         const allSlots = generateTimeSlots()
 
@@ -138,7 +148,7 @@ export function TimeSlotPicker({
         const now = Date.now()
         const pastSlotTimes = new Set(
           allSlots.filter((time) => {
-            const [hour, minute] = time.split(":").map(Number)
+            const [hour, minute] = time.split(':').map(Number)
             const slotStart = new Date(selectedDate)
             slotStart.setHours(hour, minute, 0, 0)
             return slotStart.getTime() <= now
@@ -147,7 +157,7 @@ export function TimeSlotPicker({
 
         // Check each slot against busy periods
         const slotsWithAvailability: TimeSlot[] = allSlots.map((time) => {
-          const [hour, minute] = time.split(":").map(Number)
+          const [hour, minute] = time.split(':').map(Number)
           const slotStart = new Date(selectedDate)
           slotStart.setHours(hour, minute, 0, 0)
 
@@ -157,28 +167,30 @@ export function TimeSlotPicker({
           const isPast = pastSlotTimes.has(time)
 
           // Check if this slot overlaps with any busy period
-          const isAvailable = !isPast && !busySlots.some((busy: any) => {
-            const busyStart = new Date(busy.start)
-            const busyEnd = new Date(busy.end)
+          const isAvailable =
+            !isPast &&
+            !busySlots.some((busy: any) => {
+              const busyStart = new Date(busy.start)
+              const busyEnd = new Date(busy.end)
 
-            // Skip the excluded booking period if provided
-            if (excludeStart && excludeEnd) {
-              const excludeStartDate = new Date(excludeStart)
-              const excludeEndDate = new Date(excludeEnd)
-              if (
-                busyStart.getTime() === excludeStartDate.getTime() &&
-                busyEnd.getTime() === excludeEndDate.getTime()
-              ) {
-                return false
+              // Skip the excluded booking period if provided
+              if (excludeStart && excludeEnd) {
+                const excludeStartDate = new Date(excludeStart)
+                const excludeEndDate = new Date(excludeEnd)
+                if (
+                  busyStart.getTime() === excludeStartDate.getTime() &&
+                  busyEnd.getTime() === excludeEndDate.getTime()
+                ) {
+                  return false
+                }
               }
-            }
 
-            return (
-              (slotStart >= busyStart && slotStart < busyEnd) ||
-              (slotEnd > busyStart && slotEnd <= busyEnd) ||
-              (slotStart <= busyStart && slotEnd >= busyEnd)
-            )
-          })
+              return (
+                (slotStart >= busyStart && slotStart < busyEnd) ||
+                (slotEnd > busyStart && slotEnd <= busyEnd) ||
+                (slotStart <= busyStart && slotEnd >= busyEnd)
+              )
+            })
 
           return { time, available: isAvailable }
         })
@@ -190,11 +202,18 @@ export function TimeSlotPicker({
         // booking times can never start in the past.
         setSelectedSlots((prev) => prev.filter((t) => !pastSlotTimes.has(t)))
       } catch (error) {
-        console.error("Failed to check availability:", error)
-        toast.error("Failed to load availability")
+        console.error('Failed to check availability:', error)
+        toast.error('Failed to load availability')
       }
     },
-    [googleCalendarId, googleCalendarIds, excludeStart, excludeEnd, operatingHoursStart, operatingHoursEnd]
+    [
+      googleCalendarId,
+      googleCalendarIds,
+      excludeStart,
+      excludeEnd,
+      operatingHoursStart,
+      operatingHoursEnd,
+    ]
   )
 
   // Load availability when date changes
@@ -235,9 +254,18 @@ export function TimeSlotPicker({
     isInitialMount.current = false
   }, [])
 
+  // Fill the contiguous range of slots between `from` and `to` (inclusive).
+  const fillRange = (from: string, to: string) =>
+    timeSlots
+      .map((s) => s.time)
+      .sort()
+      .filter((t) => t >= from && t <= to)
+
   // Handle time slot selection. Selections are treated as a range: picking any
   // set of slots selects every slot between the earliest and latest pick, which
   // is also how the booking times are derived (first slot → last slot + 30min).
+  // Clicking an already-selected slot inside the range moves the end of the
+  // range up to that slot; clicking a boundary slot drops it.
   const handleSlotClick = (time: string) => {
     if (disabled) return
 
@@ -245,20 +273,24 @@ export function TimeSlotPicker({
     if (!slot?.available) return
 
     setSelectedSlots((prev) => {
-      const next = prev.includes(time)
-        ? prev.filter((t) => t !== time)
-        : [...prev, time]
+      if (prev.length === 0) return [time]
 
-      if (next.length === 0) return next
-
-      const sorted = [...next].sort()
+      const sorted = [...prev].sort()
       const min = sorted[0]
       const max = sorted[sorted.length - 1]
 
-      return timeSlots
-        .map((s) => s.time)
-        .sort()
-        .filter((t) => t >= min && t <= max)
+      if (prev.includes(time)) {
+        // Clicking an interior slot moves the end of the range up to it.
+        if (time !== min && time !== max) return fillRange(min, time)
+        // Clicking a boundary slot drops it, shrinking the range from that side.
+        const next = prev.filter((t) => t !== time)
+        if (next.length === 0) return next
+        const nextSorted = [...next].sort()
+        return fillRange(nextSorted[0], nextSorted[nextSorted.length - 1])
+      }
+
+      // Clicking a slot outside the range extends the range to include it.
+      return fillRange(time < min ? time : min, time > max ? time : max)
     })
   }
 
@@ -270,8 +302,8 @@ export function TimeSlotPicker({
     const firstSlot = sortedSlots[0]
     const lastSlot = sortedSlots[sortedSlots.length - 1]
 
-    const [startHour, startMinute] = firstSlot.split(":").map(Number)
-    const [endHour, endMinute] = lastSlot.split(":").map(Number)
+    const [startHour, startMinute] = firstSlot.split(':').map(Number)
+    const [endHour, endMinute] = lastSlot.split(':').map(Number)
 
     const startTime = new Date(date)
     startTime.setHours(startHour, startMinute, 0, 0)
@@ -286,7 +318,7 @@ export function TimeSlotPicker({
 
   const content = (
     <>
-      <div className={cn("relative min-w-0", !isVerticalLayout && "md:pr-64")}>
+      <div className={cn('relative min-w-0', !isVerticalLayout && 'md:pr-64')}>
         <div className="p-6 flex w-full min-w-0 flex-col items-center gap-4">
           <div className="w-full overflow-x-auto">
             <Calendar
@@ -305,7 +337,7 @@ export function TimeSlotPicker({
               className="mx-auto w-fit max-w-full bg-transparent p-0 [--cell-size:--spacing(8)] sm:[--cell-size:--spacing(9)] md:[--cell-size:--spacing(12)]"
               formatters={{
                 formatWeekdayName: (date) => {
-                  return date.toLocaleString("en-US", { weekday: "short" })
+                  return date.toLocaleString('en-US', { weekday: 'short' })
                 },
               }}
             />
@@ -339,9 +371,10 @@ export function TimeSlotPicker({
         </div>
         <div
           className={cn(
-            "no-scrollbar flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6",
-            !isVerticalLayout && "inset-y-0 right-0 md:absolute md:max-h-none md:w-64 md:border-t-0 md:border-l",
-            isVerticalLayout && "md:static md:max-h-72 md:w-full"
+            'no-scrollbar flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6',
+            !isVerticalLayout &&
+              'inset-y-0 right-0 md:absolute md:max-h-none md:w-64 md:border-t-0 md:border-l',
+            isVerticalLayout && 'md:static md:max-h-72 md:w-full'
           )}
         >
           <div className="text-sm font-medium text-gray-700 mb-2">
@@ -351,14 +384,16 @@ export function TimeSlotPicker({
             {timeSlots.map((slot) => (
               <Button
                 key={slot.time}
-                variant={selectedSlots.includes(slot.time) ? "default" : "outline"}
+                variant={
+                  selectedSlots.includes(slot.time) ? 'default' : 'outline'
+                }
                 onClick={() => handleSlotClick(slot.time)}
                 disabled={!slot.available || disabled}
                 className={cn(
-                  "w-full shadow-none text-xs h-8",
+                  'w-full shadow-none text-xs h-8',
                   !slot.available &&
                     !selectedSlots.includes(slot.time) &&
-                    "opacity-40 cursor-not-allowed"
+                    'opacity-40 cursor-not-allowed'
                 )}
                 size="sm"
               >
@@ -374,17 +409,24 @@ export function TimeSlotPicker({
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
               <span>
-                Booking for{" "}
+                Booking for{' '}
                 <span className="font-medium">
-                  {date?.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
+                  {date?.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
                   })}
-                </span>
-                {" "}from <span className="font-medium">{format(bookingTimes.startTime, "HH:mm")}</span>
-                {" "}to <span className="font-medium">{format(bookingTimes.endTime, "HH:mm")}</span>
-                {" "}({selectedSlots.length} slot{selectedSlots.length !== 1 ? "s" : ""})
+                </span>{' '}
+                from{' '}
+                <span className="font-medium">
+                  {format(bookingTimes.startTime, 'HH:mm')}
+                </span>{' '}
+                to{' '}
+                <span className="font-medium">
+                  {format(bookingTimes.endTime, 'HH:mm')}
+                </span>{' '}
+                ({selectedSlots.length} slot
+                {selectedSlots.length !== 1 ? 's' : ''})
               </span>
             </div>
           ) : (
@@ -408,15 +450,18 @@ export function TimeSlotPicker({
   )
 }
 
-export function getBookingTimesFromSlots(slots: string[], date: Date | undefined) {
+export function getBookingTimesFromSlots(
+  slots: string[],
+  date: Date | undefined
+) {
   if (slots.length === 0 || !date) return null
 
   const sortedSlots = [...slots].sort()
   const firstSlot = sortedSlots[0]
   const lastSlot = sortedSlots[sortedSlots.length - 1]
 
-  const [startHour, startMinute] = firstSlot.split(":").map(Number)
-  const [endHour, endMinute] = lastSlot.split(":").map(Number)
+  const [startHour, startMinute] = firstSlot.split(':').map(Number)
+  const [endHour, endMinute] = lastSlot.split(':').map(Number)
 
   const startTime = new Date(date)
   startTime.setHours(startHour, startMinute, 0, 0)

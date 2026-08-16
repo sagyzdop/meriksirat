@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeft, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sidebar,
@@ -45,6 +45,8 @@ interface EquipmentBookingBlockProps {
   onAvailabilityOnlyChange: (value: boolean) => void
   defaultStartTime: string
   defaultEndTime: string
+  operatingHoursStart: number
+  operatingHoursEnd: number
   disabledEquipmentIds?: number[]
   availabilityByEquipmentId?: Map<number, boolean>
   availabilityLoading?: boolean
@@ -77,6 +79,8 @@ export function EquipmentBookingBlock({
   onAvailabilityOnlyChange,
   defaultStartTime,
   defaultEndTime,
+  operatingHoursStart,
+  operatingHoursEnd,
   disabledEquipmentIds = [],
   availabilityByEquipmentId,
   availabilityLoading = false,
@@ -245,19 +249,17 @@ export function EquipmentBookingBlock({
               />
               {isMobile && (
                 <div className="flex w-full items-center gap-2">
-                  <SlidersHorizontal
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <EquipmentCategoryCombobox
-                    {...categoryNavProps}
-                    onSelect={onCategorySelect}
-                  />
+                  <div className="min-w-0 flex-1">
+                    <EquipmentCategoryCombobox
+                      {...categoryNavProps}
+                      onSelect={onCategorySelect}
+                    />
+                  </div>
                 </div>
               )}
             </div>
             {!addMode && (
-              <div className="flex w-full flex-wrap items-center gap-2">
+              <div className="w-full">
                 <AvailabilityFilters
                   startDate={filters.availabilityStartDate}
                   endDate={filters.availabilityEndDate}
@@ -265,6 +267,8 @@ export function EquipmentBookingBlock({
                   endTime={filters.availabilityEndTime}
                   defaultStartTime={defaultStartTime}
                   defaultEndTime={defaultEndTime}
+                  operatingHoursStart={operatingHoursStart}
+                  operatingHoursEnd={operatingHoursEnd}
                   availableOnly={filters.availabilityOnly ?? false}
                   onStartDateChange={onAvailabilityStartDateChange}
                   onEndDateChange={onAvailabilityEndDateChange}
