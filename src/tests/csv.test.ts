@@ -25,6 +25,7 @@ const sampleUser: AdminUserExport = {
   telegramChatId: null,
   major: 'Computer Science',
   graduationYear: 2027,
+  birthday: '2003-07-14',
   onboardingComplete: true,
   cancelledInStartWindowCount: 2,
   overdueCount: 1,
@@ -93,6 +94,16 @@ describe('getUserExportFieldValue', () => {
     expect(getUserExportFieldValue(sampleUser, 'memberSince')).toBe(
       '2025-03-15'
     )
+  })
+
+  it('formats birthday as date-only', () => {
+    expect(getUserExportFieldValue(sampleUser, 'birthday')).toBe('2003-07-14')
+  })
+
+  it('returns empty string for a missing birthday', () => {
+    expect(
+      getUserExportFieldValue({ ...sampleUser, birthday: null }, 'birthday')
+    ).toBe('')
   })
 
   it('renders violation counters as strings', () => {

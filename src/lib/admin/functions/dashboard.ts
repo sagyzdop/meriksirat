@@ -744,6 +744,7 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
         telegramChatId: user.telegramChatId,
         major: user.major,
         graduationYear: user.graduationYear,
+        birthday: user.birthday,
         onboardingComplete: user.onboardingComplete,
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
         overdueCount: user.overdueCount,

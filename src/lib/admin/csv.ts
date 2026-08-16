@@ -15,6 +15,7 @@ export type UserExportFieldKey =
   | 'telegramUsername'
   | 'major'
   | 'graduationYear'
+  | 'birthday'
   | 'memberSince'
   | 'autoCancelled'
   | 'overdue'
@@ -35,25 +36,26 @@ export const USER_EXPORT_FIELDS: AdminUserExportField[] = [
   { key: 'telegramUsername', label: 'Telegram Username' },
   { key: 'major', label: 'Major' },
   { key: 'graduationYear', label: 'Graduation Year' },
+  { key: 'birthday', label: 'Birthday' },
   { key: 'memberSince', label: 'Member Since' },
   { key: 'autoCancelled', label: 'Auto-Cancelled' },
   { key: 'overdue', label: 'Overdue' },
 ]
 
-export const DEFAULT_USER_EXPORT_KEYS: readonly UserExportFieldKey[] = [
-  'fullName',
-  'email',
-  'role',
-  'status',
-  'clearanceLevel',
-  'memberSince',
-  'autoCancelled',
-  'overdue',
-]
+/** Every exportable column, in display order. Used as the default selection. */
+export const DEFAULT_USER_EXPORT_KEYS: readonly UserExportFieldKey[] =
+  USER_EXPORT_FIELDS.map((field) => field.key)
 
 function formatMemberSince(createdAt: Date | string): string {
   const date = createdAt instanceof Date ? createdAt : new Date(createdAt)
   if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 10)
+}
+
+function formatBirthday(birthday: string | null): string {
+  if (!birthday) return ''
+  const date = new Date(birthday)
+  if (Number.isNaN(date.getTime())) return birthday
   return date.toISOString().slice(0, 10)
 }
 
@@ -71,6 +73,8 @@ export function getUserExportFieldValue(
     }
     case 'memberSince':
       return formatMemberSince(user.createdAt)
+    case 'birthday':
+      return formatBirthday(user.birthday)
     case 'autoCancelled':
       return String(user.cancelledInStartWindowCount)
     case 'overdue':

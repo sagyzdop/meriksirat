@@ -232,6 +232,7 @@ export interface AdminUserExport {
   telegramChatId: string | null
   major: string | null
   graduationYear: number | null
+  birthday: string | null
   onboardingComplete: boolean
   cancelledInStartWindowCount: number
   overdueCount: number
