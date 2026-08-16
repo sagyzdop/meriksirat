@@ -118,7 +118,7 @@ export function ProfileStep({ form, error, onSubmit }: ProfileStepProps) {
               <FormItem>
                 <FormLabel>Instagram Username (Optional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="@username" {...field} />
+                  <Input placeholder="without @" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
