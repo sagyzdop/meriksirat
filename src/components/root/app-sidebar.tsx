@@ -10,6 +10,7 @@ import {
   Calendar,
   Images,
   FolderOpen,
+  Cake,
 } from 'lucide-react'
 
 import {
@@ -100,6 +101,11 @@ const data = {
       title: 'Booking Oversight',
       url: '/admin/bookings',
       icon: Calendar,
+    },
+    {
+      title: 'Birthdays',
+      url: '/admin/birthdays',
+      icon: Cake,
     },
     {
       title: 'Admin Settings',

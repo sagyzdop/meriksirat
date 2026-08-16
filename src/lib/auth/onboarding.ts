@@ -92,6 +92,15 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
       })
       .where(eq(user.id, session.user.id))
 
+    try {
+      const { reconcileBirthdaysToCalendar } = await import(
+        '@/lib/birthdays/functions/birthdays'
+      )
+      await reconcileBirthdaysToCalendar(database)
+    } catch (syncError) {
+      console.error('Failed to sync birthday to calendar:', syncError)
+    }
+
     return { success: true }
   })
 export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' }).handler(

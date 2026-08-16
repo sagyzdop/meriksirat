@@ -249,6 +249,16 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
     // Perform the update
     await database.update(user).set(updateData).where(eq(user.id, data.userId))
 
+    if (data.status !== undefined) {
+      try {
+        const { reconcileBirthdaysToCalendar } =
+          await import('@/lib/birthdays/functions/birthdays')
+        await reconcileBirthdaysToCalendar(database)
+      } catch (syncError) {
+        console.error('Failed to sync birthday to calendar:', syncError)
+      }
+    }
+
     // Return updated user data
     const updatedUser = await database
       .select({
@@ -450,6 +460,16 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
       .update(user)
       .set(updateData)
       .where(eq(user.id, session.user.id))
+
+    if (data.birthday !== undefined) {
+      try {
+        const { reconcileBirthdaysToCalendar } =
+          await import('@/lib/birthdays/functions/birthdays')
+        await reconcileBirthdaysToCalendar(database)
+      } catch (syncError) {
+        console.error('Failed to sync birthday to calendar:', syncError)
+      }
+    }
 
     // Return updated user data
     const updatedUser = await database

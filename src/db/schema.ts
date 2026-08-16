@@ -397,6 +397,12 @@ export const settings = sqliteTable('settings', {
   // Notifications
   globalBookingNote: text('global_booking_note').default(''),
 
+  // Birthday wish message shown once per session in the drawer
+  birthdayWishMessage: text('birthday_wish_message'),
+
+  // Dedicated Google Calendar for member birthdays (overrides the default)
+  birthdaysCalendarId: text('birthdays_calendar_id'),
+
   // Daily operating hours (minutes since midnight: 0-1439)
   operatingHoursStart: integer('operating_hours_start').default(0),
   operatingHoursEnd: integer('operating_hours_end').default(1439),

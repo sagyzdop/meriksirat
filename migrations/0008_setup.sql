@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `birthday_wish_message` text;

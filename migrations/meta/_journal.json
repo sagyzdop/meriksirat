@@ -57,6 +57,20 @@
       "when": 1786730462372,
       "tag": "0007_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786871249631,
+      "tag": "0008_setup",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786871797117,
+      "tag": "0009_setup",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import { AppSidebar } from './app-sidebar'
 import { SiteHeader } from './site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
+import { BirthdayWishDrawer } from '@/components/shared/birthday-wish-drawer'
 
 interface AuthenticatedShellProps {
   user: UserProfile
@@ -36,6 +37,7 @@ export function AuthenticatedShell({
         <div className="flex flex-1 min-w-0 flex-col">{children}</div>
       </SidebarInset>
       <Toaster />
+      <BirthdayWishDrawer />
     </SidebarProvider>
   )
 }

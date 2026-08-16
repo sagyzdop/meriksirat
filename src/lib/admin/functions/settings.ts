@@ -7,6 +7,8 @@ import { z } from 'zod'
  */
 export const UpdateSettingsSchema = z.object({
   globalBookingNote: z.string().optional(),
+  birthdayWishMessage: z.string().optional(),
+  birthdaysCalendarId: z.string().optional(),
   operatingHoursStart: z.number().min(0).max(1439).optional(),
   operatingHoursEnd: z.number().min(0).max(1439).optional(),
 })
@@ -111,6 +113,12 @@ export const updateSettingsFn = createServerFn({ method: 'POST' })
     
     if (data.globalBookingNote !== undefined) {
       updateData.globalBookingNote = data.globalBookingNote
+    }
+    if (data.birthdayWishMessage !== undefined) {
+      updateData.birthdayWishMessage = data.birthdayWishMessage
+    }
+    if (data.birthdaysCalendarId !== undefined) {
+      updateData.birthdaysCalendarId = data.birthdaysCalendarId
     }
     if (data.operatingHoursStart !== undefined) {
       updateData.operatingHoursStart = data.operatingHoursStart

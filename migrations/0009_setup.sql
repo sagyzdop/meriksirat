@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `birthdays_calendar_id` text;
