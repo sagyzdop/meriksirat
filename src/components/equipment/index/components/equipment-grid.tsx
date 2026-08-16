@@ -1,6 +1,7 @@
 import { EquipmentCard } from './equipment-card'
 import { EquipmentSkeleton } from './equipment-skeleton'
-import { Equipment, EquipmentAvailabilityStatus } from './types'
+import { Equipment } from './types'
+import { getEquipmentAvailabilityStatus } from './availability-status'
 import { ContentGrid } from '@/components/layout/content-grid'
 import {
   Empty,
@@ -105,15 +106,12 @@ export function EquipmentGrid({
     >
       {equipment.map((item) => {
         const isDisabled = disabledEquipmentIds?.includes(item.id) || false
-        const availabilityStatus: EquipmentAvailabilityStatus = isDisabled
-          ? 'in-booking'
-          : item.isActive === false
-            ? 'unavailable'
-            : availabilityLoading
-              ? 'checking'
-              : availabilityByEquipmentId?.get(item.id)
-                ? 'unavailable'
-                : 'available'
+        const availabilityStatus = getEquipmentAvailabilityStatus({
+          isDisabled,
+          isActive: item.isActive,
+          isChecking: availabilityLoading,
+          isBusy: availabilityByEquipmentId?.get(item.id) ?? false,
+        })
         return (
           <EquipmentCard
             key={item.id}

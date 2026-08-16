@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ImageIcon } from 'lucide-react'
 import { equipmentQueries } from '@/lib/equipment'
 import { GoogleCalendarView } from '@/components/shared/event-calendar/google-calendar-view'
+import { EquipmentAvailabilityBadge } from '@/components/equipment/index/components/equipment-availability-badge'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { PageContainer } from '@/components/layout/page-container'
@@ -121,19 +122,10 @@ export function Page() {
                   </TableRow>
                   <TableRow>
                     <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                      Status
+                      Availability
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          equipment.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-700'
-                        }
-                      >
-                        {equipment.isActive ? 'Available' : 'Unavailable'}
-                      </Badge>
+                      <EquipmentAvailabilityBadge equipment={equipment} />
                     </TableCell>
                   </TableRow>
                 </TableBody>

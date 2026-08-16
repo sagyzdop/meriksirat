@@ -13,6 +13,10 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import {
+  availabilityBadgeClass,
+  availabilityBadgeLabel,
+} from './availability-status'
 import { Equipment, EquipmentAvailabilityStatus } from './types'
 
 interface EquipmentCardProps {
@@ -35,23 +39,7 @@ export function EquipmentCard({
 
   const isAvailable = equipment.isActive !== false
 
-  const badgeConfig: Record<EquipmentAvailabilityStatus, string> = {
-    'in-booking': 'bg-slate-100 text-slate-700',
-    checking: 'bg-amber-100 text-amber-700',
-    unavailable: 'bg-red-100 text-red-700',
-    available: 'bg-green-100 text-green-800',
-  }
-  const badgeLabel: Record<EquipmentAvailabilityStatus, string> = {
-    'in-booking': 'In booking',
-    checking: 'Checking…',
-    unavailable: 'Unavailable',
-    available: 'Available',
-  }
-
-  const canSelect =
-    isAvailable &&
-    availabilityStatus !== 'in-booking' &&
-    availabilityStatus !== 'unavailable'
+  const canSelect = isAvailable && availabilityStatus !== 'in-booking'
 
   return (
     <Card
@@ -78,8 +66,8 @@ export function EquipmentCard({
 
       <CardHeader>
         <CardAction>
-          <Badge className={badgeConfig[availabilityStatus]}>
-            {badgeLabel[availabilityStatus]}
+          <Badge className={availabilityBadgeClass[availabilityStatus]}>
+            {availabilityBadgeLabel[availabilityStatus]}
           </Badge>
         </CardAction>
         <CardTitle className="line-clamp-1">{equipment.modelName}</CardTitle>
@@ -111,9 +99,7 @@ export function EquipmentCard({
               ? 'Selected'
               : availabilityStatus === 'in-booking'
                 ? 'In booking'
-                : availabilityStatus === 'unavailable'
-                  ? 'Unavailable in this window'
-                  : 'Select'
+                : 'Select'
           }
         >
           <Check className="@[17rem]:mr-2 h-4 w-4" />

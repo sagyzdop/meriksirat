@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { checkMultipleCalendarsFreeBusy } from '@/lib/google/google-caledar'
-import { getCurrentlyRentedEquipmentIdsFn } from '@/lib/equipment/functions'
 import {
   clubLocalToUtc,
   getNextBookableWindow,
@@ -63,10 +62,9 @@ interface UseEquipmentAvailabilityOptions {
 
 /**
  * Fetches free/busy for every equipment calendar over the given window and
- * exposes which equipment ids are busy (unavailable) during it. An item is
- * treated as busy when EITHER the calendar is busy over the window OR D1 says
- * it is currently checked out (status `active`/`overdue`) — so equipment that
- * is rented out right now never shows as available.
+ * exposes which equipment ids are busy (unavailable) during it. Availability
+ * is driven purely by Google Calendar events (the free/busy check); equipment
+ * with no events in the window is considered available.
  */
 export function useEquipmentAvailability({
   equipment,
@@ -104,33 +102,17 @@ export function useEquipmentAvailability({
     },
   })
 
-  const rentedOutQuery = useQuery({
-    queryKey: ['equipment-active-bookings'],
-    queryFn: async () => getCurrentlyRentedEquipmentIdsFn(),
-  })
-
   const busyByEquipmentId = useMemo(() => {
     const map = new Map<number, boolean>()
     for (const item of equipment) {
-      const calendarBusy =
-        freeBusyQuery.data?.has(item.googleCalendarId) ?? false
-      const rentedOut = rentedOutQuery.data?.includes(item.id) ?? false
-      map.set(item.id, calendarBusy || rentedOut)
+      map.set(item.id, freeBusyQuery.data?.has(item.googleCalendarId) ?? false)
     }
     return map
-  }, [equipment, freeBusyQuery.data, rentedOutQuery.data])
+  }, [equipment, freeBusyQuery.data])
 
   return {
     busyByEquipmentId,
-    isChecking:
-      (window !== null && freeBusyQuery.data === undefined) ||
-      rentedOutQuery.data === undefined,
-    refetch: async () => {
-      const [result] = await Promise.all([
-        freeBusyQuery.refetch(),
-        rentedOutQuery.refetch(),
-      ])
-      return result
-    },
+    isChecking: window !== null && freeBusyQuery.data === undefined,
+    refetch: freeBusyQuery.refetch,
   }
 }
