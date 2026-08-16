@@ -228,38 +228,53 @@ export const checkMultipleCalendarsFreeBusy = createServerFn({ method: 'POST' })
   .validator((d: any) => d)
   .handler(async ({ data }) => {
     const { equipmentCalendarIds, timeMin, timeMax } = data
-    
+
+    // Google's free/busy API silently drops busy data for some calendars when
+    // a request carries more than ~20 items (its documented limit is 50). Batch
+    // the request into small chunks and merge so every calendar is checked.
+    const MAX_CALENDARS_PER_REQUEST = 15
+
     const accessToken = await getGoogleAccessToken()
-    
-    const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        timeMin,
-        timeMax,
-        items: equipmentCalendarIds.map((id: string) => ({ id })),
-      }),
-    })
-    
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Failed to check calendars availability: ${error}`)
+
+    const chunks: string[][] = []
+    for (let i = 0; i < equipmentCalendarIds.length; i += MAX_CALENDARS_PER_REQUEST) {
+      chunks.push(equipmentCalendarIds.slice(i, i + MAX_CALENDARS_PER_REQUEST))
     }
-    
-    const result = await response.json() as {
-      calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }>
-    }
-    const calendars = result.calendars ?? {}
+
     const output: { [key: string]: { busy: any[] } } = {}
 
-    equipmentCalendarIds.forEach((calendarId: string) => {
-      output[calendarId] = {
-        busy: calendars[calendarId]?.busy ?? [],
-      }
-    })
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timeMin,
+            timeMax,
+            items: chunk.map((id: string) => ({ id })),
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.text()
+          throw new Error(`Failed to check calendars availability: ${error}`)
+        }
+
+        const result = await response.json() as {
+          calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }>
+        }
+        const calendars = result.calendars ?? {}
+
+        chunk.forEach((calendarId: string) => {
+          output[calendarId] = {
+            busy: calendars[calendarId]?.busy ?? [],
+          }
+        })
+      })
+    )
 
     return output
   })
