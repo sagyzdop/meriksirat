@@ -23,8 +23,10 @@ interface EquipmentBookingBlockProps {
   filters: {
     categoryId?: number
     searchQuery?: string
-    availabilityDate?: string
-    availabilityTime?: string
+    availabilityStartDate?: string
+    availabilityEndDate?: string
+    availabilityStartTime?: string
+    availabilityEndTime?: string
     availabilityOnly?: boolean
   }
   selection: {
@@ -36,9 +38,13 @@ interface EquipmentBookingBlockProps {
   onAddModeBack: () => void
   onSearchChange: (value: string) => void
   onCategorySelect: (categoryId?: number) => void
-  onAvailabilityDateChange: (dateKey?: string) => void
-  onAvailabilityTimeChange: (time?: string) => void
+  onAvailabilityStartDateChange: (value?: string) => void
+  onAvailabilityEndDateChange: (value?: string) => void
+  onAvailabilityStartTimeChange: (value?: string) => void
+  onAvailabilityEndTimeChange: (value?: string) => void
   onAvailabilityOnlyChange: (value: boolean) => void
+  defaultStartTime: string
+  defaultEndTime: string
   disabledEquipmentIds?: number[]
   availabilityByEquipmentId?: Map<number, boolean>
   availabilityLoading?: boolean
@@ -64,9 +70,13 @@ export function EquipmentBookingBlock({
   onAddModeBack,
   onSearchChange,
   onCategorySelect,
-  onAvailabilityDateChange,
-  onAvailabilityTimeChange,
+  onAvailabilityStartDateChange,
+  onAvailabilityEndDateChange,
+  onAvailabilityStartTimeChange,
+  onAvailabilityEndTimeChange,
   onAvailabilityOnlyChange,
+  defaultStartTime,
+  defaultEndTime,
   disabledEquipmentIds = [],
   availabilityByEquipmentId,
   availabilityLoading = false,
@@ -81,7 +91,11 @@ export function EquipmentBookingBlock({
   const hasActiveFilters =
     isSearching ||
     filters.categoryId !== undefined ||
-    filters.availabilityOnly === true
+    filters.availabilityOnly === true ||
+    filters.availabilityStartDate !== undefined ||
+    filters.availabilityEndDate !== undefined ||
+    filters.availabilityStartTime !== undefined ||
+    filters.availabilityEndTime !== undefined
   const selectedCount = selection.selectedIds.length
   const isMobile = useIsMobile()
 
@@ -199,55 +213,63 @@ export function EquipmentBookingBlock({
 
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <header className="flex shrink-0 flex-col gap-2 border-b px-4 py-2 md:h-16 md:flex-row md:items-center md:py-0">
-            {addMode && (
-              <div className="flex items-center gap-3 md:mr-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-muted-foreground"
-                  onClick={onAddModeBack}
-                >
-                  <ArrowLeft className="size-4" aria-hidden="true" />
-                  Back
-                </Button>
-                {bookingId !== undefined && (
-                  <span className="whitespace-nowrap text-sm text-muted-foreground">
-                    Adding to booking #{bookingId}
-                  </span>
-                )}
-                {bookingWindowLabel && (
-                  <span className="whitespace-nowrap text-sm text-muted-foreground">
-                    Window: {bookingWindowLabel}
-                  </span>
-                )}
-              </div>
-            )}
-            <EquipmentSearch
-              searchQuery={filters.searchQuery}
-              onSearchChange={onSearchChange}
-              className="w-full md:max-w-sm md:flex-1"
-            />
-            {isMobile && (
-              <div className="flex w-full items-center gap-2">
-                <SlidersHorizontal
-                  className="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <EquipmentCategoryCombobox
-                  {...categoryNavProps}
-                  onSelect={onCategorySelect}
-                />
-              </div>
-            )}
+          <header className="flex shrink-0 flex-col gap-2 border-b px-4 py-2">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+              {addMode && (
+                <div className="flex items-center gap-3 md:mr-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground"
+                    onClick={onAddModeBack}
+                  >
+                    <ArrowLeft className="size-4" aria-hidden="true" />
+                    Back
+                  </Button>
+                  {bookingId !== undefined && (
+                    <span className="whitespace-nowrap text-sm text-muted-foreground">
+                      Adding to booking #{bookingId}
+                    </span>
+                  )}
+                  {bookingWindowLabel && (
+                    <span className="whitespace-nowrap text-sm text-muted-foreground">
+                      Window: {bookingWindowLabel}
+                    </span>
+                  )}
+                </div>
+              )}
+              <EquipmentSearch
+                searchQuery={filters.searchQuery}
+                onSearchChange={onSearchChange}
+                className="w-full md:max-w-sm md:flex-1"
+              />
+              {isMobile && (
+                <div className="flex w-full items-center gap-2">
+                  <SlidersHorizontal
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <EquipmentCategoryCombobox
+                    {...categoryNavProps}
+                    onSelect={onCategorySelect}
+                  />
+                </div>
+              )}
+            </div>
             {!addMode && (
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2">
                 <AvailabilityFilters
-                  dateKey={filters.availabilityDate}
-                  time={filters.availabilityTime}
+                  startDate={filters.availabilityStartDate}
+                  endDate={filters.availabilityEndDate}
+                  startTime={filters.availabilityStartTime}
+                  endTime={filters.availabilityEndTime}
+                  defaultStartTime={defaultStartTime}
+                  defaultEndTime={defaultEndTime}
                   availableOnly={filters.availabilityOnly ?? false}
-                  onDateChange={onAvailabilityDateChange}
-                  onTimeChange={onAvailabilityTimeChange}
+                  onStartDateChange={onAvailabilityStartDateChange}
+                  onEndDateChange={onAvailabilityEndDateChange}
+                  onStartTimeChange={onAvailabilityStartTimeChange}
+                  onEndTimeChange={onAvailabilityEndTimeChange}
                   onAvailableOnlyChange={onAvailabilityOnlyChange}
                 />
               </div>

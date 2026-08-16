@@ -6,7 +6,7 @@ import { EquipmentBookingBlock } from './components/equipment-booking-block'
 import { Equipment, Category } from './components/types'
 import { useSelection } from '@/hooks/use-selection'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
-import { bookingsQueries } from '@/lib/booking'
+import { bookingsQueries, getNextBookableWindow } from '@/lib/booking'
 import {
   buildAvailabilityWindow,
   useEquipmentAvailability,
@@ -18,8 +18,10 @@ interface Filters {
   mode?: 'add-to-booking'
   bookingId?: number
   returnTo?: string
-  availabilityDate?: string
-  availabilityTime?: string
+  availabilityStartDate?: string
+  availabilityEndDate?: string
+  availabilityStartTime?: string
+  availabilityEndTime?: string
   availabilityOnly?: boolean
 }
 
@@ -51,6 +53,14 @@ export function Page({
   const { data: bookingWindow } = useQuery(
     bookingsQueries.bookingWindow(filters.bookingId)
   )
+  const { data: settings } = useQuery(bookingsQueries.settings())
+  const operatingHoursStart = settings?.operatingHoursStart ?? 0
+  const operatingHoursEnd = settings?.operatingHoursEnd ?? 1439
+
+  const defaultWindow = React.useMemo(
+    () => getNextBookableWindow(operatingHoursStart, operatingHoursEnd),
+    [operatingHoursStart, operatingHoursEnd]
+  )
 
   const window = React.useMemo(() => {
     if (isAddMode) {
@@ -60,15 +70,23 @@ export function Page({
         timeMax: bookingWindow.endTime,
       }
     }
-    return buildAvailabilityWindow(
-      filters.availabilityDate,
-      filters.availabilityTime
-    )
+    return buildAvailabilityWindow({
+      startDate: filters.availabilityStartDate,
+      endDate: filters.availabilityEndDate,
+      startTime: filters.availabilityStartTime,
+      endTime: filters.availabilityEndTime,
+      operatingHoursStart,
+      operatingHoursEnd,
+    })
   }, [
     isAddMode,
     bookingWindow,
-    filters.availabilityDate,
-    filters.availabilityTime,
+    filters.availabilityStartDate,
+    filters.availabilityEndDate,
+    filters.availabilityStartTime,
+    filters.availabilityEndTime,
+    operatingHoursStart,
+    operatingHoursEnd,
   ])
 
   const availability = useEquipmentAvailability({ equipment, window })
@@ -149,16 +167,30 @@ export function Page({
     })
   }
 
-  const handleAvailabilityDateChange = (dateKey?: string) => {
+  const handleAvailabilityStartDateChange = (value?: string) => {
     navigate({
-      search: (prev) => ({ ...prev, availabilityDate: dateKey }),
+      search: (prev) => ({ ...prev, availabilityStartDate: value }),
       replace: true,
     })
   }
 
-  const handleAvailabilityTimeChange = (time?: string) => {
+  const handleAvailabilityEndDateChange = (value?: string) => {
     navigate({
-      search: (prev) => ({ ...prev, availabilityTime: time }),
+      search: (prev) => ({ ...prev, availabilityEndDate: value }),
+      replace: true,
+    })
+  }
+
+  const handleAvailabilityStartTimeChange = (value?: string) => {
+    navigate({
+      search: (prev) => ({ ...prev, availabilityStartTime: value }),
+      replace: true,
+    })
+  }
+
+  const handleAvailabilityEndTimeChange = (value?: string) => {
+    navigate({
+      search: (prev) => ({ ...prev, availabilityEndTime: value }),
       replace: true,
     })
   }
@@ -191,9 +223,13 @@ export function Page({
       onAddModeBack={handleAddModeBack}
       onSearchChange={handleSearchChange}
       onCategorySelect={handleCategorySelect}
-      onAvailabilityDateChange={handleAvailabilityDateChange}
-      onAvailabilityTimeChange={handleAvailabilityTimeChange}
+      onAvailabilityStartDateChange={handleAvailabilityStartDateChange}
+      onAvailabilityEndDateChange={handleAvailabilityEndDateChange}
+      onAvailabilityStartTimeChange={handleAvailabilityStartTimeChange}
+      onAvailabilityEndTimeChange={handleAvailabilityEndTimeChange}
       onAvailabilityOnlyChange={handleAvailabilityOnlyChange}
+      defaultStartTime={defaultWindow.startTime}
+      defaultEndTime={defaultWindow.endTime}
       isLoading={isLoading}
     />
   )

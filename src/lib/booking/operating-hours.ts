@@ -1,4 +1,5 @@
 import { CLUB_TIMEZONE } from '@/lib/google/google-caledar'
+import { minutesToTime } from './functions/settings'
 
 /**
  * Club-local wall-clock helpers used to enforce operating hours.
@@ -89,4 +90,51 @@ export function checkThirtyMinuteExtension(
     return { allowed: false, reason: 'operating-hours' }
   }
   return { allowed: true }
+}
+
+export interface BookableWindow {
+  /** `YYYY-MM-DD` in the club timezone */
+  dateKey: string
+  /** `HH:mm` club-local start time */
+  startTime: string
+  /** `HH:mm` club-local end time */
+  endTime: string
+}
+
+/**
+ * Returns the nearest 30-minute window that can be booked right now, i.e. the
+ * next half-hour boundary clamped to the start of the operating hours and
+ * rolled over to the next club day when the remaining hours today cannot fit a
+ * full 30-minute slot.
+ */
+export function getNextBookableWindow(
+  operatingHoursStart = 0,
+  operatingHoursEnd = 1439
+): BookableWindow {
+  const now = getClubLocalParts(new Date())
+  const boundary = Math.max(
+    Math.ceil(now.minutes / 30) * 30,
+    operatingHoursStart
+  )
+  const fitsToday = boundary + 30 <= operatingHoursEnd
+
+  const startMinutes = fitsToday ? boundary : operatingHoursStart
+  const endMinutes =
+    operatingHoursEnd - operatingHoursStart >= 30
+      ? startMinutes + 30
+      : operatingHoursEnd
+
+  const dateKey = fitsToday
+    ? now.dateKey
+    : getClubLocalParts(
+        new Date(
+          clubLocalToUtc(now.dateKey, '00:00').getTime() + 24 * 60 * 60 * 1000
+        )
+      ).dateKey
+
+  return {
+    dateKey,
+    startTime: minutesToTime(startMinutes),
+    endTime: minutesToTime(endMinutes),
+  }
 }

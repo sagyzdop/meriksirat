@@ -2,7 +2,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { updateSettingsFn } from '@/lib/admin/functions/settings'
 import { minutesToTime, timeToMinutes } from '@/lib/booking/functions/settings'
 import { useMemo, useState } from 'react'
@@ -87,81 +86,74 @@ export function Page({ settings }: PageProps) {
         description="Manage system settings and configurations"
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="globalNote">Global Booking Note</Label>
+          <Textarea
+            id="globalNote"
+            placeholder="Enter a message that will be shown in all calendar events..."
+            value={globalBookingNote}
+            onChange={(e) => setGlobalBookingNote(e.target.value)}
+            rows={3}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="globalNote">Global Booking Note</Label>
-            <Textarea
-              id="globalNote"
-              placeholder="Enter a message that will be shown in all calendar events..."
-              value={globalBookingNote}
-              onChange={(e) => setGlobalBookingNote(e.target.value)}
-              rows={3}
+            <Label htmlFor="operatingHoursStart">Operating Hours Start</Label>
+            <Input
+              id="operatingHoursStart"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
             />
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="operatingHoursStart">Operating Hours Start</Label>
-              <Input
-                id="operatingHoursStart"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="operatingHoursEnd">Operating Hours End</Label>
-              <Input
-                id="operatingHoursEnd"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="operatingHoursEnd">Operating Hours End</Label>
+            <Input
+              id="operatingHoursEnd"
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+            />
           </div>
+        </div>
 
-          <div className="flex flex-col gap-2">
-            <div
-              className={cn(
-                'rounded-lg border px-4 py-3 text-sm',
-                validationError
-                  ? 'border-red-200 bg-red-50 text-red-600'
-                  : 'border-border bg-muted/50 text-muted-foreground'
-              )}
-            >
-              {validationError ? (
-                validationError
-              ) : (
-                <>
-                  Open{' '}
-                  <span className="font-medium text-foreground">
-                    {minutesToTime(startMinutes)}
-                  </span>{' '}
-                  –{' '}
-                  <span className="font-medium text-foreground">
-                    {minutesToTime(endMinutes)}
-                  </span>{' '}
-                  · {bookableHours} bookable hours · {bookableSlots} 30-min
-                  slots available per day
-                </>
-              )}
-            </div>
-          </div>
+        <div
+          className={cn(
+            'rounded-lg border px-4 py-3 text-sm',
+            validationError
+              ? 'border-red-200 bg-red-50 text-red-600'
+              : 'border-border bg-muted/50 text-muted-foreground'
+          )}
+        >
+          {validationError ? (
+            validationError
+          ) : (
+            <>
+              Open{' '}
+              <span className="font-medium text-foreground">
+                {minutesToTime(startMinutes)}
+              </span>{' '}
+              –{' '}
+              <span className="font-medium text-foreground">
+                {minutesToTime(endMinutes)}
+              </span>{' '}
+              · {bookableHours} bookable hours · {bookableSlots} 30-min slots
+              available per day
+            </>
+          )}
+        </div>
 
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={isSaving || validationError !== null}
-            >
-              {isSaving ? 'Saving...' : 'Save Settings'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="flex justify-end">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || validationError !== null}
+          >
+            {isSaving ? 'Saving...' : 'Save Settings'}
+          </Button>
+        </div>
+      </div>
     </PageContainer>
   )
 }

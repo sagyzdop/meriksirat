@@ -1,7 +1,12 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { checkMultipleCalendarsFreeBusy } from '@/lib/google/google-caledar'
-import { clubLocalToUtc, getClubLocalParts, minutesToTime } from '@/lib/booking'
+import {
+  clubLocalToUtc,
+  getNextBookableWindow,
+  minutesToTime,
+  timeToMinutes,
+} from '@/lib/booking'
 import type { Equipment } from '../components/types'
 
 const MAX_CALENDARS_PER_REQUEST = 40
@@ -11,51 +16,43 @@ export interface AvailabilityWindow {
   timeMax: string
 }
 
+export interface AvailabilityWindowOptions {
+  /** `YYYY-MM-DD` club-local start date (defaults to today) */
+  startDate?: string
+  /** `YYYY-MM-DD` club-local end date (defaults to start date) */
+  endDate?: string
+  /** `HH:mm` club-local start time (defaults to the next 30-min boundary) */
+  startTime?: string
+  /** `HH:mm` club-local end time (defaults to start time + 30 min) */
+  endTime?: string
+  operatingHoursStart?: number
+  operatingHoursEnd?: number
+}
+
 /**
  * Builds the UTC time window for an availability check.
  *
- * Browse mode: the window comes from the date/time filters, defaulting to
- * today plus the next 30-minute slot boundary (rolled over to 00:00 tomorrow
- * when today has fewer than 30 minutes left).
+ * Browse mode: the window comes from the date/time filter ranges, defaulting
+ * to today plus the nearest 30-minute bookable window (see
+ * `getNextBookableWindow`).
  * Add-to-booking mode: the window is the booking's own start/end time.
  */
 export function buildAvailabilityWindow(
-  dateKey?: string,
-  time?: string
-): AvailabilityWindow | null {
-  const resolvedDate = dateKey ?? getClubLocalParts(new Date()).dateKey
-  if (!time) {
-    const nowMinutes = getClubLocalParts(new Date()).minutes
-    const boundary = Math.ceil(nowMinutes / 30) * 30
-    if (boundary > 1439) {
-      const nextDay = new Date(
-        clubLocalToUtc(resolvedDate, '00:00').getTime() + 24 * 60 * 60 * 1000
-      )
-      return {
-        timeMin: clubLocalToUtc(
-          getClubLocalParts(nextDay).dateKey,
-          '00:00'
-        ).toISOString(),
-        timeMax: clubLocalToUtc(
-          getClubLocalParts(nextDay).dateKey,
-          '00:30'
-        ).toISOString(),
-      }
-    }
-    return {
-      timeMin: clubLocalToUtc(
-        resolvedDate,
-        minutesToTime(boundary)
-      ).toISOString(),
-      timeMax: clubLocalToUtc(
-        resolvedDate,
-        minutesToTime(boundary + 30)
-      ).toISOString(),
-    }
+  options: AvailabilityWindowOptions = {}
+): AvailabilityWindow {
+  const defaults = getNextBookableWindow(
+    options.operatingHoursStart ?? 0,
+    options.operatingHoursEnd ?? 1439
+  )
+  const startDate = options.startDate ?? defaults.dateKey
+  const endDate = options.endDate ?? startDate
+  const resolvedStartTime = options.startTime ?? defaults.startTime
+  const resolvedEndTime =
+    options.endTime ?? minutesToTime(timeToMinutes(resolvedStartTime) + 30)
+  return {
+    timeMin: clubLocalToUtc(startDate, resolvedStartTime).toISOString(),
+    timeMax: clubLocalToUtc(endDate, resolvedEndTime).toISOString(),
   }
-  const start = clubLocalToUtc(resolvedDate, time)
-  const end = new Date(start.getTime() + 30 * 60 * 1000)
-  return { timeMin: start.toISOString(), timeMax: end.toISOString() }
 }
 
 interface UseEquipmentAvailabilityOptions {

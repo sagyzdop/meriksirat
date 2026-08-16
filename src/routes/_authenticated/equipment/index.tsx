@@ -11,12 +11,15 @@ const searchSchema = z.object({
   mode: z.enum(['add-to-booking']).optional(),
   bookingId: z.coerce.number().optional(),
   returnTo: z.string().optional(),
-  availabilityDate: z.string().optional(),
-  availabilityTime: z.string().optional(),
-  availabilityOnly: z.preprocess(
-    (v) => (v === undefined ? undefined : v === 'true'),
-    z.boolean().optional()
-  ),
+  availabilityStartDate: z.string().optional(),
+  availabilityEndDate: z.string().optional(),
+  availabilityStartTime: z.string().optional(),
+  availabilityEndTime: z.string().optional(),
+  availabilityOnly: z.preprocess((v) => {
+    if (v === undefined || v === null || v === '') return undefined
+    if (typeof v === 'boolean') return v
+    return v === 'true'
+  }, z.boolean().optional()),
 })
 
 export const Route = createFileRoute('/_authenticated/equipment/')({
@@ -28,6 +31,9 @@ export const Route = createFileRoute('/_authenticated/equipment/')({
     const tasks: Promise<unknown>[] = [
       queryClient.ensureQueryData(equipmentQueries.list()),
       queryClient.ensureQueryData(equipmentQueries.categories()),
+      // Prefetch operating hours so the availability window default (nearest
+      // 30-min bookable window) is computed correctly on first render.
+      queryClient.ensureQueryData(bookingsQueries.settings()),
     ]
     if (deps.search.mode === 'add-to-booking' && deps.search.bookingId) {
       tasks.push(

@@ -2,7 +2,8 @@ import { Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { DatePicker } from '@/components/ui/date-picker'
+import { DateRangeFilter } from '@/components/shared/date-range-filter'
+import { minutesToTime, timeToMinutes } from '@/lib/booking'
 
 function dateKeyToDate(dateKey?: string): Date | undefined {
   if (!dateKey) return undefined
@@ -18,30 +19,49 @@ function dateToDateKey(date: Date): string {
 }
 
 interface AvailabilityFiltersProps {
-  dateKey?: string
-  time?: string
+  startDate?: string
+  endDate?: string
+  startTime?: string
+  endTime?: string
+  defaultStartTime: string
+  defaultEndTime: string
   availableOnly: boolean
-  onDateChange: (dateKey?: string) => void
-  onTimeChange: (time?: string) => void
+  onStartDateChange: (value?: string) => void
+  onEndDateChange: (value?: string) => void
+  onStartTimeChange: (value?: string) => void
+  onEndTimeChange: (value?: string) => void
   onAvailableOnlyChange: (value: boolean) => void
 }
 
 export function AvailabilityFilters({
-  dateKey,
-  time,
+  startDate,
+  endDate,
+  startTime,
+  endTime,
+  defaultStartTime,
+  defaultEndTime,
   availableOnly,
-  onDateChange,
-  onTimeChange,
+  onStartDateChange,
+  onEndDateChange,
+  onStartTimeChange,
+  onEndTimeChange,
   onAvailableOnlyChange,
 }: AvailabilityFiltersProps) {
+  const shownStartTime = startTime ?? defaultStartTime
+  const shownEndTime =
+    endTime ??
+    (startTime ? minutesToTime(timeToMinutes(startTime) + 30) : defaultEndTime)
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <DatePicker
-        date={dateKeyToDate(dateKey)}
-        onSelect={(date) =>
-          onDateChange(date ? dateToDateKey(date) : undefined)
-        }
-        placeholder="Pick a date"
+      <DateRangeFilter
+        from={startDate ? dateKeyToDate(startDate)!.toISOString() : undefined}
+        to={endDate ? dateKeyToDate(endDate)!.toISOString() : undefined}
+        onChange={(range) => {
+          onStartDateChange(range?.from ? dateToDateKey(range.from) : undefined)
+          onEndDateChange(range?.to ? dateToDateKey(range.to) : undefined)
+        }}
+        className="w-full sm:w-auto"
       />
       <div className="relative">
         <Clock
@@ -50,13 +70,27 @@ export function AvailabilityFilters({
         />
         <Input
           type="time"
-          value={time ?? ''}
-          onChange={(event) => onTimeChange(event.target.value || undefined)}
-          aria-label="Availability time"
+          value={shownStartTime}
+          onChange={(event) =>
+            onStartTimeChange(event.target.value || undefined)
+          }
+          aria-label="Availability start time"
           className="h-8 w-32 pl-8"
         />
       </div>
-      <div className="flex h-8 items-center gap-2 rounded-md border px-2.5">
+      <span className="text-muted-foreground" aria-hidden="true">
+        –
+      </span>
+      <div className="relative">
+        <Input
+          type="time"
+          value={shownEndTime}
+          onChange={(event) => onEndTimeChange(event.target.value || undefined)}
+          aria-label="Availability end time"
+          className="h-8 w-32 pl-8"
+        />
+      </div>
+      <div className="flex h-8 items-center gap-2">
         <Switch
           id="available-only"
           size="sm"
