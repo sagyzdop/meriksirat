@@ -1,14 +1,15 @@
 import { createServerFn } from '@tanstack/react-start'
+import type { BookingSettings } from '@/lib/booking/types'
 
 export const getBookingSettingsFn = createServerFn({ method: 'GET' }).handler(
-  async () => {
+  async (): Promise<BookingSettings> => {
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { settings } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    
+
     const database = db(env.meriksirat_d1 as D1Database)
-    
+
     // Get or create default settings
     let settingsRecord = await database.query.settings.findFirst({
       where: eq(settings.id, 'global'),
@@ -25,7 +26,7 @@ export const getBookingSettingsFn = createServerFn({ method: 'GET' }).handler(
           operatingHoursEnd: 1439,
         })
         .returning()
-      
+
       settingsRecord = newSettings
     }
 

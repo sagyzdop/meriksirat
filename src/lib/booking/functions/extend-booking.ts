@@ -24,8 +24,12 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
-    const { checkMultipleCalendarsFreeBusy, updateCalendarEvent, toCalendarDateTime, CLUB_TIMEZONE } =
-      await import('@/lib/google/google-caledar')
+    const {
+      checkMultipleCalendarsFreeBusy,
+      updateCalendarEvent,
+      toCalendarDateTime,
+      CLUB_TIMEZONE,
+    } = await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -79,6 +83,27 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
     if (parent.status === 'cancelled' || parent.status === 'returned') {
       throw new Error(
         `A booking with status "${parent.status}" cannot be extended`
+      )
+    }
+
+    const { checkThirtyMinuteExtension } =
+      await import('@/lib/booking/operating-hours')
+    const { settings } = await import('@/db/schema')
+    const settingsRow = await database.query.settings.findFirst({
+      where: eq(settings.id, 'global'),
+    })
+    const operatingHoursEnd = settingsRow?.operatingHoursEnd ?? 1439
+
+    const extensionCheck = checkThirtyMinuteExtension(
+      parent.endTime,
+      operatingHoursEnd
+    )
+    if (!extensionCheck.allowed) {
+      if (extensionCheck.reason === 'midnight') {
+        throw new Error('This booking cannot be extended past midnight')
+      }
+      throw new Error(
+        'This booking cannot be extended beyond the club operating hours'
       )
     }
 
@@ -205,10 +230,15 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
               summary: `${item.equipmentName || `Equipment ${item.equipmentId}`}${undidOverdue ? '' : ` (${parent.status.toUpperCase()})`}`,
               description,
               start: {
-                dateTime: toCalendarDateTime(parent.startedAt ?? parent.startTime),
+                dateTime: toCalendarDateTime(
+                  parent.startedAt ?? parent.startTime
+                ),
                 timeZone: CLUB_TIMEZONE,
               },
-              end: { dateTime: toCalendarDateTime(newEndTime), timeZone: CLUB_TIMEZONE },
+              end: {
+                dateTime: toCalendarDateTime(newEndTime),
+                timeZone: CLUB_TIMEZONE,
+              },
             },
             userEmail: parent.user?.email || '',
           },

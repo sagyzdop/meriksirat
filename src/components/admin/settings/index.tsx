@@ -2,13 +2,15 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { updateSettingsFn } from '@/lib/admin/functions/settings'
-import { useState } from 'react'
+import { minutesToTime, timeToMinutes } from '@/lib/booking/functions/settings'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-import { Section } from '@/components/layout/section'
+import { cn } from '@/lib/utils'
 
 interface SettingsData {
   id: string
@@ -25,154 +27,141 @@ interface PageProps {
 
 export function Page({ settings }: PageProps) {
   const router = useRouter()
-  
-  const [globalBookingNote, setGlobalBookingNote] = useState(settings?.globalBookingNote || '')
-  const [startHour, setStartHour] = useState<number | ''>(Math.floor((settings?.operatingHoursStart || 0) / 60))
-  const [startMinute, setStartMinute] = useState<number | ''>((settings?.operatingHoursStart || 0) % 60)
-  const [endHour, setEndHour] = useState<number | ''>(Math.floor((settings?.operatingHoursEnd || 1439) / 60))
-  const [endMinute, setEndMinute] = useState<number | ''>((settings?.operatingHoursEnd || 1439) % 60)
+
+  const [globalBookingNote, setGlobalBookingNote] = useState(
+    settings?.globalBookingNote || ''
+  )
+  const [startTime, setStartTime] = useState(
+    minutesToTime(settings?.operatingHoursStart || 0)
+  )
+  const [endTime, setEndTime] = useState(
+    minutesToTime(settings?.operatingHoursEnd ?? 1439)
+  )
   const [isSaving, setIsSaving] = useState(false)
-  
+
+  const startMinutes = timeToMinutes(startTime)
+  const endMinutes = timeToMinutes(endTime)
+  const validationError = useMemo(() => {
+    if (startTime === '' || endTime === '') {
+      return 'Both operating hours times are required'
+    }
+    if (startMinutes >= endMinutes) {
+      return 'Start time must be before end time'
+    }
+    return null
+  }, [startTime, endTime, startMinutes, endMinutes])
+
   const handleSave = async () => {
-    const operatingHoursStart = (startHour === '' ? 0 : startHour) * 60 + (startMinute === '' ? 0 : startMinute)
-    const operatingHoursEnd = (endHour === '' ? 0 : endHour) * 60 + (endMinute === '' ? 0 : endMinute)
-    
+    if (validationError) return
     setIsSaving(true)
     try {
       await updateSettingsFn({
         data: {
           globalBookingNote,
-          operatingHoursStart,
-          operatingHoursEnd,
+          operatingHoursStart: startMinutes,
+          operatingHoursEnd: endMinutes,
         },
       })
       toast.success('Settings updated successfully')
       router.invalidate()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update settings')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update settings'
+      )
     } finally {
       setIsSaving(false)
     }
   }
-  
+
+  const bookableHours = validationError
+    ? null
+    : ((endMinutes - startMinutes) / 60).toFixed(1)
+  const bookableSlots = validationError
+    ? null
+    : Math.round((endMinutes - startMinutes) / 30)
+
   return (
     <PageContainer>
-      <PageHeader 
+      <PageHeader
         title="Settings"
         description="Manage system settings and configurations"
       />
 
-      <div className="space-y-8">
-        <Section
-          title="Global Booking Note"
-          description="This message will be appended to all Google Calendar event descriptions for bookings"
-        >
+      <Card>
+        <CardHeader>
+          <CardTitle>Booking Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="globalNote">Booking Note</Label>
+            <Label htmlFor="globalNote">Global Booking Note</Label>
             <Textarea
               id="globalNote"
               placeholder="Enter a message that will be shown in all calendar events..."
               value={globalBookingNote}
               onChange={(e) => setGlobalBookingNote(e.target.value)}
-              rows={4}
+              rows={3}
             />
           </div>
-        </Section>
 
-        <Section
-          title="Operating Hours"
-          description="Set the daily operating hours for equipment bookings"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Start Time</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min="0"
-                  max="23"
-                  value={startHour}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val === '') {
-                      setStartHour('')
-                    } else {
-                      setStartHour(Math.min(23, Math.max(0, parseInt(val))))
-                    }
-                  }}
-                  placeholder="HH"
-                  className="flex-1"
-                />
-                <span className="flex items-center">:</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={startMinute}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val === '') {
-                      setStartMinute('')
-                    } else {
-                      setStartMinute(Math.min(59, Math.max(0, parseInt(val))))
-                    }
-                  }}
-                  placeholder="MM"
-                  className="flex-1"
-                />
-              </div>
+              <Label htmlFor="operatingHoursStart">Operating Hours Start</Label>
+              <Input
+                id="operatingHoursStart"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
             </div>
-            
             <div className="space-y-2">
-              <Label>End Time</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min="0"
-                  max="23"
-                  value={endHour}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val === '') {
-                      setEndHour('')
-                    } else {
-                      setEndHour(Math.min(23, Math.max(0, parseInt(val))))
-                    }
-                  }}
-                  placeholder="HH"
-                  className="flex-1"
-                />
-                <span className="flex items-center">:</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={endMinute}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val === '') {
-                      setEndMinute('')
-                    } else {
-                      setEndMinute(Math.min(59, Math.max(0, parseInt(val))))
-                    }
-                  }}
-                  placeholder="MM"
-                  className="flex-1"
-                />
-              </div>
+              <Label htmlFor="operatingHoursEnd">Operating Hours End</Label>
+              <Input
+                id="operatingHoursEnd"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
             </div>
           </div>
-        </Section>
-      </div>
 
-      <div className="flex justify-end pt-8">
-        <Button 
-          onClick={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? 'Saving...' : 'Save Settings'}
-        </Button>
-      </div>
+          <div className="flex flex-col gap-2">
+            <div
+              className={cn(
+                'rounded-lg border px-4 py-3 text-sm',
+                validationError
+                  ? 'border-red-200 bg-red-50 text-red-600'
+                  : 'border-border bg-muted/50 text-muted-foreground'
+              )}
+            >
+              {validationError ? (
+                validationError
+              ) : (
+                <>
+                  Open{' '}
+                  <span className="font-medium text-foreground">
+                    {minutesToTime(startMinutes)}
+                  </span>{' '}
+                  –{' '}
+                  <span className="font-medium text-foreground">
+                    {minutesToTime(endMinutes)}
+                  </span>{' '}
+                  · {bookableHours} bookable hours · {bookableSlots} 30-min
+                  slots available per day
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || validationError !== null}
+            >
+              {isSaving ? 'Saving...' : 'Save Settings'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </PageContainer>
   )
 }

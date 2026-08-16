@@ -150,6 +150,7 @@ export function BookingCollapsibleContent({
           <ExtendBookingButton
             bookingId={booking.id}
             status={booking.status}
+            endTime={booking.endTime}
             onExtend={() => router.invalidate()}
             className="w-full sm:w-auto"
           />

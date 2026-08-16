@@ -1,12 +1,17 @@
 import { queryOptions } from '@tanstack/react-query'
 import { getUserBookingsFn } from './functions/user-bookings'
 import { getAdminBookingsFn } from './functions/admin-bookings'
-import { getBookingItemEquipmentIdsFn } from './functions/booking-items'
+import {
+  getBookingItemEquipmentIdsFn,
+  getBookingWindowFn,
+} from './functions/booking-items'
+import { getBookingSettingsFn } from './functions/settings'
 import type {
   BookingFilters,
   AdminBookingFilters,
   PaginatedBookingsResponse,
   PaginatedAdminBookingsResponse,
+  BookingSettings,
 } from './types'
 import { DEFAULT_BOOKING_STATUS_FILTER } from './types'
 
@@ -83,5 +88,20 @@ export const bookingsQueries = {
         return result?.equipmentIds ?? []
       },
       enabled: bookingId !== undefined,
+    }),
+  bookingWindow: (bookingId?: number) =>
+    queryOptions({
+      queryKey: [...bookingsQueries.all, 'booking-window', bookingId ?? -1],
+      queryFn: async () => {
+        if (bookingId === undefined) return null
+        return await getBookingWindowFn({ data: { bookingId } })
+      },
+      enabled: bookingId !== undefined,
+    }),
+  settings: () =>
+    queryOptions({
+      queryKey: [...bookingsQueries.all, 'settings'],
+      queryFn: async (): Promise<BookingSettings> => getBookingSettingsFn(),
+      staleTime: 5 * 60 * 1000,
     }),
 }

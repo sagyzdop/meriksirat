@@ -190,6 +190,7 @@ export function BookingDetail({
           <ExtendBookingButton
             bookingId={booking.id}
             status={booking.status}
+            endTime={booking.endTime}
             onExtend={() => router.invalidate()}
           />
           {canCancel && onCancel && (

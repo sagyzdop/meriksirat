@@ -254,6 +254,7 @@ export function Page({
             <ExtendBookingButton
               bookingId={booking.id}
               status={booking.status}
+              endTime={booking.endTime}
               disabled={isSubmitting}
               onExtend={() => router.invalidate()}
             />

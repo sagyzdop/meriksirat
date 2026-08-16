@@ -1,12 +1,20 @@
 import * as React from "react"
 import { addDays, format } from "date-fns"
+import { useQuery } from "@tanstack/react-query"
 import { CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent } from "@/components/ui/card"
 import { checkCalendarFreeBusy, checkMultipleCalendarsFreeBusy } from "@/lib/google/google-caledar"
+import { bookingsQueries } from "@/lib/booking/queries"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+
+/** Converts "HH:MM" to minutes since midnight. */
+function timeToMinutes(time: string): number {
+  const [hour, minute] = time.split(":").map(Number)
+  return hour * 60 + minute
+}
 
 interface TimeSlot {
   time: string
@@ -42,22 +50,47 @@ export function TimeSlotPicker({
   const isVerticalLayout = layout === "vertical"
   const excludeStart = excludeBookingPeriod?.start ?? null
   const excludeEnd = excludeBookingPeriod?.end ?? null
+  const { data: bookingSettings } = useQuery(bookingsQueries.settings())
+  const operatingHoursStart = bookingSettings?.operatingHoursStart ?? 0
+  const operatingHoursEnd = bookingSettings?.operatingHoursEnd ?? 1439
   const [date, setDate] = React.useState<Date | undefined>(initialDate)
   const [month, setMonth] = React.useState<Date | undefined>(initialDate)
   const [selectedSlots, setSelectedSlots] = React.useState<string[]>([...initialSlots].sort())
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([])
   const isInitialMount = React.useRef(true)
 
-  // Generate all possible time slots (24/7, 30-minute increments)
+  // Generate all possible time slots (30-minute increments) restricted to the
+  // club's operating hours so out-of-hours slots cannot be booked or selected.
   const generateTimeSlots = (): string[] => {
     const slots: string[] = []
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        slots.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`)
+        const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+        const slotMinutes = timeToMinutes(time)
+        if (
+          slotMinutes >= operatingHoursStart &&
+          slotMinutes + 30 <= operatingHoursEnd
+        ) {
+          slots.push(time)
+        }
       }
     }
     return slots
   }
+
+  // Drop previously selected slots that fall outside the current operating
+  // hours (e.g. hours changed after an existing booking was made).
+  React.useEffect(() => {
+    setSelectedSlots((prev) =>
+      prev.filter((time) => {
+        const slotMinutes = timeToMinutes(time)
+        return (
+          slotMinutes >= operatingHoursStart &&
+          slotMinutes + 30 <= operatingHoursEnd
+        )
+      })
+    )
+  }, [operatingHoursStart, operatingHoursEnd])
 
   // Check availability for selected date
   const checkAvailability = React.useCallback(
@@ -161,7 +194,7 @@ export function TimeSlotPicker({
         toast.error("Failed to load availability")
       }
     },
-    [googleCalendarId, googleCalendarIds, excludeStart, excludeEnd]
+    [googleCalendarId, googleCalendarIds, excludeStart, excludeEnd, operatingHoursStart, operatingHoursEnd]
   )
 
   // Load availability when date changes

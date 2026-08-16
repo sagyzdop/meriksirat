@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,11 +13,18 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  bookingsQueries,
+  checkThirtyMinuteExtension,
+  getClubLocalParts,
+  minutesToTime,
+} from '@/lib/booking'
 import { extendBookingByThirtyMinutesFn } from '@/lib/booking'
 
 interface ExtendBookingButtonProps {
   bookingId: number
   status?: string
+  endTime?: Date | string
   disabled?: boolean
   onExtend?: (result: { newEndTime: string; undidOverdue: boolean }) => void
   className?: string
@@ -40,15 +47,32 @@ const EXTENDABLE_STATUSES = [
 export function ExtendBookingButton({
   bookingId,
   status,
+  endTime,
   disabled = false,
   onExtend,
   className,
 }: ExtendBookingButtonProps) {
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
+  const { data: bookingSettings } = useQuery(bookingsQueries.settings())
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [warningOpen, setWarningOpen] = useState(false)
   const [isExtending, setIsExtending] = useState(false)
 
   if (status && !EXTENDABLE_STATUSES.includes(status)) return null
+
+  const operatingHoursEnd = bookingSettings?.operatingHoursEnd ?? 1439
+  const extensionCheck =
+    endTime === undefined
+      ? { allowed: true }
+      : checkThirtyMinuteExtension(endTime, operatingHoursEnd)
+
+  const handleOpenClick = () => {
+    if (extensionCheck.allowed) {
+      setConfirmOpen(true)
+    } else {
+      setWarningOpen(true)
+    }
+  }
 
   const handleExtend = async () => {
     setIsExtending(true)
@@ -62,7 +86,7 @@ export function ExtendBookingButton({
           : 'Booking extended by 30 minutes'
       )
       await queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      setOpen(false)
+      setConfirmOpen(false)
       onExtend?.(result)
     } catch (error) {
       toast.error(
@@ -73,20 +97,25 @@ export function ExtendBookingButton({
     }
   }
 
+  const endTimeLabel =
+    endTime !== undefined
+      ? minutesToTime(getClubLocalParts(endTime).minutes)
+      : null
+
   return (
     <>
       <Button
         variant="outline"
         size="sm"
         disabled={disabled}
-        onClick={() => setOpen(true)}
+        onClick={handleOpenClick}
         className={className}
       >
         <Plus className="mr-1.5 h-3.5 w-3.5" />
         Add 30 min
       </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -114,6 +143,22 @@ export function ExtendBookingButton({
             >
               {isExtending ? 'Checking availability...' : 'Extend booking'}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={warningOpen} onOpenChange={setWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This booking can't be extended</AlertDialogTitle>
+            <AlertDialogDescription>
+              {extensionCheck.reason === 'midnight'
+                ? `This booking ends at ${endTimeLabel}. Adding 30 minutes would cross midnight, which is not allowed.`
+                : `This booking ends at ${endTimeLabel}, which is at the end of the club's operating hours. Adding 30 minutes would go past closing time.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Got it</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

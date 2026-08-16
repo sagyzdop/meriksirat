@@ -75,6 +75,14 @@ export const DEFAULT_BOOKING_STATUS_FILTER = [
 export type BookingStatus = (typeof BOOKING_STATUSES)[number]
 export type SettableBookingStatus = (typeof SETTABLE_BOOKING_STATUSES)[number]
 
+export interface BookingSettings {
+  globalBookingNote: string
+  /** Opening minute of the club day (minutes since midnight, 0-1439) */
+  operatingHoursStart: number
+  /** Last bookable minute of the club day (minutes since midnight, 0-1439) */
+  operatingHoursEnd: number
+}
+
 export const CreateBookingSchema = z.object({
   equipmentIds: z.array(z.coerce.number()).min(1),
   startTime: z.string(),
