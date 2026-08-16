@@ -78,6 +78,31 @@ export function Page({
       />
 
       <div className="space-y-8">
+        <Section title="Quick Actions">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/admin/users">
+                <Users className="mr-2 h-4 w-4" />
+                View All Users
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/admin/equipment/new">
+                <Camera className="mr-2 h-4 w-4" />
+                Add Equipment
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/admin/bookings">
+                <Calendar className="mr-2 h-4 w-4" />
+                View All Bookings
+              </Link>
+            </Button>
+            <ExportUsersDialog className="w-full sm:w-auto" />
+            {canBroadcast && <BroadcastDialog className="w-full sm:w-auto" />}
+          </div>
+        </Section>
+
         <Section
           title="Alerts"
           description="Current items that need attention."
@@ -166,31 +191,6 @@ export function Page({
             search={search}
             isLoading={isLoading}
           />
-        </Section>
-
-        <Section title="Quick Actions">
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/admin/users">
-                <Users className="mr-2 h-4 w-4" />
-                View All Users
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/admin/equipment/new">
-                <Camera className="mr-2 h-4 w-4" />
-                Add Equipment
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/admin/bookings">
-                <Calendar className="mr-2 h-4 w-4" />
-                View All Bookings
-              </Link>
-            </Button>
-            <ExportUsersDialog className="w-full sm:w-auto" />
-            {canBroadcast && <BroadcastDialog className="w-full sm:w-auto" />}
-          </div>
         </Section>
       </div>
     </PageContainer>
