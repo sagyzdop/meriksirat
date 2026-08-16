@@ -56,7 +56,7 @@ function resolveRange(
   const end = endDate ? new Date(endDate) : new Date()
   const start = startDate
     ? new Date(startDate)
-    : new Date(end.getFullYear(), end.getMonth() - 5, 1)
+    : new Date(end.getFullYear(), end.getMonth(), 1)
   const endOfRange = new Date(end)
   endOfRange.setHours(23, 59, 59, 999)
   return { start, endOfRange }

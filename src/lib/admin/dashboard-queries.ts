@@ -52,8 +52,8 @@ export interface DashboardSearchParams {
 
 /**
  * Resolves an optional date range to concrete ISO strings. When a bound is
- * missing it falls back to "now" (end) and the first day of the month five
- * months back (start), mirroring the server-side default.
+ * missing it falls back to "now" (end) and the first day of the current month
+ * (start), mirroring the server-side default.
  */
 export function effectiveDashboardRange(range: AdminDashboardRange = {}): {
   startDate: string
@@ -62,7 +62,7 @@ export function effectiveDashboardRange(range: AdminDashboardRange = {}): {
   const endDate = range.endDate ? new Date(range.endDate) : new Date()
   const startDate = range.startDate
     ? new Date(range.startDate)
-    : new Date(endDate.getFullYear(), endDate.getMonth() - 5, 1)
+    : new Date(endDate.getFullYear(), endDate.getMonth(), 1)
   return { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
 }
 
@@ -70,10 +70,15 @@ export const adminDashboardQueries = {
   all: ['admin-dashboard'] as const,
   stats: (range: AdminDashboardRange = {}) =>
     queryOptions({
+      // The key must be built from the raw range inputs, not the computed
+      // dates: `effectiveDashboardRange` falls back to `new Date()` for
+      // missing bounds, which would produce a new millisecond-precision ISO
+      // string on every render and cause an infinite refetch loop.
       queryKey: [
         ...adminDashboardQueries.all,
         'stats',
-        effectiveDashboardRange(range),
+        range.startDate ?? 'default-start',
+        range.endDate ?? 'default-end',
       ],
       staleTime: 60_000,
       queryFn: async (): Promise<AdminDashboardStats> =>

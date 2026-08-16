@@ -3,7 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
 import { Page } from '@/components/admin/dashboard'
-import { adminDashboardQueries } from '@/lib/admin/dashboard-queries'
+import {
+  adminDashboardQueries,
+  effectiveDashboardRange,
+} from '@/lib/admin/dashboard-queries'
 import type {
   MostActiveUsersFilters,
   PaginatedMostActiveUsersResponse,
@@ -41,9 +44,15 @@ const searchSchema = z.object({
 type DashboardSearch = z.infer<typeof searchSchema>
 
 function mostActiveFilters(search: DashboardSearch): MostActiveUsersFilters {
-  return {
+  // Always send an explicit range so the table agrees with the Overview stats:
+  // when no custom range is in the URL this resolves to the current month.
+  const range = effectiveDashboardRange({
     startDate: search.startDate,
     endDate: search.endDate,
+  })
+  return {
+    startDate: range.startDate,
+    endDate: range.endDate,
     search: search.activeSearch,
     page: search.activePage,
     limit: search.activeLimit,

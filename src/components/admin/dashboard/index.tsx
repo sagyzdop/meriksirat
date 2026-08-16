@@ -14,6 +14,7 @@ import { AlbumsChart } from './components/albums-chart'
 import { MostActiveUsersTable } from './components/most-active-users-table'
 import { ViolationsTable } from './components/violations-table'
 import type { DashboardSearchParams } from '@/lib/admin/dashboard-queries'
+import { effectiveDashboardRange } from '@/lib/admin/dashboard-queries'
 import type {
   AdminDashboardStats,
   DashboardAlert,
@@ -70,6 +71,14 @@ export function Page({
 
   const hasCustomRange = Boolean(search.startDate || search.endDate)
 
+  // Default (no custom range) = the current month. Surfacing the resolved
+  // range in the picker keeps the label and calendar selection in sync with
+  // what the dashboard is actually showing.
+  const effectiveRange = effectiveDashboardRange({
+    startDate: search.startDate,
+    endDate: search.endDate,
+  })
+
   return (
     <PageContainer>
       <PageHeader
@@ -114,21 +123,22 @@ export function Page({
           title="Overview"
           description="Booking activity, album creation, and storage in the selected range."
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center">
               {hasCustomRange && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-muted-foreground"
+                  className="h-8 w-full text-muted-foreground md:w-auto"
                   onClick={resetRange}
                 >
                   Reset range
                 </Button>
               )}
               <DateRangeFilter
-                from={search.startDate}
-                to={search.endDate}
+                from={effectiveRange.startDate}
+                to={effectiveRange.endDate}
                 onChange={handleRangeChange}
+                className="w-full md:w-auto"
               />
             </div>
           }
