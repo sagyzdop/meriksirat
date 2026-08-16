@@ -1,12 +1,14 @@
-import { createUserColumns, UserField } from "./components/user-columns"
-import { UserDataTable } from "./components/user-data-table"
-import { PageContainer } from "@/components/layout/page-container"
-import { PageHeader } from "@/components/layout/page-header"
-import { updateUserAdminFn } from "@/lib/user"
-import { useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { createUserColumns, UserField } from './components/user-columns'
+import { UserDataTable } from './components/user-data-table'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { ExportUsersDialog } from '@/components/shared/export-users-dialog'
+import { updateUserAdminFn } from '@/lib/user'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
-import { User } from "@/lib/user/types"
+import { User } from '@/lib/user/types'
+import type { ExportUsersFilters } from '@/lib/admin/dashboard-types'
 
 interface Pagination {
   page: number
@@ -22,7 +24,14 @@ interface Filters {
   search?: string
   page: number
   limit: number
-  sortBy: 'firstName' | 'lastName' | 'email' | 'role' | 'status' | 'clearanceLevel' | 'createdAt'
+  sortBy:
+    | 'firstName'
+    | 'lastName'
+    | 'email'
+    | 'role'
+    | 'status'
+    | 'clearanceLevel'
+    | 'createdAt'
   sortOrder: 'asc' | 'desc'
 }
 
@@ -34,18 +43,30 @@ interface PageProps {
   canAssignElevatedRoles?: boolean
 }
 
-export function Page({ users, pagination, filters, isLoading = false, canAssignElevatedRoles = true }: PageProps) {
+export function Page({
+  users,
+  pagination,
+  filters,
+  isLoading = false,
+  canAssignElevatedRoles = true,
+}: PageProps) {
   const queryClient = useQueryClient()
 
-  const description = pagination.totalCount > 0
-    ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
-    : "No users found"
+  const description =
+    pagination.totalCount > 0
+      ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
+      : 'No users found'
 
-  const handleUpdateField = async (userId: string, field: UserField, value: string) => {
+  const handleUpdateField = async (
+    userId: string,
+    field: UserField,
+    value: string
+  ) => {
     try {
-      const data = field === 'clearanceLevel'
-        ? { clearanceLevel: parseInt(value) }
-        : { [field]: value }
+      const data =
+        field === 'clearanceLevel'
+          ? { clearanceLevel: parseInt(value) }
+          : { [field]: value }
 
       await updateUserAdminFn({
         data: { userId, ...data },
@@ -54,7 +75,8 @@ export function Page({ users, pagination, filters, isLoading = false, canAssignE
       toast.success('User updated')
     } catch (error) {
       toast.error('Failed to update user', {
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description:
+          error instanceof Error ? error.message : 'An error occurred',
       })
     }
   }
@@ -69,6 +91,7 @@ export function Page({ users, pagination, filters, isLoading = false, canAssignE
       <PageHeader
         title="Manage Users"
         description={description}
+        actions={<ExportUsersDialog filters={filters as ExportUsersFilters} />}
       />
       <UserDataTable
         data={users}

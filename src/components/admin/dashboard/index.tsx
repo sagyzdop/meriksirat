@@ -1,106 +1,174 @@
-import { Link } from '@tanstack/react-router'
-import { Users, Camera, Tags, Calendar, ArrowRight } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Users, Camera, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-import { BookingsChart } from './components/bookings-chart'
-import { EquipmentUsageChart } from './components/equipment-usage-chart'
+import { Section } from '@/components/layout/section'
+import { DateRangeFilter } from '@/components/shared/date-range-filter'
+import { ExportUsersDialog } from '@/components/shared/export-users-dialog'
+import { BroadcastDialog } from '@/components/shared/broadcast-dialog'
+import { DashboardAlerts } from './components/dashboard-alerts'
+import { BookingStatCards } from './components/booking-stat-cards'
+import { AlbumStorageCards } from './components/album-storage-cards'
+import { AlbumsChart } from './components/albums-chart'
+import { MostActiveUsersTable } from './components/most-active-users-table'
+import { ViolationsTable } from './components/violations-table'
+import type { DashboardSearchParams } from '@/lib/admin/dashboard-queries'
+import type {
+  AdminDashboardStats,
+  DashboardAlert,
+  PaginatedMostActiveUsersResponse,
+  PaginatedViolationsResponse,
+} from '@/lib/admin/dashboard-types'
 
-export function Page() {
+interface PageProps {
+  search: DashboardSearchParams
+  stats?: AdminDashboardStats
+  alerts: DashboardAlert[]
+  mostActive: PaginatedMostActiveUsersResponse
+  violations: PaginatedViolationsResponse
+  isLoading?: boolean
+  canBroadcast?: boolean
+}
+
+export function Page({
+  search,
+  stats,
+  alerts,
+  mostActive,
+  violations,
+  isLoading = false,
+  canBroadcast = false,
+}: PageProps) {
+  const navigate = useNavigate()
+
+  const handleRangeChange = (range: { from?: Date; to?: Date } | undefined) => {
+    navigate({
+      to: '.',
+      search: {
+        ...search,
+        startDate: range?.from ? range.from.toISOString() : undefined,
+        endDate: range?.to ? range.to.toISOString() : undefined,
+        activePage: 1,
+        violationPage: 1,
+      } as never,
+    })
+  }
+
+  const resetRange = () => {
+    navigate({
+      to: '.',
+      search: {
+        ...search,
+        startDate: undefined,
+        endDate: undefined,
+        activePage: 1,
+        violationPage: 1,
+      } as never,
+    })
+  }
+
+  const hasCustomRange = Boolean(search.startDate || search.endDate)
+
   return (
     <PageContainer>
       <PageHeader
         title="Dashboard"
-        description="Manage users, equipment, categories, and oversee bookings"
+        description="Monitor bookings, album storage, user activity, and club health"
       />
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="group cursor-pointer transition-all hover:shadow-md">
-            <Link to="/admin/users" className="block">
-              <CardHeader>
-                <CardTitle>Users</CardTitle>
-                <CardDescription>
-                  Manage accounts and permissions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                    <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Link>
-          </Card>
+      <div className="space-y-8">
+        <Section
+          title="Alerts"
+          description="Current items that need attention."
+        >
+          <DashboardAlerts alerts={alerts} isLoading={isLoading} />
+        </Section>
 
-          <Card className="group cursor-pointer transition-all hover:shadow-md">
-            <Link to="/admin/equipment" className="block">
-              <CardHeader>
-                <CardTitle>Equipment</CardTitle>
-                <CardDescription>Manage equipment catalog</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20">
-                    <Camera className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Link>
-          </Card>
+        <Section
+          title="Overview"
+          description="Booking activity, album creation, and storage in the selected range."
+          actions={
+            <div className="flex items-center gap-2">
+              {hasCustomRange && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-muted-foreground"
+                  onClick={resetRange}
+                >
+                  Reset range
+                </Button>
+              )}
+              <DateRangeFilter
+                from={search.startDate}
+                to={search.endDate}
+                onChange={handleRangeChange}
+              />
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <BookingStatCards
+              stats={stats?.bookingStats}
+              isLoading={isLoading}
+            />
+            <AlbumStorageCards
+              stats={stats?.albumStorage}
+              isLoading={isLoading}
+            />
+          </div>
+        </Section>
 
-          <Card className="group cursor-pointer transition-all hover:shadow-md">
-            <Link to="/admin/categories" className="block">
-              <CardHeader>
-                <CardTitle>Categories</CardTitle>
-                <CardDescription>Organize equipment</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                    <Tags className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Link>
-          </Card>
+        <Section>
+          <AlbumsChart
+            data={stats?.albumsPerMonth ?? []}
+            isLoading={isLoading}
+          />
+        </Section>
 
-          <Card className="group cursor-pointer transition-all hover:shadow-md">
-            <Link to="/admin/bookings" className="block">
-              <CardHeader>
-                <CardTitle>Bookings</CardTitle>
-                <CardDescription>Monitor all bookings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
-                    <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Link>
-          </Card>
-        </div>
+        <Section
+          title="Most Active Users"
+          description="Users with the most albums (owned or co-authored) in the selected range."
+        >
+          <MostActiveUsersTable
+            users={mostActive.users}
+            pagination={mostActive.pagination}
+            filters={{
+              startDate: search.startDate,
+              endDate: search.endDate,
+              search: search.activeSearch,
+              page: search.activePage ?? 1,
+              limit: search.activeLimit ?? 10,
+              sortBy: search.activeSortBy ?? 'albumCount',
+              sortOrder: search.activeSortOrder ?? 'desc',
+            }}
+            search={search}
+            isLoading={isLoading}
+          />
+        </Section>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <BookingsChart />
-          <EquipmentUsageChart />
-        </div>
+        <Section
+          title="Violations"
+          description="All-time auto-cancelled and overdue counters per user."
+        >
+          <ViolationsTable
+            users={violations.users}
+            pagination={violations.pagination}
+            filters={{
+              violationType: search.violationType,
+              search: search.violationSearch,
+              page: search.violationPage ?? 1,
+              limit: search.violationLimit ?? 10,
+              sortBy: search.violationSortBy ?? 'cancelledInStartWindowCount',
+              sortOrder: search.violationSortOrder ?? 'desc',
+            }}
+            search={search}
+            isLoading={isLoading}
+          />
+        </Section>
 
-        <div className="space-y-4">
-          <h2 className="text-lg sm:text-xl font-semibold">Quick Actions</h2>
+        <Section title="Quick Actions">
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link to="/admin/users">
@@ -120,8 +188,10 @@ export function Page() {
                 View All Bookings
               </Link>
             </Button>
+            <ExportUsersDialog className="w-full sm:w-auto" />
+            {canBroadcast && <BroadcastDialog className="w-full sm:w-auto" />}
           </div>
-        </div>
+        </Section>
       </div>
     </PageContainer>
   )

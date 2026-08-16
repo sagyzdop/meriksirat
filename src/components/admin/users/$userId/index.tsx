@@ -20,6 +20,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { resetUserViolationCountersFn } from '@/lib/user'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
+import {
+  UserAlbumsTable,
+  type AlbumSearch,
+} from './components/user-albums-table'
+import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
 
 const formatDate = (value: string | number | null | undefined) => {
   if (!value) return '—'
@@ -77,11 +82,28 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
   return <Badge variant="outline">{value}</Badge>
 }
 
-interface PageProps {
-  user: any
+interface Pagination {
+  page: number
+  limit: number
+  totalCount: number
+  totalPages: number
 }
 
-export function Page({ user }: PageProps) {
+interface PageProps {
+  user: any
+  albums: AdminUserAlbum[]
+  albumsPagination: Pagination
+  albumsSearch: AlbumSearch
+  albumsIsLoading?: boolean
+}
+
+export function Page({
+  user,
+  albums,
+  albumsPagination,
+  albumsSearch,
+  albumsIsLoading = false,
+}: PageProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const goBack = useBackNavigation('/admin/users')
@@ -244,6 +266,27 @@ export function Page({ user }: PageProps) {
               Clear Violations
             </Button>
           </div>
+        </Section>
+
+        <Section
+          title="Albums"
+          description="Albums this user owns or co-authored."
+          spacing="compact"
+        >
+          <UserAlbumsTable
+            albums={albums}
+            pagination={albumsPagination}
+            filters={{
+              search: albumsSearch.albumSearch,
+              visibility: albumsSearch.albumVisibility,
+              page: albumsSearch.albumPage,
+              limit: albumsSearch.albumLimit,
+              sortBy: albumsSearch.albumSortBy,
+              sortOrder: albumsSearch.albumSortOrder,
+            }}
+            search={albumsSearch}
+            isLoading={albumsIsLoading}
+          />
         </Section>
       </div>
 
