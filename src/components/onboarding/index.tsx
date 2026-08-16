@@ -8,6 +8,7 @@ import {
   getTelegramLinkUrlFn,
 } from '@/lib/auth/onboarding'
 import { cn } from '@/lib/utils'
+import { toDateOnlyString } from '@/lib/format'
 import { useState } from 'react'
 import { OnboardingHeader } from '@/components/onboarding/components/onboarding-header'
 import { ProfileStep } from '@/components/onboarding/components/profile-step'
@@ -57,7 +58,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         data: {
           firstName: data.firstName,
           lastName: data.lastName,
-          birthday: data.birthday.toISOString(),
+          birthday: toDateOnlyString(data.birthday),
           instagramUsername: data.instagramUsername,
           nuId: parseInt(data.nuId),
           major: data.major,

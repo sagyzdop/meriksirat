@@ -28,6 +28,7 @@ import { updateUserProfileFn } from '@/lib/user/functions'
 import { getTelegramUpdateLinkUrlFn } from '@/lib/auth/onboarding'
 import { useRouter } from '@tanstack/react-router'
 import type { UserProfile } from '@/lib/user/types'
+import { toDateOnlyString } from '@/lib/format'
 import DatePicker from '@/components/shared/date-picker'
 
 interface ProfileContentProps {
@@ -90,9 +91,7 @@ export function ProfileContent({ user }: ProfileContentProps) {
     try {
       const updateData = {
         ...data,
-        birthday: data.birthday
-          ? data.birthday.toISOString().split('T')[0]
-          : undefined,
+        birthday: data.birthday ? toDateOnlyString(data.birthday) : undefined,
         graduationYear:
           data.graduationYear && data.graduationYear !== ''
             ? Number(data.graduationYear)
