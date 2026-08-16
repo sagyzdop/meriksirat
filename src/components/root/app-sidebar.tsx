@@ -83,14 +83,14 @@ const data = {
       icon: Users,
     },
     {
+      title: 'Birthdays',
+      url: '/admin/birthdays',
+      icon: Cake,
+    },
+    {
       title: 'Equipment Management',
       url: '/admin/equipment',
       icon: Camera,
-    },
-    {
-      title: 'Album Management',
-      url: '/admin/albums',
-      icon: Images,
     },
     {
       title: 'Category Management',
@@ -103,9 +103,9 @@ const data = {
       icon: Calendar,
     },
     {
-      title: 'Birthdays',
-      url: '/admin/birthdays',
-      icon: Cake,
+      title: 'Album Management',
+      url: '/admin/albums',
+      icon: Images,
     },
     {
       title: 'Admin Settings',
