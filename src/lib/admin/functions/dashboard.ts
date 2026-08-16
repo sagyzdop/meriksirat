@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
+import { albumCoverUrl } from '@/lib/albums/urls'
 import {
   AdminDashboardRangeSchema,
   AdminUserAlbumsFiltersSchema,
@@ -654,6 +655,7 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
           title: album.title,
           isShared: album.isShared,
           createdAt: album.createdAt,
+          coverFileId: album.coverFileId,
           coAuthorCount: coAuthorCountExpr,
         })
         .from(album)
@@ -672,6 +674,7 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
       isShared: !!row.isShared,
       createdAt: row.createdAt.toISOString(),
       coAuthorCount: Number(row.coAuthorCount),
+      coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,
     }))
 
     const totalCount = countRows.length

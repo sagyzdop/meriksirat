@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { resetUserViolationCountersFn } from '@/lib/user'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
+import { UserAvatar } from '@/components/shared/user-avatar'
 import {
   UserAlbumsTable,
   type AlbumSearch,
@@ -143,8 +144,21 @@ export function Page({
                     Name
                   </TableCell>
                   <TableCell>
-                    {`${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                      '—'}
+                    <div className="flex items-center gap-3">
+                      <UserAvatar
+                        image={user.image}
+                        name={
+                          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                          user.email ||
+                          'User'
+                        }
+                        className="size-8"
+                      />
+                      <span>
+                        {`${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                          '—'}
+                      </span>
+                    </div>
                   </TableCell>
                 </TableRow>
                 <TableRow>

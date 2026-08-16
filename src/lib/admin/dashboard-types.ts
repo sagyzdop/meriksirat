@@ -176,6 +176,7 @@ export interface AdminUserAlbum {
   isShared: boolean
   createdAt: string
   coAuthorCount: number
+  coverUrl: string | null
 }
 
 export interface PaginatedAdminUserAlbumsResponse {

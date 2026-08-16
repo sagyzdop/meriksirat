@@ -39,8 +39,7 @@ function userAlbumsFilters(
 export const Route = createFileRoute('/_authenticated/admin/users/$userId')({
   component: RouteComponent,
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({ search }),
-  loader: async ({ params, deps, context }) => {
+  loader: async ({ params }) => {
     const userId = params.userId
     if (!userId) {
       throw new Error('User ID is required')
@@ -51,16 +50,6 @@ export const Route = createFileRoute('/_authenticated/admin/users/$userId')({
 
       if (!user) {
         throw new Error('User not found')
-      }
-
-      try {
-        await context.queryClient.ensureQueryData(
-          adminDashboardQueries.userAlbums(
-            userAlbumsFilters(userId, deps.search)
-          )
-        )
-      } catch (error) {
-        console.error('Failed to load user albums:', error)
       }
 
       return { user }

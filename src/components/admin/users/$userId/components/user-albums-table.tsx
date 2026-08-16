@@ -17,11 +17,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Images } from 'lucide-react'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
 import { useScopedServerTableSorting } from '@/components/shared/data-table/use-scoped-server-table-sorting'
+import { PhotoImage } from '@/components/albums/photo-image'
 import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
 
 interface Pagination {
@@ -92,7 +94,21 @@ export function UserAlbumsTable({
           <DataTableColumnHeader column={column} title="Title" />
         ),
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.title}</span>
+          <div className="flex items-center gap-3">
+            <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-md border bg-muted">
+              {row.original.coverUrl ? (
+                <PhotoImage
+                  src={row.original.coverUrl}
+                  alt={row.original.title}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Images className="h-4 w-4 text-muted-foreground/50" />
+                </div>
+              )}
+            </div>
+            <span className="font-medium">{row.original.title}</span>
+          </div>
         ),
       },
       {
