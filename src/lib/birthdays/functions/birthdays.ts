@@ -7,6 +7,10 @@ import {
   DEFAULT_BIRTHDAYS_LOOKAHEAD_DAYS,
 } from '../constants'
 import type { BirthdaySyncResult, BirthdayUser } from '../types'
+import {
+  BirthdayListFiltersSchema,
+  type BirthdayListResult,
+} from '../types'
 
 /**
  * Extracts a calendar-safe birthday from a stored string. Onboarding stores a
@@ -163,17 +167,19 @@ export async function reconcileBirthdaysToCalendar(
 }
 
 /**
- * Upcoming birthdays for Active/Board members within a window. Defaults to the
- * next 30 days. Birthdays recur annually, so the window wraps around year end.
+ * Upcoming birthdays for Active/Board members within a window, with the same
+ * server-side search / status filter / sort / pagination contract as the admin
+ * users table. Defaults to the next 30 days; birthdays recur annually so the
+ * window wraps around year end.
  */
 export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
-  .validator((d: { from?: string; to?: string }) => d ?? {})
-  .handler(async ({ data }): Promise<BirthdayUser[]> => {
+  .validator(BirthdayListFiltersSchema)
+  .handler(async ({ data }): Promise<BirthdayListResult> => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
-    const { inArray, isNotNull, and } = await import('drizzle-orm')
+    const { inArray, isNotNull, and, or, like, sql } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -189,6 +195,28 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
             DEFAULT_BIRTHDAYS_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000
         )
 
+    const conditions = []
+    conditions.push(inArray(user.status, [...BIRTHDAY_STATUSES]))
+    conditions.push(isNotNull(user.birthday))
+
+    if (data.status && data.status.length > 0) {
+      conditions.push(inArray(user.status, data.status))
+    }
+
+    if (data.search) {
+      const searchTerm = `%${data.search}%`
+      conditions.push(
+        or(
+          like(user.firstName, searchTerm),
+          like(user.lastName, searchTerm),
+          like(user.email, searchTerm)
+        )
+      )
+    }
+
+    const whereCondition =
+      conditions.length > 0 ? and(...conditions) : sql`1=1`
+
     const members = await database
       .select({
         id: user.id,
@@ -199,12 +227,7 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
         birthday: user.birthday,
       })
       .from(user)
-      .where(
-        and(
-          inArray(user.status, [...BIRTHDAY_STATUSES]),
-          isNotNull(user.birthday)
-        )
-      )
+      .where(whereCondition)
 
     const birthdays: BirthdayUser[] = []
 
@@ -240,12 +263,44 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
       })
     }
 
-    return birthdays.sort(
-      (a, b) =>
+    const sortColumn =
+      {
+        firstName: (b: BirthdayUser) => b.firstName ?? '',
+        lastName: (b: BirthdayUser) => b.lastName ?? '',
+        status: (b: BirthdayUser) => b.status ?? '',
+        occurrence: (b: BirthdayUser) => b.occurrence,
+        turningAge: (b: BirthdayUser) => b.turningAge ?? Number.MAX_SAFE_INTEGER,
+      }[data.sortBy] ??
+      ((b: BirthdayUser) => b.occurrence)
+
+    birthdays.sort((a, b) => {
+      const av = sortColumn(a)
+      const bv = sortColumn(b)
+      const cmp =
+        typeof av === 'number' && typeof bv === 'number'
+          ? av - bv
+          : String(av).localeCompare(String(bv))
+      if (cmp !== 0) return data.sortOrder === 'desc' ? -cmp : cmp
+      return (
         a.occurrence.localeCompare(b.occurrence) ||
         a.firstName?.localeCompare(b.firstName ?? '') ||
         0
-    )
+      )
+    })
+
+    const offset = (data.page - 1) * data.limit
+    const totalCount = birthdays.length
+    const totalPages = Math.max(1, Math.ceil(totalCount / data.limit))
+
+    return {
+      birthdays: birthdays.slice(offset, offset + data.limit),
+      pagination: {
+        page: data.page,
+        limit: data.limit,
+        totalCount,
+        totalPages,
+      },
+    }
   })
 
 /**

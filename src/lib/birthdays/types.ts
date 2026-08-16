@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { BIRTHDAY_STATUSES } from './constants'
 
 export const UpcomingBirthdaysFiltersSchema = z.object({
   /** Inclusive ISO date (`YYYY-MM-DD`) window; both default to sensible values. */
@@ -9,6 +10,43 @@ export const UpcomingBirthdaysFiltersSchema = z.object({
 export type UpcomingBirthdaysFilters = z.infer<
   typeof UpcomingBirthdaysFiltersSchema
 >
+
+/**
+ * Server-side list filters for the admin birthdays table, mirroring the
+ * admin users table (search, status filter, pagination, sorting).
+ */
+export const BirthdayListFiltersSchema = z.object({
+  status: z.array(z.enum([...BIRTHDAY_STATUSES])).optional(),
+  search: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(50),
+  sortBy: z
+    .enum([
+      'firstName',
+      'lastName',
+      'status',
+      'occurrence',
+      'turningAge',
+    ])
+    .default('occurrence'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+})
+
+export type BirthdayListFilters = z.infer<typeof BirthdayListFiltersSchema>
+
+export interface BirthdayPagination {
+  page: number
+  limit: number
+  totalCount: number
+  totalPages: number
+}
+
+export interface BirthdayListResult {
+  birthdays: BirthdayUser[]
+  pagination: BirthdayPagination
+}
 
 export interface BirthdayUser {
   id: string
