@@ -26,7 +26,6 @@ export interface BookingDetailInput {
   returnedAt?: Date | string | number | null
   status?: string | null
   notes?: string | null
-  globalNote?: string | null
 }
 
 /**
@@ -110,9 +109,6 @@ export function formatBookingDetailsPlain(input: BookingDetailInput): string {
   const lines = buildBookingDetailFields(input).map(
     (field) => `${field.label}: ${field.value}`
   )
-  if (input.globalNote?.trim()) {
-    lines.push('', '---', input.globalNote.trim())
-  }
   return lines.join('\n')
 }
 

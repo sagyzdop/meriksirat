@@ -44,6 +44,7 @@ export async function startBooking(
         lastName: user.lastName,
         name: user.name,
         telegramUsername: user.telegramUsername,
+        telegramChatId: user.telegramChatId,
       },
     })
     .from(booking)
@@ -171,7 +172,49 @@ export async function startBooking(
     console.error('Failed to log booking start:', error)
   }
 
+  await sendGlobalBookingNote(database, bookingData)
+
   return { bookingId }
+}
+
+/**
+ * Sends the settings "Global Booking Note" as a direct Telegram message to the
+ * booking user after their booking is activated. This is the note's only
+ * purpose: it carries club instructions and rules to the member at pickup time.
+ * Never throws.
+ */
+async function sendGlobalBookingNote(
+  database: BookingDatabase,
+  bookingData: {
+    user?: {
+      telegramChatId?: string | null
+    } | null
+  }
+): Promise<void> {
+  try {
+    const { settings } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { TelegramAPI } = await import('@/lib/telegram/api')
+    const { env } = await import('cloudflare:workers')
+
+    const note = bookingData.user?.telegramChatId
+      ? await database
+          .select({ globalBookingNote: settings.globalBookingNote })
+          .from(settings)
+          .where(eq(settings.id, 'global'))
+          .get()
+      : null
+
+    const text = note?.globalBookingNote?.trim()
+    if (!text || !bookingData.user?.telegramChatId || !env.TELEGRAM_BOT_TOKEN) {
+      return
+    }
+
+    const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)
+    await telegram.sendMessage(bookingData.user.telegramChatId, text)
+  } catch (error) {
+    console.error('Failed to send global booking note on activation:', error)
+  }
 }
 
 /**

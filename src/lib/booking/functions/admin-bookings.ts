@@ -489,14 +489,6 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       .where(eq(booking.id, data.bookingId))
 
     // Handle Google Calendar integration
-    const { settings } = await import('@/db/schema')
-    const settingsData = await database
-      .select({ globalBookingNote: settings.globalBookingNote })
-      .from(settings)
-      .where(eq(settings.id, 'global'))
-      .get()
-
-    const globalNote = settingsData?.globalBookingNote
     const userDisplayName = formatUserDisplayName({
       firstName: bookingData.user?.firstName,
       lastName: bookingData.user?.lastName,
@@ -582,7 +574,6 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         startedAt: bookingData.startedAt,
         status: previousStatus,
         notes: updatedNotes,
-        globalNote,
       })
 
       const event = {

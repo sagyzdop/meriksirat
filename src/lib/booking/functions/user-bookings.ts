@@ -85,7 +85,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
     } = await import('@/lib/google/google-caledar')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment, settings, user } =
+    const { booking, bookingItem, equipment, user } =
       await import('@/db/schema')
     const { eq, inArray } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
@@ -184,14 +184,6 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       equipmentData.map((item) => [item.id, item.modelName])
     )
 
-    const settingsData = await database
-      .select({ globalBookingNote: settings.globalBookingNote })
-      .from(settings)
-      .where(eq(settings.id, 'global'))
-      .get()
-
-    const globalNote = settingsData?.globalBookingNote
-
     // Create the parent booking first
     const insertResult = await database
       .insert(booking)
@@ -229,7 +221,6 @@ export const createBookingFn = createServerFn({ method: 'POST' })
           endTime,
           status: 'booked',
           notes,
-          globalNote,
         })
 
         const event = {
@@ -872,15 +863,6 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     }
 
     // Update calendar events for each item
-    const { settings } = await import('@/db/schema')
-    const settingsData = await database
-      .select({ globalBookingNote: settings.globalBookingNote })
-      .from(settings)
-      .where(eq(settings.id, 'global'))
-      .get()
-
-    const globalNote = settingsData?.globalBookingNote
-
     for (const item of items) {
       if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
 
@@ -894,7 +876,6 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
         endTime: newEndTime,
         status: bookingData.status,
         notes: newNotes,
-        globalNote,
       })
 
       const event = {

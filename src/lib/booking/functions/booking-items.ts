@@ -59,7 +59,7 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment, settings, user } =
+    const { booking, bookingItem, equipment, user } =
       await import('@/db/schema')
     const { eq, inArray } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
@@ -201,13 +201,6 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       throw err
     }
 
-    const settingsData = await database
-      .select({ globalBookingNote: settings.globalBookingNote })
-      .from(settings)
-      .where(eq(settings.id, 'global'))
-      .get()
-
-    const globalNote = settingsData?.globalBookingNote
     const notes = bookingRow.userEventDetails
 
     const now = Date.now()
@@ -229,7 +222,6 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
           endTime,
           status: 'booked',
           notes,
-          globalNote,
         })
 
         const event = {
