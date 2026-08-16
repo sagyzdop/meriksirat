@@ -110,19 +110,25 @@ export interface BookableWindow {
   endTime: string
 }
 
+/** Bookings must start at least this far in the future (1 hour). */
+export const MIN_BOOKING_ADVANCE_MS = 60 * 60 * 1000
+
 /**
- * Returns the nearest 30-minute window that can be booked right now, i.e. the
- * next half-hour boundary clamped to the start of the operating hours and
- * rolled over to the next club day when the remaining hours today cannot fit a
- * full 30-minute slot.
+ * Returns the nearest 30-minute window that can be booked right now. A booking
+ * must start at least `MIN_BOOKING_ADVANCE_MS` from now, so the earliest start
+ * is the next half-hour boundary after now + the advance, clamped to the start
+ * of the operating hours and rolled over to the next club day when the
+ * remaining hours today cannot fit a full 30-minute slot.
  */
 export function getNextBookableWindow(
   operatingHoursStart = 0,
   operatingHoursEnd = 1439
 ): BookableWindow {
   const now = getClubLocalParts(new Date())
+  const advanceMinutes = MIN_BOOKING_ADVANCE_MS / (60 * 1000)
+  const earliestStart = Math.min(now.minutes + advanceMinutes, 1439)
   const boundary = Math.max(
-    Math.ceil(now.minutes / 30) * 30,
+    Math.ceil(earliestStart / 30) * 30,
     operatingHoursStart
   )
   const fitsToday = boundary + 30 <= operatingHoursEnd

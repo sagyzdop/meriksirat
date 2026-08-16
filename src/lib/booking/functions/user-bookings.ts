@@ -12,6 +12,7 @@ import type { BookingItemRow } from '../mappers'
 import { mapBookingsWithItems, itemSelect } from '../mappers'
 import { formatUserDisplayName } from '@/lib/utils'
 import { formatBookingDetailsPlain } from '../details'
+import { MIN_BOOKING_ADVANCE_MS } from '../operating-hours'
 
 type UserIdentity = {
   firstName?: string | null
@@ -91,6 +92,12 @@ export const createBookingFn = createServerFn({ method: 'POST' })
     const { getEquipmentCalendarId, retry } = await import('../server')
 
     const { equipmentIds, startTime, endTime, notes } = data
+
+    if (new Date(startTime).getTime() < Date.now() + MIN_BOOKING_ADVANCE_MS) {
+      throw new Error(
+        'Bookings must start at least 1 hour from now. Please select a later time slot.'
+      )
+    }
 
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({ headers })
@@ -804,6 +811,14 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
 
     // If times are changing, check availability on all item calendars
     if (data.startTime || data.endTime) {
+      if (
+        new Date(newStartTime).getTime() < Date.now() + MIN_BOOKING_ADVANCE_MS
+      ) {
+        throw new Error(
+          'Bookings must start at least 1 hour from now. Please select a later time slot.'
+        )
+      }
+
       for (const item of items) {
         if (!item.equipmentCalendarId) continue
         const freeBusyResult = await checkCalendarFreeBusy({

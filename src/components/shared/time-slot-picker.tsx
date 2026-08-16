@@ -10,6 +10,7 @@ import {
   checkMultipleCalendarsFreeBusy,
 } from '@/lib/google/google-caledar'
 import { bookingsQueries } from '@/lib/booking/queries'
+import { MIN_BOOKING_ADVANCE_MS } from '@/lib/booking/operating-hours'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -143,15 +144,16 @@ export function TimeSlotPicker({
         }
         const allSlots = generateTimeSlots()
 
-        // Slots whose start time has already passed cannot be booked. This
-        // prevents retroactive bookings when today is selected.
+        // Slots whose start time is too close to book cannot be selected. A
+        // booking must start at least one hour from now, which also prevents
+        // retroactive bookings when today is selected.
         const now = Date.now()
-        const pastSlotTimes = new Set(
+        const tooSoonTimes = new Set(
           allSlots.filter((time) => {
             const [hour, minute] = time.split(':').map(Number)
             const slotStart = new Date(selectedDate)
             slotStart.setHours(hour, minute, 0, 0)
-            return slotStart.getTime() <= now
+            return slotStart.getTime() <= now + MIN_BOOKING_ADVANCE_MS
           })
         )
 
@@ -164,7 +166,7 @@ export function TimeSlotPicker({
           const slotEnd = new Date(slotStart)
           slotEnd.setMinutes(slotEnd.getMinutes() + 30)
 
-          const isPast = pastSlotTimes.has(time)
+          const isPast = tooSoonTimes.has(time)
 
           // Check if this slot overlaps with any busy period
           const isAvailable =
@@ -197,10 +199,10 @@ export function TimeSlotPicker({
 
         setTimeSlots(slotsWithAvailability)
 
-        // Drop any previously selected slots that are now in the past (e.g. an
+        // Drop any previously selected slots that are now too soon (e.g. an
         // existing booking edited during its start window), so the derived
-        // booking times can never start in the past.
-        setSelectedSlots((prev) => prev.filter((t) => !pastSlotTimes.has(t)))
+        // booking times can never start within the advance window.
+        setSelectedSlots((prev) => prev.filter((t) => !tooSoonTimes.has(t)))
       } catch (error) {
         console.error('Failed to check availability:', error)
         toast.error('Failed to load availability')
