@@ -21,6 +21,9 @@ export const user = sqliteTable(
   firstName: text('first_name'),
   lastName: text('last_name'),
   birthday: text('birthday'),
+  wantsBirthdayCongratulation: integer('wants_birthday_congratulation', {
+    mode: 'boolean',
+  }).default(true),
   major: text('major'),
   graduationYear: integer('graduation_year'),
   status: text('status', {

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select'
 
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
+import { UserAvatar } from '@/components/shared/user-avatar'
 import { User } from '@/lib/user/types'
 
 export type UserField = 'role' | 'clearanceLevel' | 'status'
@@ -93,11 +94,14 @@ export const createUserColumns = ({
         `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'No name'
 
       return (
-        <div className="flex flex-col">
-          <span className="font-medium">{displayName}</span>
-          {user.email && (
-            <span className="text-sm text-muted-foreground">{user.email}</span>
-          )}
+        <div className="flex items-center gap-3">
+          <UserAvatar image={user.image} name={displayName} className="size-8" />
+          <div className="flex flex-col">
+            <span className="font-medium">{displayName}</span>
+            {user.email && (
+              <span className="text-sm text-muted-foreground">{user.email}</span>
+            )}
+          </div>
         </div>
       )
     },

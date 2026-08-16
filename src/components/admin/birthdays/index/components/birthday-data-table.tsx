@@ -42,9 +42,9 @@ interface BirthdayDataTableProps {
   isLoading?: boolean
 }
 
-const statusOptions = [
-  { value: 'Active', label: 'Active' },
-  { value: 'Board', label: 'Board' },
+const congratulationOptions = [
+  { value: 'true', label: 'Yes' },
+  { value: 'false', label: 'No' },
 ]
 
 export function BirthdayDataTable({
@@ -111,12 +111,15 @@ export function BirthdayDataTable({
   // Handle filter changes
   const handleFilterChange = React.useCallback(
     (filterId: string, value: string[] | undefined) => {
-      if (filterId === 'status') {
+      if (filterId === 'wantsCongratulation') {
         navigate({
           to: '.',
           search: {
             ...filters,
-            status: value && value.length > 0 ? value : undefined,
+            wantsCongratulation:
+              value && value.length > 0
+                ? value.map((v) => v === 'true')
+                : undefined,
             page: 1,
           },
         })
@@ -148,7 +151,9 @@ export function BirthdayDataTable({
   )
 
   const isFiltered =
-    (filters.status && filters.status.length > 0) || filters.search
+    (filters.wantsCongratulation &&
+      filters.wantsCongratulation.length > 0) ||
+    filters.search
 
   const clearAllFilters = React.useCallback(() => {
     navigate({
@@ -175,11 +180,13 @@ export function BirthdayDataTable({
           />
           <div className="flex flex-wrap gap-2">
             <DataTableFacetedFilter
-              title="Status"
-              options={statusOptions}
-              selectedValues={filters.status || []}
+              title="Congratulate"
+              options={congratulationOptions}
+              selectedValues={(
+                filters.wantsCongratulation || []
+              ).map(String)}
               onSelectionChange={(values) =>
-                handleFilterChange('status', values)
+                handleFilterChange('wantsCongratulation', values)
               }
             />
             {isFiltered && (

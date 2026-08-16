@@ -10,6 +10,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import DatePicker from '@/components/shared/date-picker'
 
 interface ProfileStepProps {
@@ -58,6 +59,26 @@ export function ProfileStep({ form, error, onSubmit }: ProfileStepProps) {
                 <FormControl>
                   <DatePicker value={field.value} onChange={field.onChange} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="wantsBirthdayCongratulation"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal">
+                    I want to be congratulated on my birthday!
+                  </FormLabel>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

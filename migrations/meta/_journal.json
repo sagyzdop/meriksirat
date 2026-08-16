@@ -78,6 +78,13 @@
       "when": 1786874131505,
       "tag": "0010_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1786890478123,
+      "tag": "0011_setup",
+      "breakpoints": true
     }
   ]
 }

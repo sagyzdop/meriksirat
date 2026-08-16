@@ -8,6 +8,3 @@ export const BIRTHDAYS_CALENDAR_ID =
 /** Only these user statuses count for birthdays. */
 export const BIRTHDAY_STATUSES = ['Active', 'Board'] as const
 export type BirthdayStatus = (typeof BIRTHDAY_STATUSES)[number]
-
-/** Default upcoming-birthdays window in days when none is requested. */
-export const DEFAULT_BIRTHDAYS_LOOKAHEAD_DAYS = 30

@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `wants_birthday_congratulation` integer DEFAULT true;

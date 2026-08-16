@@ -6,6 +6,7 @@ const updateOnboardingSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   birthday: z.string().min(1, 'Birthday is required'),
+  wantsBirthdayCongratulation: z.boolean().optional(),
   instagramUsername: z.string().optional(),
   nuId: z.number().int().positive('NU ID must be a positive number'),
   major: z.string().min(1, 'Major is required'),
@@ -42,6 +43,8 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
         firstName: data.firstName,
         lastName: data.lastName,
         birthday: data.birthday,
+        wantsBirthdayCongratulation:
+          data.wantsBirthdayCongratulation ?? true,
         instagramUsername: data.instagramUsername,
         nuId: data.nuId,
         major: data.major,

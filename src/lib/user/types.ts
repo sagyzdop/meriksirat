@@ -28,6 +28,7 @@ export interface UserProfile {
 export interface User {
   id: string
   email: string
+  image: string | null
   role: 'user' | 'manager' | 'admin' | null
   clearanceLevel: number | null
   status:

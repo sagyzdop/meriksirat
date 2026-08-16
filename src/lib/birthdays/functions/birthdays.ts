@@ -1,11 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type { db } from '@/db'
-import {
-  BIRTHDAYS_CALENDAR_ID,
-  BIRTHDAY_STATUSES,
-  DEFAULT_BIRTHDAYS_LOOKAHEAD_DAYS,
-} from '../constants'
+import { BIRTHDAYS_CALENDAR_ID, BIRTHDAY_STATUSES } from '../constants'
 import type { BirthdaySyncResult, BirthdayUser } from '../types'
 import {
   BirthdayListFiltersSchema,
@@ -167,10 +163,10 @@ export async function reconcileBirthdaysToCalendar(
 }
 
 /**
- * Upcoming birthdays for Active/Board members within a window, with the same
- * server-side search / status filter / sort / pagination contract as the admin
- * users table. Defaults to the next 30 days; birthdays recur annually so the
- * window wraps around year end.
+ * Every Active/Board member with a birthday, with the same server-side search /
+ * congratulation filter / sort / pagination contract as the admin users table.
+ * Each row carries the member's NEXT occurrence (wrapping around year end) so
+ * the default ascending sort lists whose birthday is coming up first.
  */
 export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
   .validator(BirthdayListFiltersSchema)
@@ -186,21 +182,16 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
 
     const database = db(env.meriksirat_d1 as D1Database)
 
-    const today = startOfDay(new Date())
-    const from = data.from ? new Date(`${data.from}T00:00:00`) : today
-    const to = data.to
-      ? new Date(`${data.to}T23:59:59`)
-      : new Date(
-          today.getTime() +
-            DEFAULT_BIRTHDAYS_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000
-        )
+    const from = startOfDay(new Date())
 
     const conditions = []
     conditions.push(inArray(user.status, [...BIRTHDAY_STATUSES]))
     conditions.push(isNotNull(user.birthday))
 
-    if (data.status && data.status.length > 0) {
-      conditions.push(inArray(user.status, data.status))
+    if (data.wantsCongratulation && data.wantsCongratulation.length > 0) {
+      conditions.push(
+        inArray(user.wantsBirthdayCongratulation, data.wantsCongratulation)
+      )
     }
 
     if (data.search) {
@@ -223,7 +214,8 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        status: user.status,
+        image: user.image,
+        wantsBirthdayCongratulation: user.wantsBirthdayCongratulation,
         birthday: user.birthday,
       })
       .from(user)
@@ -247,14 +239,14 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
           parsed.day
         )
       }
-      if (occurrence > to) continue
 
       birthdays.push({
         id: member.id,
         firstName: member.firstName,
         lastName: member.lastName,
         email: member.email,
-        status: member.status ?? 'Active',
+        image: member.image,
+        wantsCongratulation: member.wantsBirthdayCongratulation ?? true,
         birthday: member.birthday ?? '',
         monthDay: `${pad(parsed.month)}-${pad(parsed.day)}`,
         occurrence: toISODate(occurrence),
@@ -267,7 +259,8 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
       {
         firstName: (b: BirthdayUser) => b.firstName ?? '',
         lastName: (b: BirthdayUser) => b.lastName ?? '',
-        status: (b: BirthdayUser) => b.status ?? '',
+        wantsCongratulation: (b: BirthdayUser) =>
+          b.wantsCongratulation ? 1 : 0,
         occurrence: (b: BirthdayUser) => b.occurrence,
         turningAge: (b: BirthdayUser) => b.turningAge ?? Number.MAX_SAFE_INTEGER,
       }[data.sortBy] ??
@@ -334,7 +327,7 @@ export const getBirthdayWishMessageFn = createServerFn({
   const { env } = await import('cloudflare:workers')
   const { db } = await import('@/db')
   const { user } = await import('@/db/schema')
-  const { inArray, isNotNull, and } = await import('drizzle-orm')
+  const { inArray, isNotNull, and, eq } = await import('drizzle-orm')
 
   const headers = getRequestHeaders()
   const session = await auth.api.getSession({ headers })
@@ -351,7 +344,8 @@ export const getBirthdayWishMessageFn = createServerFn({
     .where(
       and(
         inArray(user.status, [...BIRTHDAY_STATUSES]),
-        isNotNull(user.birthday)
+        isNotNull(user.birthday),
+        eq(user.wantsBirthdayCongratulation, true)
       )
     )
 

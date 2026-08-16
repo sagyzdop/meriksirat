@@ -132,6 +132,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
       .select({
         id: user.id,
         email: user.email,
+        image: user.image,
         role: user.role,
         clearanceLevel: user.clearanceLevel,
         status: user.status,

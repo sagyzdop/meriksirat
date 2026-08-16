@@ -2,16 +2,22 @@ import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/birthdays/index'
 import { birthdaysQueries } from '@/lib/birthdays/queries'
-import { stringArrayParam } from '@/lib/search-params'
+import { booleanArrayParam } from '@/lib/search-params'
 import { z } from 'zod'
 
 const searchSchema = z.object({
-  status: stringArrayParam(z.enum(['Active', 'Board'])),
+  wantsCongratulation: booleanArrayParam(),
   search: z.string().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
   sortBy: z
-    .enum(['firstName', 'lastName', 'status', 'occurrence', 'turningAge'])
+    .enum([
+      'firstName',
+      'lastName',
+      'wantsCongratulation',
+      'occurrence',
+      'turningAge',
+    ])
     .default('occurrence'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
 })
