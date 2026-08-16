@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/equipment/index'
 import { equipmentQueries, equipmentEmptyResponse } from '@/lib/equipment'
 import { bookingsQueries } from '@/lib/booking'
+import { Spinner } from '@/components/ui/spinner'
 import { z } from 'zod'
 
 const searchSchema = z.object({
@@ -24,8 +25,16 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/_authenticated/equipment/')({
   component: RouteComponent,
+  pendingComponent: EquipmentPending,
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({ search }),
+  // Only depend on the values the loader actually reads. The availability
+  // filters (date/time/available-only) are read client-side, so changing them
+  // must reuse the existing match instead of re-running the loader — otherwise
+  // every filter change drops the page into a blank pending state.
+  loaderDeps: ({ search }) => ({
+    mode: search.mode,
+    bookingId: search.bookingId,
+  }),
   loader: async ({ deps, context }) => {
     const queryClient = context.queryClient
     const tasks: Promise<unknown>[] = [
@@ -35,13 +44,13 @@ export const Route = createFileRoute('/_authenticated/equipment/')({
       // 30-min bookable window) is computed correctly on first render.
       queryClient.ensureQueryData(bookingsQueries.settings()),
     ]
-    if (deps.search.mode === 'add-to-booking' && deps.search.bookingId) {
+    if (deps.mode === 'add-to-booking' && deps.bookingId) {
       tasks.push(
         queryClient.ensureQueryData(
-          bookingsQueries.bookingItemEquipmentIds(deps.search.bookingId)
+          bookingsQueries.bookingItemEquipmentIds(deps.bookingId)
         ),
         queryClient.ensureQueryData(
-          bookingsQueries.bookingWindow(deps.search.bookingId)
+          bookingsQueries.bookingWindow(deps.bookingId)
         )
       )
     }
@@ -77,5 +86,13 @@ function RouteComponent() {
         isRouterPending || (isFetching && equipmentResponse === undefined)
       }
     />
+  )
+}
+
+function EquipmentPending() {
+  return (
+    <div className="flex h-[calc(100svh-var(--header-height))] items-center justify-center bg-background">
+      <Spinner className="size-5 text-muted-foreground" />
+    </div>
   )
 }
