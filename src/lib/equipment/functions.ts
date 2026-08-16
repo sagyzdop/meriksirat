@@ -14,6 +14,34 @@ import {
 } from './types'
 import { getUserClearanceLevel } from './server'
 
+/**
+ * Equipment ids that are currently checked out. D1 `booking_item` rows with an
+ * `active`/`overdue` status are the source of truth for "rented out right now";
+ * the Google Calendar free/busy check only answers for the selected window, so
+ * it alone can report an item as free while it is physically out.
+ */
+export const getCurrentlyRentedEquipmentIdsFn = createServerFn({
+  method: 'GET',
+}).handler(async (): Promise<number[]> => {
+  const { auth } = await import('@/lib/auth/auth')
+  const { env } = await import('cloudflare:workers')
+  const { db } = await import('@/db')
+  const { bookingItem } = await import('@/db/schema')
+  const { inArray } = await import('drizzle-orm')
+
+  const headers = getRequestHeaders()
+  const session = await auth.api.getSession({ headers })
+  if (!session?.user) return []
+
+  const database = db(env.meriksirat_d1 as D1Database)
+  const rows = await database
+    .select({ equipmentId: bookingItem.equipmentId })
+    .from(bookingItem)
+    .where(inArray(bookingItem.status, ['active', 'overdue']))
+
+  return [...new Set(rows.map((row) => row.equipmentId))]
+})
+
 export const getEquipmentFn = createServerFn({
   method: 'GET'
 })

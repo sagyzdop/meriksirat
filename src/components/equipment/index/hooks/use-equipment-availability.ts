@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { checkMultipleCalendarsFreeBusy } from '@/lib/google/google-caledar'
+import { getCurrentlyRentedEquipmentIdsFn } from '@/lib/equipment/functions'
 import {
   clubLocalToUtc,
   getNextBookableWindow,
@@ -62,13 +63,16 @@ interface UseEquipmentAvailabilityOptions {
 
 /**
  * Fetches free/busy for every equipment calendar over the given window and
- * exposes which equipment ids are busy (unavailable) during it.
+ * exposes which equipment ids are busy (unavailable) during it. An item is
+ * treated as busy when EITHER the calendar is busy over the window OR D1 says
+ * it is currently checked out (status `active`/`overdue`) — so equipment that
+ * is rented out right now never shows as available.
  */
 export function useEquipmentAvailability({
   equipment,
   window,
 }: UseEquipmentAvailabilityOptions) {
-  const query = useQuery({
+  const freeBusyQuery = useQuery({
     queryKey: ['equipment-availability', window?.timeMin, window?.timeMax],
     enabled: window !== null,
     queryFn: async () => {
@@ -90,7 +94,9 @@ export function useEquipmentAvailability({
             },
           })
           for (const [calendarId, info] of Object.entries(result)) {
-            if ((info.busy ?? []).length > 0) busyCalendarIds.add(calendarId)
+            if ((info.busy ?? []).length > 0 || info.error) {
+              busyCalendarIds.add(calendarId)
+            }
           }
         })
       )
@@ -98,17 +104,33 @@ export function useEquipmentAvailability({
     },
   })
 
+  const rentedOutQuery = useQuery({
+    queryKey: ['equipment-active-bookings'],
+    queryFn: async () => getCurrentlyRentedEquipmentIdsFn(),
+  })
+
   const busyByEquipmentId = useMemo(() => {
     const map = new Map<number, boolean>()
     for (const item of equipment) {
-      map.set(item.id, query.data?.has(item.googleCalendarId) ?? false)
+      const calendarBusy =
+        freeBusyQuery.data?.has(item.googleCalendarId) ?? false
+      const rentedOut = rentedOutQuery.data?.includes(item.id) ?? false
+      map.set(item.id, calendarBusy || rentedOut)
     }
     return map
-  }, [equipment, query.data])
+  }, [equipment, freeBusyQuery.data, rentedOutQuery.data])
 
   return {
     busyByEquipmentId,
-    isChecking: window !== null && query.data === undefined,
-    refetch: query.refetch,
+    isChecking:
+      (window !== null && freeBusyQuery.data === undefined) ||
+      rentedOutQuery.data === undefined,
+    refetch: async () => {
+      const [result] = await Promise.all([
+        freeBusyQuery.refetch(),
+        rentedOutQuery.refetch(),
+      ])
+      return result
+    },
   }
 }
