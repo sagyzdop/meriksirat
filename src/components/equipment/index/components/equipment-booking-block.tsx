@@ -13,12 +13,20 @@ import { EquipmentCategoryCombobox } from './equipment-category-combobox'
 import { EquipmentCategoryNav } from './equipment-category-nav'
 import { EquipmentGrid } from './equipment-grid'
 import { EquipmentSearch } from './equipment-search'
+import { AvailabilityFilters } from './availability-filters'
+import { toCalendarDateTime } from '@/lib/google/google-caledar'
 import { useIsMobile } from '@/hooks/use-mobile'
 
 interface EquipmentBookingBlockProps {
   equipment: Equipment[]
   categories: Category[]
-  filters: { categoryId?: number; searchQuery?: string }
+  filters: {
+    categoryId?: number
+    searchQuery?: string
+    availabilityDate?: string
+    availabilityTime?: string
+    availabilityOnly?: boolean
+  }
   selection: {
     selectedIds: number[]
     toggleSelection: (id: number) => void
@@ -28,10 +36,16 @@ interface EquipmentBookingBlockProps {
   onAddModeBack: () => void
   onSearchChange: (value: string) => void
   onCategorySelect: (categoryId?: number) => void
+  onAvailabilityDateChange: (dateKey?: string) => void
+  onAvailabilityTimeChange: (time?: string) => void
+  onAvailabilityOnlyChange: (value: boolean) => void
   disabledEquipmentIds?: number[]
+  availabilityByEquipmentId?: Map<number, boolean>
+  availabilityLoading?: boolean
   isLoading?: boolean
   addMode?: boolean
   bookingId?: number
+  bookingWindow?: { startTime: string; endTime: string } | null
   ctaLabel?: string
 }
 
@@ -50,22 +64,46 @@ export function EquipmentBookingBlock({
   onAddModeBack,
   onSearchChange,
   onCategorySelect,
+  onAvailabilityDateChange,
+  onAvailabilityTimeChange,
+  onAvailabilityOnlyChange,
   disabledEquipmentIds = [],
+  availabilityByEquipmentId,
+  availabilityLoading = false,
   isLoading = false,
   addMode = false,
   bookingId,
+  bookingWindow,
   ctaLabel = 'View & Book Selected',
 }: EquipmentBookingBlockProps) {
   const searchQuery = filters.searchQuery?.trim() ?? ''
   const isSearching = searchQuery.length > 0
-  const hasActiveFilters = isSearching || filters.categoryId !== undefined
+  const hasActiveFilters =
+    isSearching ||
+    filters.categoryId !== undefined ||
+    filters.availabilityOnly === true
   const selectedCount = selection.selectedIds.length
   const isMobile = useIsMobile()
+
+  const availabilityFilteredEquipment = React.useMemo(() => {
+    if (!filters.availabilityOnly || availabilityLoading) return equipment
+    return equipment.filter(
+      (item) =>
+        disabledEquipmentIds.includes(item.id) ||
+        (item.isActive !== false && !availabilityByEquipmentId?.get(item.id))
+    )
+  }, [
+    equipment,
+    filters.availabilityOnly,
+    availabilityLoading,
+    availabilityByEquipmentId,
+    disabledEquipmentIds,
+  ])
 
   const filteredEquipment = React.useMemo(() => {
     if (isSearching) {
       const query = searchQuery.toLowerCase()
-      return equipment.filter(
+      return availabilityFilteredEquipment.filter(
         (item) =>
           item.modelName.toLowerCase().includes(query) ||
           (item.description ?? '').toLowerCase().includes(query) ||
@@ -73,10 +111,21 @@ export function EquipmentBookingBlock({
       )
     }
     if (filters.categoryId !== undefined) {
-      return equipment.filter((item) => item.categoryId === filters.categoryId)
+      return availabilityFilteredEquipment.filter(
+        (item) => item.categoryId === filters.categoryId
+      )
     }
-    return equipment
-  }, [equipment, isSearching, searchQuery, filters.categoryId])
+    return availabilityFilteredEquipment
+  }, [
+    availabilityFilteredEquipment,
+    isSearching,
+    searchQuery,
+    filters.categoryId,
+  ])
+
+  const bookingWindowLabel = bookingWindow
+    ? `${toCalendarDateTime(bookingWindow.startTime).slice(11, 16)} – ${toCalendarDateTime(bookingWindow.endTime).slice(11, 16)}`
+    : null
 
   const equipmentCounts = React.useMemo(() => {
     const counts: Record<number, number> = {}
@@ -167,6 +216,11 @@ export function EquipmentBookingBlock({
                     Adding to booking #{bookingId}
                   </span>
                 )}
+                {bookingWindowLabel && (
+                  <span className="whitespace-nowrap text-sm text-muted-foreground">
+                    Window: {bookingWindowLabel}
+                  </span>
+                )}
               </div>
             )}
             <EquipmentSearch
@@ -183,6 +237,18 @@ export function EquipmentBookingBlock({
                 <EquipmentCategoryCombobox
                   {...categoryNavProps}
                   onSelect={onCategorySelect}
+                />
+              </div>
+            )}
+            {!addMode && (
+              <div className="flex items-center gap-2">
+                <AvailabilityFilters
+                  dateKey={filters.availabilityDate}
+                  time={filters.availabilityTime}
+                  availableOnly={filters.availabilityOnly ?? false}
+                  onDateChange={onAvailabilityDateChange}
+                  onTimeChange={onAvailabilityTimeChange}
+                  onAvailableOnlyChange={onAvailabilityOnlyChange}
                 />
               </div>
             )}
@@ -210,6 +276,8 @@ export function EquipmentBookingBlock({
                     hasActiveFilters={hasActiveFilters}
                     selectedEquipmentIds={selection.selectedIds}
                     disabledEquipmentIds={disabledEquipmentIds}
+                    availabilityByEquipmentId={availabilityByEquipmentId}
+                    availabilityLoading={availabilityLoading}
                     onToggleSelect={selection.toggleSelection}
                   />
                 </div>

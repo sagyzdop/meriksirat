@@ -13,12 +13,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Equipment } from './types'
+import { Equipment, EquipmentAvailabilityStatus } from './types'
 
 interface EquipmentCardProps {
   equipment: Equipment
   isSelected?: boolean
   disabled?: boolean
+  availabilityStatus?: EquipmentAvailabilityStatus
   onToggleSelect?: (equipmentId: number) => void
 }
 
@@ -26,12 +27,31 @@ export function EquipmentCard({
   equipment,
   isSelected = false,
   disabled = false,
+  availabilityStatus = 'available',
   onToggleSelect,
 }: EquipmentCardProps) {
   const [imageFailed, setImageFailed] = useState(false)
   const showPlaceholder = imageFailed || !equipment.imagePath
 
   const isAvailable = equipment.isActive !== false
+
+  const badgeConfig: Record<EquipmentAvailabilityStatus, string> = {
+    'in-booking': 'bg-slate-100 text-slate-700',
+    checking: 'bg-amber-100 text-amber-700',
+    unavailable: 'bg-red-100 text-red-700',
+    available: 'bg-green-100 text-green-800',
+  }
+  const badgeLabel: Record<EquipmentAvailabilityStatus, string> = {
+    'in-booking': 'In booking',
+    checking: 'Checking…',
+    unavailable: 'Unavailable',
+    available: 'Available',
+  }
+
+  const canSelect =
+    isAvailable &&
+    availabilityStatus !== 'in-booking' &&
+    availabilityStatus !== 'unavailable'
 
   return (
     <Card
@@ -58,20 +78,8 @@ export function EquipmentCard({
 
       <CardHeader>
         <CardAction>
-          <Badge
-            className={
-              disabled
-                ? 'bg-slate-100 text-slate-700'
-                : isAvailable
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-700'
-            }
-          >
-            {disabled
-              ? 'In booking'
-              : isAvailable
-                ? 'Available'
-                : 'Unavailable'}
+          <Badge className={badgeConfig[availabilityStatus]}>
+            {badgeLabel[availabilityStatus]}
           </Badge>
         </CardAction>
         <CardTitle className="line-clamp-1">{equipment.modelName}</CardTitle>
@@ -96,13 +104,25 @@ export function EquipmentCard({
         <Button
           variant={isSelected ? 'default' : 'outline'}
           className="flex-1"
-          disabled={!isAvailable || disabled}
+          disabled={!canSelect}
           onClick={() => onToggleSelect?.(equipment.id)}
-          title={isSelected ? 'Selected' : disabled ? 'In booking' : 'Select'}
+          title={
+            isSelected
+              ? 'Selected'
+              : availabilityStatus === 'in-booking'
+                ? 'In booking'
+                : availabilityStatus === 'unavailable'
+                  ? 'Unavailable in this window'
+                  : 'Select'
+          }
         >
           <Check className="@[17rem]:mr-2 h-4 w-4" />
           <span className="hidden @[17rem]:inline">
-            {isSelected ? 'Selected' : disabled ? 'In booking' : 'Select'}
+            {isSelected
+              ? 'Selected'
+              : availabilityStatus === 'in-booking'
+                ? 'In booking'
+                : 'Select'}
           </span>
         </Button>
       </CardFooter>

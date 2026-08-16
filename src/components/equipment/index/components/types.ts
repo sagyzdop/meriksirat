@@ -18,3 +18,9 @@ export interface Equipment {
   updatedAt: Date | null;
   category: Category | null;
 }
+
+export type EquipmentAvailabilityStatus =
+  | 'in-booking'
+  | 'checking'
+  | 'unavailable'
+  | 'available';

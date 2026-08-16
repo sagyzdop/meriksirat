@@ -235,8 +235,14 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
         const event = {
           summary: `${equipmentName} - Booking`,
           description,
-          start: { dateTime: toCalendarDateTime(startTime), timeZone: CLUB_TIMEZONE },
-          end: { dateTime: toCalendarDateTime(endTime), timeZone: CLUB_TIMEZONE },
+          start: {
+            dateTime: toCalendarDateTime(startTime),
+            timeZone: CLUB_TIMEZONE,
+          },
+          end: {
+            dateTime: toCalendarDateTime(endTime),
+            timeZone: CLUB_TIMEZONE,
+          },
         }
 
         const createdEvent = await retry(
@@ -404,4 +410,49 @@ export const getBookingItemEquipmentIdsFn = createServerFn({ method: 'POST' })
       .where(eq(bookingItem.bookingId, data.bookingId))
 
     return { equipmentIds: items.map((item) => item.equipmentId) }
+  })
+
+/**
+ * getBookingWindowFn returns the start/end time of a booking. Used by the
+ * equipment catalog in add-to-booking mode so availability for the selected
+ * items can be checked against the booking's time window before adding them.
+ */
+export const getBookingWindowFn = createServerFn({ method: 'POST' })
+  .validator(GetBookingByIdSchema)
+  .handler(async ({ data }) => {
+    const { auth } = await import('@/lib/auth/auth')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db/index')
+    const { booking } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const headers = getRequestHeaders()
+    const session = await auth.api.getSession({ headers })
+    if (!session?.user) {
+      throw new Error('Not authenticated')
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    await assertBookingAccess({
+      headers,
+      database,
+      bookingId: data.bookingId,
+      sessionUserId: session.user.id,
+    })
+
+    const row = await database
+      .select({ startTime: booking.startTime, endTime: booking.endTime })
+      .from(booking)
+      .where(eq(booking.id, data.bookingId))
+      .get()
+
+    if (!row) {
+      throw new Error('Booking not found')
+    }
+
+    return {
+      startTime: new Date(row.startTime).toISOString(),
+      endTime: new Date(row.endTime).toISOString(),
+    }
   })

@@ -11,6 +11,12 @@ const searchSchema = z.object({
   mode: z.enum(['add-to-booking']).optional(),
   bookingId: z.coerce.number().optional(),
   returnTo: z.string().optional(),
+  availabilityDate: z.string().optional(),
+  availabilityTime: z.string().optional(),
+  availabilityOnly: z.preprocess(
+    (v) => (v === undefined ? undefined : v === 'true'),
+    z.boolean().optional()
+  ),
 })
 
 export const Route = createFileRoute('/_authenticated/equipment/')({
@@ -27,6 +33,9 @@ export const Route = createFileRoute('/_authenticated/equipment/')({
       tasks.push(
         queryClient.ensureQueryData(
           bookingsQueries.bookingItemEquipmentIds(deps.search.bookingId)
+        ),
+        queryClient.ensureQueryData(
+          bookingsQueries.bookingWindow(deps.search.bookingId)
         )
       )
     }

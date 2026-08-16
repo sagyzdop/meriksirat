@@ -1,6 +1,6 @@
 import { EquipmentCard } from './equipment-card'
 import { EquipmentSkeleton } from './equipment-skeleton'
-import { Equipment } from './types'
+import { Equipment, EquipmentAvailabilityStatus } from './types'
 import { ContentGrid } from '@/components/layout/content-grid'
 import {
   Empty,
@@ -19,6 +19,8 @@ interface EquipmentGridProps {
   className?: string
   selectedEquipmentIds?: number[]
   disabledEquipmentIds?: number[]
+  availabilityByEquipmentId?: Map<number, boolean>
+  availabilityLoading?: boolean
   onToggleSelect?: (equipmentId: number) => void
 }
 
@@ -29,6 +31,8 @@ export function EquipmentGrid({
   className,
   selectedEquipmentIds,
   disabledEquipmentIds,
+  availabilityByEquipmentId,
+  availabilityLoading = false,
   onToggleSelect,
 }: EquipmentGridProps) {
   if (isLoading) {
@@ -99,15 +103,28 @@ export function EquipmentGrid({
       gap={6}
       className={cn(className)}
     >
-      {equipment.map((item) => (
-        <EquipmentCard
-          key={item.id}
-          equipment={item}
-          isSelected={selectedEquipmentIds?.includes(item.id) || false}
-          disabled={disabledEquipmentIds?.includes(item.id) || false}
-          onToggleSelect={onToggleSelect}
-        />
-      ))}
+      {equipment.map((item) => {
+        const isDisabled = disabledEquipmentIds?.includes(item.id) || false
+        const availabilityStatus: EquipmentAvailabilityStatus = isDisabled
+          ? 'in-booking'
+          : item.isActive === false
+            ? 'unavailable'
+            : availabilityLoading
+              ? 'checking'
+              : availabilityByEquipmentId?.get(item.id)
+                ? 'unavailable'
+                : 'available'
+        return (
+          <EquipmentCard
+            key={item.id}
+            equipment={item}
+            isSelected={selectedEquipmentIds?.includes(item.id) || false}
+            disabled={isDisabled}
+            availabilityStatus={availabilityStatus}
+            onToggleSelect={onToggleSelect}
+          />
+        )
+      })}
     </ContentGrid>
   )
 }
