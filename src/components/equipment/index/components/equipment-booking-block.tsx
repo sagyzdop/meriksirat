@@ -23,8 +23,7 @@ interface EquipmentBookingBlockProps {
   filters: {
     categoryId?: number
     searchQuery?: string
-    availabilityStartDate?: string
-    availabilityEndDate?: string
+    availabilityDate?: string
     availabilityStartTime?: string
     availabilityEndTime?: string
     availabilityOnly?: boolean
@@ -38,8 +37,7 @@ interface EquipmentBookingBlockProps {
   onAddModeBack: () => void
   onSearchChange: (value: string) => void
   onCategorySelect: (categoryId?: number) => void
-  onAvailabilityStartDateChange: (value?: string) => void
-  onAvailabilityEndDateChange: (value?: string) => void
+  onAvailabilityDateChange: (value?: string) => void
   onAvailabilityStartTimeChange: (value?: string) => void
   onAvailabilityEndTimeChange: (value?: string) => void
   onAvailabilityOnlyChange: (value: boolean) => void
@@ -72,8 +70,7 @@ export function EquipmentBookingBlock({
   onAddModeBack,
   onSearchChange,
   onCategorySelect,
-  onAvailabilityStartDateChange,
-  onAvailabilityEndDateChange,
+  onAvailabilityDateChange,
   onAvailabilityStartTimeChange,
   onAvailabilityEndTimeChange,
   onAvailabilityOnlyChange,
@@ -96,8 +93,7 @@ export function EquipmentBookingBlock({
     isSearching ||
     filters.categoryId !== undefined ||
     filters.availabilityOnly === true ||
-    filters.availabilityStartDate !== undefined ||
-    filters.availabilityEndDate !== undefined ||
+    filters.availabilityDate !== undefined ||
     filters.availabilityStartTime !== undefined ||
     filters.availabilityEndTime !== undefined
   const selectedCount = selection.selectedIds.length
@@ -261,8 +257,7 @@ export function EquipmentBookingBlock({
             {!addMode && (
               <div className="w-full">
                 <AvailabilityFilters
-                  startDate={filters.availabilityStartDate}
-                  endDate={filters.availabilityEndDate}
+                  date={filters.availabilityDate}
                   startTime={filters.availabilityStartTime}
                   endTime={filters.availabilityEndTime}
                   defaultStartTime={defaultStartTime}
@@ -270,8 +265,7 @@ export function EquipmentBookingBlock({
                   operatingHoursStart={operatingHoursStart}
                   operatingHoursEnd={operatingHoursEnd}
                   availableOnly={filters.availabilityOnly ?? false}
-                  onStartDateChange={onAvailabilityStartDateChange}
-                  onEndDateChange={onAvailabilityEndDateChange}
+                  onDateChange={onAvailabilityDateChange}
                   onStartTimeChange={onAvailabilityStartTimeChange}
                   onEndTimeChange={onAvailabilityEndTimeChange}
                   onAvailableOnlyChange={onAvailabilityOnlyChange}

@@ -1,6 +1,15 @@
+import { format } from 'date-fns'
+import { CalendarIcon } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { DateRangeFilter } from '@/components/shared/date-range-filter'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import { TimeRangePicker } from './time-range-picker'
 import { getClubLocalParts } from '@/lib/booking'
 
@@ -18,8 +27,7 @@ function dateToDateKey(date: Date): string {
 }
 
 interface AvailabilityFiltersProps {
-  startDate?: string
-  endDate?: string
+  date?: string
   startTime?: string
   endTime?: string
   defaultStartTime: string
@@ -27,16 +35,14 @@ interface AvailabilityFiltersProps {
   operatingHoursStart: number
   operatingHoursEnd: number
   availableOnly: boolean
-  onStartDateChange: (value?: string) => void
-  onEndDateChange: (value?: string) => void
+  onDateChange: (value?: string) => void
   onStartTimeChange: (value?: string) => void
   onEndTimeChange: (value?: string) => void
   onAvailableOnlyChange: (value: boolean) => void
 }
 
 export function AvailabilityFilters({
-  startDate,
-  endDate,
+  date,
   startTime,
   endTime,
   defaultStartTime,
@@ -44,8 +50,7 @@ export function AvailabilityFilters({
   operatingHoursStart,
   operatingHoursEnd,
   availableOnly,
-  onStartDateChange,
-  onEndDateChange,
+  onDateChange,
   onStartTimeChange,
   onEndTimeChange,
   onAvailableOnlyChange,
@@ -53,8 +58,8 @@ export function AvailabilityFilters({
   // The date filter defaults to today (club-local) so the calendar and the
   // button always show a concrete date even before the user picks one.
   const todayKey = getClubLocalParts(new Date()).dateKey
-  const effectiveStartDate = startDate ?? todayKey
-  const effectiveEndDate = endDate ?? todayKey
+  const effectiveDate = date ?? todayKey
+  const selectedDate = dateKeyToDate(effectiveDate)!
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -62,24 +67,62 @@ export function AvailabilityFilters({
         Availability
       </span>
       <div className="flex w-full flex-wrap items-center gap-2">
-        <DateRangeFilter
-          from={dateKeyToDate(effectiveStartDate)!.toISOString()}
-          to={dateKeyToDate(effectiveEndDate)!.toISOString()}
-          onChange={(range) => {
-            onStartDateChange(
-              range?.from ? dateToDateKey(range.from) : undefined
-            )
-            onEndDateChange(range?.to ? dateToDateKey(range.to) : undefined)
-          }}
-          disablePastDates
-          className="w-full md:w-auto"
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              data-empty={!date}
+              aria-label="Availability date filter"
+              className={cn(
+                'data-[empty=true]:text-muted-foreground h-8 max-w-full justify-start border-dashed',
+                'w-full md:w-auto'
+              )}
+            >
+              <CalendarIcon data-icon="inline-start" />
+              <span className="min-w-0 flex-1 truncate text-left">
+                Date: {format(selectedDate, 'MMM d, yyyy')}
+              </span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-auto max-w-[calc(100vw-2rem)] p-0"
+            align="start"
+          >
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              defaultMonth={selectedDate}
+              onSelect={(value) =>
+                onDateChange(value ? dateToDateKey(value) : undefined)
+              }
+              initialFocus
+              className="max-w-full"
+              disabled={(date) => {
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                return date < today
+              }}
+            />
+            {date && (
+              <div className="flex items-center justify-center border-t p-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDateChange(undefined)}
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
         <TimeRangePicker
           startTime={startTime}
           endTime={endTime}
           defaultStartTime={defaultStartTime}
           defaultEndTime={defaultEndTime}
-          startDate={effectiveStartDate}
+          startDate={effectiveDate}
           operatingHoursStart={operatingHoursStart}
           operatingHoursEnd={operatingHoursEnd}
           onStartTimeChange={onStartTimeChange}

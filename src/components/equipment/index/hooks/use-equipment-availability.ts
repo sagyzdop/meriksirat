@@ -17,10 +17,8 @@ export interface AvailabilityWindow {
 }
 
 export interface AvailabilityWindowOptions {
-  /** `YYYY-MM-DD` club-local start date (defaults to today) */
-  startDate?: string
-  /** `YYYY-MM-DD` club-local end date (defaults to start date) */
-  endDate?: string
+  /** `YYYY-MM-DD` club-local date (defaults to today). Bookings are single-day. */
+  date?: string
   /** `HH:mm` club-local start time (defaults to the next 30-min boundary) */
   startTime?: string
   /** `HH:mm` club-local end time (defaults to start time + 30 min) */
@@ -32,9 +30,8 @@ export interface AvailabilityWindowOptions {
 /**
  * Builds the UTC time window for an availability check.
  *
- * Browse mode: the window comes from the date/time filter ranges, defaulting
- * to today plus the nearest 30-minute bookable window (see
- * `getNextBookableWindow`).
+ * Browse mode: the window comes from the date/time filter, defaulting to today
+ * plus the nearest 30-minute bookable window (see `getNextBookableWindow`).
  * Add-to-booking mode: the window is the booking's own start/end time.
  */
 export function buildAvailabilityWindow(
@@ -44,14 +41,13 @@ export function buildAvailabilityWindow(
     options.operatingHoursStart ?? 0,
     options.operatingHoursEnd ?? 1439
   )
-  const startDate = options.startDate ?? defaults.dateKey
-  const endDate = options.endDate ?? startDate
+  const date = options.date ?? defaults.dateKey
   const resolvedStartTime = options.startTime ?? defaults.startTime
   const resolvedEndTime =
     options.endTime ?? minutesToTime(timeToMinutes(resolvedStartTime) + 30)
   return {
-    timeMin: clubLocalToUtc(startDate, resolvedStartTime).toISOString(),
-    timeMax: clubLocalToUtc(endDate, resolvedEndTime).toISOString(),
+    timeMin: clubLocalToUtc(date, resolvedStartTime).toISOString(),
+    timeMax: clubLocalToUtc(date, resolvedEndTime).toISOString(),
   }
 }
 
@@ -92,7 +88,7 @@ export function useEquipmentAvailability({
             },
           })
           for (const [calendarId, info] of Object.entries(result)) {
-            if ((info.busy ?? []).length > 0 || info.error) {
+            if ((info.busy ?? []).length > 0) {
               busyCalendarIds.add(calendarId)
             }
           }

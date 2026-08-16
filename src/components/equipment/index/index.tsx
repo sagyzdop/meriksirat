@@ -18,8 +18,7 @@ interface Filters {
   mode?: 'add-to-booking'
   bookingId?: number
   returnTo?: string
-  availabilityStartDate?: string
-  availabilityEndDate?: string
+  availabilityDate?: string
   availabilityStartTime?: string
   availabilityEndTime?: string
   availabilityOnly?: boolean
@@ -71,8 +70,7 @@ export function Page({
       }
     }
     return buildAvailabilityWindow({
-      startDate: filters.availabilityStartDate,
-      endDate: filters.availabilityEndDate,
+      date: filters.availabilityDate,
       startTime: filters.availabilityStartTime,
       endTime: filters.availabilityEndTime,
       operatingHoursStart,
@@ -81,8 +79,7 @@ export function Page({
   }, [
     isAddMode,
     bookingWindow,
-    filters.availabilityStartDate,
-    filters.availabilityEndDate,
+    filters.availabilityDate,
     filters.availabilityStartTime,
     filters.availabilityEndTime,
     operatingHoursStart,
@@ -167,16 +164,9 @@ export function Page({
     })
   }
 
-  const handleAvailabilityStartDateChange = (value?: string) => {
+  const handleAvailabilityDateChange = (value?: string) => {
     navigate({
-      search: (prev) => ({ ...prev, availabilityStartDate: value }),
-      replace: true,
-    })
-  }
-
-  const handleAvailabilityEndDateChange = (value?: string) => {
-    navigate({
-      search: (prev) => ({ ...prev, availabilityEndDate: value }),
+      search: (prev) => ({ ...prev, availabilityDate: value }),
       replace: true,
     })
   }
@@ -223,8 +213,7 @@ export function Page({
       onAddModeBack={handleAddModeBack}
       onSearchChange={handleSearchChange}
       onCategorySelect={handleCategorySelect}
-      onAvailabilityStartDateChange={handleAvailabilityStartDateChange}
-      onAvailabilityEndDateChange={handleAvailabilityEndDateChange}
+      onAvailabilityDateChange={handleAvailabilityDateChange}
       onAvailabilityStartTimeChange={handleAvailabilityStartTimeChange}
       onAvailabilityEndTimeChange={handleAvailabilityEndTimeChange}
       onAvailabilityOnlyChange={handleAvailabilityOnlyChange}

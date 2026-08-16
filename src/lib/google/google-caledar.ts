@@ -250,25 +250,17 @@ export const checkMultipleCalendarsFreeBusy = createServerFn({ method: 'POST' })
     }
     
     const result = await response.json() as {
-      calendars?: Record<string, {
-        busy?: Array<{ start: string; end: string }>
-        errors?: Array<{ reason?: string }>
-      }>
+      calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }>
     }
     const calendars = result.calendars ?? {}
-    const output: { [key: string]: { busy: any[]; error?: boolean } } = {}
-    
+    const output: { [key: string]: { busy: any[] } } = {}
+
     equipmentCalendarIds.forEach((calendarId: string) => {
-      const entry = calendars[calendarId]
       output[calendarId] = {
-        busy: entry?.busy ?? [],
-        // Google reports calendars it cannot read here (e.g. not shared with
-        // the master account). Treat those as busy so a calendar we cannot
-        // verify is never advertised as available.
-        error: Boolean(entry?.errors && entry.errors.length > 0),
+        busy: calendars[calendarId]?.busy ?? [],
       }
     })
-    
+
     return output
   })
 

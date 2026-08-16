@@ -12,8 +12,7 @@ const searchSchema = z.object({
   mode: z.enum(['add-to-booking']).optional(),
   bookingId: z.coerce.number().optional(),
   returnTo: z.string().optional(),
-  availabilityStartDate: z.string().optional(),
-  availabilityEndDate: z.string().optional(),
+  availabilityDate: z.string().optional(),
   availabilityStartTime: z.string().optional(),
   availabilityEndTime: z.string().optional(),
   availabilityOnly: z.preprocess((v) => {
