@@ -190,7 +190,20 @@ export function Page({
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
                     Instagram
                   </TableCell>
-                  <TableCell>{user.instagramUsername || '—'}</TableCell>
+                  <TableCell>
+                    {user.instagramUsername ? (
+                      <a
+                        href={`https://instagram.com/${user.instagramUsername.replace(/^@/, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        @{user.instagramUsername}
+                      </a>
+                    ) : (
+                      '—'
+                    )}
+                  </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
