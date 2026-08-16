@@ -412,13 +412,13 @@ export function BookingCollapsibleList<T extends BookingCollapsibleRowData>({
             className={TOOLBAR_BUTTON_CLASS}
             onClick={() =>
               onSortChange(
-                'createdAt',
+                'startTime',
                 filters.sortOrder === 'asc' ? 'desc' : 'asc'
               )
             }
           >
-            Created
-            {filters.sortBy === 'createdAt' ? (
+            Booking Time
+            {filters.sortBy === 'startTime' ? (
               filters.sortOrder === 'asc' ? (
                 <ArrowUp className="ml-1 h-3.5 w-3.5" />
               ) : (

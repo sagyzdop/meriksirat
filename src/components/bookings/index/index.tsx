@@ -120,8 +120,8 @@ export function Page({
             search: {
               page: 1,
               limit: filters.limit,
-              sortBy: 'createdAt',
-              sortOrder: 'desc',
+              sortBy: 'startTime',
+              sortOrder: 'asc',
             },
           })
         }

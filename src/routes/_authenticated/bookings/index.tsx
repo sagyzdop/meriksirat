@@ -28,8 +28,8 @@ const searchSchema = z.object({
   limit: z.coerce.number().default(50),
   sortBy: z
     .enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment'])
-    .default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+    .default('startTime'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
 })
 
 export const Route = createFileRoute('/_authenticated/bookings/')({

@@ -101,7 +101,7 @@ export const BookingFiltersSchema = z.object({
     .enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment'])
     .optional()
     .default('startTime'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
 })
 
 export type BookingFilters = z.infer<typeof BookingFiltersSchema>
@@ -141,7 +141,7 @@ export const AdminBookingFiltersSchema = z.object({
     .enum(['startTime', 'endTime', 'status', 'createdAt', 'equipment', 'user'])
     .optional()
     .default('startTime'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
 })
 
 export type AdminBookingFilters = z.infer<typeof AdminBookingFiltersSchema>
