@@ -41,12 +41,16 @@ export function getClubLocalParts(date: Date | string): ClubLocalParts {
  * Converts a club-local wall-clock time (`YYYY-MM-DD` + `HH:mm`) into the
  * absolute UTC Date it refers to. Used to build the `timeMin`/`timeMax`
  * arguments for the Google Calendar free/busy API.
+ *
+ * The naive guess (the wall-clock time read as UTC) is corrected by the club
+ * offset: `utc = naive - offset`. Two passes converge exactly even for DST
+ * zones; Asia/Karachi has a fixed UTC+5 offset so a single pass is exact.
  */
 export function clubLocalToUtc(dateKey: string, time: string): Date {
   const [year, month, day] = dateKey.split('-').map(Number)
   const [hour, minute] = time.split(':').map(Number)
-  const guess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0))
-  const parts = new Intl.DateTimeFormat('en-CA', {
+  const naiveUtc = Date.UTC(year, month - 1, day, hour, minute, 0)
+  const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: CLUB_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
@@ -55,19 +59,24 @@ export function clubLocalToUtc(dateKey: string, time: string): Date {
     minute: '2-digit',
     second: '2-digit',
     hourCycle: 'h23',
-  }).formatToParts(guess)
-  const get = (type: string) =>
+  })
+  const get = (parts: Intl.DateTimeFormatPart[], type: string) =>
     parts.find((p) => p.type === type)?.value ?? '00'
-  const clubAsUtc = Date.UTC(
-    Number(get('year')),
-    Number(get('month')) - 1,
-    Number(get('day')),
-    Number(get('hour')),
-    Number(get('minute')),
-    Number(get('second'))
-  )
-  const offsetMs = clubAsUtc - guess.getTime()
-  return new Date(guess.getTime() + offsetMs)
+
+  let guess = new Date(naiveUtc)
+  for (let i = 0; i < 2; i++) {
+    const parts = formatter.formatToParts(guess)
+    const clubAsUtc = Date.UTC(
+      Number(get(parts, 'year')),
+      Number(get(parts, 'month')) - 1,
+      Number(get(parts, 'day')),
+      Number(get(parts, 'hour')),
+      Number(get(parts, 'minute')),
+      Number(get(parts, 'second'))
+    )
+    guess = new Date(naiveUtc - (clubAsUtc - guess.getTime()))
+  }
+  return guess
 }
 
 export interface ThirtyMinuteExtensionCheck {
