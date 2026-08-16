@@ -9,9 +9,5 @@ export const BIRTHDAYS_CALENDAR_ID =
 export const BIRTHDAY_STATUSES = ['Active', 'Board'] as const
 export type BirthdayStatus = (typeof BIRTHDAY_STATUSES)[number]
 
-/** Fallback when no custom wish message is configured in settings. */
-export const DEFAULT_BIRTHDAY_WISH =
-  'Happy birthday! Wishing you an amazing day filled with joy, good company, and plenty of cake.'
-
 /** Default upcoming-birthdays window in days when none is requested. */
 export const DEFAULT_BIRTHDAYS_LOOKAHEAD_DAYS = 30

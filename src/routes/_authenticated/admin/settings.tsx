@@ -12,7 +12,6 @@ export const Route = createFileRoute('/_authenticated/admin/settings')({
         settings: settings || {
           id: 'global',
           globalBookingNote: '',
-          birthdayWishMessage: '',
           birthdaysCalendarId: '',
           operatingHoursStart: 0,
           operatingHoursEnd: 1439,
@@ -26,7 +25,6 @@ export const Route = createFileRoute('/_authenticated/admin/settings')({
         settings: {
           id: 'global',
           globalBookingNote: '',
-          birthdayWishMessage: '',
           birthdaysCalendarId: '',
           operatingHoursStart: 0,
           operatingHoursEnd: 1439,

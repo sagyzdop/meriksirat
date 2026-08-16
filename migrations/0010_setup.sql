@@ -1,0 +1,1 @@
+ALTER TABLE `settings` DROP COLUMN `birthday_wish_message`;

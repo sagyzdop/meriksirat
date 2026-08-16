@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils'
 interface SettingsData {
   id: string
   globalBookingNote: string | null
-  birthdayWishMessage: string | null
   birthdaysCalendarId: string | null
   operatingHoursStart: number | null
   operatingHoursEnd: number | null
@@ -31,9 +30,6 @@ export function Page({ settings }: PageProps) {
 
   const [globalBookingNote, setGlobalBookingNote] = useState(
     settings?.globalBookingNote || ''
-  )
-  const [birthdayWishMessage, setBirthdayWishMessage] = useState(
-    settings?.birthdayWishMessage || ''
   )
   const [birthdaysCalendarId, setBirthdaysCalendarId] = useState(
     settings?.birthdaysCalendarId || ''
@@ -65,7 +61,6 @@ export function Page({ settings }: PageProps) {
       await updateSettingsFn({
         data: {
           globalBookingNote,
-          birthdayWishMessage,
           birthdaysCalendarId,
           operatingHoursStart: startMinutes,
           operatingHoursEnd: endMinutes,
@@ -104,17 +99,6 @@ export function Page({ settings }: PageProps) {
             placeholder="Enter a message that will be shown in all calendar events..."
             value={globalBookingNote}
             onChange={(e) => setGlobalBookingNote(e.target.value)}
-            rows={3}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="birthdayWishMessage">Birthday Wish Message</Label>
-          <Textarea
-            id="birthdayWishMessage"
-            placeholder="Enter the congratulations message shown once per session in the birthday drawer..."
-            value={birthdayWishMessage}
-            onChange={(e) => setBirthdayWishMessage(e.target.value)}
             rows={3}
           />
         </div>

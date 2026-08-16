@@ -1,9 +1,7 @@
 import * as React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Gift } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { birthdayQueries } from '@/lib/birthdays/queries'
-import { DEFAULT_BIRTHDAY_WISH } from '@/lib/birthdays/constants'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -23,57 +21,64 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 
-const STORAGE_KEY = 'meriksirat:birthday-wish-shown'
+const STORAGE_KEY_PREFIX = 'meriksirat:birthday-wish-shown'
 
-function hasShownWish(): boolean {
+// Scoped per user so two members sharing a browser each get their own
+// once-per-session flag.
+function storageKey(userId: string): string {
+  return `${STORAGE_KEY_PREFIX}:${userId}`
+}
+
+function hasShownWish(userId: string): boolean {
   if (typeof window === 'undefined') return false
   try {
-    return window.sessionStorage.getItem(STORAGE_KEY) === 'true'
+    return window.sessionStorage.getItem(storageKey(userId)) === 'true'
   } catch {
     return false
   }
 }
 
-function markWishShown(): void {
+function markWishShown(userId: string): void {
   if (typeof window === 'undefined') return
   try {
-    window.sessionStorage.setItem(STORAGE_KEY, 'true')
+    window.sessionStorage.setItem(storageKey(userId), 'true')
   } catch {
     // sessionStorage may be unavailable (e.g. private browsing)
   }
 }
 
-export function BirthdayWishDrawer() {
+export function BirthdayWishDrawer({ userId }: { userId: string }) {
   const [open, setOpen] = React.useState(false)
   const isDesktop = !useIsMobile()
-  const { data: message } = useQuery(birthdayQueries.wishMessage())
+  const { data: message } = useQuery(birthdayQueries.wishMessage(userId))
 
   React.useEffect(() => {
-    if (hasShownWish()) return
+    // Wait for the birthday check to resolve before deciding anything.
+    if (message === undefined) return
+    if (message === null) {
+      setOpen(false)
+      return
+    }
+    if (hasShownWish(userId)) return
     setOpen(true)
-    markWishShown()
-  }, [])
+    markWishShown(userId)
+  }, [message, userId])
 
-  const body = message ?? DEFAULT_BIRTHDAY_WISH
+  if (!message) return null
 
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-full">
-                <Gift className="size-5" />
-              </div>
-              <DialogTitle>Happy Birthday!</DialogTitle>
-            </div>
+            <DialogTitle>Happy Birthday!</DialogTitle>
             <DialogDescription className="pt-2 text-base">
-              {body}
+              {message}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end">
             <DialogClose asChild>
-              <Button variant="outline">Got it!</Button>
+              <Button variant="outline">Thank You!</Button>
             </DialogClose>
           </div>
         </DialogContent>
@@ -85,17 +90,14 @@ export function BirthdayWishDrawer() {
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerContent>
         <DrawerHeader className="text-left">
-          <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-full">
-            <Gift className="size-5" />
-          </div>
-          <DrawerTitle className="pt-2">Happy Birthday!</DrawerTitle>
+          <DrawerTitle>Happy Birthday!</DrawerTitle>
           <DrawerDescription className="pt-1 text-base">
-            {body}
+            {message}
           </DrawerDescription>
         </DrawerHeader>
         <DrawerFooter>
           <DrawerClose asChild>
-            <Button>Got it!</Button>
+            <Button>Thank You!</Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>

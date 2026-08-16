@@ -5,7 +5,6 @@ import {
   BIRTHDAYS_CALENDAR_ID,
   BIRTHDAY_STATUSES,
   DEFAULT_BIRTHDAYS_LOOKAHEAD_DAYS,
-  DEFAULT_BIRTHDAY_WISH,
 } from '../constants'
 import type { BirthdaySyncResult, BirthdayUser } from '../types'
 
@@ -268,23 +267,57 @@ export const syncBirthdaysToCalendarFn = createServerFn({
 })
 
 /**
- * The editable congratulations message shown once per session in the
- * birthday-wish drawer. Deliberately NOT admin-guarded: every member needs it.
+ * Announcement for the birthday-wish drawer. Shown to EVERY member (not just
+ * the birthday person) when one or more Active/Board members have a birthday
+ * today. Returns `null` when nobody has a birthday today so the drawer stays
+ * hidden. Deliberately NOT admin-guarded: every member needs it.
  */
 export const getBirthdayWishMessageFn = createServerFn({
   method: 'GET',
-}).handler(async (): Promise<string> => {
+}).handler(async (): Promise<string | null> => {
+  const { auth } = await import('@/lib/auth/auth')
   const { env } = await import('cloudflare:workers')
   const { db } = await import('@/db')
-  const { settings } = await import('@/db/schema')
-  const { eq } = await import('drizzle-orm')
+  const { user } = await import('@/db/schema')
+  const { inArray, isNotNull, and } = await import('drizzle-orm')
+
+  const headers = getRequestHeaders()
+  const session = await auth.api.getSession({ headers })
+  if (!session?.user) return null
 
   const database = db(env.meriksirat_d1 as D1Database)
-  const row = await database
-    .select({ birthdayWishMessage: settings.birthdayWishMessage })
-    .from(settings)
-    .where(eq(settings.id, 'global'))
-    .get()
+  const members = await database
+    .select({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      birthday: user.birthday,
+    })
+    .from(user)
+    .where(
+      and(
+        inArray(user.status, [...BIRTHDAY_STATUSES]),
+        isNotNull(user.birthday)
+      )
+    )
 
-  return row?.birthdayWishMessage ?? DEFAULT_BIRTHDAY_WISH
+  const now = new Date()
+  const names = members
+    .map((member) => ({
+      member,
+      parsed: parseBirthday(member.birthday),
+    }))
+    .filter(
+      ({ parsed }) =>
+        parsed &&
+        parsed.month === now.getMonth() + 1 &&
+        parsed.day === now.getDate()
+    )
+    .map(({ member }) =>
+      [member.firstName, member.lastName].filter(Boolean).join(' ')
+    )
+    .filter(Boolean)
+
+  if (names.length === 0) return null
+
+  return `Today is the birthday of ${names.join(', ')}. Happy Birthday!`
 })

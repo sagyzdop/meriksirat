@@ -37,7 +37,7 @@ export function AuthenticatedShell({
         <div className="flex flex-1 min-w-0 flex-col">{children}</div>
       </SidebarInset>
       <Toaster />
-      <BirthdayWishDrawer />
+      <BirthdayWishDrawer userId={user.id} />
     </SidebarProvider>
   )
 }
