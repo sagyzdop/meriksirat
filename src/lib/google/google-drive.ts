@@ -178,7 +178,9 @@ export async function findDriveFileByName(
     accessToken,
     `${API}/files?${params.toString()}`
   )
-  const data = (await response.json()) as { files?: { id: string; name: string }[] }
+  const data = (await response.json()) as {
+    files?: { id: string; name: string }[]
+  }
   return data.files?.[0] ?? null
 }
 

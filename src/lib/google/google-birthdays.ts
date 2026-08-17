@@ -73,9 +73,7 @@ export async function createBirthdayEvent(
  * List all events on the birthdays calendar. The calendar is dedicated to
  * birthdays and `singleEvents=false` returns each recurring series once.
  */
-export async function listBirthdayEvents(
-  calendarId: string
-): Promise<
+export async function listBirthdayEvents(calendarId: string): Promise<
   Array<{
     id: string
     summary?: string

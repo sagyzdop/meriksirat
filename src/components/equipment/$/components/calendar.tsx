@@ -1,11 +1,11 @@
-import * as React from "react"
-import { addDays, format } from "date-fns"
-import { CheckCircle, Loader2 } from "lucide-react"
-import { useQueryClient } from "@tanstack/react-query"
+import * as React from 'react'
+import { addDays, format } from 'date-fns'
+import { CheckCircle, Loader2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -13,13 +13,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { checkCalendarFreeBusy } from "@/lib/google/google-caledar"
-import { createBookingFn } from "@/lib/booking"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { checkCalendarFreeBusy } from '@/lib/google/google-caledar'
+import { createBookingFn } from '@/lib/booking'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface CalendarUIProps {
   equipmentId: number
@@ -39,7 +39,7 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([])
   const [isLoadingSlots, setIsLoadingSlots] = React.useState(false)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
-  const [notes, setNotes] = React.useState("")
+  const [notes, setNotes] = React.useState('')
   const [isBooking, setIsBooking] = React.useState(false)
 
   // Generate all possible time slots (24/7, 30-minute increments)
@@ -47,67 +47,72 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
     const slots: string[] = []
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        slots.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`)
+        slots.push(
+          `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        )
       }
     }
     return slots
   }
 
   // Check availability for selected date
-  const checkAvailability = React.useCallback(async (selectedDate: Date) => {
-    if (!selectedDate) return
+  const checkAvailability = React.useCallback(
+    async (selectedDate: Date) => {
+      if (!selectedDate) return
 
-    setIsLoadingSlots(true)
-    try {
-      // Set time range for the entire day
-      const startOfDay = new Date(selectedDate)
-      startOfDay.setHours(0, 0, 0, 0)
-      
-      const endOfDay = new Date(selectedDate)
-      endOfDay.setHours(23, 59, 59, 999)
+      setIsLoadingSlots(true)
+      try {
+        // Set time range for the entire day
+        const startOfDay = new Date(selectedDate)
+        startOfDay.setHours(0, 0, 0, 0)
 
-      const result = await checkCalendarFreeBusy({
-        data: {
-          calendarId,
-          timeMin: startOfDay.toISOString(),
-          timeMax: endOfDay.toISOString(),
-        },
-      })
+        const endOfDay = new Date(selectedDate)
+        endOfDay.setHours(23, 59, 59, 999)
 
-      const busySlots = result.busy || []
-      const allSlots = generateTimeSlots()
-
-      // Check each slot against busy periods
-      const slotsWithAvailability: TimeSlot[] = allSlots.map((time) => {
-        const [hour, minute] = time.split(":").map(Number)
-        const slotStart = new Date(selectedDate)
-        slotStart.setHours(hour, minute, 0, 0)
-        
-        const slotEnd = new Date(slotStart)
-        slotEnd.setMinutes(slotEnd.getMinutes() + 30)
-
-        // Check if this slot overlaps with any busy period
-        const isAvailable = !busySlots.some((busy: any) => {
-          const busyStart = new Date(busy.start)
-          const busyEnd = new Date(busy.end)
-          return (
-            (slotStart >= busyStart && slotStart < busyEnd) ||
-            (slotEnd > busyStart && slotEnd <= busyEnd) ||
-            (slotStart <= busyStart && slotEnd >= busyEnd)
-          )
+        const result = await checkCalendarFreeBusy({
+          data: {
+            calendarId,
+            timeMin: startOfDay.toISOString(),
+            timeMax: endOfDay.toISOString(),
+          },
         })
 
-        return { time, available: isAvailable }
-      })
+        const busySlots = result.busy || []
+        const allSlots = generateTimeSlots()
 
-      setTimeSlots(slotsWithAvailability)
-    } catch (error) {
-      console.error("Failed to check availability:", error)
-      toast.error("Failed to load availability")
-    } finally {
-      setIsLoadingSlots(false)
-    }
-  }, [calendarId])
+        // Check each slot against busy periods
+        const slotsWithAvailability: TimeSlot[] = allSlots.map((time) => {
+          const [hour, minute] = time.split(':').map(Number)
+          const slotStart = new Date(selectedDate)
+          slotStart.setHours(hour, minute, 0, 0)
+
+          const slotEnd = new Date(slotStart)
+          slotEnd.setMinutes(slotEnd.getMinutes() + 30)
+
+          // Check if this slot overlaps with any busy period
+          const isAvailable = !busySlots.some((busy: any) => {
+            const busyStart = new Date(busy.start)
+            const busyEnd = new Date(busy.end)
+            return (
+              (slotStart >= busyStart && slotStart < busyEnd) ||
+              (slotEnd > busyStart && slotEnd <= busyEnd) ||
+              (slotStart <= busyStart && slotEnd >= busyEnd)
+            )
+          })
+
+          return { time, available: isAvailable }
+        })
+
+        setTimeSlots(slotsWithAvailability)
+      } catch (error) {
+        console.error('Failed to check availability:', error)
+        toast.error('Failed to load availability')
+      } finally {
+        setIsLoadingSlots(false)
+      }
+    },
+    [calendarId]
+  )
 
   // Load availability when date changes
   React.useEffect(() => {
@@ -139,8 +144,8 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
     const firstSlot = sortedSlots[0]
     const lastSlot = sortedSlots[sortedSlots.length - 1]
 
-    const [startHour, startMinute] = firstSlot.split(":").map(Number)
-    const [endHour, endMinute] = lastSlot.split(":").map(Number)
+    const [startHour, startMinute] = firstSlot.split(':').map(Number)
+    const [endHour, endMinute] = lastSlot.split(':').map(Number)
 
     const startTime = new Date(date)
     startTime.setHours(startHour, startMinute, 0, 0)
@@ -166,21 +171,23 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
         },
       })
 
-      toast.success(`Booking created successfully! Booking ID: #${result.bookingId}`)
+      toast.success(
+        `Booking created successfully! Booking ID: #${result.bookingId}`
+      )
       setIsDialogOpen(false)
       setSelectedSlots([])
-      setNotes("")
-      
+      setNotes('')
+
       // Invalidate bookings query to refresh the bookings list
       await queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      
+
       // Refresh availability
       if (date) {
         await checkAvailability(date)
       }
     } catch (error: any) {
-      console.error("Booking failed:", error)
-      toast.error(error.message || "Failed to create booking")
+      console.error('Booking failed:', error)
+      toast.error(error.message || 'Failed to create booking')
     } finally {
       setIsBooking(false)
     }
@@ -209,7 +216,7 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
                 className="bg-transparent p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
                 formatters={{
                   formatWeekdayName: (date) => {
-                    return date.toLocaleString("en-US", { weekday: "short" })
+                    return date.toLocaleString('en-US', { weekday: 'short' })
                   },
                 }}
               />
@@ -251,12 +258,16 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
                   {timeSlots.map((slot) => (
                     <Button
                       key={slot.time}
-                      variant={selectedSlots.includes(slot.time) ? "default" : "outline"}
+                      variant={
+                        selectedSlots.includes(slot.time)
+                          ? 'default'
+                          : 'outline'
+                      }
                       onClick={() => handleSlotClick(slot.time)}
                       disabled={!slot.available}
                       className={cn(
-                        "w-full shadow-none text-xs h-8",
-                        !slot.available && "opacity-40 cursor-not-allowed"
+                        'w-full shadow-none text-xs h-8',
+                        !slot.available && 'opacity-40 cursor-not-allowed'
                       )}
                       size="sm"
                     >
@@ -273,22 +284,29 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
                   <span>
-                    Booking for{" "}
+                    Booking for{' '}
                     <span className="font-medium">
-                      {date?.toLocaleDateString("en-US", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
+                      {date?.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
                       })}
-                    </span>
-                    {" "}from <span className="font-medium">{format(bookingTimes.startTime, "HH:mm")}</span>
-                    {" "}to <span className="font-medium">{format(bookingTimes.endTime, "HH:mm")}</span>
-                    {" "}({selectedSlots.length} slots)
+                    </span>{' '}
+                    from{' '}
+                    <span className="font-medium">
+                      {format(bookingTimes.startTime, 'HH:mm')}
+                    </span>{' '}
+                    to{' '}
+                    <span className="font-medium">
+                      {format(bookingTimes.endTime, 'HH:mm')}
+                    </span>{' '}
+                    ({selectedSlots.length} slots)
                   </span>
                 </div>
               ) : (
                 <span className="text-gray-500">
-                  Select one or more consecutive time slots to book this equipment.
+                  Select one or more consecutive time slots to book this
+                  equipment.
                 </span>
               )}
             </div>
@@ -311,32 +329,32 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
               Please provide any additional details for your booking.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium">Booking Details</Label>
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>
-                  <span className="font-medium">Date:</span>{" "}
-                  {date?.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
+                  <span className="font-medium">Date:</span>{' '}
+                  {date?.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
                   })}
                 </p>
                 {bookingTimes && (
                   <>
                     <p>
-                      <span className="font-medium">Start:</span>{" "}
-                      {format(bookingTimes.startTime, "HH:mm")}
+                      <span className="font-medium">Start:</span>{' '}
+                      {format(bookingTimes.startTime, 'HH:mm')}
                     </p>
                     <p>
-                      <span className="font-medium">End:</span>{" "}
-                      {format(bookingTimes.endTime, "HH:mm")}
+                      <span className="font-medium">End:</span>{' '}
+                      {format(bookingTimes.endTime, 'HH:mm')}
                     </p>
                     <p>
-                      <span className="font-medium">Duration:</span>{" "}
+                      <span className="font-medium">Duration:</span>{' '}
                       {selectedSlots.length * 30} minutes
                     </p>
                   </>
@@ -371,7 +389,7 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
                   Creating...
                 </>
               ) : (
-                "Confirm Booking"
+                'Confirm Booking'
               )}
             </Button>
           </DialogFooter>

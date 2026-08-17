@@ -125,9 +125,7 @@ async function cancelItems(
     return { ok: false, message: 'Item not found.' }
   }
 
-  const bookedRows = ownedRows.filter(
-    (r) => r.status === BOOKING_STATUS.BOOKED
-  )
+  const bookedRows = ownedRows.filter((r) => r.status === BOOKING_STATUS.BOOKED)
 
   if (bookedRows.length === 0) {
     return {
@@ -318,10 +316,7 @@ async function renderCancelBookingItems(
   })
   buttons.push(backToMenuButton())
 
-  await ctx.editMessageText(
-    messageLines.join('\n'),
-    inlineKeyboard(buttons)
-  )
+  await ctx.editMessageText(messageLines.join('\n'), inlineKeyboard(buttons))
 }
 
 /**
@@ -380,7 +375,10 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
   }
 
   if (callbackData.startsWith('cancel_book_')) {
-    const bookingId = parseInt(callbackData.substring('cancel_book_'.length), 10)
+    const bookingId = parseInt(
+      callbackData.substring('cancel_book_'.length),
+      10
+    )
     if (isNaN(bookingId)) {
       await ctx.answerCbQuery('Invalid selection')
       return true
@@ -471,7 +469,10 @@ export async function handleCancelCallback(ctx: BotContext): Promise<boolean> {
   }
 
   if (callbackData.startsWith('deny_cancel_')) {
-    const bookingId = parseInt(callbackData.substring('deny_cancel_'.length), 10)
+    const bookingId = parseInt(
+      callbackData.substring('deny_cancel_'.length),
+      10
+    )
     if (isNaN(bookingId)) {
       await ctx.answerCbQuery('Invalid selection')
       return true

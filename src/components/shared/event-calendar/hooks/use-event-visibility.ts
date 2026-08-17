@@ -1,5 +1,4 @@
-
-import { useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 interface EventVisibilityOptions {
   eventHeight: number

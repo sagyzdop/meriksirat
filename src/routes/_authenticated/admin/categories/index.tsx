@@ -21,7 +21,9 @@ export const Route = createFileRoute('/_authenticated/admin/categories/')({
 
 function RouteComponent() {
   const { categories } = Route.useLoaderData()
-  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
+  const isLoading = useRouterState({
+    select: (state) => state.status === 'pending',
+  })
 
   return <Page categories={categories} isLoading={isLoading} />
 }

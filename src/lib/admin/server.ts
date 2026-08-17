@@ -23,13 +23,13 @@ export async function checkAdminPermission(
 
   // If session already has the required data, use it to avoid a DB hit
   // session.user in better-auth typically contains the user table fields
-  const userFromSession = session.user as any;
+  const userFromSession = session.user as any
   const hasRequiredFields =
     userFromSession.role !== undefined &&
     userFromSession.clearanceLevel !== undefined &&
-    userFromSession.status !== undefined;
+    userFromSession.status !== undefined
 
-  let userData: AdminUser;
+  let userData: AdminUser
 
   if (hasRequiredFields) {
     userData = {
@@ -44,7 +44,7 @@ export async function checkAdminPermission(
       telegramUsername: userFromSession.telegramUsername ?? null,
       createdAt: new Date(userFromSession.createdAt),
       updatedAt: new Date(userFromSession.updatedAt),
-    };
+    }
   } else {
     // Fallback to DB if session is incomplete (unlikely with better-auth default config)
     const database = db(env.meriksirat_d1 as D1Database)
@@ -67,17 +67,23 @@ export async function checkAdminPermission(
       .get()
 
     if (!dbUser) {
-      console.warn(`Unauthorized admin access attempt: User ${session.user.id} not found in database`)
+      console.warn(
+        `Unauthorized admin access attempt: User ${session.user.id} not found in database`
+      )
       throw new Error('Unauthorized: User not found')
     }
-    userData = dbUser as AdminUser;
+    userData = dbUser as AdminUser
   }
 
-  const hasPermission = requiredRoles.includes(userData.role as 'admin' | 'manager')
+  const hasPermission = requiredRoles.includes(
+    userData.role as 'admin' | 'manager'
+  )
 
   if (!hasPermission) {
     // Log unauthorized access attempt for security auditing
-    console.warn(`Unauthorized admin access attempt by user ${userData.id} (${userData.email}) with role ${userData.role}. Required roles: ${requiredRoles.join(', ')}`)
+    console.warn(
+      `Unauthorized admin access attempt by user ${userData.id} (${userData.email}) with role ${userData.role}. Required roles: ${requiredRoles.join(', ')}`
+    )
     throw new Error('Insufficient permissions')
   }
 

@@ -43,8 +43,7 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
         firstName: data.firstName,
         lastName: data.lastName,
         birthday: data.birthday,
-        wantsBirthdayCongratulation:
-          data.wantsBirthdayCongratulation ?? true,
+        wantsBirthdayCongratulation: data.wantsBirthdayCongratulation ?? true,
         instagramUsername: data.instagramUsername,
         nuId: data.nuId,
         major: data.major,
@@ -96,9 +95,8 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
       .where(eq(user.id, session.user.id))
 
     try {
-      const { reconcileBirthdaysToCalendar } = await import(
-        '@/lib/birthdays/functions/birthdays'
-      )
+      const { reconcileBirthdaysToCalendar } =
+        await import('@/lib/birthdays/functions/birthdays')
       await reconcileBirthdaysToCalendar(database)
     } catch (syncError) {
       console.error('Failed to sync birthday to calendar:', syncError)
@@ -145,9 +143,8 @@ export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' }).handler(
     }
 
     // Import the telegram helper only on server side
-    const { createTelegramLinkToken } = await import(
-      '@/lib/telegram/commands/start'
-    )
+    const { createTelegramLinkToken } =
+      await import('@/lib/telegram/commands/start')
     const url = await createTelegramLinkToken(session.user.id)
 
     return {
@@ -172,9 +169,8 @@ export const getTelegramUpdateLinkUrlFn = createServerFn({
   }
 
   // Import the telegram helper only on server side
-  const { createTelegramLinkToken } = await import(
-    '@/lib/telegram/commands/start'
-  )
+  const { createTelegramLinkToken } =
+    await import('@/lib/telegram/commands/start')
   const url = await createTelegramLinkToken(session.user.id)
 
   return {

@@ -8,7 +8,8 @@ import {
   saveUploadFiles,
 } from './upload-storage'
 
-export type UploadStatus = 'queued' | 'uploading' | 'done' | 'error' | 'cancelled'
+export type UploadStatus =
+  'queued' | 'uploading' | 'done' | 'error' | 'cancelled'
 
 export interface UploadJob {
   id: string
@@ -112,7 +113,8 @@ class UploadManager {
       size: job.size,
       mimeType: job.mimeType,
       // Uploads interrupted by a refresh restart from scratch.
-      status: job.status === 'uploading' ? 'queued' : (job.status as UploadStatus),
+      status:
+        job.status === 'uploading' ? 'queued' : (job.status as UploadStatus),
       progress: job.status === 'uploading' ? 0 : job.progress,
       error: job.error,
       attempts: job.attempts ?? 0,

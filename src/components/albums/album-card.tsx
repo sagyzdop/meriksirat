@@ -18,10 +18,7 @@ interface AlbumCardProps {
   showPrivacy?: boolean
 }
 
-export function AlbumCard({
-  album,
-  showPrivacy = false,
-}: AlbumCardProps) {
+export function AlbumCard({ album, showPrivacy = false }: AlbumCardProps) {
   const primaryAuthor = album.authors[0]?.name
   const coAuthorCount = Math.max(album.authors.length - 1, 0)
   const authorsLabel = primaryAuthor

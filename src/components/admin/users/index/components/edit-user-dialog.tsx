@@ -1,7 +1,7 @@
-import { useEffect } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -17,19 +17,19 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from '@/components/ui/form'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
-import { User } from "@/lib/user/types"
+import { User } from '@/lib/user/types'
 
 interface EditUserDialogProps {
   user: User | null
@@ -39,16 +39,21 @@ interface EditUserDialogProps {
 }
 
 const editUserSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email address'),
   role: z.enum(['user', 'manager', 'admin']),
   clearanceLevel: z.number().min(1).max(10).nullable(),
 })
 
 export type EditUserFormData = z.infer<typeof editUserSchema>
 
-export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDialogProps) {
+export function EditUserDialog({
+  user,
+  open,
+  onOpenChange,
+  onSave,
+}: EditUserDialogProps) {
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
@@ -80,11 +85,12 @@ export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDia
       if (onSave) {
         await onSave(user.id, values)
       }
-      toast.success("User updated successfully")
+      toast.success('User updated successfully')
       onOpenChange(false)
     } catch (error) {
-      toast.error("Failed to update user", {
-        description: error instanceof Error ? error.message : "An error occurred"
+      toast.error('Failed to update user', {
+        description:
+          error instanceof Error ? error.message : 'An error occurred',
       })
     }
   }
@@ -100,10 +106,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDia
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="firstName"
@@ -111,10 +114,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDia
                 <FormItem>
                   <FormLabel>First Name *</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      disabled={form.formState.isSubmitting}
-                    />
+                    <Input {...field} disabled={form.formState.isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -128,10 +128,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDia
                 <FormItem>
                   <FormLabel>Last Name *</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      disabled={form.formState.isSubmitting}
-                    />
+                    <Input {...field} disabled={form.formState.isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -190,8 +187,10 @@ export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDia
                 <FormItem>
                   <FormLabel>Clearance Level</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
-                    value={field.value?.toString() ?? "none"}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'none' ? null : parseInt(value))
+                    }
+                    value={field.value?.toString() ?? 'none'}
                     disabled={form.formState.isSubmitting}
                   >
                     <FormControl>
@@ -223,7 +222,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSave }: EditUserDia
                 Cancel
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

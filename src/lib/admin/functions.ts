@@ -12,8 +12,8 @@ import {
  * Get admin dashboard statistics
  * Provides overview data for the admin dashboard
  */
-export const getAdminStatsFn = createServerFn({ method: 'GET' })
-  .handler(async (): Promise<AdminStats> => {
+export const getAdminStatsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<AdminStats> => {
     // Import server-only code inside handler
     const { checkAdminPermission } = await import('./server')
     const { env } = await import('cloudflare:workers')
@@ -61,7 +61,8 @@ export const getAdminStatsFn = createServerFn({ method: 'GET' })
       activeBookings: activeBookingsResult[0]?.count || 0,
       overdueBookings: overdueBookingsResult[0]?.count || 0,
     }
-  })
+  }
+)
 
 /**
  * Create a new equipment category
@@ -202,7 +203,8 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
         .insert(category)
         .values({
           name: 'Uncategorized',
-          description: 'Default category for equipment without specific categories',
+          description:
+            'Default category for equipment without specific categories',
           sortOrder: 999,
         })
         .returning({ id: category.id })
@@ -221,9 +223,7 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
       .where(eq(equipment.categoryId, data.categoryId))
 
     // Delete the category
-    await database
-      .delete(category)
-      .where(eq(category.id, data.categoryId))
+    await database.delete(category).where(eq(category.id, data.categoryId))
 
     return { success: true }
   })
@@ -232,41 +232,42 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
  * Get all categories with equipment count
  * Used for category management interface
  */
-export const getCategoriesWithCountFn = createServerFn({ method: 'GET' })
-  .handler(async () => {
-    // Import server-only code inside handler
-    const { checkAdminPermission } = await import('./server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { category, equipment } = await import('@/db/schema')
-    const { eq, sql } = await import('drizzle-orm')
+export const getCategoriesWithCountFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  // Import server-only code inside handler
+  const { checkAdminPermission } = await import('./server')
+  const { env } = await import('cloudflare:workers')
+  const { db } = await import('@/db')
+  const { category, equipment } = await import('@/db/schema')
+  const { eq, sql } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
+  const headers = getRequestHeaders()
+  await checkAdminPermission(headers, ['admin', 'manager'])
 
-    const database = db(env.meriksirat_d1 as D1Database)
+  const database = db(env.meriksirat_d1 as D1Database)
 
-    const categories = await database
-      .select({
-        id: category.id,
-        name: category.name,
-        description: category.description,
-        sortOrder: category.sortOrder,
-        createdAt: category.createdAt,
-        updatedAt: category.updatedAt,
-        equipmentCount: sql<number>`count(${equipment.id})`,
-      })
-      .from(category)
-      .leftJoin(equipment, eq(category.id, equipment.categoryId))
-      .groupBy(category.id)
-      .orderBy(category.sortOrder, category.name)
+  const categories = await database
+    .select({
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      sortOrder: category.sortOrder,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
+      equipmentCount: sql<number>`count(${equipment.id})`,
+    })
+    .from(category)
+    .leftJoin(equipment, eq(category.id, equipment.categoryId))
+    .groupBy(category.id)
+    .orderBy(category.sortOrder, category.name)
 
-    // Ensure sortOrder is never null by providing default value
-    return categories.map(cat => ({
-      ...cat,
-      sortOrder: cat.sortOrder ?? 0
-    }))
-  })
+  // Ensure sortOrder is never null by providing default value
+  return categories.map((cat) => ({
+    ...cat,
+    sortOrder: cat.sortOrder ?? 0,
+  }))
+})
 
 /**
  * Update category sort order after drag-and-drop reordering

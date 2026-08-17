@@ -63,7 +63,9 @@ export function CancelBookingItemDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isCancelling}>Keep Item</AlertDialogCancel>
+          <AlertDialogCancel disabled={isCancelling}>
+            Keep Item
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleCancel}
             disabled={isCancelling}

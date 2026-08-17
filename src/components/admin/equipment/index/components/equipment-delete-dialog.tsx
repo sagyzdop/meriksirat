@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { toast } from "sonner"
+import { useState } from 'react'
+import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,10 +9,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { deleteEquipmentAdminFn } from "@/lib/equipment"
-import { EquipmentWithCategory } from "@/lib/equipment"
-import { useQueryClient } from "@tanstack/react-query"
+} from '@/components/ui/alert-dialog'
+import { deleteEquipmentAdminFn } from '@/lib/equipment'
+import { EquipmentWithCategory } from '@/lib/equipment'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface EquipmentDeleteDialogProps {
   open: boolean
@@ -37,17 +37,17 @@ export function EquipmentDeleteDialog({
         data: { equipmentId: equipment.id },
       })
 
-      if (result.action === "deleted") {
-        toast.success(result.message || "Equipment deleted successfully")
-      } else if (result.action === "deactivated") {
-        toast.warning(result.message || "Equipment has been deactivated")
+      if (result.action === 'deleted') {
+        toast.success(result.message || 'Equipment deleted successfully')
+      } else if (result.action === 'deactivated') {
+        toast.warning(result.message || 'Equipment has been deactivated')
       }
 
       onOpenChange(false)
       await queryClient.invalidateQueries({ queryKey: ['equipment'] })
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete equipment"
+        error instanceof Error ? error.message : 'Failed to delete equipment'
       )
     } finally {
       setIsDeleting(false)
@@ -60,10 +60,10 @@ export function EquipmentDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete the equipment{" "}
-            <span className="font-semibold">{equipment?.modelName}</span>.
-            {" "}If there are active bookings, the equipment will be marked as inactive instead.
-            This action cannot be undone.
+            This will permanently delete the equipment{' '}
+            <span className="font-semibold">{equipment?.modelName}</span>. If
+            there are active bookings, the equipment will be marked as inactive
+            instead. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -73,7 +73,7 @@ export function EquipmentDeleteDialog({
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? "Deleting..." : "Delete Equipment"}
+            {isDeleting ? 'Deleting...' : 'Delete Equipment'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

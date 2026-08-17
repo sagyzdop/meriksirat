@@ -3,10 +3,7 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import type { db } from '@/db'
 import { BIRTHDAYS_CALENDAR_ID, BIRTHDAY_STATUSES } from '../constants'
 import type { BirthdaySyncResult, BirthdayUser } from '../types'
-import {
-  BirthdayListFiltersSchema,
-  type BirthdayListResult,
-} from '../types'
+import { BirthdayListFiltersSchema, type BirthdayListResult } from '../types'
 
 /**
  * Extracts a calendar-safe birthday from a stored string. Onboarding stores a
@@ -175,7 +172,8 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
-    const { inArray, isNotNull, and, or, like, sql } = await import('drizzle-orm')
+    const { inArray, isNotNull, and, or, like, sql } =
+      await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -205,8 +203,7 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
       )
     }
 
-    const whereCondition =
-      conditions.length > 0 ? and(...conditions) : sql`1=1`
+    const whereCondition = conditions.length > 0 ? and(...conditions) : sql`1=1`
 
     const members = await database
       .select({
@@ -262,9 +259,9 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
         wantsCongratulation: (b: BirthdayUser) =>
           b.wantsCongratulation ? 1 : 0,
         occurrence: (b: BirthdayUser) => b.occurrence,
-        turningAge: (b: BirthdayUser) => b.turningAge ?? Number.MAX_SAFE_INTEGER,
-      }[data.sortBy] ??
-      ((b: BirthdayUser) => b.occurrence)
+        turningAge: (b: BirthdayUser) =>
+          b.turningAge ?? Number.MAX_SAFE_INTEGER,
+      }[data.sortBy] ?? ((b: BirthdayUser) => b.occurrence)
 
     birthdays.sort((a, b) => {
       const av = sortColumn(a)

@@ -38,8 +38,10 @@ export const Route = createFileRoute('/_authenticated/admin/settings')({
 
 function RouteComponent() {
   const { settings } = Route.useLoaderData()
-  const isLoading = useRouterState({ select: (state) => state.status === 'pending' })
-  
+  const isLoading = useRouterState({
+    select: (state) => state.status === 'pending',
+  })
+
   return (
     <div className="relative">
       {isLoading && <LoadingOverlay />}

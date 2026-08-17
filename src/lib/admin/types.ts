@@ -36,12 +36,14 @@ export const UpdateCategorySchema = CreateCategorySchema.extend({
 })
 
 export const DeleteCategorySchema = z.object({
-  categoryId: z.number()
+  categoryId: z.number(),
 })
 
 export const UpdateCategorySortOrderSchema = z.object({
-  categoryUpdates: z.array(z.object({
-    id: z.number(),
-    sortOrder: z.number()
-  }))
+  categoryUpdates: z.array(
+    z.object({
+      id: z.number(),
+      sortOrder: z.number(),
+    })
+  ),
 })

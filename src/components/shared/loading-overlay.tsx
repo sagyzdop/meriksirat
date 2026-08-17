@@ -1,16 +1,19 @@
-import { Spinner } from "@/components/ui/spinner"
-import { cn } from "@/lib/utils"
+import { Spinner } from '@/components/ui/spinner'
+import { cn } from '@/lib/utils'
 
 interface LoadingOverlayProps {
   className?: string
   label?: string
 }
 
-export function LoadingOverlay({ className, label = "Loading..." }: LoadingOverlayProps) {
+export function LoadingOverlay({
+  className,
+  label = 'Loading...',
+}: LoadingOverlayProps) {
   return (
     <div
       className={cn(
-        "absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm",
+        'absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm',
         className
       )}
       role="status"

@@ -1,7 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
-import type { PaginatedEquipmentResponse, EquipmentResponse, EquipmentWithCategory } from './types'
+import type {
+  PaginatedEquipmentResponse,
+  EquipmentResponse,
+  EquipmentWithCategory,
+} from './types'
 import {
   EQUIPMENT_MIN_CLEARANCE,
   EquipmentFiltersSchema,
@@ -10,12 +14,12 @@ import {
   UpdateEquipmentSchema,
   DeleteEquipmentSchema,
   UploadEquipmentImageSchema,
-  BulkUpdateEquipmentClearanceSchema
+  BulkUpdateEquipmentClearanceSchema,
 } from './types'
 import { getUserClearanceLevel } from './server'
 
 export const getEquipmentFn = createServerFn({
-  method: 'GET'
+  method: 'GET',
 })
   .validator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
@@ -24,7 +28,8 @@ export const getEquipmentFn = createServerFn({
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, gte, lte, like, or, asc, desc, inArray } = await import('drizzle-orm')
+    const { eq, and, gte, lte, like, or, asc, desc, inArray } =
+      await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     const session = await auth.api.getSession({
@@ -47,7 +52,7 @@ export const getEquipmentFn = createServerFn({
 
     // Build where conditions
     const conditions = [
-      lte(equipment.requiredClearanceLevel, userClearanceLevel)
+      lte(equipment.requiredClearanceLevel, userClearanceLevel),
     ]
 
     // Add active status filter
@@ -77,10 +82,14 @@ export const getEquipmentFn = createServerFn({
 
     // Add clearance level range filters
     if (data.minClearanceLevel !== undefined) {
-      conditions.push(gte(equipment.requiredClearanceLevel, data.minClearanceLevel))
+      conditions.push(
+        gte(equipment.requiredClearanceLevel, data.minClearanceLevel)
+      )
     }
     if (data.maxClearanceLevel !== undefined) {
-      conditions.push(lte(equipment.requiredClearanceLevel, data.maxClearanceLevel))
+      conditions.push(
+        lte(equipment.requiredClearanceLevel, data.maxClearanceLevel)
+      )
     }
 
     const whereClause = and(...conditions)
@@ -94,7 +103,11 @@ export const getEquipmentFn = createServerFn({
       createdAt: equipment.createdAt,
     }[sortBy]
 
-    const orderBy = sortColumn ? (sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
+    const orderBy = sortColumn
+      ? sortOrder === 'desc'
+        ? desc(sortColumn)
+        : asc(sortColumn)
+      : asc(equipment.modelName)
 
     const equipmentListQuery = database
       .select({
@@ -130,7 +143,7 @@ export const getEquipmentFn = createServerFn({
   })
 
 export const getEquipmentByIdFn = createServerFn({
-  method: 'GET'
+  method: 'GET',
 })
   .validator(z.object({ equipmentId: z.coerce.number() }))
   .handler(async ({ data }) => {
@@ -252,7 +265,9 @@ export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
       .get()
 
     if (existingEquipment) {
-      throw new Error('Google Calendar ID already exists. Each equipment must have a unique calendar.')
+      throw new Error(
+        'Google Calendar ID already exists. Each equipment must have a unique calendar.'
+      )
     }
 
     // Verify category exists
@@ -304,7 +319,10 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
 
     // Check if equipment exists
     const existingEquipment = await database
-      .select({ id: equipment.id, googleCalendarId: equipment.googleCalendarId })
+      .select({
+        id: equipment.id,
+        googleCalendarId: equipment.googleCalendarId,
+      })
       .from(equipment)
       .where(eq(equipment.id, data.equipmentId))
       .get()
@@ -314,7 +332,10 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
     }
 
     // Check Google Calendar ID uniqueness if it's being updated
-    if (data.googleCalendarId && data.googleCalendarId !== existingEquipment.googleCalendarId) {
+    if (
+      data.googleCalendarId &&
+      data.googleCalendarId !== existingEquipment.googleCalendarId
+    ) {
       const calendarIdConflict = await database
         .select({ id: equipment.id })
         .from(equipment)
@@ -327,7 +348,9 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
         .get()
 
       if (calendarIdConflict) {
-        throw new Error('Google Calendar ID already exists. Each equipment must have a unique calendar.')
+        throw new Error(
+          'Google Calendar ID already exists. Each equipment must have a unique calendar.'
+        )
       }
     }
 
@@ -348,10 +371,13 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
     const updateData: any = {}
     if (data.modelName !== undefined) updateData.modelName = data.modelName
     if (data.shortName !== undefined) updateData.shortName = data.shortName
-    if (data.description !== undefined) updateData.description = data.description
+    if (data.description !== undefined)
+      updateData.description = data.description
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId
-    if (data.googleCalendarId !== undefined) updateData.googleCalendarId = data.googleCalendarId
-    if (data.requiredClearanceLevel !== undefined) updateData.requiredClearanceLevel = data.requiredClearanceLevel
+    if (data.googleCalendarId !== undefined)
+      updateData.googleCalendarId = data.googleCalendarId
+    if (data.requiredClearanceLevel !== undefined)
+      updateData.requiredClearanceLevel = data.requiredClearanceLevel
     if (data.imagePath !== undefined) updateData.imagePath = data.imagePath
     if (data.isActive !== undefined) updateData.isActive = data.isActive
 
@@ -416,7 +442,7 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
       .select({
         id: equipment.id,
         modelName: equipment.modelName,
-        isActive: equipment.isActive
+        isActive: equipment.isActive,
       })
       .from(equipment)
       .where(eq(equipment.id, data.equipmentId))
@@ -451,25 +477,23 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
         .update(equipment)
         .set({
           isActive: false,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(equipment.id, data.equipmentId))
 
       return {
         success: true,
         action: 'deactivated',
-        message: `Equipment "${equipmentToDelete.modelName}" has been marked as inactive due to active bookings. It will no longer be available for new bookings.`
+        message: `Equipment "${equipmentToDelete.modelName}" has been marked as inactive due to active bookings. It will no longer be available for new bookings.`,
       }
     } else {
       // Safe to delete - no active bookings
-      await database
-        .delete(equipment)
-        .where(eq(equipment.id, data.equipmentId))
+      await database.delete(equipment).where(eq(equipment.id, data.equipmentId))
 
       return {
         success: true,
         action: 'deleted',
-        message: `Equipment "${equipmentToDelete.modelName}" has been permanently deleted.`
+        message: `Equipment "${equipmentToDelete.modelName}" has been permanently deleted.`,
       }
     }
   })
@@ -479,7 +503,7 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
  * Returns equipment regardless of clearance level or active status
  */
 export const getAdminEquipmentByIdFn = createServerFn({
-  method: 'GET'
+  method: 'GET',
 })
   .validator(z.object({ equipmentId: z.number() }))
   .handler(async ({ data }) => {
@@ -527,7 +551,7 @@ export const getAdminEquipmentByIdFn = createServerFn({
  * Returns all equipment regardless of clearance level or active status
  */
 export const getAdminEquipmentFn = createServerFn({
-  method: 'GET'
+  method: 'GET',
 })
   .validator(AdminEquipmentFiltersSchema)
   .handler(async ({ data }) => {
@@ -536,7 +560,8 @@ export const getAdminEquipmentFn = createServerFn({
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, or, gte, lte, like, sql, asc, desc, inArray } = await import('drizzle-orm')
+    const { eq, and, or, gte, lte, like, sql, asc, desc, inArray } =
+      await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -576,10 +601,14 @@ export const getAdminEquipmentFn = createServerFn({
 
     // Add clearance level range filters
     if (data.minClearanceLevel !== undefined) {
-      conditions.push(gte(equipment.requiredClearanceLevel, data.minClearanceLevel))
+      conditions.push(
+        gte(equipment.requiredClearanceLevel, data.minClearanceLevel)
+      )
     }
     if (data.maxClearanceLevel !== undefined) {
-      conditions.push(lte(equipment.requiredClearanceLevel, data.maxClearanceLevel))
+      conditions.push(
+        lte(equipment.requiredClearanceLevel, data.maxClearanceLevel)
+      )
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -608,7 +637,11 @@ export const getAdminEquipmentFn = createServerFn({
       createdAt: equipment.createdAt,
     }[sortBy]
 
-    const orderBy = sortColumn ? (sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)) : asc(equipment.modelName)
+    const orderBy = sortColumn
+      ? sortOrder === 'desc'
+        ? desc(sortColumn)
+        : asc(sortColumn)
+      : asc(equipment.modelName)
 
     // Get paginated equipment list
     const equipmentListQuery = database
@@ -654,7 +687,7 @@ export const getAdminEquipmentFn = createServerFn({
         totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1,
-      }
+      },
     }
 
     return response
@@ -682,7 +715,9 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     if (!allowedTypes.includes(data.contentType)) {
-      throw new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.')
+      throw new Error(
+        'Invalid file type. Only JPEG, PNG, and WebP images are allowed.'
+      )
     }
 
     // Decode base64 image data
@@ -727,18 +762,19 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
         .update(equipment)
         .set({
           imagePath: fileName,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(equipment.id, data.equipmentId))
 
       return {
         success: true,
         imagePath: fileName,
-        message: 'Image uploaded successfully'
+        message: 'Image uploaded successfully',
       }
-
     } catch (error) {
       console.error('Image upload error:', error)
-      throw new Error(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   })

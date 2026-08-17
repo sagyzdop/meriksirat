@@ -1,12 +1,12 @@
-import * as React from "react"
+import * as React from 'react'
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { useRouter } from "@tanstack/react-router"
-import { Button } from "@/components/ui/button"
+} from '@tanstack/react-table'
+import { useRouter } from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -14,19 +14,31 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { LoadingOverlay } from "@/components/shared/loading-overlay"
+} from '@/components/ui/table'
+import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Edit, Trash2, GripVertical } from "lucide-react"
-import { CategoryWithCount } from ".."
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
+} from '@/components/ui/dropdown-menu'
+import { Badge } from '@/components/ui/badge'
+import { MoreHorizontal, Edit, Trash2, GripVertical } from 'lucide-react'
+import { CategoryWithCount } from '..'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
@@ -44,7 +56,7 @@ interface CategoryDataTableProps {
 function SortableRow({
   category,
   onEdit,
-  onDelete
+  onDelete,
 }: {
   category: CategoryWithCount
   onEdit: (category: CategoryWithCount) => void
@@ -69,7 +81,7 @@ function SortableRow({
     <TableRow
       ref={setNodeRef}
       style={style}
-      className={isDragging ? "bg-muted/50" : ""}
+      className={isDragging ? 'bg-muted/50' : ''}
     >
       <TableCell className="w-[40px]">
         <div
@@ -87,7 +99,9 @@ function SortableRow({
             {category.description}
           </span>
         ) : (
-          <span className="text-sm text-muted-foreground italic">No description</span>
+          <span className="text-sm text-muted-foreground italic">
+            No description
+          </span>
         )}
       </TableCell>
       <TableCell>
@@ -97,7 +111,8 @@ function SortableRow({
       </TableCell>
       <TableCell>
         <Badge variant="outline">
-          {category.equipmentCount} {category.equipmentCount === 1 ? 'item' : 'items'}
+          {category.equipmentCount}{' '}
+          {category.equipmentCount === 1 ? 'item' : 'items'}
         </Badge>
       </TableCell>
       <TableCell>
@@ -127,14 +142,21 @@ function SortableRow({
   )
 }
 
-export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = false }: CategoryDataTableProps) {
+export function CategoryDataTable({
+  categories,
+  onEdit,
+  onDelete,
+  isLoading = false,
+}: CategoryDataTableProps) {
   const router = useRouter()
   const [sortedCategories, setSortedCategories] = React.useState(categories)
   const [isUpdatingSortOrder, setIsUpdatingSortOrder] = React.useState(false)
 
   // Update sorted categories when categories prop changes
   React.useEffect(() => {
-    setSortedCategories([...categories].sort((a, b) => a.sortOrder - b.sortOrder))
+    setSortedCategories(
+      [...categories].sort((a, b) => a.sortOrder - b.sortOrder)
+    )
   }, [categories])
 
   const sensors = useSensors(
@@ -148,8 +170,10 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
     const { active, over } = event
 
     if (active.id !== over?.id) {
-      const oldIndex = sortedCategories.findIndex(item => item.id === active.id)
-      const newIndex = sortedCategories.findIndex(item => item.id === over.id)
+      const oldIndex = sortedCategories.findIndex(
+        (item) => item.id === active.id
+      )
+      const newIndex = sortedCategories.findIndex((item) => item.id === over.id)
 
       const newOrder = arrayMove(sortedCategories, oldIndex, newIndex)
       setSortedCategories(newOrder)
@@ -159,11 +183,11 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
       try {
         const categoryUpdates = newOrder.map((cat, index) => ({
           id: cat.id,
-          sortOrder: index
+          sortOrder: index,
         }))
 
         await updateCategorySortOrderFn({
-          data: { categoryUpdates }
+          data: { categoryUpdates },
         })
 
         toast.success('Category order updated successfully')
@@ -174,7 +198,9 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
         toast.error('Failed to update category order')
 
         // Revert the local state on error
-        setSortedCategories([...categories].sort((a, b) => a.sortOrder - b.sortOrder))
+        setSortedCategories(
+          [...categories].sort((a, b) => a.sortOrder - b.sortOrder)
+        )
       } finally {
         setIsUpdatingSortOrder(false)
       }
@@ -183,33 +209,33 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
 
   const columns: ColumnDef<CategoryWithCount>[] = [
     {
-      id: "drag",
-      header: "",
+      id: 'drag',
+      header: '',
       cell: () => null, // Handled by SortableRow
       enableSorting: false,
       size: 40,
     },
     {
-      accessorKey: "name",
-      header: "Name",
+      accessorKey: 'name',
+      header: 'Name',
     },
     {
-      accessorKey: "description",
-      header: "Description",
+      accessorKey: 'description',
+      header: 'Description',
       enableSorting: false,
     },
     {
-      accessorKey: "sortOrder",
-      header: "Sort Order",
+      accessorKey: 'sortOrder',
+      header: 'Sort Order',
     },
     {
-      accessorKey: "equipmentCount",
-      header: "Equipment Count",
+      accessorKey: 'equipmentCount',
+      header: 'Equipment Count',
       enableSorting: false,
     },
     {
-      id: "actions",
-      header: "Actions",
+      id: 'actions',
+      header: 'Actions',
       cell: () => null, // Handled by SortableRow
       enableSorting: false,
     },
@@ -241,9 +267,9 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -251,7 +277,7 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
             </TableHeader>
             <TableBody>
               <SortableContext
-                items={sortedCategories.map(cat => cat.id)}
+                items={sortedCategories.map((cat) => cat.id)}
                 strategy={verticalListSortingStrategy}
               >
                 {sortedCategories.length ? (
@@ -265,7 +291,10 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
                       No categories found.
                     </TableCell>
                   </TableRow>
@@ -278,7 +307,8 @@ export function CategoryDataTable({ categories, onEdit, onDelete, isLoading = fa
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
         <span>
-          {sortedCategories.length} {sortedCategories.length === 1 ? 'category' : 'categories'} total
+          {sortedCategories.length}{' '}
+          {sortedCategories.length === 1 ? 'category' : 'categories'} total
         </span>
         {isUpdatingSortOrder && (
           <span className="text-blue-600">Updating sort order...</span>

@@ -12,7 +12,9 @@ import type { BookingStatus } from '@/lib/telegram/types'
  * - any item active      -> active
  * - otherwise            -> booked
  */
-export function deriveParentBookingStatus(itemStatuses: string[]): BookingStatus {
+export function deriveParentBookingStatus(
+  itemStatuses: string[]
+): BookingStatus {
   if (itemStatuses.length === 0) return 'cancelled'
 
   const statuses = new Set(itemStatuses)
@@ -35,7 +37,10 @@ export function deriveParentBookingStatus(itemStatuses: string[]): BookingStatus
  * Recompute and persist a parent booking's status from its items' statuses.
  * Returns the newly derived status.
  */
-export async function recomputeBookingStatus(database: any, bookingId: number): Promise<BookingStatus> {
+export async function recomputeBookingStatus(
+  database: any,
+  bookingId: number
+): Promise<BookingStatus> {
   const { bookingItem, booking } = await import('@/db/schema')
   const { eq } = await import('drizzle-orm')
 
@@ -44,7 +49,9 @@ export async function recomputeBookingStatus(database: any, bookingId: number): 
     .from(bookingItem)
     .where(eq(bookingItem.bookingId, bookingId))
 
-  const status = deriveParentBookingStatus(itemRows.map((row: { status: string }) => row.status))
+  const status = deriveParentBookingStatus(
+    itemRows.map((row: { status: string }) => row.status)
+  )
 
   await database
     .update(booking)

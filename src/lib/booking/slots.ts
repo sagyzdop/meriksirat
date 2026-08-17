@@ -5,7 +5,10 @@
  * The start is floored down to the nearest 30-minute boundary so the generated
  * labels align with the picker's :00 / :30 slots.
  */
-export function getBookingSlots(start: Date | string, end: Date | string): string[] {
+export function getBookingSlots(
+  start: Date | string,
+  end: Date | string
+): string[] {
   const startTime = new Date(start)
   const endTime = new Date(end)
 
@@ -16,10 +19,10 @@ export function getBookingSlots(start: Date | string, end: Date | string): strin
   const current = new Date(flooredStart)
 
   while (current < endTime) {
-    const timeStr = `${current.getHours().toString().padStart(2, "0")}:${current
+    const timeStr = `${current.getHours().toString().padStart(2, '0')}:${current
       .getMinutes()
       .toString()
-      .padStart(2, "0")}`
+      .padStart(2, '0')}`
     slots.push(timeStr)
     current.setMinutes(current.getMinutes() + 30)
   }

@@ -151,8 +151,7 @@ export function BirthdayDataTable({
   )
 
   const isFiltered =
-    (filters.wantsCongratulation &&
-      filters.wantsCongratulation.length > 0) ||
+    (filters.wantsCongratulation && filters.wantsCongratulation.length > 0) ||
     filters.search
 
   const clearAllFilters = React.useCallback(() => {
@@ -182,9 +181,7 @@ export function BirthdayDataTable({
             <DataTableFacetedFilter
               title="Congratulate"
               options={congratulationOptions}
-              selectedValues={(
-                filters.wantsCongratulation || []
-              ).map(String)}
+              selectedValues={(filters.wantsCongratulation || []).map(String)}
               onSelectionChange={(values) =>
                 handleFilterChange('wantsCongratulation', values)
               }

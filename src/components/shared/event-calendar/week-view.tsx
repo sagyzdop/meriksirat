@@ -1,5 +1,4 @@
-
-import React, { useMemo } from "react"
+import React, { useMemo } from 'react'
 import {
   addHours,
   areIntervalsOverlapping,
@@ -15,9 +14,9 @@ import {
   isToday,
   startOfDay,
   startOfWeek,
-} from "date-fns"
+} from 'date-fns'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 import {
   DraggableEvent,
   DroppableCell,
@@ -26,8 +25,11 @@ import {
   useCurrentTimeIndicator,
   WeekCellsHeight,
   type CalendarEvent,
-} from "@/components/shared/event-calendar"
-import { EndHour, StartHour } from "@/components/shared/event-calendar/constants"
+} from '@/components/shared/event-calendar'
+import {
+  EndHour,
+  StartHour,
+} from '@/components/shared/event-calendar/constants'
 
 interface WeekViewProps {
   currentDate: Date
@@ -189,7 +191,7 @@ export function WeekView({
         currentColumn.push({ event, end: adjustedEnd })
 
         // Calculate width and left position based on number of columns
-        const width = columnIndex === 0 ? 1 : 1 - (columnIndex * 0.1)
+        const width = columnIndex === 0 ? 1 : 1 - columnIndex * 0.1
         const left = columnIndex === 0 ? 0 : columnIndex * 0.1
 
         positionedEvents.push({
@@ -216,17 +218,16 @@ export function WeekView({
   const showAllDaySection = allDayEvents.length > 0
   const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
     currentDate,
-    "week"
+    'week'
   )
 
   return (
-    <div
-      data-slot="week-view"
-      className="flex h-full flex-col"
-    >
+    <div data-slot="week-view" className="flex h-full flex-col">
       <div className="border-border/70 grid grid-cols-8 border-b bg-background">
         <div className="text-muted-foreground/70 py-2 text-center text-sm">
-          <span className="max-[479px]:sr-only">{format(currentDate, "O")}</span>
+          <span className="max-[479px]:sr-only">
+            {format(currentDate, 'O')}
+          </span>
         </div>
         {days.map((day) => (
           <div
@@ -235,9 +236,9 @@ export function WeekView({
             data-today={isToday(day) || undefined}
           >
             <span className="sm:hidden" aria-hidden="true">
-              {format(day, "E")[0]} {format(day, "d")}
+              {format(day, 'E')[0]} {format(day, 'd')}
             </span>
-            <span className="max-sm:hidden">{format(day, "EEE dd")}</span>
+            <span className="max-sm:hidden">{format(day, 'EEE dd')}</span>
           </div>
         ))}
       </div>
@@ -290,8 +291,8 @@ export function WeekView({
                         {/* Show title if it's the first day of the event or the first visible day in the week */}
                         <div
                           className={cn(
-                            "truncate",
-                            !shouldShowTitle && "invisible"
+                            'truncate',
+                            !shouldShowTitle && 'invisible'
                           )}
                           aria-hidden={!shouldShowTitle}
                         >
@@ -316,7 +317,7 @@ export function WeekView({
             >
               {index > 0 && (
                 <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
-                  {format(hour, "h a")}
+                  {format(hour, 'h a')}
                 </span>
               )}
             </div>
@@ -386,14 +387,14 @@ export function WeekView({
                         time={quarterHourTime}
                         disabled={readOnly}
                         className={cn(
-                          "absolute h-[calc(var(--week-cells-height)/4)] w-full",
-                          quarter === 0 && "top-0",
+                          'absolute h-[calc(var(--week-cells-height)/4)] w-full',
+                          quarter === 0 && 'top-0',
                           quarter === 1 &&
-                            "top-[calc(var(--week-cells-height)/4)]",
+                            'top-[calc(var(--week-cells-height)/4)]',
                           quarter === 2 &&
-                            "top-[calc(var(--week-cells-height)/4*2)]",
+                            'top-[calc(var(--week-cells-height)/4*2)]',
                           quarter === 3 &&
-                            "top-[calc(var(--week-cells-height)/4*3)]"
+                            'top-[calc(var(--week-cells-height)/4*3)]'
                         )}
                         onClick={() => {
                           if (readOnly) return

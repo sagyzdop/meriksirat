@@ -205,13 +205,14 @@ export function UploadDropzone({
           <span className="min-w-0 flex-1">
             {skippedNotice.length === 1 ? (
               <>
-                Skipped <span className="font-medium text-foreground">{skippedNotice[0]}</span>{' '}
+                Skipped{' '}
+                <span className="font-medium text-foreground">
+                  {skippedNotice[0]}
+                </span>{' '}
                 — already in the album.
               </>
             ) : (
-              <>
-                Skipped {skippedNotice.length} photos — already in the album.
-              </>
+              <>Skipped {skippedNotice.length} photos — already in the album.</>
             )}
           </span>
           <Button
@@ -273,7 +274,10 @@ export function UploadDropzone({
                   className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
                 >
                   <span
-                    className={cn('size-2 shrink-0 rounded-full', statusDot(job))}
+                    className={cn(
+                      'size-2 shrink-0 rounded-full',
+                      statusDot(job)
+                    )}
                     aria-hidden="true"
                   />
                   <span className="min-w-0 flex-1 truncate">{job.name}</span>
@@ -304,7 +308,9 @@ export function UploadDropzone({
                     <span className="text-muted-foreground/60">
                       <Check
                         className="size-4"
-                        aria-label={job.status === 'done' ? 'Uploaded' : 'Cancelled'}
+                        aria-label={
+                          job.status === 'done' ? 'Uploaded' : 'Cancelled'
+                        }
                       />
                     </span>
                   )}

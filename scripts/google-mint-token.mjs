@@ -56,7 +56,9 @@ const argRedirect = process.argv.indexOf('--redirect-uri')
 
 const PORT = argPort !== -1 ? Number(process.argv[argPort + 1]) : 8788
 const REDIRECT_URI =
-  argRedirect !== -1 ? process.argv[argRedirect + 1] : `http://localhost:${PORT}/oauth`
+  argRedirect !== -1
+    ? process.argv[argRedirect + 1]
+    : `http://localhost:${PORT}/oauth`
 const state = Math.random().toString(36).slice(2)
 
 const authUrl =
@@ -126,7 +128,9 @@ const server = createServer((req, res) => {
       console.log('==========================================')
       console.log('Granted scopes:')
       for (const scope of scopes) console.log('  -', scope)
-      console.log('\nCopy the token above into .env as GOOGLE_MASTER_REFRESH_TOKEN,')
+      console.log(
+        '\nCopy the token above into .env as GOOGLE_MASTER_REFRESH_TOKEN,'
+      )
       console.log('then restart the dev server.')
     })
     .catch((err) => console.error('\nERROR:', err.message))

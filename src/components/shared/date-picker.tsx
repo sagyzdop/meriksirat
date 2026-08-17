@@ -1,13 +1,13 @@
-import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
+import * as React from 'react'
+import { ChevronDownIcon } from 'lucide-react'
 
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from '@/components/ui/popover'
 
 interface DatePickerProps {
   value?: Date
@@ -15,7 +15,11 @@ interface DatePickerProps {
   disabled?: boolean
 }
 
-export default function DatePicker({ value, onChange, disabled }: DatePickerProps) {
+export default function DatePicker({
+  value,
+  onChange,
+  disabled,
+}: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
   const formatDate = (date: Date) => {
@@ -23,7 +27,7 @@ export default function DatePicker({ value, onChange, disabled }: DatePickerProp
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     })
   }
 
@@ -36,7 +40,7 @@ export default function DatePicker({ value, onChange, disabled }: DatePickerProp
           type="button"
           disabled={disabled}
         >
-          {value ? formatDate(value) : "Select date"}
+          {value ? formatDate(value) : 'Select date'}
           <ChevronDownIcon className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -49,7 +53,9 @@ export default function DatePicker({ value, onChange, disabled }: DatePickerProp
             onChange?.(date)
             setOpen(false)
           }}
-          disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+          disabled={(date) =>
+            date > new Date() || date < new Date('1900-01-01')
+          }
         />
       </PopoverContent>
     </Popover>

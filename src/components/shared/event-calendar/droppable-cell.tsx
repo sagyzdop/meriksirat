@@ -1,8 +1,7 @@
+import { useDroppable } from '@dnd-kit/core'
 
-import { useDroppable } from "@dnd-kit/core"
-
-import { cn } from "@/lib/utils"
-import { useCalendarDnd } from "@/components/shared/event-calendar"
+import { cn } from '@/lib/utils'
+import { useCalendarDnd } from '@/components/shared/event-calendar'
 
 interface DroppableCellProps {
   id: string
@@ -39,7 +38,7 @@ export function DroppableCell({
     time !== undefined
       ? `${Math.floor(time)}:${Math.round((time - Math.floor(time)) * 60)
           .toString()
-          .padStart(2, "0")}`
+          .padStart(2, '0')}`
       : null
 
   return (
@@ -47,7 +46,7 @@ export function DroppableCell({
       ref={setNodeRef}
       onClick={disabled ? undefined : onClick}
       className={cn(
-        "data-dragging:bg-accent flex h-full flex-col overflow-hidden px-0.5 py-1 sm:px-1",
+        'data-dragging:bg-accent flex h-full flex-col overflow-hidden px-0.5 py-1 sm:px-1',
         className
       )}
       title={formattedTime ? `${formattedTime}` : undefined}

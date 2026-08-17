@@ -22,7 +22,12 @@ interface DeleteCategoryDialogProps {
   category: CategoryWithCount
 }
 
-export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: DeleteCategoryDialogProps) {
+export function DeleteCategoryDialog({
+  open,
+  onOpenChange,
+  onClose,
+  category,
+}: DeleteCategoryDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -31,17 +36,17 @@ export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: 
 
     try {
       await deleteCategoryFn({
-        data: { categoryId: category.id }
+        data: { categoryId: category.id },
       })
 
       toast.success(
-        category.equipmentCount > 0 
+        category.equipmentCount > 0
           ? `Category "${category.name}" deleted and ${category.equipmentCount} equipment items moved to "Uncategorized"`
           : `Category "${category.name}" deleted successfully`
       )
-      
+
       onClose()
-      
+
       // Refresh the page data
       router.invalidate()
     } catch (error) {
@@ -75,10 +80,11 @@ export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: 
             Delete Category
           </DialogTitle>
           <DialogDescription>
-            This action cannot be undone. Are you sure you want to delete this category?
+            This action cannot be undone. Are you sure you want to delete this
+            category?
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="bg-muted/50 p-4 rounded-lg">
             <h4 className="font-semibold">{category.name}</h4>
@@ -88,7 +94,8 @@ export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: 
               </p>
             )}
             <p className="text-sm text-muted-foreground mt-2">
-              <strong>Equipment Count:</strong> {category.equipmentCount} {category.equipmentCount === 1 ? 'item' : 'items'}
+              <strong>Equipment Count:</strong> {category.equipmentCount}{' '}
+              {category.equipmentCount === 1 ? 'item' : 'items'}
             </p>
           </div>
 
@@ -96,8 +103,10 @@ export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: 
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                This category contains {category.equipmentCount} equipment {category.equipmentCount === 1 ? 'item' : 'items'}. 
-                All equipment will be automatically moved to the "Uncategorized" category.
+                This category contains {category.equipmentCount} equipment{' '}
+                {category.equipmentCount === 1 ? 'item' : 'items'}. All
+                equipment will be automatically moved to the "Uncategorized"
+                category.
               </AlertDescription>
             </Alert>
           )}
@@ -105,7 +114,8 @@ export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: 
           <Alert className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Warning:</strong> This action cannot be undone. The category will be permanently deleted.
+              <strong>Warning:</strong> This action cannot be undone. The
+              category will be permanently deleted.
             </AlertDescription>
           </Alert>
         </div>
@@ -119,7 +129,7 @@ export function DeleteCategoryDialog({ open, onOpenChange, onClose, category }: 
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             variant="destructive"
             onClick={handleDelete}
             disabled={isLoading}

@@ -1,5 +1,11 @@
 import { relations, sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import {
+  sqliteTable,
+  text,
+  integer,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 
 export const user = sqliteTable(
   'user',
@@ -10,51 +16,51 @@ export const user = sqliteTable(
     emailVerified: integer('email_verified', { mode: 'boolean' })
       .default(false)
       .notNull(),
-  image: text('image'),
-  // Telegram fields
-  telegramChatId: text('telegram_chat_id'),
-  telegramUsername: text('telegram_username'),
-  // Onboarding fields
-  instagramUsername: text('instagram_username'),
-  googleId: text('google_id').unique(),
-  nuId: integer('nu_id').unique(),
-  firstName: text('first_name'),
-  lastName: text('last_name'),
-  birthday: text('birthday'),
-  wantsBirthdayCongratulation: integer('wants_birthday_congratulation', {
-    mode: 'boolean',
-  }).default(true),
-  major: text('major'),
-  graduationYear: integer('graduation_year'),
-  status: text('status', {
-    enum: [
-      'Active',
-      'Inactive',
-      'On Probation',
-      'Board',
-      'Ex-Board',
-      'Roommate',
-      'Ex-Roommate',
-      'Graduated',
-    ],
-  }).default('Active'),
-  clearanceLevel: integer('clearance_level').default(1),
-  role: text('role', { enum: ['user', 'manager', 'admin'] }).default('user'),
-  onboardingComplete: integer('onboarding_complete', {
-    mode: 'boolean',
-  }).default(false),
-  // Violation counters (per booking): auto-cancelled for not starting, overdue
-  cancelledInStartWindowCount: integer('cancelled_in_start_window_count')
-    .default(0)
-    .notNull(),
-  overdueCount: integer('overdue_count').default(0).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
+    image: text('image'),
+    // Telegram fields
+    telegramChatId: text('telegram_chat_id'),
+    telegramUsername: text('telegram_username'),
+    // Onboarding fields
+    instagramUsername: text('instagram_username'),
+    googleId: text('google_id').unique(),
+    nuId: integer('nu_id').unique(),
+    firstName: text('first_name'),
+    lastName: text('last_name'),
+    birthday: text('birthday'),
+    wantsBirthdayCongratulation: integer('wants_birthday_congratulation', {
+      mode: 'boolean',
+    }).default(true),
+    major: text('major'),
+    graduationYear: integer('graduation_year'),
+    status: text('status', {
+      enum: [
+        'Active',
+        'Inactive',
+        'On Probation',
+        'Board',
+        'Ex-Board',
+        'Roommate',
+        'Ex-Roommate',
+        'Graduated',
+      ],
+    }).default('Active'),
+    clearanceLevel: integer('clearance_level').default(1),
+    role: text('role', { enum: ['user', 'manager', 'admin'] }).default('user'),
+    onboardingComplete: integer('onboarding_complete', {
+      mode: 'boolean',
+    }).default(false),
+    // Violation counters (per booking): auto-cancelled for not starting, overdue
+    cancelledInStartWindowCount: integer('cancelled_in_start_window_count')
+      .default(0)
+      .notNull(),
+    overdueCount: integer('overdue_count').default(0).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
   },
   (table) => [
     index('user_role_idx').on(table.role),
@@ -191,7 +197,9 @@ export const equipment = sqliteTable(
   (table) => [
     index('equipment_categoryId_idx').on(table.categoryId),
     index('equipment_isActive_idx').on(table.isActive),
-    index('equipment_requiredClearanceLevel_idx').on(table.requiredClearanceLevel),
+    index('equipment_requiredClearanceLevel_idx').on(
+      table.requiredClearanceLevel
+    ),
   ]
 )
 
@@ -203,10 +211,10 @@ export const category = sqliteTable('category', {
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
 })
 
 // Bookings Table
@@ -221,16 +229,31 @@ export const booking = sqliteTable(
     startTime: integer('start_time', { mode: 'timestamp_ms' }).notNull(),
     endTime: integer('end_time', { mode: 'timestamp_ms' }).notNull(),
     status: text('status', {
-      enum: ['booked', 'active', 'returned', 'cancelled', 'overdue', 'partially_returned'],
+      enum: [
+        'booked',
+        'active',
+        'returned',
+        'cancelled',
+        'overdue',
+        'partially_returned',
+      ],
     })
       .notNull()
       .default('booked'),
     userEventDetails: text('user_event_details'), // User-provided booking notes
     startedAt: integer('started_at', { mode: 'timestamp_ms' }), // Actual pickup time
-    startReminderSentAt: integer('start_reminder_sent_at', { mode: 'timestamp_ms' }),
-    startWarningSentAt: integer('start_warning_sent_at', { mode: 'timestamp_ms' }),
-    returnReminderSentAt: integer('return_reminder_sent_at', { mode: 'timestamp_ms' }),
-    graceWarningSentAt: integer('grace_warning_sent_at', { mode: 'timestamp_ms' }),
+    startReminderSentAt: integer('start_reminder_sent_at', {
+      mode: 'timestamp_ms',
+    }),
+    startWarningSentAt: integer('start_warning_sent_at', {
+      mode: 'timestamp_ms',
+    }),
+    returnReminderSentAt: integer('return_reminder_sent_at', {
+      mode: 'timestamp_ms',
+    }),
+    graceWarningSentAt: integer('grace_warning_sent_at', {
+      mode: 'timestamp_ms',
+    }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
@@ -349,7 +372,10 @@ export const albumMember = sqliteTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('album_member_albumId_userId_idx').on(table.albumId, table.userId),
+    uniqueIndex('album_member_albumId_userId_idx').on(
+      table.albumId,
+      table.userId
+    ),
     index('album_member_userId_idx').on(table.userId),
   ]
 )

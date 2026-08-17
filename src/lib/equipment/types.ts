@@ -33,7 +33,15 @@ export const EquipmentFiltersSchema = z.object({
   maxClearanceLevel: z.coerce.number().optional(),
   isActive: z.array(z.boolean()).optional(),
   // Sorting
-  sortBy: z.enum(['modelName', 'category', 'requiredClearanceLevel', 'isActive', 'createdAt']).optional(),
+  sortBy: z
+    .enum([
+      'modelName',
+      'category',
+      'requiredClearanceLevel',
+      'isActive',
+      'createdAt',
+    ])
+    .optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
 })
 
@@ -65,23 +73,34 @@ export interface PaginatedEquipmentResponse extends EquipmentResponse {
 // Admin equipment management schemas
 export const CreateEquipmentSchema = z.object({
   modelName: z.string().min(1, 'Model name is required'),
-  shortName: z.string().optional().transform(val => val && val.trim() !== '' ? val : undefined),
-  description: z.string().optional().transform(val => val && val.trim() !== '' ? val : undefined),
+  shortName: z
+    .string()
+    .optional()
+    .transform((val) => (val && val.trim() !== '' ? val : undefined)),
+  description: z
+    .string()
+    .optional()
+    .transform((val) => (val && val.trim() !== '' ? val : undefined)),
   categoryId: z.number().min(1, 'Category is required'),
   googleCalendarId: z.string().min(1, 'Google Calendar ID is required'),
   requiredClearanceLevel: z.number().min(1).default(1),
-  imagePath: z.string().optional().transform(val => val && val.trim() !== '' ? val : undefined),
+  imagePath: z
+    .string()
+    .optional()
+    .transform((val) => (val && val.trim() !== '' ? val : undefined)),
 })
 
 export const UpdateEquipmentSchema = CreateEquipmentSchema.extend({
   equipmentId: z.number(),
   isActive: z.boolean().optional(),
-}).partial().extend({
-  equipmentId: z.number(), // equipmentId is always required
 })
+  .partial()
+  .extend({
+    equipmentId: z.number(), // equipmentId is always required
+  })
 
 export const DeleteEquipmentSchema = z.object({
-  equipmentId: z.number()
+  equipmentId: z.number(),
 })
 
 export const UploadEquipmentImageSchema = z.object({

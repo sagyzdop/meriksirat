@@ -34,9 +34,7 @@ export interface BookingDetailInput {
  */
 const CLUB_TIMEZONE = 'Asia/Karachi'
 
-export function formatBookingTimestamp(
-  value: Date | string | number
-): string {
+export function formatBookingTimestamp(value: Date | string | number): string {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
   return date.toLocaleString('en-US', {
@@ -78,14 +76,23 @@ export function buildBookingDetailFields(
   }
 
   if (input.startedAt) {
-    fields.push({ label: 'Actual start', value: formatBookingTimestamp(input.startedAt) })
+    fields.push({
+      label: 'Actual start',
+      value: formatBookingTimestamp(input.startedAt),
+    })
   }
 
   if (input.returnedAt) {
-    fields.push({ label: 'Actual return', value: formatBookingTimestamp(input.returnedAt) })
+    fields.push({
+      label: 'Actual return',
+      value: formatBookingTimestamp(input.returnedAt),
+    })
   }
 
-  fields.push({ label: 'Status', value: input.status ? input.status.toUpperCase() : '—' })
+  fields.push({
+    label: 'Status',
+    value: input.status ? input.status.toUpperCase() : '—',
+  })
   fields.push({
     label: 'Notes',
     value: input.notes?.trim() || 'No additional notes',

@@ -36,7 +36,11 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
 const GOOGLE_MASTER_REFRESH_TOKEN = process.env.GOOGLE_MASTER_REFRESH_TOKEN
 
-for (const key of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_MASTER_REFRESH_TOKEN']) {
+for (const key of [
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'GOOGLE_MASTER_REFRESH_TOKEN',
+]) {
   if (!process.env[key]) throw new Error(`${key} is not set in .env`)
 }
 
@@ -54,7 +58,9 @@ async function getGoogleAccessToken() {
     }),
   })
   if (!response.ok) {
-    throw new Error(`Failed to refresh Google access token: ${await response.text()}`)
+    throw new Error(
+      `Failed to refresh Google access token: ${await response.text()}`
+    )
   }
   const data = await response.json()
   return data.access_token
@@ -94,13 +100,15 @@ const raw = runWrangler(query)
 const parsed = JSON.parse(raw)
 const rows = Array.isArray(parsed)
   ? parsed.flatMap((entry) => entry.results ?? [])
-  : parsed.results ?? []
+  : (parsed.results ?? [])
 
 console.log(`Found ${rows.length} booking item(s) with calendar events.`)
 
 if (dryRun) {
   for (const row of rows) {
-    console.log(`  [dry-run] would delete event ${row.gcal_event_id} from calendar ${row.calendar_id} (booking #${row.booking_id})`)
+    console.log(
+      `  [dry-run] would delete event ${row.gcal_event_id} from calendar ${row.calendar_id} (booking #${row.booking_id})`
+    )
   }
   console.log('Dry run complete. Nothing was changed.')
   process.exit(0)
@@ -113,28 +121,46 @@ if (rows.length > 0) {
 
   for (const row of rows) {
     try {
-      const ok = await deleteCalendarEvent(accessToken, row.calendar_id, row.gcal_event_id)
+      const ok = await deleteCalendarEvent(
+        accessToken,
+        row.calendar_id,
+        row.gcal_event_id
+      )
       if (ok) {
         deleted++
-        console.log(`  deleted event ${row.gcal_event_id} (booking #${row.booking_id})`)
+        console.log(
+          `  deleted event ${row.gcal_event_id} (booking #${row.booking_id})`
+        )
       } else {
         failed++
-        console.error(`  FAILED to delete event ${row.gcal_event_id} (booking #${row.booking_id})`)
+        console.error(
+          `  FAILED to delete event ${row.gcal_event_id} (booking #${row.booking_id})`
+        )
       }
     } catch (error) {
       failed++
-      console.error(`  ERROR deleting event ${row.gcal_event_id}: ${error.message}`)
+      console.error(
+        `  ERROR deleting event ${row.gcal_event_id}: ${error.message}`
+      )
     }
   }
 
-  console.log(`Calendar cleanup finished: ${deleted} deleted, ${failed} failed.`)
+  console.log(
+    `Calendar cleanup finished: ${deleted} deleted, ${failed} failed.`
+  )
 }
 
 // ---- Step 2: clear the booking table ----
 const total = await new Promise((resolve) => {
-  const out = runWrangler(['--command', 'SELECT count(*) AS total FROM booking', '--json'])
+  const out = runWrangler([
+    '--command',
+    'SELECT count(*) AS total FROM booking',
+    '--json',
+  ])
   const parsedOut = JSON.parse(out)
-  const results = Array.isArray(parsedOut) ? parsedOut.flatMap((e) => e.results ?? []) : parsedOut.results ?? []
+  const results = Array.isArray(parsedOut)
+    ? parsedOut.flatMap((e) => e.results ?? [])
+    : (parsedOut.results ?? [])
   resolve(Number(results[0]?.total ?? 0))
 })
 

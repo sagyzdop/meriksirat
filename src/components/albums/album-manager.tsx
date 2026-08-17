@@ -36,10 +36,7 @@ import {
   updateAlbumFn,
 } from '@/lib/albums'
 import type { AlbumDetail } from '@/lib/albums'
-import {
-  clearUploadReveal,
-  useUploadReveal,
-} from '@/lib/albums/upload-manager'
+import { clearUploadReveal, useUploadReveal } from '@/lib/albums/upload-manager'
 
 interface AlbumManagerProps {
   album: AlbumDetail
@@ -124,7 +121,9 @@ export function AlbumManager({
     if (!currentUserId) return
     setBusy(true)
     try {
-      await removeMemberFn({ data: { albumId: album.id, userId: currentUserId } })
+      await removeMemberFn({
+        data: { albumId: album.id, userId: currentUserId },
+      })
       toast.success('You left the album')
       setLeaveOpen(false)
       onDeleted()
@@ -207,9 +206,9 @@ export function AlbumManager({
           <TriangleAlert />
           <AlertTitle>Album folder deleted from Google Drive</AlertTitle>
           <AlertDescription>
-            The folder behind this album was permanently deleted, so its
-            photos are gone. You can recreate an empty folder to keep
-            uploading, or delete the album.
+            The folder behind this album was permanently deleted, so its photos
+            are gone. You can recreate an empty folder to keep uploading, or
+            delete the album.
             <Button
               type="button"
               variant="outline"
@@ -234,8 +233,8 @@ export function AlbumManager({
           <TriangleAlert />
           <AlertTitle>Album folder is in the Google Drive bin</AlertTitle>
           <AlertDescription>
-            The folder behind this album was moved to the bin in Drive.
-            Uploads are paused until it is restored.
+            The folder behind this album was moved to the bin in Drive. Uploads
+            are paused until it is restored.
             <Button
               type="button"
               variant="outline"
@@ -306,11 +305,7 @@ export function AlbumManager({
             onClick={handleRefresh}
             disabled={refreshing}
           >
-            {refreshing ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <RefreshCw />
-            )}
+            {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
             Refresh
           </Button>
           {isManager && (

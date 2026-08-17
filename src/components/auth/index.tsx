@@ -4,10 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
 
-export function Page({
-  className,
-  ...props
-}: React.ComponentProps<'div'>) {
+export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   const handleGoogleSignIn = async () => {
     try {
       await authClient.signIn.social({
@@ -58,7 +55,15 @@ export function Page({
       </FieldGroup>
 
       <FieldDescription className="px-6 text-center">
-        Made by <a href="https://sagyzdop.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">sagyzdop</a>
+        Made by{' '}
+        <a
+          href="https://sagyzdop.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-primary"
+        >
+          sagyzdop
+        </a>
       </FieldDescription>
     </div>
   )

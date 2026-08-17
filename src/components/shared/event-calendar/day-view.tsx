@@ -1,5 +1,4 @@
-
-import React, { useMemo } from "react"
+import React, { useMemo } from 'react'
 import {
   addHours,
   areIntervalsOverlapping,
@@ -10,9 +9,9 @@ import {
   getMinutes,
   isSameDay,
   startOfDay,
-} from "date-fns"
+} from 'date-fns'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 import {
   DraggableEvent,
   DroppableCell,
@@ -21,8 +20,11 @@ import {
   useCurrentTimeIndicator,
   WeekCellsHeight,
   type CalendarEvent,
-} from "@/components/shared/event-calendar"
-import { EndHour, StartHour } from "@/components/shared/event-calendar/constants"
+} from '@/components/shared/event-calendar'
+import {
+  EndHour,
+  StartHour,
+} from '@/components/shared/event-calendar/constants'
 
 interface DayViewProps {
   currentDate: Date
@@ -162,7 +164,7 @@ export function DayView({
       currentColumn.push({ event, end: adjustedEnd })
 
       // First column takes full width, others are indented by 10% and take 90% width
-      const width = columnIndex === 0 ? 1 : 1 - (columnIndex * 0.1)
+      const width = columnIndex === 0 ? 1 : 1 - columnIndex * 0.1
       const left = columnIndex === 0 ? 0 : columnIndex * 0.1
 
       result.push({
@@ -186,7 +188,7 @@ export function DayView({
   const showAllDaySection = allDayEvents.length > 0
   const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
     currentDate,
-    "day"
+    'day'
   )
 
   return (
@@ -234,7 +236,7 @@ export function DayView({
             >
               {index > 0 && (
                 <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
-                  {format(hour, "h a")}
+                  {format(hour, 'h a')}
                 </span>
               )}
             </div>
@@ -300,14 +302,14 @@ export function DayView({
                       time={quarterHourTime}
                       disabled={readOnly}
                       className={cn(
-                        "absolute h-[calc(var(--week-cells-height)/4)] w-full",
-                        quarter === 0 && "top-0",
+                        'absolute h-[calc(var(--week-cells-height)/4)] w-full',
+                        quarter === 0 && 'top-0',
                         quarter === 1 &&
-                          "top-[calc(var(--week-cells-height)/4)]",
+                          'top-[calc(var(--week-cells-height)/4)]',
                         quarter === 2 &&
-                          "top-[calc(var(--week-cells-height)/4*2)]",
+                          'top-[calc(var(--week-cells-height)/4*2)]',
                         quarter === 3 &&
-                          "top-[calc(var(--week-cells-height)/4*3)]"
+                          'top-[calc(var(--week-cells-height)/4*3)]'
                       )}
                       onClick={() => {
                         if (readOnly) return

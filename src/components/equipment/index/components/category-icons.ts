@@ -7,7 +7,7 @@ import {
   Package,
   Zap,
   type LucideIcon,
-} from "lucide-react";
+} from 'lucide-react'
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   cameras: Camera,
@@ -16,8 +16,8 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   triggers: Zap,
   storage: HardDrive,
   batteries: Battery,
-};
+}
 
 export function getCategoryIcon(name: string): LucideIcon {
-  return CATEGORY_ICONS[name.trim().toLowerCase()] ?? Package;
+  return CATEGORY_ICONS[name.trim().toLowerCase()] ?? Package
 }

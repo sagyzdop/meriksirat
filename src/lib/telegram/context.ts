@@ -1,6 +1,6 @@
 /**
  * Custom Telegram Context
- * 
+ *
  * Replaces Telegraf's Context with a simpler version that works in Cloudflare Workers
  */
 

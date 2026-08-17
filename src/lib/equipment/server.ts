@@ -10,6 +10,6 @@ export async function getUserClearanceLevel(userId: string): Promise<number> {
     .from(user)
     .where(eq(user.id, userId))
     .get()
-  
+
   return userData?.clearanceLevel || 1
 }

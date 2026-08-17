@@ -27,7 +27,8 @@ export function Page({ categories, isLoading = false }: PageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<CategoryWithCount | null>(null)
+  const [selectedCategory, setSelectedCategory] =
+    useState<CategoryWithCount | null>(null)
 
   const handleEdit = (category: CategoryWithCount) => {
     setSelectedCategory(category)
@@ -46,9 +47,10 @@ export function Page({ categories, isLoading = false }: PageProps) {
     setSelectedCategory(null)
   }
 
-  const description = categories.length > 0
-    ? `Managing ${categories.length} categor${categories.length === 1 ? 'y' : 'ies'}`
-    : "No categories found"
+  const description =
+    categories.length > 0
+      ? `Managing ${categories.length} categor${categories.length === 1 ? 'y' : 'ies'}`
+      : 'No categories found'
 
   return (
     <PageContainer>

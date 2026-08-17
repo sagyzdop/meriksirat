@@ -1,7 +1,7 @@
-import { Input } from "@/components/ui/input";
-import { useDebounce } from "@/hooks/use-debounce";
-import { Search, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Input } from '@/components/ui/input'
+import { useDebounce } from '@/hooks/use-debounce'
+import { Search, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 interface EquipmentSearchProps {
   searchQuery?: string
@@ -9,8 +9,12 @@ interface EquipmentSearchProps {
   className?: string
 }
 
-export function EquipmentSearch({ searchQuery, onSearchChange, className }: EquipmentSearchProps) {
-  const searchQueryValue = searchQuery || ""
+export function EquipmentSearch({
+  searchQuery,
+  onSearchChange,
+  className,
+}: EquipmentSearchProps) {
+  const searchQueryValue = searchQuery || ''
   const [localValue, setLocalValue] = useState(searchQueryValue)
   const debouncedValue = useDebounce(localValue, 300)
 
@@ -29,7 +33,7 @@ export function EquipmentSearch({ searchQuery, onSearchChange, className }: Equi
   }, [searchQueryValue])
 
   return (
-    <div className={`relative ${className ?? ""}`}>
+    <div className={`relative ${className ?? ''}`}>
       <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={localValue}
@@ -40,7 +44,7 @@ export function EquipmentSearch({ searchQuery, onSearchChange, className }: Equi
       {localValue && (
         <button
           type="button"
-          onClick={() => setLocalValue("")}
+          onClick={() => setLocalValue('')}
           aria-label="Clear search"
           className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground"
         >

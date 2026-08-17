@@ -1,5 +1,4 @@
-
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from 'react'
 import {
   addDays,
   addHours,
@@ -15,25 +14,25 @@ import {
   startOfWeek,
   subMonths,
   subWeeks,
-} from "date-fns"
+} from 'date-fns'
 import {
   CalendarCheck,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   PlusIcon,
-} from "lucide-react"
-import { toast } from "sonner"
+} from 'lucide-react'
+import { toast } from 'sonner'
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu'
 import {
   AgendaDaysToShow,
   AgendaView,
@@ -47,7 +46,7 @@ import {
   MonthView,
   WeekCellsHeight,
   WeekView,
-} from "@/components/shared/event-calendar"
+} from '@/components/shared/event-calendar'
 
 export interface EventCalendarProps {
   events?: CalendarEvent[]
@@ -74,7 +73,7 @@ export function EventCalendar({
   onEventDelete,
   className,
   containerClassName,
-  initialView = "month",
+  initialView = 'month',
   availableViews,
   readOnly = false,
   weekCellsHeight,
@@ -86,14 +85,14 @@ export function EventCalendar({
     () =>
       availableViews && availableViews.length > 0
         ? availableViews
-        : ["month", "week", "day", "agenda"],
+        : ['month', 'week', 'day', 'agenda'],
     [availableViews]
   )
   const resolvedInitialView = useMemo<CalendarView>(
     () =>
       resolvedViews.includes(initialView)
         ? initialView
-        : resolvedViews[0] || "month",
+        : resolvedViews[0] || 'month',
     [resolvedViews, initialView]
   )
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
@@ -127,21 +126,21 @@ export function EventCalendar({
       }
 
       const key = e.key.toLowerCase()
-      if (key === "m" && resolvedViews.includes("month")) {
-        setView("month")
-      } else if (key === "w" && resolvedViews.includes("week")) {
-        setView("week")
-      } else if (key === "d" && resolvedViews.includes("day")) {
-        setView("day")
-      } else if (key === "a" && resolvedViews.includes("agenda")) {
-        setView("agenda")
+      if (key === 'm' && resolvedViews.includes('month')) {
+        setView('month')
+      } else if (key === 'w' && resolvedViews.includes('week')) {
+        setView('week')
+      } else if (key === 'd' && resolvedViews.includes('day')) {
+        setView('day')
+      } else if (key === 'a' && resolvedViews.includes('agenda')) {
+        setView('agenda')
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown)
     }
   }, [isEventDialogOpen, resolvedViews])
 
@@ -149,7 +148,7 @@ export function EventCalendar({
     if (!currentDate) return
     if (!onRangeChange) return
 
-    if (view === "month") {
+    if (view === 'month') {
       onRangeChange({
         start: startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 }),
         end: endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 }),
@@ -158,7 +157,7 @@ export function EventCalendar({
       return
     }
 
-    if (view === "week") {
+    if (view === 'week') {
       onRangeChange({
         start: startOfWeek(currentDate, { weekStartsOn: 0 }),
         end: endOfWeek(currentDate, { weekStartsOn: 0 }),
@@ -167,7 +166,7 @@ export function EventCalendar({
       return
     }
 
-    if (view === "day") {
+    if (view === 'day') {
       onRangeChange({
         start: startOfDay(currentDate),
         end: endOfDay(currentDate),
@@ -185,13 +184,13 @@ export function EventCalendar({
 
   const handlePrevious = () => {
     if (!currentDate) return
-    if (view === "month") {
+    if (view === 'month') {
       setCurrentDate(subMonths(currentDate, 1))
-    } else if (view === "week") {
+    } else if (view === 'week') {
       setCurrentDate(subWeeks(currentDate, 1))
-    } else if (view === "day") {
+    } else if (view === 'day') {
       setCurrentDate(addDays(currentDate, -1))
-    } else if (view === "agenda") {
+    } else if (view === 'agenda') {
       // For agenda view, go back 30 days (a full month)
       setCurrentDate(addDays(currentDate, -AgendaDaysToShow))
     }
@@ -199,13 +198,13 @@ export function EventCalendar({
 
   const handleNext = () => {
     if (!currentDate) return
-    if (view === "month") {
+    if (view === 'month') {
       setCurrentDate(addMonths(currentDate, 1))
-    } else if (view === "week") {
+    } else if (view === 'week') {
       setCurrentDate(addWeeks(currentDate, 1))
-    } else if (view === "day") {
+    } else if (view === 'day') {
       setCurrentDate(addDays(currentDate, 1))
-    } else if (view === "agenda") {
+    } else if (view === 'agenda') {
       // For agenda view, go forward 30 days (a full month)
       setCurrentDate(addDays(currentDate, AgendaDaysToShow))
     }
@@ -239,8 +238,8 @@ export function EventCalendar({
     }
 
     const newEvent: CalendarEvent = {
-      id: "",
-      title: "",
+      id: '',
+      title: '',
       start: startTime,
       end: addHours(startTime, 1),
       allDay: false,
@@ -255,8 +254,8 @@ export function EventCalendar({
       onEventUpdate?.(event)
       // Show toast notification when an event is updated
       toast(`Event "${event.title}" updated`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
-        position: "bottom-left",
+        description: format(new Date(event.start), 'MMM d, yyyy'),
+        position: 'bottom-left',
       })
     } else {
       onEventAdd?.({
@@ -265,8 +264,8 @@ export function EventCalendar({
       })
       // Show toast notification when an event is added
       toast(`Event "${event.title}" added`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
-        position: "bottom-left",
+        description: format(new Date(event.start), 'MMM d, yyyy'),
+        position: 'bottom-left',
       })
     }
     setIsEventDialogOpen(false)
@@ -283,8 +282,8 @@ export function EventCalendar({
     // Show toast notification when an event is deleted
     if (deletedEvent) {
       toast(`Event "${deletedEvent.title}" deleted`, {
-        description: format(new Date(deletedEvent.start), "MMM d, yyyy"),
-        position: "bottom-left",
+        description: format(new Date(deletedEvent.start), 'MMM d, yyyy'),
+        position: 'bottom-left',
       })
     }
   }
@@ -295,49 +294,49 @@ export function EventCalendar({
 
     // Show toast notification when an event is updated via drag and drop
     toast(`Event "${updatedEvent.title}" moved`, {
-      description: format(new Date(updatedEvent.start), "MMM d, yyyy"),
-      position: "bottom-left",
+      description: format(new Date(updatedEvent.start), 'MMM d, yyyy'),
+      position: 'bottom-left',
     })
   }
 
   const viewTitle = useMemo(() => {
     if (!currentDate) return null
-    if (view === "month") {
-      return format(currentDate, "MMMM yyyy")
-    } else if (view === "week") {
+    if (view === 'month') {
+      return format(currentDate, 'MMMM yyyy')
+    } else if (view === 'week') {
       const start = startOfWeek(currentDate, { weekStartsOn: 0 })
       const end = endOfWeek(currentDate, { weekStartsOn: 0 })
       if (isSameMonth(start, end)) {
-        return format(start, "MMMM yyyy")
+        return format(start, 'MMMM yyyy')
       } else {
-        return `${format(start, "MMM")} - ${format(end, "MMM yyyy")}`
+        return `${format(start, 'MMM')} - ${format(end, 'MMM yyyy')}`
       }
-    } else if (view === "day") {
+    } else if (view === 'day') {
       return (
         <>
           <span className="min-[480px]:hidden" aria-hidden="true">
-            {format(currentDate, "MMM d, yyyy")}
+            {format(currentDate, 'MMM d, yyyy')}
           </span>
           <span className="max-[479px]:hidden md:hidden" aria-hidden="true">
-            {format(currentDate, "MMMM d, yyyy")}
+            {format(currentDate, 'MMMM d, yyyy')}
           </span>
           <span className="max-md:hidden">
-            {format(currentDate, "EEE MMMM d, yyyy")}
+            {format(currentDate, 'EEE MMMM d, yyyy')}
           </span>
         </>
       )
-    } else if (view === "agenda") {
+    } else if (view === 'agenda') {
       // Show the month range for agenda view
       const start = currentDate
       const end = addDays(currentDate, AgendaDaysToShow - 1)
 
       if (isSameMonth(start, end)) {
-        return format(start, "MMMM yyyy")
+        return format(start, 'MMMM yyyy')
       } else {
-        return `${format(start, "MMM")} - ${format(end, "MMM yyyy")}`
+        return `${format(start, 'MMM')} - ${format(end, 'MMM yyyy')}`
       }
     } else {
-      return format(currentDate, "MMMM yyyy")
+      return format(currentDate, 'MMMM yyyy')
     }
   }, [currentDate, view])
 
@@ -345,7 +344,7 @@ export function EventCalendar({
     return (
       <div
         className={cn(
-          "flex min-h-0 flex-col rounded-lg border",
+          'flex min-h-0 flex-col rounded-lg border',
           containerClassName
         )}
         aria-busy="true"
@@ -356,21 +355,21 @@ export function EventCalendar({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col rounded-lg border has-data-[slot=month-view]:flex-1",
+        'flex min-h-0 flex-col rounded-lg border has-data-[slot=month-view]:flex-1',
         containerClassName
       )}
       style={
         {
-          "--event-height": `${EventHeight}px`,
-          "--event-gap": `${EventGap}px`,
-          "--week-cells-height": `${resolvedWeekCellsHeight}px`,
+          '--event-height': `${EventHeight}px`,
+          '--event-gap': `${EventGap}px`,
+          '--week-cells-height': `${resolvedWeekCellsHeight}px`,
         } as React.CSSProperties
       }
     >
       <CalendarDndProvider onEventUpdate={handleEventUpdate}>
         <div
           className={cn(
-            "flex items-center justify-between p-2 sm:p-4",
+            'flex items-center justify-between p-2 sm:p-4',
             className
           )}
         >
@@ -430,23 +429,23 @@ export function EventCalendar({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-32">
-                  {resolvedViews.includes("month") && (
-                    <DropdownMenuItem onClick={() => setView("month")}>
+                  {resolvedViews.includes('month') && (
+                    <DropdownMenuItem onClick={() => setView('month')}>
                       Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
                     </DropdownMenuItem>
                   )}
-                  {resolvedViews.includes("week") && (
-                    <DropdownMenuItem onClick={() => setView("week")}>
+                  {resolvedViews.includes('week') && (
+                    <DropdownMenuItem onClick={() => setView('week')}>
                       Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
                     </DropdownMenuItem>
                   )}
-                  {resolvedViews.includes("day") && (
-                    <DropdownMenuItem onClick={() => setView("day")}>
+                  {resolvedViews.includes('day') && (
+                    <DropdownMenuItem onClick={() => setView('day')}>
                       Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
                     </DropdownMenuItem>
                   )}
-                  {resolvedViews.includes("agenda") && (
-                    <DropdownMenuItem onClick={() => setView("agenda")}>
+                  {resolvedViews.includes('agenda') && (
+                    <DropdownMenuItem onClick={() => setView('agenda')}>
                       Agenda <DropdownMenuShortcut>A</DropdownMenuShortcut>
                     </DropdownMenuItem>
                   )}
@@ -473,7 +472,7 @@ export function EventCalendar({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          {view === "month" && resolvedViews.includes("month") && (
+          {view === 'month' && resolvedViews.includes('month') && (
             <MonthView
               currentDate={currentDate}
               events={events}
@@ -482,7 +481,7 @@ export function EventCalendar({
               readOnly={readOnly}
             />
           )}
-          {view === "week" && resolvedViews.includes("week") && (
+          {view === 'week' && resolvedViews.includes('week') && (
             <WeekView
               currentDate={currentDate}
               events={events}
@@ -492,7 +491,7 @@ export function EventCalendar({
               weekCellsHeight={resolvedWeekCellsHeight}
             />
           )}
-          {view === "day" && resolvedViews.includes("day") && (
+          {view === 'day' && resolvedViews.includes('day') && (
             <DayView
               currentDate={currentDate}
               events={events}
@@ -502,7 +501,7 @@ export function EventCalendar({
               weekCellsHeight={resolvedWeekCellsHeight}
             />
           )}
-          {view === "agenda" && resolvedViews.includes("agenda") && (
+          {view === 'agenda' && resolvedViews.includes('agenda') && (
             <AgendaView
               currentDate={currentDate}
               events={events}

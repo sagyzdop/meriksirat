@@ -1,5 +1,5 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 
 export function EquipmentSkeleton() {
   return (
@@ -21,5 +21,5 @@ export function EquipmentSkeleton() {
         <Skeleton className="h-9 w-full" />
       </CardFooter>
     </Card>
-  );
+  )
 }

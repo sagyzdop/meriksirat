@@ -13,7 +13,9 @@ describe('deriveParentBookingStatus', () => {
   })
 
   it('returns returned when every non-cancelled item was returned', () => {
-    expect(deriveParentBookingStatus(['returned', 'cancelled'])).toBe('returned')
+    expect(deriveParentBookingStatus(['returned', 'cancelled'])).toBe(
+      'returned'
+    )
     expect(
       deriveParentBookingStatus(['returned', 'cancelled', 'returned'])
     ).toBe('returned')

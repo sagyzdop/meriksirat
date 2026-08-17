@@ -1,5 +1,4 @@
-
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   addDays,
   eachDayOfInterval,
@@ -11,13 +10,13 @@ import {
   isToday,
   startOfMonth,
   startOfWeek,
-} from "date-fns"
+} from 'date-fns'
 
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from '@/components/ui/popover'
 import {
   DraggableEvent,
   DroppableCell,
@@ -30,8 +29,8 @@ import {
   sortEvents,
   useEventVisibility,
   type CalendarEvent,
-} from "@/components/shared/event-calendar"
-import { DefaultStartHour } from "@/components/shared/event-calendar/constants"
+} from '@/components/shared/event-calendar'
+import { DefaultStartHour } from '@/components/shared/event-calendar/constants'
 
 interface MonthViewProps {
   currentDate: Date
@@ -61,7 +60,7 @@ export function MonthView({
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
     return Array.from({ length: 7 }).map((_, i) => {
       const date = addDays(weekStart, i)
-      return format(date, "EEE")
+      return format(date, 'EEE')
     })
   }, [currentDate])
 
@@ -152,7 +151,7 @@ export function MonthView({
                     }}
                   >
                     <div className="group-data-today:bg-primary group-data-today:text-primary-foreground mt-1 inline-flex size-6 items-center justify-center rounded-full text-sm">
-                      {format(day, "d")}
+                      {format(day, 'd')}
                     </div>
                     <div
                       ref={isReferenceCell ? contentRef : null}
@@ -174,7 +173,7 @@ export function MonthView({
                             <div
                               key={`spanning-${event.id}-${day.toISOString().slice(0, 10)}`}
                               className="aria-hidden:hidden"
-                              aria-hidden={isHidden ? "true" : undefined}
+                              aria-hidden={isHidden ? 'true' : undefined}
                             >
                               <EventItem
                                 onClick={(e) => handleEventClick(event, e)}
@@ -188,8 +187,8 @@ export function MonthView({
                                     <span>
                                       {format(
                                         new Date(event.start),
-                                        "h:mm"
-                                      )}{" "}
+                                        'h:mm'
+                                      )}{' '}
                                     </span>
                                   )}
                                   {event.title}
@@ -203,7 +202,7 @@ export function MonthView({
                           <div
                             key={event.id}
                             className="aria-hidden:hidden"
-                            aria-hidden={isHidden ? "true" : undefined}
+                            aria-hidden={isHidden ? 'true' : undefined}
                           >
                             <DraggableEvent
                               event={event}
@@ -225,7 +224,7 @@ export function MonthView({
                               onClick={(e) => e.stopPropagation()}
                             >
                               <span>
-                                + {remainingCount}{" "}
+                                + {remainingCount}{' '}
                                 <span className="max-sm:sr-only">more</span>
                               </span>
                             </button>
@@ -235,13 +234,13 @@ export function MonthView({
                             className="max-w-52 p-3"
                             style={
                               {
-                                "--event-height": `${EventHeight}px`,
+                                '--event-height': `${EventHeight}px`,
                               } as React.CSSProperties
                             }
                           >
                             <div className="space-y-2">
                               <div className="text-sm font-medium">
-                                {format(day, "EEE d")}
+                                {format(day, 'EEE d')}
                               </div>
                               <div className="space-y-1">
                                 {sortEvents(allEvents).map((event) => {

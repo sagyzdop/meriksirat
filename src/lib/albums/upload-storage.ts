@@ -94,7 +94,9 @@ export async function saveUploadFiles(
   }
 }
 
-export async function getUploadFiles(ids: string[]): Promise<Map<string, File>> {
+export async function getUploadFiles(
+  ids: string[]
+): Promise<Map<string, File>> {
   const result = new Map<string, File>()
   if (typeof indexedDB === 'undefined' || ids.length === 0) return result
   try {

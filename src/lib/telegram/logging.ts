@@ -392,10 +392,7 @@ export async function logAlbumActivity(input: {
  */
 export async function logAlbumActivityByUser(
   userId: string,
-  input: Omit<
-    Parameters<typeof logAlbumActivity>[0],
-    'actor'
-  >
+  input: Omit<Parameters<typeof logAlbumActivity>[0], 'actor'>
 ): Promise<void> {
   try {
     if (!isTelegramLoggingEnabled()) return

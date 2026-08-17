@@ -1,12 +1,11 @@
-
-import { createEquipmentColumns } from "./components/equipment-columns"
-import { EquipmentDataTable } from "./components/equipment-data-table"
-import { EquipmentWithCategory } from "@/lib/equipment"
-import { PageContainer } from "@/components/layout/page-container"
-import { PageHeader } from "@/components/layout/page-header"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import { Link } from "@tanstack/react-router"
+import { createEquipmentColumns } from './components/equipment-columns'
+import { EquipmentDataTable } from './components/equipment-data-table'
+import { EquipmentWithCategory } from '@/lib/equipment'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 
 interface Pagination {
   page: number
@@ -25,7 +24,12 @@ interface Filters {
   isActive?: boolean[]
   page: number
   limit: number
-  sortBy: 'modelName' | 'category' | 'requiredClearanceLevel' | 'isActive' | 'createdAt'
+  sortBy:
+    | 'modelName'
+    | 'category'
+    | 'requiredClearanceLevel'
+    | 'isActive'
+    | 'createdAt'
   sortOrder: 'asc' | 'desc'
 }
 
@@ -37,12 +41,19 @@ interface PageProps {
   isLoading?: boolean
 }
 
-export function Page({ equipment, categories, pagination, filters, isLoading = false }: PageProps) {
+export function Page({
+  equipment,
+  categories,
+  pagination,
+  filters,
+  isLoading = false,
+}: PageProps) {
   const columns = createEquipmentColumns()
 
-  const description = pagination.total > 0
-    ? `Managing ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
-    : "No equipment found"
+  const description =
+    pagination.total > 0
+      ? `Managing ${pagination.total} equipment item${pagination.total === 1 ? '' : 's'}`
+      : 'No equipment found'
 
   return (
     <PageContainer>

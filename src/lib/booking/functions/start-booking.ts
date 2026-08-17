@@ -50,8 +50,8 @@ export const startBookingFn = createServerFn({ method: 'POST' })
  * List the current user's bookings whose start window is open and can be
  * started right now.
  */
-export const getStartableBookingsFn = createServerFn({ method: 'GET' })
-  .handler(async () => {
+export const getStartableBookingsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
     const { auth } = await import('@/lib/auth/auth')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
@@ -65,4 +65,5 @@ export const getStartableBookingsFn = createServerFn({ method: 'GET' })
 
     const database = db(env.meriksirat_d1 as D1Database)
     return listStartableBookings(database, session.user.id)
-  })
+  }
+)

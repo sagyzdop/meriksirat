@@ -21,7 +21,11 @@ interface CreateCategoryDialogProps {
   onClose: () => void
 }
 
-export function CreateCategoryDialog({ open, onOpenChange, onClose }: CreateCategoryDialogProps) {
+export function CreateCategoryDialog({
+  open,
+  onOpenChange,
+  onClose,
+}: CreateCategoryDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -42,20 +46,20 @@ export function CreateCategoryDialog({ open, onOpenChange, onClose }: CreateCate
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
           sortOrder: formData.sortOrder,
-        }
+        },
       })
 
       toast.success('Category created successfully')
-      
+
       // Reset form
       setFormData({
         name: '',
         description: '',
         sortOrder: 0,
       })
-      
+
       onClose()
-      
+
       // Refresh the page data
       router.invalidate()
     } catch (error) {
@@ -94,14 +98,16 @@ export function CreateCategoryDialog({ open, onOpenChange, onClose }: CreateCate
             Add a new equipment category to organize your inventory.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name *</Label>
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, name: e.target.value }))
+              }
               placeholder="Enter category name"
               disabled={isLoading}
               className={errors.name ? 'border-destructive' : ''}
@@ -116,7 +122,12 @@ export function CreateCategoryDialog({ open, onOpenChange, onClose }: CreateCate
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
               placeholder="Enter category description (optional)"
               disabled={isLoading}
               rows={3}
@@ -129,7 +140,12 @@ export function CreateCategoryDialog({ open, onOpenChange, onClose }: CreateCate
               id="sortOrder"
               type="number"
               value={formData.sortOrder}
-              onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  sortOrder: parseInt(e.target.value) || 0,
+                }))
+              }
               placeholder="0"
               disabled={isLoading}
               min="0"

@@ -18,7 +18,7 @@ const faqItems = [
     id: 'telegram-linking',
     question: 'Why do I need to link my Telegram account?',
     answer:
-      'Telegram linking is required for accountability and communication. You\'ll receive notifications about your bookings and can use the /return_equipment command through the bot to return equipment with photo verification.',
+      "Telegram linking is required for accountability and communication. You'll receive notifications about your bookings and can use the /return_equipment command through the bot to return equipment with photo verification.",
   },
   {
     id: 'making-booking',
@@ -48,7 +48,7 @@ const faqItems = [
     id: 'return-process',
     question: 'How do I return equipment?',
     answer:
-      'Use the /return_equipment command in the Telegram bot. If you have multiple active bookings, select which items to return. You\'ll be prompted to send a photo of the equipment as proof of its condition. The photo is timestamped and sent to administrators for verification.',
+      "Use the /return_equipment command in the Telegram bot. If you have multiple active bookings, select which items to return. You'll be prompted to send a photo of the equipment as proof of its condition. The photo is timestamped and sent to administrators for verification.",
   },
   {
     id: 'partial-return',
@@ -58,9 +58,9 @@ const faqItems = [
   },
   {
     id: 'clearance-levels',
-    question: 'Why can\'t I see certain equipment?',
+    question: "Why can't I see certain equipment?",
     answer:
-      'Some equipment requires specific clearance levels. Equipment with a higher required clearance level than your account won\'t appear in your catalog. Contact an administrator if you need access to specialized equipment.',
+      "Some equipment requires specific clearance levels. Equipment with a higher required clearance level than your account won't appear in your catalog. Contact an administrator if you need access to specialized equipment.",
   },
   {
     id: 'telegram-commands',

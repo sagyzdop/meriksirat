@@ -23,7 +23,12 @@ interface EditCategoryDialogProps {
   category: CategoryWithCount
 }
 
-export function EditCategoryDialog({ open, onOpenChange, onClose, category }: EditCategoryDialogProps) {
+export function EditCategoryDialog({
+  open,
+  onOpenChange,
+  onClose,
+  category,
+}: EditCategoryDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -57,12 +62,12 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
           sortOrder: formData.sortOrder,
-        }
+        },
       })
 
       toast.success('Category updated successfully')
       onClose()
-      
+
       // Refresh the page data
       router.invalidate()
     } catch (error) {
@@ -96,7 +101,7 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
     }
   }
 
-  const hasChanges = 
+  const hasChanges =
     formData.name !== category.name ||
     formData.description !== (category.description || '') ||
     formData.sortOrder !== category.sortOrder
@@ -110,7 +115,7 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
             Update the category information and organization.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-4">
             <div className="space-y-2">
@@ -118,7 +123,9 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
               <Input
                 id="edit-name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
                 placeholder="Enter category name"
                 disabled={isLoading}
                 className={errors.name ? 'border-destructive' : ''}
@@ -133,7 +140,12 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
               <Textarea
                 id="edit-description"
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
                 placeholder="Enter category description (optional)"
                 disabled={isLoading}
                 rows={3}
@@ -146,7 +158,12 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
                 id="edit-sortOrder"
                 type="number"
                 value={formData.sortOrder}
-                onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sortOrder: parseInt(e.target.value) || 0,
+                  }))
+                }
                 placeholder="0"
                 disabled={isLoading}
                 min="0"
@@ -158,7 +175,8 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
 
             <div className="bg-muted/50 p-3 rounded-lg">
               <p className="text-sm text-muted-foreground">
-                <strong>Equipment Count:</strong> {category.equipmentCount} {category.equipmentCount === 1 ? 'item' : 'items'}
+                <strong>Equipment Count:</strong> {category.equipmentCount}{' '}
+                {category.equipmentCount === 1 ? 'item' : 'items'}
               </p>
             </div>
           </div>
@@ -172,8 +190,8 @@ export function EditCategoryDialog({ open, onOpenChange, onClose, category }: Ed
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isLoading || !formData.name.trim() || !hasChanges}
             >
               {isLoading ? 'Updating...' : 'Update Category'}

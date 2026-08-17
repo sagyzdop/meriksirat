@@ -59,7 +59,9 @@ export interface BookingItemRow {
  * Group flat joined rows into parent bookings with their item arrays.
  * Rows must be ordered by bookingId for deterministic output.
  */
-export function mapBookingsWithItems(rows: BookingItemRow[]): BookingWithItems[] {
+export function mapBookingsWithItems(
+  rows: BookingItemRow[]
+): BookingWithItems[] {
   const map = new Map<number, BookingWithItems>()
 
   for (const row of rows) {

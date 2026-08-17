@@ -1,12 +1,12 @@
-import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/layout/page-header";
-import { Section } from "@/components/layout/section";
-import { ProfileHeader } from "./components/profile-header";
-import { ProfileContent } from "./components/profile-content";
-import type { UserProfile } from "@/lib/user/types";
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
+import { ProfileHeader } from './components/profile-header'
+import { ProfileContent } from './components/profile-content'
+import type { UserProfile } from '@/lib/user/types'
 
 interface ProfilePageProps {
-  user?: UserProfile;
+  user?: UserProfile
 }
 
 export function Page({ user }: ProfilePageProps) {
@@ -14,10 +14,12 @@ export function Page({ user }: ProfilePageProps) {
     return (
       <PageContainer>
         <div className="flex items-center justify-center py-10">
-          <div className="text-muted-foreground">Please sign in to view your profile.</div>
+          <div className="text-muted-foreground">
+            Please sign in to view your profile.
+          </div>
         </div>
       </PageContainer>
-    );
+    )
   }
 
   return (
@@ -35,5 +37,5 @@ export function Page({ user }: ProfilePageProps) {
         </Section>
       </div>
     </PageContainer>
-  );
+  )
 }
