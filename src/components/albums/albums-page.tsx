@@ -3,6 +3,8 @@ import { Plus, Loader2, Images } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import DatePicker from '@/components/shared/date-picker'
+import { toDateOnlyString } from '@/lib/format'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
@@ -62,7 +64,7 @@ export function AlbumsPage({
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [event, setEvent] = React.useState('')
-  const [eventDate, setEventDate] = React.useState('')
+  const [eventDate, setEventDate] = React.useState<Date | undefined>()
   const [busy, setBusy] = React.useState(false)
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -74,7 +76,7 @@ export function AlbumsPage({
           title: title.trim(),
           description: description.trim() || '',
           event: event.trim(),
-          eventDate,
+          eventDate: toDateOnlyString(eventDate!),
         },
       })
       toast.success('Album created')
@@ -82,7 +84,7 @@ export function AlbumsPage({
       setTitle('')
       setDescription('')
       setEvent('')
-      setEventDate('')
+      setEventDate(undefined)
       onCreated()
       return id
     } catch (error) {
@@ -189,14 +191,8 @@ export function AlbumsPage({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-album-event-date">Event Date</Label>
-              <Input
-                id="new-album-event-date"
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                required
-              />
+              <Label>Event Date</Label>
+              <DatePicker value={eventDate} onChange={setEventDate} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-album-description">Description</Label>

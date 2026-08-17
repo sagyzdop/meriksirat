@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Dialog,
@@ -20,8 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import DatePicker from '@/components/shared/date-picker'
+import { toDateOnlyString } from '@/lib/format'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
@@ -59,8 +61,8 @@ export function AlbumManager({
   const [title, setTitle] = React.useState(album.title)
   const [description, setDescription] = React.useState(album.description)
   const [event, setEvent] = React.useState(album.event)
-  const [eventDate, setEventDate] = React.useState(
-    album.eventDate ? album.eventDate.slice(0, 10) : ''
+  const [eventDate, setEventDate] = React.useState<Date | undefined>(
+    album.eventDate ? new Date(album.eventDate) : undefined
   )
   const [busy, setBusy] = React.useState(false)
   const [recreating, setRecreating] = React.useState(false)
@@ -92,7 +94,7 @@ export function AlbumManager({
           title: title.trim(),
           description: description.trim() || '',
           event: event.trim(),
-          eventDate: eventDate || undefined,
+          eventDate: eventDate ? toDateOnlyString(eventDate) : undefined,
         },
       })
       toast.success('Album updated')
@@ -296,7 +298,9 @@ export function AlbumManager({
               setTitle(album.title)
               setDescription(album.description)
               setEvent(album.event)
-              setEventDate(album.eventDate ? album.eventDate.slice(0, 10) : '')
+              setEventDate(
+                album.eventDate ? new Date(album.eventDate) : undefined
+              )
               setEditOpen(true)
             }}
           >
@@ -419,14 +423,8 @@ export function AlbumManager({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="album-event-date">Event Date</Label>
-              <Input
-                id="album-event-date"
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                required
-              />
+              <Label>Event Date</Label>
+              <DatePicker value={eventDate} onChange={setEventDate} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="album-description">Description</Label>
