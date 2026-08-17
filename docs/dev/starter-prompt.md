@@ -4,14 +4,14 @@ Copy this into a fresh AI coding session to get up to speed quickly.
 
 ---
 
-You are working on **Meriksirat**, a full-stack equipment booking & management platform (React 19 + TanStack Start/Router/Query + Drizzle on Cloudflare D1, Better Auth, shadcn/ui, Tailwind v4, Google Calendar + Telegram integrations).
+You are working on **Meriksirat**, a full-stack equipment booking & management platform built for **NU Image** (React 19 + TanStack Start/Router/Query + Drizzle on Cloudflare D1, Better Auth, shadcn/ui, Tailwind v4, Google Calendar + Drive + Telegram integrations).
 
 ## Before you edit
 
 - Read `docs/dev/conventions.md` and `docs/dev/architecture.md`, plus `docs/dev/data-loading.md`.
 - Run `npx tsc --noEmit` first — it must stay at 0 errors.
 - Format touched files with `npx prettier --write <files>` (`.prettierrc`: no semi, single quotes, 80 cols).
-- `npm run lint` is broken at baseline; ignore its output.
+- `npm run lint` — should be clean before committing.
 
 ## Key rules
 
@@ -26,16 +26,22 @@ You are working on **Meriksirat**, a full-stack equipment booking & management p
 
 ## Project structure quick map
 
-- `src/routes/` — thin route constructors
-- `src/components/{admin,albums,bookings,equipment,...}` — pages (mirror routes)
+- `src/routes/` — thin route constructors (`_public/`, `_authenticated/`, `api/`)
+- `src/components/{admin,albums,bookings,equipment,faq,onboarding,profile}` — pages (mirror routes)
 - `src/components/ui/` — shadcn primitives; `src/components/shared/` — cross-page components
-- `src/lib/{equipment,booking,user}/` — server functions (`functions.ts`), queries (`queries.ts`), types
+- `src/components/layout/` — PageContainer, PageHeader, sidebar shell
+- `src/components/root/` — SiteHeader, AppSidebar, authenticated shell
+- `src/lib/{admin,albums,auth,booking,equipment,user}/` — server functions (`functions.ts`), queries (`queries.ts`), types
+- `src/lib/google/` — Calendar + Drive integration; `src/lib/telegram/` — bot commands + logging
+- `src/lib/birthdays/` — birthday calendar sync
 - `src/lib/search-params.ts`, `src/lib/query-client.ts`, `src/router.tsx`
-- `docs/dev/` — architecture, conventions, data-loading, albums, calendar-viewer, worker-import-convention, shadcn-reference, logs, availability-badges, starter-prompt
+- `src/db/` — Drizzle schema + migrations
+- `docs/dev/` — architecture, conventions, data-loading, albums, calendar-viewer, availability-badges, worker-import-convention, logs, shadcn-reference, starter-prompt
 - `docs/user/` — booking, member-guide, admin-guide
+- `docs/terms-of-service.md` — user-facing legal terms (linked from sidebar + onboarding dialog)
 
 ## Conventions for this repo
 
 - Commit as you go on `main`, one logical change per commit, concise message (e.g. `refactor: extract shared equipment form components`).
 - Use `@/` path alias for imports.
-- Keep `npx tsc --noEmit` at 0 errors and `npx prettier` clean before committing.
+- Keep `npx tsc --noEmit` at 0 errors and `npx prettier` + `npm run lint` clean before committing.
