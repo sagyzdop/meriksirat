@@ -125,6 +125,7 @@ export function PhotoLightbox({
         src={photo.url}
         alt={photo.name}
         fit="contain"
+        eager
         placeholderSrc={photo.thumbnailUrl}
         containerClassName="bg-transparent h-full w-full"
         onClick={() => setChromeVisible((v) => !v)}

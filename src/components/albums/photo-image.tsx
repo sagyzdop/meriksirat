@@ -25,6 +25,8 @@ interface PhotoImageProps extends React.ComponentProps<'img'> {
   placeholderSrc?: string
   /** Class applied to the placeholder image (e.g. to mirror the main image's inset). */
   placeholderClassName?: string
+  /** When true the image loads immediately regardless of viewport position (e.g. lightbox). */
+  eager?: boolean
 }
 
 /**
@@ -52,6 +54,7 @@ export function PhotoImage({
   fit = 'cover',
   placeholderSrc,
   placeholderClassName,
+  eager = false,
   ...props
 }: PhotoImageProps) {
   const [attempt, setAttempt] = React.useState(0)
@@ -171,6 +174,7 @@ export function PhotoImage({
             key={attempt}
             src={currentSrc}
             alt={alt}
+            loading={eager ? 'eager' : 'lazy'}
             decoding="async"
             referrerPolicy="no-referrer"
             onLoad={handleLoad}
