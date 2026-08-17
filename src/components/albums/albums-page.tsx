@@ -59,6 +59,8 @@ export function AlbumsPage({
   const [createOpen, setCreateOpen] = React.useState(false)
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
+  const [event, setEvent] = React.useState('')
+  const [eventDate, setEventDate] = React.useState('')
   const [busy, setBusy] = React.useState(false)
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -66,12 +68,19 @@ export function AlbumsPage({
     setBusy(true)
     try {
       const { id } = await createAlbumFn({
-        data: { title: title.trim(), description: description.trim() || '' },
+        data: {
+          title: title.trim(),
+          description: description.trim() || '',
+          event: event.trim(),
+          eventDate,
+        },
       })
       toast.success('Album created')
       setCreateOpen(false)
       setTitle('')
       setDescription('')
+      setEvent('')
+      setEventDate('')
       onCreated()
       return id
     } catch (error) {
@@ -165,6 +174,27 @@ export function AlbumsPage({
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="new-album-event">Event</Label>
+              <Input
+                id="new-album-event"
+                value={event}
+                onChange={(e) => setEvent(e.target.value)}
+                placeholder="e.g. Annual Photography Workshop"
+                required
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-album-event-date">Event Date</Label>
+              <Input
+                id="new-album-event-date"
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="new-album-description">Description</Label>
               <Textarea
                 id="new-album-description"
@@ -183,7 +213,10 @@ export function AlbumsPage({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={busy || !title.trim()}>
+              <Button
+                type="submit"
+                disabled={busy || !title.trim() || !event.trim() || !eventDate}
+              >
                 {busy ? <Loader2 className="animate-spin" /> : <Plus />}
                 Create
               </Button>
