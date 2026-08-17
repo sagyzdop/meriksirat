@@ -50,6 +50,8 @@ export interface AlbumListPage {
 export const CreateAlbumSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(1000).optional().default(''),
+  event: z.string().min(1, 'Event is required').max(200),
+  eventDate: z.string().min(1, 'Event date is required'),
 })
 
 export const GetAlbumSchema = z.object({
@@ -60,6 +62,8 @@ export const UpdateAlbumSchema = z.object({
   albumId: z.string(),
   title: z.string().min(1, 'Title is required').max(200).optional(),
   description: z.string().max(1000).optional(),
+  event: z.string().min(1, 'Event is required').max(200).optional(),
+  eventDate: z.string().optional(),
 })
 
 export const DeleteAlbumSchema = z.object({
@@ -152,6 +156,8 @@ export interface AlbumSummary {
   ownerUserId: string
   title: string
   description: string
+  event: string
+  eventDate: string | null
   driveFolderId: string
   coverFileId: string | null
   coverUrl: string | null

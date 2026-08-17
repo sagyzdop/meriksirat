@@ -135,6 +135,8 @@ function toAlbumSummary(
     ownerUserId: row.ownerUserId,
     title: row.title,
     description: row.description ?? '',
+    event: row.event ?? '',
+    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
     driveFolderId: row.driveFolderId,
     coverFileId: row.coverFileId,
     coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,
@@ -560,6 +562,8 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       ownerUserId: currentUser.id,
       title: data.title,
       description: data.description ?? '',
+      event: data.event,
+      eventDate: new Date(data.eventDate),
       driveFolderId: folder.id,
       editShareToken: newShareToken(),
       isShared: true,
@@ -851,6 +855,10 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     const updates: Record<string, unknown> = {}
     if (data.title !== undefined) updates.title = data.title
     if (data.description !== undefined) updates.description = data.description
+    if (data.event !== undefined) updates.event = data.event
+    if (data.eventDate !== undefined) {
+      updates.eventDate = data.eventDate ? new Date(data.eventDate) : null
+    }
 
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = new Date()
@@ -866,6 +874,12 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     }
     if (data.description !== undefined) {
       detailParts.push('Description updated')
+    }
+    if (data.event !== undefined) {
+      detailParts.push(`Event: ${row.event} → ${data.event}`)
+    }
+    if (data.eventDate !== undefined) {
+      detailParts.push('Event date updated')
     }
 
     if (currentUser && detailParts.length > 0) {
