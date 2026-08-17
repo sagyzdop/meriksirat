@@ -171,7 +171,6 @@ export function PhotoImage({
             key={attempt}
             src={currentSrc}
             alt={alt}
-            loading="lazy"
             decoding="async"
             referrerPolicy="no-referrer"
             onLoad={handleLoad}
