@@ -25,8 +25,6 @@ interface PhotoImageProps extends React.ComponentProps<'img'> {
   placeholderSrc?: string
   /** Class applied to the placeholder image (e.g. to mirror the main image's inset). */
   placeholderClassName?: string
-  /** When true the image loads immediately regardless of viewport position (e.g. lightbox). */
-  eager?: boolean
 }
 
 /**
@@ -54,7 +52,6 @@ export function PhotoImage({
   fit = 'cover',
   placeholderSrc,
   placeholderClassName,
-  eager = false,
   ...props
 }: PhotoImageProps) {
   const [attempt, setAttempt] = React.useState(0)
@@ -83,14 +80,7 @@ export function PhotoImage({
   // The slot is held only for the fetch (load, final error, or unmount) so a
   // successful load frees the slot for the next queued image. Retrying
   // (attempt++) releases the previous slot and re-queues.
-  // Eager images (lightbox) bypass the gate entirely so they're never blocked
-  // by grid thumbnails that grabbed all slots on mount but haven't fetched yet.
   React.useEffect(() => {
-    if (eager) {
-      setCurrentSrc(src ?? null)
-      return () => setCurrentSrc(null)
-    }
-
     let cancelled = false
     releaseRef.current = null
     setCurrentSrc(null)
@@ -109,7 +99,7 @@ export function PhotoImage({
       releaseRef.current?.()
       releaseRef.current = null
     }
-  }, [src, attempt, eager])
+  }, [src, attempt])
 
   React.useEffect(() => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
@@ -181,7 +171,7 @@ export function PhotoImage({
             key={attempt}
             src={currentSrc}
             alt={alt}
-            loading={eager ? 'eager' : 'lazy'}
+            loading="lazy"
             decoding="async"
             referrerPolicy="no-referrer"
             onLoad={handleLoad}

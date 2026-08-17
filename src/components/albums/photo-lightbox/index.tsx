@@ -131,6 +131,8 @@ export function PhotoLightbox({
             src={photo.thumbnailUrl}
             alt=""
             aria-hidden
+            loading="eager"
+            decoding="async"
             referrerPolicy="no-referrer"
             className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
           />
@@ -139,6 +141,9 @@ export function PhotoLightbox({
           key={photo.id}
           src={photo.url}
           alt={photo.name}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
           referrerPolicy="no-referrer"
           onLoad={() => setImgLoaded(true)}
           className={cn(
