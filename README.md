@@ -206,7 +206,7 @@ src/
 3. Choose date and time slots (30-minute increments)
 4. Confirm booking with optional notes
 5. Receive Telegram notification
-6. Confirm pickup within 30 minutes of start time
+6. Confirm pickup within 15 minutes of start time
 
 ### Returning Equipment
 

@@ -4,8 +4,8 @@
 **Last Updated:** August 17, 2026
 
 These Terms of Service ("Terms") govern your use of the Meriksirat equipment
-booking and management platform ("Platform") operated for [Club/Organization
-Name] ("Organization"). By creating an account or using the Platform, you
+booking and management platform ("Platform") operated for NU Image
+("Organization"). By creating an account or using the Platform, you
 agree to be bound by these Terms.
 
 ## 1. Acceptance of Terms
