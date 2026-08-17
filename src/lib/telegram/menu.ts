@@ -48,9 +48,11 @@ export function isCallback(ctx: BotContext): boolean {
 export async function renderInPlace(
   ctx: BotContext,
   text: string,
-  markup?: any
+  markup?: Record<string, unknown>
 ): Promise<void> {
-  const isRemoveKeyboard = markup?.reply_markup?.remove_keyboard === true
+  const replyMarkup = markup?.reply_markup as
+    Record<string, unknown> | undefined
+  const isRemoveKeyboard = replyMarkup?.remove_keyboard === true
 
   if (isCallback(ctx)) {
     // Editing a tapped message: a remove_keyboard markup is meaningless here.

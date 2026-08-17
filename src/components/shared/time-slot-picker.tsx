@@ -171,7 +171,7 @@ export function TimeSlotPicker({
           // Check if this slot overlaps with any busy period
           const isAvailable =
             !isPast &&
-            !busySlots.some((busy: any) => {
+            !busySlots.some((busy: { start: string; end: string }) => {
               const busyStart = new Date(busy.start)
               const busyEnd = new Date(busy.end)
 

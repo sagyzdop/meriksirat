@@ -368,7 +368,7 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
     }
 
     // Build update object with only provided fields
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (data.modelName !== undefined) updateData.modelName = data.modelName
     if (data.shortName !== undefined) updateData.shortName = data.shortName
     if (data.description !== undefined)

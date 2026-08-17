@@ -458,9 +458,10 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         )
 
         if (conflicts.length > 0) {
-          const err: any = new Error(
-            `Requested time conflicts with existing booking for ${item.equipmentModelName || `equipment ${item.equipmentId}`}`
-          )
+          const err: Error & { conflict?: (typeof conflicts)[number] } =
+            new Error(
+              `Requested time conflicts with existing booking for ${item.equipmentModelName || `equipment ${item.equipmentId}`}`
+            )
           err.conflict = conflicts[0]
           throw err
         }

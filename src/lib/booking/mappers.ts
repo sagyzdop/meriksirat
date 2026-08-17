@@ -1,26 +1,31 @@
 import type { BookingWithItems } from './types'
+import type { bookingItem, equipment, category } from '@/db/schema'
 
 /**
  * Shared select fragment for booking_item + equipment + category joins.
  * Column aliases must match the BookingItemRow shape.
  */
-export function itemSelect(bookingItem: any, equipment: any, category: any) {
+export function itemSelect(
+  bItem: typeof bookingItem,
+  eq: typeof equipment,
+  cat: typeof category
+) {
   return {
-    itemId: bookingItem.id,
-    equipmentId: bookingItem.equipmentId,
-    itemStatus: bookingItem.status,
-    gcalEventId: bookingItem.googleCalendarEventId,
-    returnedAt: bookingItem.returnedAt,
-    itemCreatedAt: bookingItem.createdAt,
-    itemUpdatedAt: bookingItem.updatedAt,
-    eqId: equipment.id,
-    eqModelName: equipment.modelName,
-    eqDescription: equipment.description,
-    eqCategoryId: equipment.categoryId,
-    eqImagePath: equipment.imagePath,
-    eqGcalId: equipment.googleCalendarId,
-    catId: category.id,
-    catName: category.name,
+    itemId: bItem.id,
+    equipmentId: bItem.equipmentId,
+    itemStatus: bItem.status,
+    gcalEventId: bItem.googleCalendarEventId,
+    returnedAt: bItem.returnedAt,
+    itemCreatedAt: bItem.createdAt,
+    itemUpdatedAt: bItem.updatedAt,
+    eqId: eq.id,
+    eqModelName: eq.modelName,
+    eqDescription: eq.description,
+    eqCategoryId: eq.categoryId,
+    eqImagePath: eq.imagePath,
+    eqGcalId: eq.googleCalendarId,
+    catId: cat.id,
+    catName: cat.name,
   }
 }
 

@@ -12,6 +12,27 @@
 
 import { getGoogleAccessToken } from './google-calendar-auth'
 
+type CalendarBusyPeriod = { start: string; end: string }
+
+type CalendarEvent = {
+  id: string
+  summary?: string
+  description?: string
+  start?: { dateTime?: string; date?: string; timeZone?: string }
+  end?: { dateTime?: string; date?: string; timeZone?: string }
+  status?: string
+  attendees?: Array<{ email: string }>
+}
+
+type CalendarEventInput = {
+  summary?: string
+  description?: string
+  start?: { dateTime?: string; date?: string; timeZone?: string }
+  end?: { dateTime?: string; date?: string; timeZone?: string }
+  attendees?: Array<{ email: string }>
+  [key: string]: unknown
+}
+
 /**
  * Check freeBusy for a single calendar.
  */
@@ -63,7 +84,7 @@ export async function checkMultipleCalendarsFreeBusyRaw(args: {
   equipmentCalendarIds: string[]
   timeMin: string
   timeMax: string
-}): Promise<{ [key: string]: { busy: any[] } }> {
+}): Promise<{ [key: string]: { busy: CalendarBusyPeriod[] } }> {
   const { equipmentCalendarIds, timeMin, timeMax } = args
 
   const MAX_CALENDARS_PER_REQUEST = 15
@@ -79,7 +100,7 @@ export async function checkMultipleCalendarsFreeBusyRaw(args: {
     chunks.push(equipmentCalendarIds.slice(i, i + MAX_CALENDARS_PER_REQUEST))
   }
 
-  const output: { [key: string]: { busy: any[] } } = {}
+  const output: { [key: string]: { busy: CalendarBusyPeriod[] } } = {}
 
   await Promise.all(
     chunks.map(async (chunk) => {
@@ -131,7 +152,7 @@ export async function getCalendarEventsRaw(args: {
   timeMin?: string
   timeMax?: string
   maxResults?: number
-}): Promise<any[]> {
+}): Promise<CalendarEvent[]> {
   const { equipmentCalendarId, timeMin, timeMax, maxResults = 250 } = args
 
   const accessToken = await getGoogleAccessToken()
@@ -162,7 +183,7 @@ export async function getCalendarEventsRaw(args: {
     throw new Error(`Failed to get calendar events: ${error}`)
   }
 
-  const result = (await response.json()) as { items?: any[] }
+  const result = (await response.json()) as { items?: CalendarEvent[] }
   return result.items || []
 }
 
@@ -171,9 +192,9 @@ export async function getCalendarEventsRaw(args: {
  */
 export async function createCalendarEventRaw(args: {
   equipmentCalendarId: string
-  event: any
+  event: CalendarEventInput
   userEmail?: string
-}): Promise<{ success: boolean; eventId: string; event: any }> {
+}): Promise<{ success: boolean; eventId: string; event: CalendarEvent }> {
   const { equipmentCalendarId, event, userEmail = '' } = args
 
   const accessToken = await getGoogleAccessToken()
@@ -203,7 +224,7 @@ export async function createCalendarEventRaw(args: {
     throw new Error(`Failed to create calendar event: ${error}`)
   }
 
-  const createdEvent = (await response.json()) as any
+  const createdEvent = (await response.json()) as CalendarEvent
 
   return { success: true, eventId: createdEvent.id, event: createdEvent }
 }
@@ -214,9 +235,9 @@ export async function createCalendarEventRaw(args: {
 export async function updateCalendarEventRaw(args: {
   equipmentCalendarId: string
   eventId: string
-  event: any
+  event: CalendarEventInput
   userEmail?: string
-}): Promise<{ success: boolean; event: any }> {
+}): Promise<{ success: boolean; event: CalendarEvent }> {
   const { equipmentCalendarId, eventId, event, userEmail = '' } = args
 
   const accessToken = await getGoogleAccessToken()
@@ -245,7 +266,7 @@ export async function updateCalendarEventRaw(args: {
     throw new Error(`Failed to update calendar event: ${error}`)
   }
 
-  const result = (await response.json()) as any
+  const result = (await response.json()) as CalendarEvent
   return { success: true, event: result }
 }
 

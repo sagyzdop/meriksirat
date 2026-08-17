@@ -11,7 +11,9 @@
 
 import { TelegramAPI } from './api'
 
-export async function configureTelegramBot(env: any): Promise<void> {
+export async function configureTelegramBot(env: {
+  TELEGRAM_BOT_TOKEN?: string
+}): Promise<void> {
   if (!env.TELEGRAM_BOT_TOKEN) return
 
   const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)

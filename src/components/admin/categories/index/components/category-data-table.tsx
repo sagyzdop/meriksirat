@@ -166,10 +166,13 @@ export function CategoryDataTable({
     })
   )
 
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = async (event: {
+    active: { id: string | number }
+    over: { id: string | number } | null
+  }) => {
     const { active, over } = event
 
-    if (active.id !== over?.id) {
+    if (active.id !== over?.id && over) {
       const oldIndex = sortedCategories.findIndex(
         (item) => item.id === active.id
       )

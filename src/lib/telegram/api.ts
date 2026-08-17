@@ -8,7 +8,11 @@
 /**
  * Call Telegram Bot API method
  */
-async function callAPI(token: string, method: string, data: any = {}) {
+async function callAPI(
+  token: string,
+  method: string,
+  data: Record<string, unknown> = {}
+) {
   const url = `https://api.telegram.org/bot${token}/${method}`
   const response = await fetch(url, {
     method: 'POST',
@@ -16,7 +20,11 @@ async function callAPI(token: string, method: string, data: any = {}) {
     body: JSON.stringify(data),
   })
 
-  const result = (await response.json()) as any
+  const result = (await response.json()) as {
+    ok: boolean
+    description?: string
+    result: unknown
+  }
 
   if (!result.ok) {
     throw new Error(
@@ -27,13 +35,24 @@ async function callAPI(token: string, method: string, data: any = {}) {
   return result.result
 }
 
+type SendMessageExtra = {
+  parse_mode?: string
+  disable_web_page_preview?: boolean
+  reply_markup?: Record<string, unknown>
+  caption?: string
+}
+
 /**
  * Telegram API client compatible with Telegraf's Telegram class
  */
 export class TelegramAPI {
   constructor(private token: string) {}
 
-  async sendMessage(chatId: number | string, text: string, extra?: any) {
+  async sendMessage(
+    chatId: number | string,
+    text: string,
+    extra?: SendMessageExtra
+  ) {
     return await callAPI(this.token, 'sendMessage', {
       chat_id: chatId,
       text,
@@ -41,7 +60,11 @@ export class TelegramAPI {
     })
   }
 
-  async sendPhoto(chatId: number | string, photo: any, extra?: any) {
+  async sendPhoto(
+    chatId: number | string,
+    photo: string,
+    extra?: SendMessageExtra
+  ) {
     return await callAPI(this.token, 'sendPhoto', {
       chat_id: chatId,
       photo,
@@ -52,7 +75,7 @@ export class TelegramAPI {
   async answerCallbackQuery(
     callbackQueryId: string,
     text?: string,
-    extra?: any
+    extra?: Record<string, unknown>
   ) {
     return await callAPI(this.token, 'answerCallbackQuery', {
       callback_query_id: callbackQueryId,
@@ -71,7 +94,7 @@ export class TelegramAPI {
     chatId: number | string,
     messageId: number,
     text: string,
-    extra?: any
+    extra?: SendMessageExtra
   ) {
     return await callAPI(this.token, 'editMessageText', {
       chat_id: chatId,
@@ -84,7 +107,7 @@ export class TelegramAPI {
   async editMessageReplyMarkup(
     chatId: number | string,
     messageId: number,
-    replyMarkup?: any
+    replyMarkup?: Record<string, unknown>
   ) {
     return await callAPI(this.token, 'editMessageReplyMarkup', {
       chat_id: chatId,
@@ -108,7 +131,7 @@ export class TelegramAPI {
     })
   }
 
-  async setChatMenuButton(menuButton: any) {
+  async setChatMenuButton(menuButton: Record<string, unknown>) {
     return await callAPI(this.token, 'setChatMenuButton', {
       menu_button: menuButton,
     })

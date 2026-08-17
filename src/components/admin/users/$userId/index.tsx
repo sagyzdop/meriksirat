@@ -91,7 +91,26 @@ interface Pagination {
 }
 
 interface PageProps {
-  user: any
+  user: {
+    id: string
+    email: string
+    image: string | null
+    role: string | null
+    clearanceLevel: number | null
+    status: string | null
+    firstName: string | null
+    lastName: string | null
+    instagramUsername: string | null
+    nuId: number | null
+    birthday: string | null
+    major: string | null
+    graduationYear: number | null
+    onboardingComplete: boolean | null
+    cancelledInStartWindowCount: number | null
+    overdueCount: number | null
+    createdAt: Date
+    updatedAt: Date
+  }
   albums: AdminUserAlbum[]
   albumsPagination: Pagination
   albumsSearch: AlbumSearch
@@ -247,7 +266,7 @@ export function Page({
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
                     Member Since
                   </TableCell>
-                  <TableCell>{formatDate(user.createdAt)}</TableCell>
+                  <TableCell>{formatDate(user.createdAt.getTime())}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">

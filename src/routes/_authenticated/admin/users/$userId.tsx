@@ -52,7 +52,7 @@ export const Route = createFileRoute('/_authenticated/admin/users/$userId')({
         throw new Error('User not found')
       }
 
-      return { user }
+      return { user: { ...user, birthday: user.birthday as string | null } }
     } catch (error) {
       console.error('Failed to load user:', error)
       throw new Error('Failed to load user data')

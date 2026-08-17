@@ -90,15 +90,17 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
           slotEnd.setMinutes(slotEnd.getMinutes() + 30)
 
           // Check if this slot overlaps with any busy period
-          const isAvailable = !busySlots.some((busy: any) => {
-            const busyStart = new Date(busy.start)
-            const busyEnd = new Date(busy.end)
-            return (
-              (slotStart >= busyStart && slotStart < busyEnd) ||
-              (slotEnd > busyStart && slotEnd <= busyEnd) ||
-              (slotStart <= busyStart && slotEnd >= busyEnd)
-            )
-          })
+          const isAvailable = !busySlots.some(
+            (busy: { start: string; end: string }) => {
+              const busyStart = new Date(busy.start)
+              const busyEnd = new Date(busy.end)
+              return (
+                (slotStart >= busyStart && slotStart < busyEnd) ||
+                (slotEnd > busyStart && slotEnd <= busyEnd) ||
+                (slotStart <= busyStart && slotEnd >= busyEnd)
+              )
+            }
+          )
 
           return { time, available: isAvailable }
         })
@@ -185,9 +187,11 @@ export function CalendarUI({ equipmentId, calendarId }: CalendarUIProps) {
       if (date) {
         await checkAvailability(date)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Booking failed:', error)
-      toast.error(error.message || 'Failed to create booking')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create booking'
+      )
     } finally {
       setIsBooking(false)
     }

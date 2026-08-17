@@ -16,7 +16,10 @@ export interface BotContext {
   callbackQuery?: CallbackQuery
   chat?: Chat
   from?: User
-  reply: (text: string, extra?: any) => Promise<any>
-  answerCbQuery: (text?: string) => Promise<any>
-  editMessageText: (text: string, extra?: any) => Promise<any>
+  reply: (text: string, extra?: Record<string, unknown>) => Promise<unknown>
+  answerCbQuery: (text?: string) => Promise<unknown>
+  editMessageText: (
+    text: string,
+    extra?: Record<string, unknown>
+  ) => Promise<unknown>
 }

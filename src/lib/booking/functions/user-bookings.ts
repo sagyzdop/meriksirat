@@ -17,6 +17,8 @@ import {
   MAX_BOOKING_DURATION_MS,
   MAX_BOOKING_HORIZON_MS,
 } from '../operating-hours'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import type * as schema from '@/db/schema'
 
 type UserIdentity = {
   firstName?: string | null
@@ -35,11 +37,11 @@ function hasUserIdentity(identity?: UserIdentity | null): boolean {
 }
 
 async function resolveUserDisplayName(params: {
-  database: any
+  database: DrizzleD1Database<typeof schema>
   userId: string
   sessionUser?: UserIdentity | null
-  userTable: any
-  eq: any
+  userTable: typeof schema.user
+  eq: typeof import('drizzle-orm').eq
 }): Promise<string> {
   const { database, userId, sessionUser, userTable, eq } = params
 
@@ -199,7 +201,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       )
 
     if (conflicts.length > 0) {
-      const err: any = new Error(
+      const err: Error & { conflicts?: typeof conflicts } = new Error(
         'Requested time conflicts with existing booking(s)'
       )
       err.conflicts = conflicts
@@ -875,9 +877,10 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
         )
 
         if (conflicts.length > 0) {
-          const err: any = new Error(
-            `Requested time conflicts with existing booking for ${item.equipmentModelName || `equipment ${item.equipmentId}`}`
-          )
+          const err: Error & { conflict?: (typeof conflicts)[number] } =
+            new Error(
+              `Requested time conflicts with existing booking for ${item.equipmentModelName || `equipment ${item.equipmentId}`}`
+            )
           err.conflict = conflicts[0]
           throw err
         }

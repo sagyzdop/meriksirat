@@ -34,7 +34,7 @@ export function inlineKeyboard(
 /**
  * Removes the persistent reply keyboard from the chat.
  */
-export function removeKeyboard(options: any = {}) {
+export function removeKeyboard(options: Record<string, unknown> = {}) {
   return {
     ...options,
     reply_markup: { remove_keyboard: true },

@@ -8,6 +8,7 @@ import {
   deleteEquipmentAdminFn,
   uploadEquipmentImageFn,
 } from '@/lib/equipment'
+import type { EquipmentWithCategory } from '@/lib/equipment/types'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -53,8 +54,15 @@ const editEquipmentSchema = z.object({
 type EditEquipmentForm = z.infer<typeof editEquipmentSchema>
 
 interface PageProps {
-  equipment: any
-  categories: any[]
+  equipment: EquipmentWithCategory
+  categories: Array<{
+    id: number
+    name: string
+    description: string | null
+    sortOrder: number | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }>
   equipmentId: number
 }
 

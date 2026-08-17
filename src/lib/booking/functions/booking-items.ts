@@ -5,6 +5,8 @@ import {
   CancelBookingItemSchema,
   GetBookingByIdSchema,
 } from '../types'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import type * as schema from '@/db/schema'
 
 /**
  * Per-item booking action for the web UI.
@@ -16,7 +18,7 @@ import {
 
 async function assertBookingAccess(params: {
   headers: Headers
-  database: any
+  database: DrizzleD1Database<typeof schema>
   bookingId: number
   sessionUserId: string
 }) {
@@ -208,7 +210,7 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
             equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`
         )
         .join(', ')
-      const err: any = new Error(
+      const err: Error & { conflicts?: typeof conflicts } = new Error(
         `Requested time conflicts with existing booking(s) for ${conflictNames}`
       )
       err.conflicts = conflicts

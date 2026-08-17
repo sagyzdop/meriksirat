@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 
 /**
  * Club timezone (UTC+5). All calendar event payloads and rendered timestamps
@@ -38,7 +39,13 @@ export function toCalendarDateTime(value: Date | string): string {
  * unauthenticated clients.
  */
 export const checkCalendarFreeBusy = createServerFn({ method: 'POST' })
-  .validator((d: any) => d)
+  .validator(
+    z.object({
+      calendarId: z.string(),
+      timeMin: z.string(),
+      timeMax: z.string(),
+    })
+  )
   .handler(async ({ data }) => {
     const { requireAuthenticatedUser } = await import('@/lib/auth/require-auth')
     await requireAuthenticatedUser()
@@ -52,7 +59,13 @@ export const checkCalendarFreeBusy = createServerFn({ method: 'POST' })
  * Authenticated wrapper around checkMultipleCalendarsFreeBusyRaw.
  */
 export const checkMultipleCalendarsFreeBusy = createServerFn({ method: 'POST' })
-  .validator((d: any) => d)
+  .validator(
+    z.object({
+      equipmentCalendarIds: z.array(z.string()),
+      timeMin: z.string(),
+      timeMax: z.string(),
+    })
+  )
   .handler(async ({ data }) => {
     const { requireAuthenticatedUser } = await import('@/lib/auth/require-auth')
     await requireAuthenticatedUser()
@@ -70,7 +83,14 @@ export const checkMultipleCalendarsFreeBusy = createServerFn({ method: 'POST' })
  * Authenticated wrapper around getCalendarEventsRaw.
  */
 export const getCalendarEvents = createServerFn({ method: 'POST' })
-  .validator((d: any) => d)
+  .validator(
+    z.object({
+      equipmentCalendarId: z.string(),
+      timeMin: z.string().optional(),
+      timeMax: z.string().optional(),
+      maxResults: z.number().optional(),
+    })
+  )
   .handler(async ({ data }) => {
     const { requireAuthenticatedUser } = await import('@/lib/auth/require-auth')
     await requireAuthenticatedUser()

@@ -120,7 +120,16 @@ export function AppSidebar({
   onLogout,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
-  user?: any
+  user?: {
+    id: string
+    name: string | null
+    email: string
+    image?: string | null
+    firstName?: string | null
+    lastName?: string | null
+    role?: string | null
+    clearanceLevel?: number | null
+  }
   onLogout?: () => void
 }) {
   const [user, setUser] = React.useState<{

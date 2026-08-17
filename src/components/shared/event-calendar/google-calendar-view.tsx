@@ -58,7 +58,16 @@ const LEGEND_PALETTE: EventColor[] = [
 ]
 
 const toCalendarEvent = (
-  event: any,
+  event: {
+    id?: string
+    summary?: string
+    description?: string
+    location?: string
+    status?: string
+    colorId?: string
+    start?: { dateTime?: string; date?: string }
+    end?: { dateTime?: string; date?: string }
+  },
   colorOverride?: EventColor
 ): CalendarEvent | null => {
   if (!event || event.status === 'cancelled') return null
@@ -80,7 +89,10 @@ const toCalendarEvent = (
     start: startDate,
     end: endDate,
     allDay: isAllDay,
-    color: colorOverride || colorMap[event.colorId] || 'sky',
+    color:
+      colorOverride ||
+      (event.colorId ? colorMap[event.colorId] : undefined) ||
+      'sky',
   }
 }
 

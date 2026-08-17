@@ -12,6 +12,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import type { Update } from '@/lib/telegram/types'
+import type { BotContext } from '@/lib/telegram/context'
 import { TelegramAPI } from '@/lib/telegram/api'
 import { handleStart } from '@/lib/telegram/commands/start'
 import { handleEndBooking } from '@/lib/telegram/commands/end-booking'
@@ -84,11 +85,11 @@ export const Route = createFileRoute('/api/telegram')({
           const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)
 
           // Create a simple context object
-          const ctx: any = {
+          const ctx: BotContext = {
             update,
             env,
             telegram,
-            reply: async (text: string, extra?: any) => {
+            reply: async (text: string, extra?: Record<string, unknown>) => {
               if ('message' in update && update.message) {
                 return await telegram.sendMessage(
                   update.message.chat.id,
@@ -115,7 +116,10 @@ export const Route = createFileRoute('/api/telegram')({
                 )
               }
             },
-            editMessageText: async (text: string, extra?: any) => {
+            editMessageText: async (
+              text: string,
+              extra?: Record<string, unknown>
+            ) => {
               if (
                 'callback_query' in update &&
                 update.callback_query?.message

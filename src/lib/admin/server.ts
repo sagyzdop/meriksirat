@@ -23,7 +23,8 @@ export async function checkAdminPermission(
 
   // If session already has the required data, use it to avoid a DB hit
   // session.user in better-auth typically contains the user table fields
-  const userFromSession = session.user as any
+  const userFromSession = session.user as unknown as AdminUser &
+    Record<string, unknown>
   const hasRequiredFields =
     userFromSession.role !== undefined &&
     userFromSession.clearanceLevel !== undefined &&

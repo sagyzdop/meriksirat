@@ -190,10 +190,12 @@ export function NewBookingPage() {
         to: '/bookings/$bookingId',
         params: { bookingId: result.bookingId.toString() },
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Booking failed:', error)
-      if (error?.conflicts && Array.isArray(error.conflicts)) {
-        const conflictNames = error.conflicts
+      const err = error as
+        { conflicts?: Array<{ equipmentId: number }> } | undefined
+      if (err?.conflicts && Array.isArray(err.conflicts)) {
+        const conflictNames = err.conflicts
           .map(
             (conflict: { equipmentId: number }) =>
               equipmentNameById.get(conflict.equipmentId) ||
@@ -202,7 +204,9 @@ export function NewBookingPage() {
           .join(', ')
         toast.error(`Time slot unavailable for: ${conflictNames}`)
       } else {
-        toast.error(error.message || 'Failed to create booking')
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to create booking'
+        )
       }
     } finally {
       setIsBooking(false)

@@ -14,8 +14,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import DatePicker from '@/components/shared/date-picker'
 
 interface ProfileStepProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
   error: string | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit: (data: any) => void
 }
 

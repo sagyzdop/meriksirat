@@ -199,7 +199,7 @@ export async function logBookingActivity(
 
     await telegram.sendMessage(channelId, message, {
       disable_web_page_preview: true,
-    } as any)
+    })
   } catch (error) {
     console.error('Failed to log booking activity to Telegram channel:', {
       bookingId: logData.bookingId,
@@ -327,7 +327,7 @@ async function sendChannelText(text: string): Promise<void> {
     const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
     await telegram.sendMessage(env.TELEGRAM_CLUB_CHANNEL_ID!, text, {
       disable_web_page_preview: true,
-    } as any)
+    })
   } catch (error) {
     console.error('Failed to send Telegram channel log:', {
       error: error instanceof Error ? error.message : String(error),

@@ -30,7 +30,14 @@ const createEquipmentSchema = z.object({
 type CreateEquipmentForm = z.infer<typeof createEquipmentSchema>
 
 interface PageProps {
-  categories: any[]
+  categories: Array<{
+    id: number
+    name: string
+    description: string | null
+    sortOrder: number | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }>
 }
 
 export function Page({ categories }: PageProps) {

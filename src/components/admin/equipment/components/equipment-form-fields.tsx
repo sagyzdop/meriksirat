@@ -16,16 +16,30 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+type EquipmentFormFields = {
+  modelName: string
+  shortName?: string
+  description?: string
+  categoryId: number
+  googleCalendarId: string
+  requiredClearanceLevel: number
+}
+
 interface EquipmentFormFieldsProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
-  categories: any[]
+  categories: Array<{
+    id: number
+    name: string
+  }>
   disabled?: boolean
 }
 
 /**
- * Shared equipment form fields used by both the create and edit admin pages:
- * model name, short name, description, category, required clearance level, and
- * Google Calendar ID.
+ * Shared equipment form fields used by both the create and edit admin pages.
+ * Uses `any` for the form prop because the two pages have different schema
+ * types (create vs. edit with isActive). This is the idiomatic react-hook-form
+ * pattern for shared form components across different schemas.
  */
 export function EquipmentFormFields({
   form,
@@ -61,7 +75,7 @@ export function EquipmentFormFields({
               <FormLabel>Short Name</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="e.g., R5, A7IV (optional)"
+                  placeholder="e.g., R5, A7IV"
                   {...field}
                   disabled={disabled}
                 />
@@ -80,8 +94,8 @@ export function EquipmentFormFields({
             <FormLabel>Description</FormLabel>
             <FormControl>
               <Textarea
-                placeholder="Detailed description of the equipment, specifications, included accessories, etc."
-                className="min-h-[100px]"
+                placeholder="Equipment description..."
+                className="min-h-[80px]"
                 {...field}
                 disabled={disabled}
               />
@@ -91,65 +105,56 @@ export function EquipmentFormFields({
         )}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <FormField
-          control={form.control}
-          name="categoryId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category *</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-                disabled={disabled}
-              >
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {[...categories]
-                    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-                    .map((category) => (
-                      <SelectItem
-                        key={category.id}
-                        value={category.id.toString()}
-                      >
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="requiredClearanceLevel"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Clearance Level *</FormLabel>
+      <FormField
+        control={form.control}
+        name="categoryId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Category *</FormLabel>
+            <Select
+              onValueChange={(value) => field.onChange(Number(value))}
+              value={field.value ? String(field.value) : ''}
+              disabled={disabled}
+            >
               <FormControl>
-                <Input
-                  type="number"
-                  min="1"
-                  max="10"
-                  placeholder="1-10"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(parseInt(e.target.value) || 1)
-                  }
-                  disabled={disabled}
-                />
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={String(category.id)}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="requiredClearanceLevel"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Required Clearance Level *</FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                placeholder="1"
+                value={field.value}
+                onChange={(e) => field.onChange(Number(e.target.value))}
+                disabled={disabled}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
       <FormField
         control={form.control}
@@ -159,15 +164,11 @@ export function EquipmentFormFields({
             <FormLabel>Google Calendar ID *</FormLabel>
             <FormControl>
               <Input
-                placeholder="e.g., equipment-camera-01@example.com"
+                placeholder="calendar@group.calendar.google.com"
                 {...field}
                 disabled={disabled}
               />
             </FormControl>
-            <p className="text-sm text-muted-foreground">
-              Each equipment must have a unique Google Calendar ID for booking
-              management
-            </p>
             <FormMessage />
           </FormItem>
         )}
