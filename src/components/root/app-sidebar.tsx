@@ -68,8 +68,9 @@ const data = {
   navSecondary: [
     {
       title: 'FAQ',
-      url: '/faq',
+      url: 'https://github.com/sagyzdop/meriksirat/blob/main/docs/faq.md',
       icon: HelpCircle,
+      external: true,
     },
     {
       title: 'Terms of Service',

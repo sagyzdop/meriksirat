@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
-import { Route as AuthenticatedFaqRouteImport } from './routes/_authenticated/faq'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AlbumsIndexRouteImport } from './routes/albums/index'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums/$albumId'
@@ -64,11 +63,6 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedFaqRoute = AuthenticatedFaqRouteImport.update({
-  id: '/faq',
-  path: '/faq',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -227,7 +221,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/faq': typeof AuthenticatedFaqRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
@@ -260,7 +253,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/faq': typeof AuthenticatedFaqRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
@@ -295,7 +287,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/_authenticated/faq': typeof AuthenticatedFaqRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
@@ -330,7 +321,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/admin'
-    | '/faq'
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
@@ -363,7 +353,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/admin'
-    | '/faq'
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
@@ -397,7 +386,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/_authenticated/admin'
-    | '/_authenticated/faq'
     | '/_authenticated/profile'
     | '/albums/$albumId'
     | '/api/telegram'
@@ -473,13 +461,6 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/faq': {
-      id: '/_authenticated/faq'
-      path: '/faq'
-      fullPath: '/faq'
-      preLoaderRoute: typeof AuthenticatedFaqRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/profile': {
@@ -708,7 +689,6 @@ const AuthenticatedAdminRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
-  AuthenticatedFaqRoute: typeof AuthenticatedFaqRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedBookingsNewRoute: typeof AuthenticatedBookingsNewRoute
   AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
@@ -721,7 +701,6 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
-  AuthenticatedFaqRoute: AuthenticatedFaqRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedBookingsNewRoute: AuthenticatedBookingsNewRoute,
   AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,

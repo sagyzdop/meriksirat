@@ -179,7 +179,6 @@ src/
 │   ├── albums/              # Album pages
 │   ├── bookings/            # Booking pages
 │   ├── equipment/           # Equipment pages
-│   ├── faq/                 # FAQ page
 │   ├── onboarding/          # Onboarding flow
 │   └── profile/             # User profile
 ├── lib/
@@ -232,6 +231,11 @@ messages. See `docs/dev/logs.md` for the full list of message formats.
 
 Detailed documentation lives in `docs/`:
 
+### User-facing
+
+- [FAQ](https://github.com/sagyzdop/meriksirat/blob/main/docs/faq.md) — common questions (linked from sidebar)
+- [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md) — user agreement (linked from sidebar + onboarding)
+
 ### Developer docs (`docs/dev/`)
 
 - [Architecture](docs/dev/architecture.md) — stack overview and directory layout
@@ -248,12 +252,9 @@ Detailed documentation lives in `docs/`:
 ### User docs (`docs/user/`)
 
 - [Booking Flow](docs/user/booking.md) — full booking lifecycle
+- [Telegram Bot](docs/user/telegram-bot.md) — bot usage guide
 - [Member Guide](docs/user/member-guide.md) — how to use the platform
 - [Admin Guide](docs/user/admin-guide.md) — administrative operations
-
-### Legal
-
-- [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md) — user agreement and data policy
 
 ## Contributing
 

@@ -63,9 +63,6 @@ function getPageName(pathname: string): string {
     case 'profile':
       return 'My Profile'
 
-    case 'faq':
-      return 'FAQ'
-
     case 'albums':
       return 'Public Albums'
 
