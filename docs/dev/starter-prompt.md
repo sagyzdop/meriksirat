@@ -26,16 +26,17 @@ You are working on **Meriksirat**, a full-stack equipment booking & management p
 
 ## Project structure quick map
 
-- `src/routes/` — thin route constructors (`_public/`, `_authenticated/`, `api/`)
+- `src/routes/` — thin route constructors (`_authenticated/`, `api/`, plus root-level public routes like `login.tsx`, `onboarding.tsx`, `albums/`)
 - `src/components/{admin,albums,bookings,equipment,faq,onboarding,profile}` — pages (mirror routes)
 - `src/components/ui/` — shadcn primitives; `src/components/shared/` — cross-page components
 - `src/components/layout/` — PageContainer, PageHeader, sidebar shell
 - `src/components/root/` — SiteHeader, AppSidebar, authenticated shell
-- `src/lib/{admin,albums,auth,booking,equipment,user}/` — server functions (`functions.ts`), queries (`queries.ts`), types
+- `src/lib/{admin,albums,booking,equipment,user}/` — server functions + queries + types (each domain splits into `functions.ts`/`functions/`, `queries.ts`, `types.ts`)
+- `src/lib/auth/` — Better Auth setup, session, onboarding (different pattern: `auth.ts`, `session.ts`, `onboarding.ts`)
 - `src/lib/google/` — Calendar + Drive integration; `src/lib/telegram/` — bot commands + logging
 - `src/lib/birthdays/` — birthday calendar sync
 - `src/lib/search-params.ts`, `src/lib/query-client.ts`, `src/router.tsx`
-- `src/db/` — Drizzle schema + migrations
+- `src/db/` — Drizzle schema (`schema.ts`) + migrations (`index.ts`)
 - `docs/dev/` — architecture, conventions, data-loading, albums, calendar-viewer, availability-badges, worker-import-convention, logs, shadcn-reference, starter-prompt
 - `docs/user/` — booking, member-guide, admin-guide
 - `docs/terms-of-service.md` — user-facing legal terms (linked from sidebar + onboarding dialog)
