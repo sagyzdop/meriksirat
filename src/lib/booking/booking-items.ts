@@ -3,11 +3,10 @@ import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { recomputeBookingStatus } from '@/lib/booking/status'
 import {
-  deleteCalendarEvent,
-  updateCalendarEvent,
-  toCalendarDateTime,
-  CLUB_TIMEZONE,
-} from '@/lib/google/google-caledar'
+  deleteCalendarEventRaw,
+  updateCalendarEventRaw,
+} from '@/lib/google/google-calendar-client'
+import { toCalendarDateTime, CLUB_TIMEZONE } from '@/lib/google/google-caledar'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
 
@@ -147,11 +146,9 @@ export async function cancelBookingItems(
   for (const it of cancellable) {
     if (it.googleCalendarEventId && it.equipmentCalendarId) {
       try {
-        await deleteCalendarEvent({
-          data: {
-            equipmentCalendarId: it.equipmentCalendarId,
-            eventId: it.googleCalendarEventId,
-          },
+        await deleteCalendarEventRaw({
+          equipmentCalendarId: it.equipmentCalendarId,
+          eventId: it.googleCalendarEventId,
         })
       } catch (err) {
         console.error(
@@ -215,18 +212,22 @@ export async function returnBookingItems(
     try {
       const eventStart = it.startedAt ?? it.bookingStartTime
 
-      await updateCalendarEvent({
-        data: {
-          equipmentCalendarId: it.equipmentCalendarId,
-          eventId: it.googleCalendarEventId,
-          event: {
-            summary: `${it.equipmentName} (RETURNED)`,
-            description: buildItemEventDetails(it, 'returned', returnedAt),
-            start: { dateTime: toCalendarDateTime(eventStart), timeZone: CLUB_TIMEZONE },
-            end: { dateTime: toCalendarDateTime(returnedAt), timeZone: CLUB_TIMEZONE },
+      await updateCalendarEventRaw({
+        equipmentCalendarId: it.equipmentCalendarId,
+        eventId: it.googleCalendarEventId,
+        event: {
+          summary: `${it.equipmentName} (RETURNED)`,
+          description: buildItemEventDetails(it, 'returned', returnedAt),
+          start: {
+            dateTime: toCalendarDateTime(eventStart),
+            timeZone: CLUB_TIMEZONE,
           },
-          userEmail: it.userEmail || '',
+          end: {
+            dateTime: toCalendarDateTime(returnedAt),
+            timeZone: CLUB_TIMEZONE,
+          },
         },
+        userEmail: it.userEmail || '',
       })
     } catch (err) {
       console.error('Failed to update calendar event for returned item:', err)

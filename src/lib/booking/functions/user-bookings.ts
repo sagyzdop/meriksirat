@@ -12,7 +12,11 @@ import type { BookingItemRow } from '../mappers'
 import { mapBookingsWithItems, itemSelect } from '../mappers'
 import { formatUserDisplayName } from '@/lib/utils'
 import { formatBookingDetailsPlain } from '../details'
-import { MIN_BOOKING_ADVANCE_MS } from '../operating-hours'
+import {
+  MIN_BOOKING_ADVANCE_MS,
+  MAX_BOOKING_DURATION_MS,
+  MAX_BOOKING_HORIZON_MS,
+} from '../operating-hours'
 
 type UserIdentity = {
   firstName?: string | null
@@ -76,13 +80,13 @@ export const createBookingFn = createServerFn({ method: 'POST' })
   .validator(CreateBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
+    const { toCalendarDateTime, CLUB_TIMEZONE } =
+      await import('@/lib/google/google-caledar')
     const {
-      createCalendarEvent,
-      checkMultipleCalendarsFreeBusy,
-      deleteCalendarEvent,
-      toCalendarDateTime,
-      CLUB_TIMEZONE,
-    } = await import('@/lib/google/google-caledar')
+      createCalendarEventRaw,
+      checkMultipleCalendarsFreeBusyRaw,
+      deleteCalendarEventRaw,
+    } = await import('@/lib/google/google-calendar-client')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -93,10 +97,33 @@ export const createBookingFn = createServerFn({ method: 'POST' })
 
     const { equipmentIds, startTime, endTime, notes } = data
 
-    if (new Date(startTime).getTime() < Date.now() + MIN_BOOKING_ADVANCE_MS) {
+    // Dedupe equipment ids from the schema so the same item cannot be booked
+    // twice in one request.
+    const dedupedEquipmentIds = [...new Set(equipmentIds)]
+
+    const startMs = new Date(startTime).getTime()
+    const endMs = new Date(endTime).getTime()
+
+    if (
+      !Number.isFinite(startMs) ||
+      !Number.isFinite(endMs) ||
+      endMs <= startMs
+    ) {
+      throw new Error('Invalid booking times')
+    }
+
+    if (startMs < Date.now() + MIN_BOOKING_ADVANCE_MS) {
       throw new Error(
         'Bookings must start at least 1 hour from now. Please select a later time slot.'
       )
+    }
+
+    if (endMs - startMs > MAX_BOOKING_DURATION_MS) {
+      throw new Error('Bookings cannot be longer than 48 hours.')
+    }
+
+    if (startMs > Date.now() + MAX_BOOKING_HORIZON_MS) {
+      throw new Error('Bookings must start within 60 days.')
     }
 
     const headers = getRequestHeaders()
@@ -106,6 +133,22 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       throw new Error('Not authenticated')
     }
 
+    // Per-user rate limit so a single member cannot spam booking creation
+    // (each attempt runs free/busy queries + calendar event inserts).
+    const { rateLimit } = await import('@/lib/ratelimit')
+    const bookingRateLimit = await rateLimit(
+      headers,
+      {
+        name: 'create-booking',
+        windowMs: 60_000,
+        limit: 10,
+      },
+      session.user.id
+    )
+    if (!bookingRateLimit.allowed) {
+      throw new Error('Too many booking requests. Please try again shortly.')
+    }
+
     const userId = session.user.id
     const userEmail = session.user.email
     if (!userId) throw new Error('Unable to determine user id from session')
@@ -113,7 +156,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       throw new Error('Unable to determine user email from session')
 
     const equipmentCalendarIds = await Promise.all(
-      equipmentIds.map(async (equipmentId) => ({
+      dedupedEquipmentIds.map(async (equipmentId) => ({
         equipmentId,
         calendarId: await getEquipmentCalendarId(equipmentId),
       }))
@@ -135,12 +178,10 @@ export const createBookingFn = createServerFn({ method: 'POST' })
 
     const calendarIds = resolvedCalendars.map((item) => item.calendarId)
 
-    const freeBusyResult = await checkMultipleCalendarsFreeBusy({
-      data: {
-        equipmentCalendarIds: calendarIds,
-        timeMin: startTime,
-        timeMax: endTime,
-      },
+    const freeBusyResult = await checkMultipleCalendarsFreeBusyRaw({
+      equipmentCalendarIds: calendarIds,
+      timeMin: startTime,
+      timeMax: endTime,
     })
 
     const conflicts = resolvedCalendars
@@ -178,7 +219,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
     const equipmentData = await database
       .select({ id: equipment.id, modelName: equipment.modelName })
       .from(equipment)
-      .where(inArray(equipment.id, equipmentIds))
+      .where(inArray(equipment.id, dedupedEquipmentIds))
 
     const equipmentNameMap = new Map(
       equipmentData.map((item) => [item.id, item.modelName])
@@ -226,18 +267,22 @@ export const createBookingFn = createServerFn({ method: 'POST' })
         const event = {
           summary: `${equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`} - Booking`,
           description,
-          start: { dateTime: toCalendarDateTime(startTime), timeZone: CLUB_TIMEZONE },
-          end: { dateTime: toCalendarDateTime(endTime), timeZone: CLUB_TIMEZONE },
+          start: {
+            dateTime: toCalendarDateTime(startTime),
+            timeZone: CLUB_TIMEZONE,
+          },
+          end: {
+            dateTime: toCalendarDateTime(endTime),
+            timeZone: CLUB_TIMEZONE,
+          },
         }
 
         const createdEvent = await retry(
           () =>
-            createCalendarEvent({
-              data: {
-                equipmentCalendarId: calendarId,
-                event,
-                userEmail,
-              },
+            createCalendarEventRaw({
+              equipmentCalendarId: calendarId,
+              event,
+              userEmail,
             }),
           3,
           400
@@ -271,11 +316,9 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       // Rollback: delete created events, items and the parent booking
       for (const record of createdItems) {
         try {
-          await deleteCalendarEvent({
-            data: {
-              equipmentCalendarId: record.calendarId,
-              eventId: record.eventId,
-            },
+          await deleteCalendarEventRaw({
+            equipmentCalendarId: record.calendarId,
+            eventId: record.eventId,
           })
         } catch (deleteError) {
           console.error(
@@ -616,7 +659,8 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
   .validator(CancelBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
-    const { deleteCalendarEvent } = await import('@/lib/google/google-caledar')
+    const { deleteCalendarEventRaw } =
+      await import('@/lib/google/google-calendar-client')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment } = await import('@/db/schema')
@@ -705,11 +749,9 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
     for (const item of items) {
       if (item.googleCalendarEventId && item.equipmentCalendarId) {
         try {
-          await deleteCalendarEvent({
-            data: {
-              equipmentCalendarId: item.equipmentCalendarId,
-              eventId: item.googleCalendarEventId,
-            },
+          await deleteCalendarEventRaw({
+            equipmentCalendarId: item.equipmentCalendarId,
+            eventId: item.googleCalendarEventId,
           })
         } catch (err) {
           console.error('Failed to delete calendar event:', err)
@@ -724,8 +766,10 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
-    const { checkCalendarFreeBusy, updateCalendarEvent, toCalendarDateTime, CLUB_TIMEZONE } =
+    const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
+    const { checkCalendarFreeBusyRaw, updateCalendarEventRaw } =
+      await import('@/lib/google/google-calendar-client')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -803,7 +847,8 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     // If times are changing, check availability on all item calendars
     if (data.startTime || data.endTime) {
       if (
-        new Date(newStartTime).getTime() < Date.now() + MIN_BOOKING_ADVANCE_MS
+        new Date(newStartTime).getTime() <
+        Date.now() + MIN_BOOKING_ADVANCE_MS
       ) {
         throw new Error(
           'Bookings must start at least 1 hour from now. Please select a later time slot.'
@@ -812,12 +857,10 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
 
       for (const item of items) {
         if (!item.equipmentCalendarId) continue
-        const freeBusyResult = await checkCalendarFreeBusy({
-          data: {
-            calendarId: item.equipmentCalendarId,
-            timeMin: newStartTime,
-            timeMax: newEndTime,
-          },
+        const freeBusyResult = await checkCalendarFreeBusyRaw({
+          calendarId: item.equipmentCalendarId,
+          timeMin: newStartTime,
+          timeMax: newEndTime,
         })
 
         // The booking's own events still occupy the calendar until they are
@@ -881,18 +924,22 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
       const event = {
         summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking`,
         description,
-        start: { dateTime: toCalendarDateTime(newStartTime), timeZone: CLUB_TIMEZONE },
-        end: { dateTime: toCalendarDateTime(newEndTime), timeZone: CLUB_TIMEZONE },
+        start: {
+          dateTime: toCalendarDateTime(newStartTime),
+          timeZone: CLUB_TIMEZONE,
+        },
+        end: {
+          dateTime: toCalendarDateTime(newEndTime),
+          timeZone: CLUB_TIMEZONE,
+        },
       }
 
       try {
-        await updateCalendarEvent({
-          data: {
-            equipmentCalendarId: item.equipmentCalendarId,
-            eventId: item.googleCalendarEventId,
-            event,
-            userEmail,
-          },
+        await updateCalendarEventRaw({
+          equipmentCalendarId: item.equipmentCalendarId,
+          eventId: item.googleCalendarEventId,
+          event,
+          userEmail,
         })
       } catch (err) {
         console.error('Failed to update calendar event:', err)

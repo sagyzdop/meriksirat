@@ -1,7 +1,8 @@
 import type { db } from '@/db'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, and, inArray, isNull } from 'drizzle-orm'
-import { updateCalendarEvent, toCalendarDateTime, CLUB_TIMEZONE } from '@/lib/google/google-caledar'
+import { updateCalendarEventRaw } from '@/lib/google/google-calendar-client'
+import { toCalendarDateTime, CLUB_TIMEZONE } from '@/lib/google/google-caledar'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
 import { logBookingActivityById } from '@/lib/telegram/logging'
@@ -128,32 +129,30 @@ export async function startBooking(
     if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
 
     try {
-      await updateCalendarEvent({
-        data: {
-          equipmentCalendarId: item.equipmentCalendarId,
-          eventId: item.googleCalendarEventId,
-          event: {
-            summary: `${item.equipmentName || `Equipment ${item.equipmentId}`} (ACTIVE)`,
-            description: formatBookingDetailsPlain({
-              bookingId,
-              userDisplayName,
-              equipmentNames: [
-                item.equipmentName || `Equipment ${item.equipmentId}`,
-              ],
-              startTime: bookingData.startTime,
-              endTime: bookingData.endTime,
-              startedAt: now,
-              status: 'active',
-              notes: bookingData.userEventDetails,
-            }),
-            start: { dateTime: toCalendarDateTime(now), timeZone: CLUB_TIMEZONE },
-            end: {
-              dateTime: toCalendarDateTime(bookingData.endTime),
-              timeZone: CLUB_TIMEZONE,
-            },
+      await updateCalendarEventRaw({
+        equipmentCalendarId: item.equipmentCalendarId,
+        eventId: item.googleCalendarEventId,
+        event: {
+          summary: `${item.equipmentName || `Equipment ${item.equipmentId}`} (ACTIVE)`,
+          description: formatBookingDetailsPlain({
+            bookingId,
+            userDisplayName,
+            equipmentNames: [
+              item.equipmentName || `Equipment ${item.equipmentId}`,
+            ],
+            startTime: bookingData.startTime,
+            endTime: bookingData.endTime,
+            startedAt: now,
+            status: 'active',
+            notes: bookingData.userEventDetails,
+          }),
+          start: { dateTime: toCalendarDateTime(now), timeZone: CLUB_TIMEZONE },
+          end: {
+            dateTime: toCalendarDateTime(bookingData.endTime),
+            timeZone: CLUB_TIMEZONE,
           },
-          userEmail: bookingData.user?.email || '',
         },
+        userEmail: bookingData.user?.email || '',
       })
     } catch (error) {
       console.error(

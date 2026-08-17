@@ -55,7 +55,7 @@ export async function reconcileBirthdaysToCalendar(
     updateBirthdayEvent,
     deleteBirthdayEvent,
     buildBirthdayEventBody,
-  } = await import('@/lib/google/google-caledar')
+  } = await import('@/lib/google/google-birthdays')
 
   // The calendar id is editable from admin settings; fall back to the default
   // constant when it hasn't been configured yet.

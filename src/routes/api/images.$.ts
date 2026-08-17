@@ -21,6 +21,22 @@ export const Route = createFileRoute('/api/images/$')({
             return new Response('Unauthorized', { status: 401 })
           }
 
+          // Per-user rate limit: image serving reads R2 on every miss, and an
+          // authenticated user should not be able to flood it.
+          const { rateLimit } = await import('@/lib/ratelimit')
+          const rl = await rateLimit(
+            request.headers,
+            {
+              name: 'images',
+              windowMs: 60_000,
+              limit: 300,
+            },
+            session.user.id
+          )
+          if (!rl.allowed) {
+            return new Response('Too Many Requests', { status: 429 })
+          }
+
           // Get R2 bucket from context
           const { env } = await import('cloudflare:workers')
           const bucket = env.meriksirat_r2

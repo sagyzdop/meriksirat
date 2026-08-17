@@ -63,13 +63,13 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       await import('@/db/schema')
     const { eq, inArray } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
+    const { toCalendarDateTime, CLUB_TIMEZONE } =
+      await import('@/lib/google/google-caledar')
     const {
-      createCalendarEvent,
-      checkMultipleCalendarsFreeBusy,
-      deleteCalendarEvent,
-      toCalendarDateTime,
-      CLUB_TIMEZONE,
-    } = await import('@/lib/google/google-caledar')
+      createCalendarEventRaw,
+      checkMultipleCalendarsFreeBusyRaw,
+      deleteCalendarEventRaw,
+    } = await import('@/lib/google/google-calendar-client')
     const { getEquipmentCalendarId, retry } = await import('../server')
     const { formatBookingDetailsPlain } = await import('../details')
     const { formatUserDisplayName } = await import('@/lib/utils')
@@ -78,6 +78,22 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const session = await auth.api.getSession({ headers })
     if (!session?.user) {
       throw new Error('Not authenticated')
+    }
+
+    // Per-user rate limit so a single member cannot spam adding items (each
+    // attempt runs free/busy queries + calendar event inserts).
+    const { rateLimit } = await import('@/lib/ratelimit')
+    const addItemsRateLimit = await rateLimit(
+      headers,
+      {
+        name: 'add-booking-items',
+        windowMs: 60_000,
+        limit: 10,
+      },
+      session.user.id
+    )
+    if (!addItemsRateLimit.allowed) {
+      throw new Error('Too many requests. Please try again shortly.')
     }
 
     const database = db(env.meriksirat_d1 as D1Database)
@@ -165,12 +181,10 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const startTime = new Date(bookingRow.startTime).toISOString()
     const endTime = new Date(bookingRow.endTime).toISOString()
 
-    const freeBusyResult = await checkMultipleCalendarsFreeBusy({
-      data: {
-        equipmentCalendarIds: calendarIds,
-        timeMin: startTime,
-        timeMax: endTime,
-      },
+    const freeBusyResult = await checkMultipleCalendarsFreeBusyRaw({
+      equipmentCalendarIds: calendarIds,
+      timeMin: startTime,
+      timeMax: endTime,
     })
 
     const conflicts = resolvedCalendars
@@ -239,12 +253,10 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
 
         const createdEvent = await retry(
           () =>
-            createCalendarEvent({
-              data: {
-                equipmentCalendarId: calendarId,
-                event,
-                userEmail,
-              },
+            createCalendarEventRaw({
+              equipmentCalendarId: calendarId,
+              event,
+              userEmail,
             }),
           3,
           400
@@ -278,11 +290,9 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       // Rollback: delete created events and items
       for (const record of createdItems) {
         try {
-          await deleteCalendarEvent({
-            data: {
-              equipmentCalendarId: record.calendarId,
-              eventId: record.eventId,
-            },
+          await deleteCalendarEventRaw({
+            equipmentCalendarId: record.calendarId,
+            eventId: record.eventId,
           })
         } catch (deleteError) {
           console.error(

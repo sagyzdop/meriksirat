@@ -340,8 +340,13 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingStatusAdminSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { deleteCalendarEvent, updateCalendarEvent, checkCalendarFreeBusy, toCalendarDateTime, CLUB_TIMEZONE } =
+    const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
+    const {
+      deleteCalendarEventRaw,
+      updateCalendarEventRaw,
+      checkCalendarFreeBusyRaw,
+    } = await import('@/lib/google/google-calendar-client')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -435,12 +440,10 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     if (timesChanged) {
       for (const item of items) {
         if (!item.equipmentCalendarId) continue
-        const freeBusyResult = await checkCalendarFreeBusy({
-          data: {
-            calendarId: item.equipmentCalendarId,
-            timeMin: newStartTime,
-            timeMax: newEndTime,
-          },
+        const freeBusyResult = await checkCalendarFreeBusyRaw({
+          calendarId: item.equipmentCalendarId,
+          timeMin: newStartTime,
+          timeMax: newEndTime,
         })
 
         // The booking's own events still occupy the calendar until they are
@@ -525,11 +528,9 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       for (const item of items) {
         if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
         try {
-          await deleteCalendarEvent({
-            data: {
-              equipmentCalendarId: item.equipmentCalendarId,
-              eventId: item.googleCalendarEventId,
-            },
+          await deleteCalendarEventRaw({
+            equipmentCalendarId: item.equipmentCalendarId,
+            eventId: item.googleCalendarEventId,
           })
         } catch (calendarError) {
           console.error('Failed to delete calendar event:', calendarError)
@@ -579,18 +580,22 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       const event = {
         summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking (${previousStatus.toUpperCase()})`,
         description,
-        start: { dateTime: toCalendarDateTime(newStartTime), timeZone: CLUB_TIMEZONE },
-        end: { dateTime: toCalendarDateTime(newEndTime), timeZone: CLUB_TIMEZONE },
+        start: {
+          dateTime: toCalendarDateTime(newStartTime),
+          timeZone: CLUB_TIMEZONE,
+        },
+        end: {
+          dateTime: toCalendarDateTime(newEndTime),
+          timeZone: CLUB_TIMEZONE,
+        },
       }
 
       try {
-        await updateCalendarEvent({
-          data: {
-            equipmentCalendarId: item.equipmentCalendarId,
-            eventId: item.googleCalendarEventId,
-            event,
-            userEmail: bookingData.user?.email || '',
-          },
+        await updateCalendarEventRaw({
+          equipmentCalendarId: item.equipmentCalendarId,
+          eventId: item.googleCalendarEventId,
+          event,
+          userEmail: bookingData.user?.email || '',
         })
       } catch (calendarError) {
         console.error('Failed to update calendar event:', calendarError)
@@ -608,7 +613,8 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
   .validator(DeleteBookingSchema)
   .handler(async ({ data }) => {
     const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { deleteCalendarEvent } = await import('@/lib/google/google-caledar')
+    const { deleteCalendarEventRaw } =
+      await import('@/lib/google/google-calendar-client')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment } = await import('@/db/schema')
@@ -650,11 +656,9 @@ export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
     for (const item of items) {
       if (item.googleCalendarEventId && item.equipmentCalendarId) {
         try {
-          await deleteCalendarEvent({
-            data: {
-              equipmentCalendarId: item.equipmentCalendarId,
-              eventId: item.googleCalendarEventId,
-            },
+          await deleteCalendarEventRaw({
+            equipmentCalendarId: item.equipmentCalendarId,
+            eventId: item.googleCalendarEventId,
           })
         } catch (calendarError) {
           console.error(

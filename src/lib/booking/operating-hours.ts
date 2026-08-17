@@ -113,6 +113,15 @@ export interface BookableWindow {
 /** Bookings must start at least this far in the future (1 hour). */
 export const MIN_BOOKING_ADVANCE_MS = 60 * 60 * 1000
 
+/** A single booking may not run longer than this (48 hours). */
+export const MAX_BOOKING_DURATION_MS = 48 * 60 * 60 * 1000
+
+/** Bookings may not start further in the future than this (60 days). */
+export const MAX_BOOKING_HORIZON_MS = 60 * 24 * 60 * 60 * 1000
+
+/** Maximum number of equipment items allowed per booking. */
+export const MAX_BOOKING_ITEMS = 10
+
 /**
  * Returns the nearest 30-minute window that can be booked right now. A booking
  * must start at least `MIN_BOOKING_ADVANCE_MS` from now, so the earliest start

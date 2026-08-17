@@ -176,8 +176,8 @@ async function updateOverdueBookings(env: Env): Promise<void> {
     const { booking, bookingItem, equipment, user } =
       await import('./src/db/schema')
     const { eq, and, lte, sql } = await import('drizzle-orm')
-    const { updateCalendarEvent } =
-      await import('./src/lib/google/google-caledar')
+    const { updateCalendarEventRaw } =
+      await import('./src/lib/google/google-calendar-client')
     const { logBookingActivityById } =
       await import('./src/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('./src/lib/booking/status')
@@ -284,13 +284,11 @@ async function updateOverdueBookings(env: Env): Promise<void> {
             },
           }
 
-          await updateCalendarEvent({
-            data: {
-              equipmentCalendarId: item.equipment.googleCalendarId,
-              eventId: item.googleCalendarEventId,
-              event,
-              userEmail: item.user?.email || '',
-            },
+          await updateCalendarEventRaw({
+            equipmentCalendarId: item.equipment.googleCalendarId,
+            eventId: item.googleCalendarEventId,
+            event,
+            userEmail: item.user?.email || '',
           })
         }
 

@@ -81,6 +81,18 @@ export async function handleStart(ctx: BotContext): Promise<void> {
 
     // If token is invalid or expired, send error message
     if (!tokenRecord) {
+      // A re-tap of an already-used link: if this chat is already linked just
+      // proceed to the menu instead of showing a scary error.
+      const alreadyLinked = await database
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.telegramChatId, chatId))
+        .limit(1)
+        .then((rows) => rows[0])
+      if (alreadyLinked) {
+        await showMainMenu(ctx)
+        return
+      }
       await ctx.reply('Link expired or invalid.')
       return
     }
@@ -127,6 +139,26 @@ export async function handleStart(ctx: BotContext): Promise<void> {
 export async function createTelegramLinkToken(userId: string): Promise<string> {
   const database = db(env.meriksirat_d1 as D1Database)
 
+  // Reuse an existing unexpired token so page reloads / repeated onboarding
+  // visits do not keep inserting new rows into D1.
+  const existing = await database
+    .select()
+    .from(telegramToken)
+    .where(
+      and(
+        eq(telegramToken.userId, userId),
+        gt(telegramToken.expiresAt, new Date())
+      )
+    )
+    .limit(1)
+    .then((rows) => rows[0])
+
+  const botUsername = env.TELEGRAM_BOT_USERNAME || 'your_equipment_bot'
+
+  if (existing) {
+    return `https://t.me/${botUsername}?start=${existing.token}`
+  }
+
   // Generate a unique token
   const token = crypto.randomUUID().replace(/-/g, '')
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
@@ -137,9 +169,6 @@ export async function createTelegramLinkToken(userId: string): Promise<string> {
     userId,
     expiresAt,
   })
-
-  // Get bot username from environment
-  const botUsername = env.TELEGRAM_BOT_USERNAME || 'your_equipment_bot'
 
   return `https://t.me/${botUsername}?start=${token}`
 }

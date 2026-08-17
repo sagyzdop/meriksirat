@@ -52,6 +52,34 @@ export const Route = createFileRoute('/api/telegram')({
           // Parse Telegram update
           const update = (await request.json()) as Update
 
+          // Rate limit per chat so a single spammy chat cannot churn the whole
+          // webhook (every update triggers DB reads and possibly bot replies).
+          // Keying on the chat id (not IP) is required because all webhooks
+          // arrive from Telegram's own IPs.
+          const chatId =
+            ('message' in update && update.message?.chat?.id) ||
+            ('callback_query' in update &&
+              update.callback_query?.message?.chat?.id)
+
+          if (chatId) {
+            const { rateLimit } = await import('@/lib/ratelimit')
+            const rl = await rateLimit(
+              request.headers,
+              {
+                name: 'telegram-webhook',
+                windowMs: 60_000,
+                limit: 30,
+              },
+              `chat:${chatId}`
+            )
+            if (!rl.allowed) {
+              console.warn(
+                `Telegram update rate limit exceeded for chat ${chatId}`
+              )
+              return new Response('Too Many Requests', { status: 429 })
+            }
+          }
+
           // Create Telegram API client
           const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)
 

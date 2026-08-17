@@ -24,12 +24,10 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
     const { auth } = await import('@/lib/auth/auth')
-    const {
-      checkMultipleCalendarsFreeBusy,
-      updateCalendarEvent,
-      toCalendarDateTime,
-      CLUB_TIMEZONE,
-    } = await import('@/lib/google/google-caledar')
+    const { toCalendarDateTime, CLUB_TIMEZONE } =
+      await import('@/lib/google/google-caledar')
+    const { checkMultipleCalendarsFreeBusyRaw, updateCalendarEventRaw } =
+      await import('@/lib/google/google-calendar-client')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -139,12 +137,10 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       .filter((id): id is string => Boolean(id))
 
     if (calendarIds.length > 0) {
-      const freeBusyResult = await checkMultipleCalendarsFreeBusy({
-        data: {
-          equipmentCalendarIds: calendarIds,
-          timeMin: parent.endTime.toISOString(),
-          timeMax: newEndTime.toISOString(),
-        },
+      const freeBusyResult = await checkMultipleCalendarsFreeBusyRaw({
+        equipmentCalendarIds: calendarIds,
+        timeMin: parent.endTime.toISOString(),
+        timeMax: newEndTime.toISOString(),
       })
 
       const conflicts = activeItems
@@ -222,26 +218,24 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       })
 
       try {
-        await updateCalendarEvent({
-          data: {
-            equipmentCalendarId: item.equipmentCalendarId,
-            eventId: item.googleCalendarEventId,
-            event: {
-              summary: `${item.equipmentName || `Equipment ${item.equipmentId}`}${undidOverdue ? '' : ` (${parent.status.toUpperCase()})`}`,
-              description,
-              start: {
-                dateTime: toCalendarDateTime(
-                  parent.startedAt ?? parent.startTime
-                ),
-                timeZone: CLUB_TIMEZONE,
-              },
-              end: {
-                dateTime: toCalendarDateTime(newEndTime),
-                timeZone: CLUB_TIMEZONE,
-              },
+        await updateCalendarEventRaw({
+          equipmentCalendarId: item.equipmentCalendarId,
+          eventId: item.googleCalendarEventId,
+          event: {
+            summary: `${item.equipmentName || `Equipment ${item.equipmentId}`}${undidOverdue ? '' : ` (${parent.status.toUpperCase()})`}`,
+            description,
+            start: {
+              dateTime: toCalendarDateTime(
+                parent.startedAt ?? parent.startTime
+              ),
+              timeZone: CLUB_TIMEZONE,
             },
-            userEmail: parent.user?.email || '',
+            end: {
+              dateTime: toCalendarDateTime(newEndTime),
+              timeZone: CLUB_TIMEZONE,
+            },
           },
+          userEmail: parent.user?.email || '',
         })
       } catch (calendarError) {
         console.error(

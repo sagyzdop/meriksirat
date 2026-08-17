@@ -63,7 +63,15 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       // Mark selected items as returned (reuses the shared return logic:
       // updates the items, recomputes parent booking statuses, and updates the
       // Google Calendar events with the actual return time).
-      await returnBookingItems(database, selectedItemIds)
+      const result = await returnBookingItems(database, selectedItemIds)
+
+      // If nothing was updated the items were already returned (e.g. a
+      // duplicate/re-sent photo racing the first one). Drop the session and
+      // return without re-logging to the channel.
+      if (result.updated.length === 0) {
+        await deleteSession(ctx.env.meriksirat_kv, chatId)
+        return
+      }
 
       // Resolve the booking this return belongs to, for the channel log.
       const bookingRows = await database

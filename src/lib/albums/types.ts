@@ -97,8 +97,8 @@ export const RemoveMemberSchema = z.object({
 
 export const CreateUploadSessionSchema = z.object({
   albumId: z.string(),
-  fileName: z.string(),
-  mimeType: z.string(),
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(100),
 })
 
 export const RefreshAlbumSchema = z.object({

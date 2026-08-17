@@ -697,9 +697,27 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
+    const { access, user } = await resolveAlbumAccess(headers, row)
     if (!['owner', 'editor', 'manager'].includes(access)) {
       throw new Error('Insufficient permissions')
+    }
+
+    // Refreshing invalidates the listing cache and re-fetches the folder from
+    // the Drive API, so cap how often a user can trigger it.
+    if (user?.id) {
+      const { rateLimit } = await import('@/lib/ratelimit')
+      const rl = await rateLimit(
+        headers,
+        {
+          name: 'refresh-album',
+          windowMs: 60_000,
+          limit: 10,
+        },
+        user.id
+      )
+      if (!rl.allowed) {
+        throw new Error('Too many refresh requests. Please try again shortly.')
+      }
     }
 
     await invalidateCachedListing(row.driveFolderId)
@@ -724,8 +742,26 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'manager'])
+    const { access, user } = await resolveAlbumAccess(headers, row)
+    requireAccess(access, ['owner', 'editor', 'manager'])
+
+    // Each upload session mints a Drive resumable upload URL and hits the
+    // Drive API, so cap how fast a user can mint them.
+    if (user?.id) {
+      const { rateLimit } = await import('@/lib/ratelimit')
+      const rl = await rateLimit(
+        headers,
+        {
+          name: 'create-upload-session',
+          windowMs: 60_000,
+          limit: 20,
+        },
+        user.id
+      )
+      if (!rl.allowed) {
+        throw new Error('Too many upload sessions. Please try again shortly.')
+      }
+    }
 
     const accessToken = await getGoogleAccessToken()
     const monthFolder = await resolveMonthFolder(accessToken)

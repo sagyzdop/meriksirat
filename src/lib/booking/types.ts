@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_BOOKING_ITEMS } from './operating-hours'
 
 export interface BookingEquipmentInfo {
   id: number
@@ -83,11 +84,21 @@ export interface BookingSettings {
   operatingHoursEnd: number
 }
 
+/** Validates that a string parses as a date-time. */
+const isoDateTime = z
+  .string()
+  .refine((value) => !Number.isNaN(Date.parse(value)), {
+    message: 'Invalid date-time',
+  })
+
+/** Free-text notes are bounded to avoid oversized rows / log spam. */
+const notesField = z.string().max(500).optional()
+
 export const CreateBookingSchema = z.object({
-  equipmentIds: z.array(z.coerce.number()).min(1),
-  startTime: z.string(),
-  endTime: z.string(),
-  notes: z.string().optional(),
+  equipmentIds: z.array(z.coerce.number()).min(1).max(MAX_BOOKING_ITEMS),
+  startTime: isoDateTime,
+  endTime: isoDateTime,
+  notes: notesField,
 })
 
 export const BookingFiltersSchema = z.object({
@@ -150,9 +161,9 @@ export const UpdateBookingStatusAdminSchema = z.object({
   bookingId: z.coerce.number(),
   // Admins may only move a booking to `cancelled`; other statuses are rejected.
   status: z.literal('cancelled').optional(),
-  notes: z.string().optional(), // Full replacement for user_event_details
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
+  notes: z.string().max(500).optional(), // Full replacement for user_event_details
+  startTime: isoDateTime.optional(),
+  endTime: isoDateTime.optional(),
 })
 
 export const StartBookingSchema = z.object({
@@ -161,9 +172,9 @@ export const StartBookingSchema = z.object({
 
 export const UpdateBookingSchema = z.object({
   bookingId: z.coerce.number(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
-  notes: z.string().optional(),
+  startTime: isoDateTime.optional(),
+  endTime: isoDateTime.optional(),
+  notes: notesField,
 })
 
 export const CancelBookingSchema = z.object({
@@ -177,7 +188,7 @@ export const CancelBookingItemSchema = z.object({
 
 export const AddBookingItemsSchema = z.object({
   bookingId: z.coerce.number(),
-  equipmentIds: z.array(z.coerce.number()).min(1),
+  equipmentIds: z.array(z.coerce.number()).min(1).max(MAX_BOOKING_ITEMS),
 })
 
 export const ExtendBookingSchema = z.object({

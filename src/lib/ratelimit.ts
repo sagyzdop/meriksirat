@@ -33,10 +33,12 @@ export function clientIp(headers: Headers): string | null {
 
 export async function rateLimit(
   headers: Headers,
-  options: RateLimitOptions
+  options: RateLimitOptions,
+  identity?: string
 ): Promise<RateLimitResult> {
   const ip = clientIp(headers)
-  if (!ip) return { allowed: true }
+  const subject = identity ?? ip
+  if (!subject) return { allowed: true }
 
   try {
     const { env } = await import('cloudflare:workers')
@@ -45,7 +47,7 @@ export async function rateLimit(
 
     const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS
     const bucket = Math.floor(Date.now() / windowMs)
-    const key = `rl:${options.name}:${ip}:${bucket}`
+    const key = `rl:${options.name}:${subject}:${bucket}`
 
     const current = Number((await kv.get(key)) ?? '0')
     if (current >= options.limit) {

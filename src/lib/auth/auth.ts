@@ -21,4 +21,9 @@ export const auth = betterAuth({
     }
   ),
   plugins: [tanstackStartCookies()],
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+  },
 })
