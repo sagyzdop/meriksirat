@@ -118,6 +118,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
       role: user.role,
       status: user.status,
       clearanceLevel: user.clearanceLevel,
+      albumCount: user.albumCount,
       createdAt: user.createdAt,
     }[data.sortBy]
 
@@ -140,6 +141,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
         lastName: user.lastName,
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
         overdueCount: user.overdueCount,
+        albumCount: user.albumCount,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
@@ -348,6 +350,7 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
         onboardingComplete: user.onboardingComplete,
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
         overdueCount: user.overdueCount,
+        albumCount: user.albumCount,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })

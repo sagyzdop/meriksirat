@@ -201,6 +201,16 @@ export const createUserColumns = ({
       return value.includes(row.getValue(id))
     },
   },
+  {
+    accessorKey: 'albumCount',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Albums" />
+    ),
+    cell: ({ row }) => {
+      const count = row.original.albumCount ?? 0
+      return <span className="text-sm tabular-nums">{count}</span>
+    },
+  },
 ]
 
 // Export a default version for backward compatibility

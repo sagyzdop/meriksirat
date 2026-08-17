@@ -43,6 +43,7 @@ export interface User {
     | null
   firstName: string | null
   lastName: string | null
+  albumCount: number | null
   createdAt: Date
   updatedAt: Date
 }
@@ -76,6 +77,7 @@ export const AdminUserFiltersSchema = z.object({
       'role',
       'status',
       'clearanceLevel',
+      'albumCount',
       'createdAt',
     ])
     .default('firstName'),

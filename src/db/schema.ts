@@ -54,6 +54,7 @@ export const user = sqliteTable(
       .default(0)
       .notNull(),
     overdueCount: integer('overdue_count').default(0).notNull(),
+    albumCount: integer('album_count').default(0).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),

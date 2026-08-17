@@ -522,13 +522,14 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
+    const { album, user } = await import('@/db/schema')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { createDriveFolder, setAnyoneReader } =
       await import('@/lib/google/google-drive')
     const { getSessionUser } = await import('./server')
     const { newAlbumId, newShareToken } = await import('./ids')
+    const { sql, eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     const currentUser = await getSessionUser(headers)
@@ -563,6 +564,11 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       editShareToken: newShareToken(),
       isShared: true,
     })
+
+    await database
+      .update(user)
+      .set({ albumCount: sql`${user.albumCount} + 1` })
+      .where(eq(user.id, currentUser.id))
 
     const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
     await logAlbumActivityByUser(currentUser.id, {
@@ -881,8 +887,8 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
+    const { album, user } = await import('@/db/schema')
+    const { eq, sql } = await import('drizzle-orm')
     const { resolveAlbumAccess, requireAccess, invalidateCachedListing } =
       await import('./server')
     const { getGoogleAccessToken } =
@@ -907,6 +913,11 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
     }
     await invalidateCachedListing(row.driveFolderId)
     await database.delete(album).where(eq(album.id, data.albumId))
+
+    await database
+      .update(user)
+      .set({ albumCount: sql`MAX(${user.albumCount} - 1, 0)` })
+      .where(eq(user.id, row.ownerUserId))
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
@@ -971,7 +982,8 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { albumMember } = await import('@/db/schema')
+    const { albumMember, user } = await import('@/db/schema')
+    const { eq, sql } = await import('drizzle-orm')
     const { getSessionUser } = await import('./server')
     const { newId } = await import('./ids')
 
@@ -991,6 +1003,11 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
         .insert(albumMember)
         .values({ id: newId(12), albumId: row.id, userId: currentUser.id })
         .onConflictDoNothing()
+
+      await database
+        .update(user)
+        .set({ albumCount: sql`${user.albumCount} + 1` })
+        .where(eq(user.id, currentUser.id))
 
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
       await logAlbumActivityByUser(currentUser.id, {
@@ -1178,7 +1195,7 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { albumMember, user } = await import('@/db/schema')
-    const { and, eq } = await import('drizzle-orm')
+    const { and, eq, sql } = await import('drizzle-orm')
     const { resolveAlbumAccess } = await import('./server')
 
     const headers = getRequestHeaders()
@@ -1213,6 +1230,11 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
           eq(albumMember.userId, data.userId)
         )
       )
+
+    await database
+      .update(user)
+      .set({ albumCount: sql`MAX(${user.albumCount} - 1, 0)` })
+      .where(eq(user.id, data.userId))
 
     if (currentUser) {
       const [{ logAlbumActivityByUser }, { formatUserDisplayName }] =
