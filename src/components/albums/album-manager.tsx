@@ -58,6 +58,10 @@ export function AlbumManager({
   const [leaveOpen, setLeaveOpen] = React.useState(false)
   const [title, setTitle] = React.useState(album.title)
   const [description, setDescription] = React.useState(album.description)
+  const [event, setEvent] = React.useState(album.event)
+  const [eventDate, setEventDate] = React.useState(
+    album.eventDate ? album.eventDate.slice(0, 10) : ''
+  )
   const [busy, setBusy] = React.useState(false)
   const [recreating, setRecreating] = React.useState(false)
   const [restoring, setRestoring] = React.useState(false)
@@ -87,6 +91,8 @@ export function AlbumManager({
           albumId: album.id,
           title: title.trim(),
           description: description.trim() || '',
+          event: event.trim(),
+          eventDate: eventDate || undefined,
         },
       })
       toast.success('Album updated')
@@ -289,6 +295,8 @@ export function AlbumManager({
             onClick={() => {
               setTitle(album.title)
               setDescription(album.description)
+              setEvent(album.event)
+              setEventDate(album.eventDate ? album.eventDate.slice(0, 10) : '')
               setEditOpen(true)
             }}
           >
@@ -386,7 +394,7 @@ export function AlbumManager({
           <DialogHeader>
             <DialogTitle>Edit album</DialogTitle>
             <DialogDescription>
-              Update the title and description.
+              Update the title, event, date, and description.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdate} className="space-y-4">
@@ -398,6 +406,26 @@ export function AlbumManager({
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="album-event">Event</Label>
+              <Input
+                id="album-event"
+                value={event}
+                onChange={(e) => setEvent(e.target.value)}
+                required
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="album-event-date">Event Date</Label>
+              <Input
+                id="album-event-date"
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -418,7 +446,10 @@ export function AlbumManager({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={busy || !title.trim()}>
+              <Button
+                type="submit"
+                disabled={busy || !title.trim() || !event.trim() || !eventDate}
+              >
                 {busy ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
