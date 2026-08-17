@@ -136,6 +136,18 @@ export interface AlbumAuthor {
   telegramUsername: string | null
 }
 
+export interface AlbumPhotoExif {
+  cameraMake?: string
+  cameraModel?: string
+  exposureTime?: string
+  aperture?: number
+  focalLength?: number
+  isoSpeed?: number
+  width?: number
+  height?: number
+  whiteBalance?: string
+}
+
 export interface AlbumPhoto {
   id: string
   name: string
@@ -149,6 +161,7 @@ export interface AlbumPhoto {
   createdAt?: string
   url: string
   thumbnailUrl: string
+  exif?: AlbumPhotoExif
 }
 
 export interface AlbumSummary {

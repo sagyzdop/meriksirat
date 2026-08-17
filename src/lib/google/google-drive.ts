@@ -15,6 +15,21 @@ export interface DriveFileMeta {
   createdTime?: string
   imageMediaMetadata?: {
     time?: string
+    cameraMake?: string
+    cameraModel?: string
+    exposureTime?: string
+    aperture?: number
+    focalLength?: number
+    isoSpeed?: number
+    width?: number
+    height?: number
+    rotation?: number
+    whiteBalance?: string
+    flash?: string
+    colorSpace?: string
+    meteringMode?: string
+    exposureBias?: number
+    exposureMode?: string
   }
 }
 

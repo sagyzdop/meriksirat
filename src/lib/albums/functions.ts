@@ -382,6 +382,37 @@ async function listAlbumPhotos(driveFolderId: string): Promise<{
       const capturedAt =
         normalizeCapturedAt(f.imageMediaMetadata?.time) || f.createdTime || ''
       const { url, thumbnailUrl } = albumPhotoUrls(f.id)
+      const exif = f.imageMediaMetadata
+        ? {
+            ...(f.imageMediaMetadata.cameraMake && {
+              cameraMake: f.imageMediaMetadata.cameraMake,
+            }),
+            ...(f.imageMediaMetadata.cameraModel && {
+              cameraModel: f.imageMediaMetadata.cameraModel,
+            }),
+            ...(f.imageMediaMetadata.exposureTime && {
+              exposureTime: f.imageMediaMetadata.exposureTime,
+            }),
+            ...(f.imageMediaMetadata.aperture != null && {
+              aperture: f.imageMediaMetadata.aperture,
+            }),
+            ...(f.imageMediaMetadata.focalLength != null && {
+              focalLength: f.imageMediaMetadata.focalLength,
+            }),
+            ...(f.imageMediaMetadata.isoSpeed != null && {
+              isoSpeed: f.imageMediaMetadata.isoSpeed,
+            }),
+            ...(f.imageMediaMetadata.width != null && {
+              width: f.imageMediaMetadata.width,
+            }),
+            ...(f.imageMediaMetadata.height != null && {
+              height: f.imageMediaMetadata.height,
+            }),
+            ...(f.imageMediaMetadata.whiteBalance && {
+              whiteBalance: f.imageMediaMetadata.whiteBalance,
+            }),
+          }
+        : undefined
       return {
         id: f.id,
         name: f.name,
@@ -391,6 +422,7 @@ async function listAlbumPhotos(driveFolderId: string): Promise<{
         createdAt: f.createdTime ?? '',
         url,
         thumbnailUrl,
+        ...(exif && { exif }),
       }
     })
     .sort((a, b) => {

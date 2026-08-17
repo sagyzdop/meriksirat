@@ -27,7 +27,7 @@ export function albumPhotoUrls(fileId: string): {
   thumbnailUrl: string
 } {
   return {
-    url: driveCdnUrl(fileId),
+    url: driveCdnUrl(fileId, 1920),
     thumbnailUrl: driveCdnUrl(fileId, 600),
   }
 }
