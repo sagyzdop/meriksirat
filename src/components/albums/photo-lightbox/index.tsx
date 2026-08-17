@@ -7,7 +7,8 @@ import {
   Info,
   Star,
   Trash2,
-  X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -18,21 +19,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import type { AlbumPhoto } from '@/lib/albums'
 import { downloadPhotoFile } from '@/lib/albums/download'
-import { formatBytes, formatUtcDateTime } from '@/lib/format'
-import { PhotoImage } from './photo-image'
-
-interface PhotoLightboxProps {
-  photos: AlbumPhoto[]
-  index: number
-  onIndexChange: (index: number) => void
-  onClose: () => void
-  canManage?: boolean
-  coverFileId?: string | null
-  onSetCover?: (photo: AlbumPhoto) => void
-  onDeletePhoto?: (photo: AlbumPhoto) => void
-}
+import type { PhotoLightboxProps } from './types'
+import { useZoom } from './use-zoom'
+import { InfoPanel } from './info-panel'
 
 const CHROME_TIMEOUT_MS = 3000
 
@@ -51,7 +41,12 @@ export function PhotoLightbox({
   const [infoOpen, setInfoOpen] = React.useState(false)
   const [downloading, setDownloading] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [imgLoaded, setImgLoaded] = React.useState(false)
   const hideTimer = React.useRef<number | null>(null)
+
+  const { scale, translate, resetZoom, zoomIn } = useZoom()
+
+  // ── Chrome auto-hide ─────────────────────────────────
 
   const wakeChrome = React.useCallback(() => {
     setChromeVisible(true)
@@ -62,6 +57,8 @@ export function PhotoLightbox({
     )
   }, [])
 
+  // ── Navigation ───────────────────────────────────────
+
   const prev = React.useCallback(
     () => onIndexChange((index - 1 + photos.length) % photos.length),
     [index, photos.length, onIndexChange]
@@ -71,14 +68,18 @@ export function PhotoLightbox({
     [index, photos.length, onIndexChange]
   )
 
+  // ── Effects ──────────────────────────────────────────
+
   React.useEffect(() => {
+    resetZoom()
+    setImgLoaded(false)
     setInfoOpen(false)
     setConfirmDelete(false)
     wakeChrome()
     return () => {
       if (hideTimer.current !== null) window.clearTimeout(hideTimer.current)
     }
-  }, [index, wakeChrome])
+  }, [index, wakeChrome, resetZoom])
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -99,6 +100,8 @@ export function PhotoLightbox({
     }
   }, [])
 
+  // ── Download ─────────────────────────────────────────
+
   if (!photo) return null
 
   const handleDownload = async () => {
@@ -114,25 +117,42 @@ export function PhotoLightbox({
     }
   }
 
-  const exif = photo.exif
-
   return (
     <div
       className="fixed inset-0 z-50 flex bg-black"
       onMouseMove={wakeChrome}
       onTouchStart={wakeChrome}
     >
-      <PhotoImage
-        key={photo.id}
-        src={photo.url}
-        alt={photo.name}
-        fit="contain"
-        eager
-        placeholderSrc={photo.thumbnailUrl}
-        containerClassName="bg-transparent h-full w-full"
-        onClick={() => setChromeVisible((v) => !v)}
-      />
+      {/* Image area */}
+      <div className="relative h-full w-full overflow-hidden">
+        {/* Thumbnail placeholder behind the full image */}
+        {photo.thumbnailUrl && !imgLoaded && (
+          <img
+            src={photo.thumbnailUrl}
+            alt=""
+            aria-hidden
+            referrerPolicy="no-referrer"
+            className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
+          />
+        )}
+        <img
+          key={photo.id}
+          src={photo.url}
+          alt={photo.name}
+          referrerPolicy="no-referrer"
+          onLoad={() => setImgLoaded(true)}
+          className={cn(
+            'absolute inset-0 m-auto max-h-full max-w-full select-none object-contain transition-opacity duration-300',
+            imgLoaded ? 'opacity-100' : 'opacity-0'
+          )}
+          style={{
+            transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+          }}
+          draggable={false}
+        />
+      </div>
 
+      {/* Top chrome bar */}
       <div
         className={cn(
           'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-3 transition-opacity duration-300 sm:p-4',
@@ -194,6 +214,19 @@ export function PhotoLightbox({
             variant="ghost"
             size="icon"
             className="text-white hover:bg-white/10 hover:text-white"
+            onClick={scale > 1 ? resetZoom : zoomIn}
+            aria-label={scale > 1 ? 'Zoom out' : 'Zoom in'}
+          >
+            {scale > 1 ? (
+              <ZoomOut className="size-6" />
+            ) : (
+              <ZoomIn className="size-6" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/10 hover:text-white"
             onClick={() => setInfoOpen((o) => !o)}
             aria-label="Photo details"
           >
@@ -202,6 +235,7 @@ export function PhotoLightbox({
         </div>
       </div>
 
+      {/* Navigation arrows */}
       {photos.length > 1 && (
         <>
           <button
@@ -229,136 +263,16 @@ export function PhotoLightbox({
         </>
       )}
 
-      {infoOpen && (
-        <>
-          <div
-            className="absolute inset-0 z-20 bg-black/40 md:hidden"
-            onClick={() => setInfoOpen(false)}
-          />
-          <div className="absolute inset-x-0 bottom-0 z-30 flex max-h-[70vh] flex-col bg-zinc-900 text-white md:inset-y-0 md:right-0 md:left-auto md:h-full md:max-h-none md:w-80">
-            <div className="flex items-center justify-between gap-2 border-b border-white/10 p-4">
-              <h2 className="truncate text-sm font-semibold">Details</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0 text-white hover:bg-white/10 hover:text-white"
-                onClick={() => setInfoOpen(false)}
-                aria-label="Close details"
-              >
-                <X className="size-5" />
-              </Button>
-            </div>
-            <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
-              <div>
-                <div className="text-xs font-medium text-zinc-400">Name</div>
-                <div className="mt-0.5 break-words">{photo.name}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs font-medium text-zinc-400">Photo</div>
-                  <div className="mt-0.5">
-                    {index + 1} of {photos.length}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-zinc-400">Type</div>
-                  <div className="mt-0.5 break-words">{photo.mimeType}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-zinc-400">Size</div>
-                  <div className="mt-0.5">
-                    {photo.size != null ? formatBytes(photo.size) : '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-zinc-400">Date</div>
-                  <div className="mt-0.5">
-                    {formatUtcDateTime(photo.capturedAt) || '—'}
-                  </div>
-                </div>
-              </div>
+      {/* Info panel */}
+      <InfoPanel
+        photo={photo}
+        index={index}
+        total={photos.length}
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+      />
 
-              {exif && (
-                <>
-                  <div className="border-t border-white/10" />
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                    Camera Info
-                  </div>
-                  {(exif.cameraMake || exif.cameraModel) && (
-                    <div>
-                      <div className="text-xs font-medium text-zinc-400">
-                        Camera
-                      </div>
-                      <div className="mt-0.5">
-                        {[exif.cameraMake, exif.cameraModel]
-                          .filter(Boolean)
-                          .join(' ')}
-                      </div>
-                    </div>
-                  )}
-                  {exif.focalLength != null && (
-                    <div>
-                      <div className="text-xs font-medium text-zinc-400">
-                        Focal length
-                      </div>
-                      <div className="mt-0.5">{exif.focalLength}mm</div>
-                    </div>
-                  )}
-                  {exif.aperture != null && (
-                    <div>
-                      <div className="text-xs font-medium text-zinc-400">
-                        Aperture
-                      </div>
-                      <div className="mt-0.5">f/{exif.aperture}</div>
-                    </div>
-                  )}
-                  {exif.exposureTime && (
-                    <div>
-                      <div className="text-xs font-medium text-zinc-400">
-                        Shutter speed
-                      </div>
-                      <div className="mt-0.5">
-                        {(() => {
-                          const t = parseFloat(exif.exposureTime)
-                          if (isNaN(t)) return exif.exposureTime
-                          return t < 1 ? `1/${Math.round(1 / t)}` : `${t}"`
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                  {exif.isoSpeed != null && (
-                    <div>
-                      <div className="text-xs font-medium text-zinc-400">
-                        ISO
-                      </div>
-                      <div className="mt-0.5">ISO {exif.isoSpeed}</div>
-                    </div>
-                  )}
-                  {exif.whiteBalance && (
-                    <div>
-                      <div className="text-xs font-medium text-zinc-400">
-                        White balance
-                      </div>
-                      <div className="mt-0.5">{exif.whiteBalance}</div>
-                    </div>
-                  )}
-                  {exif.width != null && exif.height != null && (
-                    <div>
-                      <div className="text-xs font-medium text-zinc-400">
-                        Dimensions
-                      </div>
-                      <div className="mt-0.5">
-                        {exif.width} × {exif.height}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
+      {/* Delete confirmation */}
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
           <DialogTitle>Delete photo?</DialogTitle>
@@ -385,3 +299,5 @@ export function PhotoLightbox({
     </div>
   )
 }
+
+export type { PhotoLightboxProps }

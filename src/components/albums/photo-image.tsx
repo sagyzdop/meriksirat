@@ -83,7 +83,14 @@ export function PhotoImage({
   // The slot is held only for the fetch (load, final error, or unmount) so a
   // successful load frees the slot for the next queued image. Retrying
   // (attempt++) releases the previous slot and re-queues.
+  // Eager images (lightbox) bypass the gate entirely so they're never blocked
+  // by grid thumbnails that grabbed all slots on mount but haven't fetched yet.
   React.useEffect(() => {
+    if (eager) {
+      setCurrentSrc(src ?? null)
+      return () => setCurrentSrc(null)
+    }
+
     let cancelled = false
     releaseRef.current = null
     setCurrentSrc(null)
@@ -102,7 +109,7 @@ export function PhotoImage({
       releaseRef.current?.()
       releaseRef.current = null
     }
-  }, [src, attempt])
+  }, [src, attempt, eager])
 
   React.useEffect(() => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)

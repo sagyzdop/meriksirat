@@ -26,7 +26,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
           <span className="sr-only">MerikSirat</span>
         </a>
         <h1 className="text-xl font-bold">Welcome to MerikSirat</h1>
-        <FieldDescription>
+        <FieldDescription className="text-center">
           ⚠️ For NU Image members only! Please sign in with your NU account.
         </FieldDescription>
       </div>
