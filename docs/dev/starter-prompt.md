@@ -17,10 +17,10 @@ You are working on **Meriksirat**, a full-stack equipment booking & management p
 
 1. **Routes are constructors.** Route files own the zod `validateSearch` schema, `loader`/`loaderDeps` (via `context.queryClient.ensureQueryData`), and a thin `RouteComponent` that passes data to the page as props.
 2. **Components mirror routes.** A route `routes/_authenticated/admin/bookings/$bookingId.edit.tsx` maps to `components/admin/bookings/$bookingId.edit/index.tsx`, which exports `Page`. Big pages use a `components/` subfolder.
-3. **Do NOT use `useSearch({ from })` / `useNavigate({ from })` from pages on `_authenticated` routes** — it fails typechecking. Pass search data and callbacks via props from the route instead.
+3. **Do NOT use `useSearch({ from })` from pages on `_authenticated` routes** — it fails typechecking. Pass search data via props from the route instead. (`useNavigate({ from })` is fine.)
 4. **Search params**: use `stringArrayParam(z.enum([...]))`, `numberArrayParam()`, `booleanArrayParam()` from `src/lib/search-params.ts` for array params in route schemas.
 5. **Data**: list/detail data goes through `queryOptions` factories (`src/lib/{equipment,booking,user}/queries.ts`) + `useQuery`. Mutations call `createServerFn` functions and invalidate by query-key prefix. Route loaders `ensureQueryData`.
-6. **No comments** in code. Self-documenting names and small components instead.
+6. **No comments unless asked.** Self-documenting names and small components instead.
 7. Shared cross-page components go in `src/components/shared/`; page-local shared pieces in the page's own `components/`.
 8. **Build UI from shadcn/ui components** (`src/components/ui/`). No hand-rolled layout primitives or status pills; use Badge (color-coded) for labels/status in tables and cards, lucide icons for placeholders (never static SVGs in `public/`). See `docs/dev/conventions.md`. Apply this every time you create components.
 
