@@ -23,9 +23,6 @@ export function PublicAlbumsHeader() {
             NU Image Albums
           </span>
         </Link>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/login">Member Login</Link>
-        </Button>
       </div>
     </header>
   )

@@ -27,7 +27,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         </a>
         <h1 className="text-xl font-bold">Welcome to MerikSirat</h1>
         <FieldDescription>
-          Sign in with your Google account to continue
+          ⚠️ For NU Image members only! Please sign in with your NU account.
         </FieldDescription>
       </div>
 
