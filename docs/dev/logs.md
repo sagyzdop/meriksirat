@@ -5,6 +5,7 @@ destination. This is the current implementation; the formats below are the
 source of truth for the logging logic.
 
 Formatting conventions:
+
 - People are always rendered as `Name Surname (@telegram)` (no emails, no roles).
 - All times are UTC, rendered as `Aug 14, 2026` for dates and `09:00` for times.
 - Every log opens with a shared `Event:` line (what happened) followed by a
@@ -54,21 +55,21 @@ Notes: {notes}                     ← optional
 
 ### Emitters of `logBookingActivityById`
 
-| Action | Trigger | Caller | Options passed |
-| --- | --- | --- | --- |
-| `created` | User creates a booking (web) | `src/lib/booking/functions/user-bookings.ts` | `newStatus: 'booked'`, `notes` |
-| `updated` | User edits schedule/notes (web) | `user-bookings.ts` | `newStatus` (current), `notes` (new notes) |
-| `updated` | Admin edits schedule/notes | `src/lib/booking/functions/admin-bookings.ts` | `actorName`, `notes: "Schedule updated" / "Notes: {notes}"` |
-| `updated` | Admin adds equipment to booking | `src/lib/booking/functions/booking-items.ts` | `notes: "Added equipment to booking: {name1}, {name2}"` |
-| `updated` | Booking extended +30 min (web) | `src/lib/booking/functions/extend-booking.ts` | `notes: "Booking extended by 30 minutes to {time}{; overdue status reset}"` |
-| `updated` | Booking started (web or Telegram) | `src/lib/booking/start-booking.ts` | `previousStatus: 'booked'`, `newStatus: 'active'` (start time comes from `Started:`) |
-| `cancelled` | User cancels whole booking (web) | `user-bookings.ts` | `previousStatus` (current), `newStatus: 'cancelled'` |
-| `cancelled` | Admin cancels booking | `admin-bookings.ts` | `previousStatus`, `newStatus: 'cancelled'`, `actorName`, `notes: "Reason: {reason}"` |
-| `cancelled` | User cancels one item (Telegram) | `src/lib/telegram/commands/cancel-booking.ts` | `previousStatus` (item status), `newStatus: 'cancelled'` |
-| `cancelled` | User cancels one item (web) | `src/lib/booking/functions/booking-items.ts` | `newStatus: 'cancelled'`, `notes: "Item cancelled via web"` |
-| `cancelled` | Cron auto-cancel (never started) | `server.ts` | `previousStatus: 'booked'`, `newStatus: 'cancelled'`, `notes: "Booking auto-cancelled: equipment was not picked up within 15 minutes of the start time"` |
-| `returned` | User returns items (Telegram photo) | `src/lib/telegram/commands/photo.ts` | `notes: "Returned {n} item(s) via Telegram"` |
-| `deleted` | Admin deletes booking (web) | `admin-bookings.ts` | `actorName` |
+| Action      | Trigger                             | Caller                                        | Options passed                                                                                                                                           |
+| ----------- | ----------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `created`   | User creates a booking (web)        | `src/lib/booking/functions/user-bookings.ts`  | `newStatus: 'booked'`, `notes`                                                                                                                           |
+| `updated`   | User edits schedule/notes (web)     | `user-bookings.ts`                            | `newStatus` (current), `notes` (new notes)                                                                                                               |
+| `updated`   | Admin edits schedule/notes          | `src/lib/booking/functions/admin-bookings.ts` | `actorName`, `notes: "Schedule updated" / "Notes: {notes}"`                                                                                              |
+| `updated`   | Admin adds equipment to booking     | `src/lib/booking/functions/booking-items.ts`  | `notes: "Added equipment to booking: {name1}, {name2}"`                                                                                                  |
+| `updated`   | Booking extended +30 min (web)      | `src/lib/booking/functions/extend-booking.ts` | `notes: "Booking extended by 30 minutes to {time}{; overdue status reset}"`                                                                              |
+| `updated`   | Booking started (web or Telegram)   | `src/lib/booking/start-booking.ts`            | `previousStatus: 'booked'`, `newStatus: 'active'` (start time comes from `Started:`)                                                                     |
+| `cancelled` | User cancels whole booking (web)    | `user-bookings.ts`                            | `previousStatus` (current), `newStatus: 'cancelled'`                                                                                                     |
+| `cancelled` | Admin cancels booking               | `admin-bookings.ts`                           | `previousStatus`, `newStatus: 'cancelled'`, `actorName`, `notes: "Reason: {reason}"`                                                                     |
+| `cancelled` | User cancels one item (Telegram)    | `src/lib/telegram/commands/cancel-booking.ts` | `previousStatus` (item status), `newStatus: 'cancelled'`                                                                                                 |
+| `cancelled` | User cancels one item (web)         | `src/lib/booking/functions/booking-items.ts`  | `newStatus: 'cancelled'`, `notes: "Item cancelled via web"`                                                                                              |
+| `cancelled` | Cron auto-cancel (never started)    | `server.ts`                                   | `previousStatus: 'booked'`, `newStatus: 'cancelled'`, `notes: "Booking auto-cancelled: equipment was not picked up within 15 minutes of the start time"` |
+| `returned`  | User returns items (Telegram photo) | `src/lib/telegram/commands/photo.ts`          | `notes: "Returned {n} item(s) via Telegram"`                                                                                                             |
+| `deleted`   | Admin deletes booking (web)         | `admin-bookings.ts`                           | `actorName`                                                                                                                                              |
 
 ---
 
@@ -110,16 +111,16 @@ By: {Name Surname (@telegram)}
 
 Action labels and details:
 
-| Action | Emitter | Detail |
-| --- | --- | --- |
-| `created` | `createAlbumFn` | — |
-| `updated` | `updateAlbumFn` | `Title: {old} → {new}` and/or `Description updated` |
-| `deleted` | `deleteAlbumFn` | — |
-| `shared` / `unshared` | `toggleAlbumShareFn` | — |
-| `photo_deleted` | `deletePhotoFn` | — |
-| `member_added` | `claimEditAccessFn` | — |
-| `member_removed` | `removeMemberFn` | `Removed: {Name Surname (@telegram)}` |
-| `token_rotated` | `rotateEditTokenFn` | — |
+| Action                | Emitter              | Detail                                              |
+| --------------------- | -------------------- | --------------------------------------------------- |
+| `created`             | `createAlbumFn`      | —                                                   |
+| `updated`             | `updateAlbumFn`      | `Title: {old} → {new}` and/or `Description updated` |
+| `deleted`             | `deleteAlbumFn`      | —                                                   |
+| `shared` / `unshared` | `toggleAlbumShareFn` | —                                                   |
+| `photo_deleted`       | `deletePhotoFn`      | —                                                   |
+| `member_added`        | `claimEditAccessFn`  | —                                                   |
+| `member_removed`      | `removeMemberFn`     | `Removed: {Name Surname (@telegram)}`               |
+| `token_rotated`       | `rotateEditTokenFn`  | —                                                   |
 
 Photo uploads go straight from the browser to Google Drive and have no
 server-side completion hook, so individual uploads are not logged.
@@ -213,68 +214,68 @@ Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `s
 
 ### 5a. Account linking (`start.ts`)
 
-| Message |
-| --- |
-| `Welcome! Please use the link from the web app to connect your account.` |
-| `Link expired or invalid.` |
+| Message                                                                          |
+| -------------------------------------------------------------------------------- |
+| `Welcome! Please use the link from the web app to connect your account.`         |
+| `Link expired or invalid.`                                                       |
 | `Telegram linked ✅\n\nYou can now use the menu below to interact with the bot.` |
-| `Error linking account. Please try again.` |
+| `Error linking account. Please try again.`                                       |
 
 ### 5b. Shared guard (`list-bookings.ts`, `start-booking.ts`, `end-booking.ts`, `cancel-booking.ts`)
 
-| Message |
-| --- |
+| Message                                      |
+| -------------------------------------------- |
 | `Please link your account via /start first.` |
 
 ### 5c. My Bookings (`list-bookings.ts`)
 
-| Message |
-| --- |
-| `You have no active or upcoming bookings.` |
-| `Your bookings:` + per booking `\n{Active|Upcoming} - Booking #{id} ({status})\n  {date}, {HH:MM} - {HH:MM}\n  - {equipment} ({itemStatus})` |
+| Message                                      |
+| -------------------------------------------- |
+| `You have no active or upcoming bookings.`   |
+| `Your bookings:` + per booking `\n{Active    | Upcoming} - Booking #{id} ({status})\n {date}, {HH:MM} - {HH:MM}\n - {equipment} ({itemStatus})` |
 | `Error fetching bookings. Please try again.` |
 
 ### 5d. Start Booking (`start-booking.ts`)
 
-| Message |
-| --- |
+| Message                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------- |
 | `You have no bookings to start right now.\n\nYour booking can be started within 15 minutes of its start time.` |
-| `Select which booking to start:` + buttons `#{id} — {equipment names}` |
-| `Error fetching bookings. Please try again.` |
+| `Select which booking to start:` + buttons `#{id} — {equipment names}`                                         |
+| `Error fetching bookings. Please try again.`                                                                   |
 
 ### 5e. End Booking / return flow (`end-booking.ts`, `callback.ts`, `photo.ts`)
 
-| Message |
-| --- |
-| `You have no active bookings to return.` |
-| `Select which booking to return:` + buttons `#{id} — {equipment names}` |
+| Message                                                                                        |
+| ---------------------------------------------------------------------------------------------- |
+| `You have no active bookings to return.`                                                       |
+| `Select which booking to return:` + buttons `#{id} — {equipment names}`                        |
 | `Select which items to return for booking #{id}:` + buttons `{equipment}` / `Return All Items` |
-| `Selected. Please send a photo of the equipment.` |
-| `Return logged for {n} item(s).\n\nPhoto sent to the club channel.` |
-| `❌ Error processing return. Please try again.` |
-| `Error fetching bookings. Please try again.` |
+| `Selected. Please send a photo of the equipment.`                                              |
+| `Return logged for {n} item(s).\n\nPhoto sent to the club channel.`                            |
+| `❌ Error processing return. Please try again.`                                                |
+| `Error fetching bookings. Please try again.`                                                   |
 
 ### 5f. Cancel Booking (`cancel-booking.ts`)
 
-| Message |
-| --- |
-| `You have no upcoming or active bookings to cancel.` |
+| Message                                                                                   |
+| ----------------------------------------------------------------------------------------- |
+| `You have no upcoming or active bookings to cancel.`                                      |
 | `Select the item(s) you want to cancel:` + per booking `\nBooking #{id}\n  • {equipment}` |
-| `Cancel this item?` (confirm inline) |
-| `Cancel all items in booking #{id}?` (confirm inline) |
-| `Cancelled {equipment names} (booking #{a}, #{b}).` |
-| `Cancellation aborted.` |
-| `Error fetching bookings. Please try again.` |
+| `Cancel this item?` (confirm inline)                                                      |
+| `Cancel all items in booking #{id}?` (confirm inline)                                     |
+| `Cancelled {equipment names} (booking #{a}, #{b}).`                                       |
+| `Cancellation aborted.`                                                                   |
+| `Error fetching bookings. Please try again.`                                              |
 
 ### 5g. Callback query confirmations (`callback.ts`)
 
-| Message |
-| --- |
-| `Start booking #{id} now?\n\n📦 Equipment: {names}\n🕐 Time: {start} - {end}` (confirm inline) |
+| Message                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Start booking #{id} now?\n\n📦 Equipment: {names}\n🕐 Time: {start} - {end}` (confirm inline)                                     |
 | `✅ Booking #{id} has been started.\n\nThe equipment is now marked as picked up. Remember to use "End Booking" when returning it.` |
-| `Start cancelled.` |
-| `Starting booking...` (callback toast) |
-| `Invalid selection` (callback toast) |
-| `Session expired or invalid` (callback toast) + `Please use /return_equipment first.` |
-| `No items to return` (callback toast) |
-| `Error processing selection. Please try again.` |
+| `Start cancelled.`                                                                                                                 |
+| `Starting booking...` (callback toast)                                                                                             |
+| `Invalid selection` (callback toast)                                                                                               |
+| `Session expired or invalid` (callback toast) + `Please use /return_equipment first.`                                              |
+| `No items to return` (callback toast)                                                                                              |
+| `Error processing selection. Please try again.`                                                                                    |

@@ -54,11 +54,11 @@ The prefix keys (`equipmentQueries.all`, `bookingsQueries.all`, `usersQueries.al
 
 ## Query key conventions
 
-| Domain     | Prefix      | Example keys                                   |
-| ---------- | ----------- | ---------------------------------------------- |
-| Equipment  | `equipment` | `['equipment','list',filters]`, `['equipment','admin-list',filters]`, `['categories']` |
-| Bookings   | `bookings`  | `['bookings','list',filters]`, `['bookings','admin-list',filters]` |
-| Users      | `users`     | `['users','list',filters]`                     |
+| Domain    | Prefix      | Example keys                                                                           |
+| --------- | ----------- | -------------------------------------------------------------------------------------- |
+| Equipment | `equipment` | `['equipment','list',filters]`, `['equipment','admin-list',filters]`, `['categories']` |
+| Bookings  | `bookings`  | `['bookings','list',filters]`, `['bookings','admin-list',filters]`                     |
+| Users     | `users`     | `['users','list',filters]`                                                             |
 
 Invalidate by prefix and all related variants refresh.
 

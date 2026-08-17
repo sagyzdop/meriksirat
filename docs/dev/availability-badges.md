@@ -22,7 +22,7 @@ How the "Available / Unavailable" equipment state is computed and why requests a
    in parallel (`Promise.all`). The union of returned busy ids is the
    `busyByEquipmentId` map.
 2. `checkMultipleCalendarsFreeBusy`
-   (`src/lib/google/google-caledar.ts:227`) re-batches *whatever it receives*
+   (`src/lib/google/google-caledar.ts:227`) re-batches _whatever it receives_
    into groups of **15** and fires one Google `POST /freeBusy` per group in
    parallel, merging the responses into
    `{ [calendarId]: { busy: [{ start, end }] } }`.
@@ -54,9 +54,9 @@ does the same across its chunks.
 
 ## Code locations
 
-| Layer | Constant | Location |
-| ----- | -------- | -------- |
-| Client batch size | `MAX_CALENDARS_PER_REQUEST = 40` | `use-equipment-availability.ts:12` |
+| Layer             | Constant                         | Location                                                      |
+| ----------------- | -------------------------------- | ------------------------------------------------------------- |
+| Client batch size | `MAX_CALENDARS_PER_REQUEST = 40` | `use-equipment-availability.ts:12`                            |
 | Server batch size | `MAX_CALENDARS_PER_REQUEST = 15` | `google-caledar.ts:235` (in `checkMultipleCalendarsFreeBusy`) |
 
 ## Constraints

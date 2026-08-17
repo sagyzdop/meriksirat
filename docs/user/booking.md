@@ -8,7 +8,7 @@ cron jobs that keep everything in sync.
 
 A **booking** is a parent record (one user, one time range) that contains one
 **booking item per piece of equipment**. Each item tracks its own lifecycle,
-and the parent booking's status is always *derived* from its items' statuses —
+and the parent booking's status is always _derived_ from its items' statuses —
 it is never set directly by the user flows.
 
 Key columns:
@@ -22,14 +22,14 @@ Key columns:
 
 ### Statuses
 
-| Status                 | Meaning                                                                 |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `booked`               | Created, equipment reserved, not picked up yet.                         |
-| `active`               | Equipment picked up (booking started).                                  |
-| `overdue`              | Equipment still out 15+ minutes after the booking end time.             |
-| `partially_returned`   | Some items returned, others still out.                                  |
-| `returned`             | All items returned.                                                     |
-| `cancelled`            | Never picked up and cancelled (by the user, admin, or auto-cancel).     |
+| Status               | Meaning                                                             |
+| -------------------- | ------------------------------------------------------------------- |
+| `booked`             | Created, equipment reserved, not picked up yet.                     |
+| `active`             | Equipment picked up (booking started).                              |
+| `overdue`            | Equipment still out 15+ minutes after the booking end time.         |
+| `partially_returned` | Some items returned, others still out.                              |
+| `returned`           | All items returned.                                                 |
+| `cancelled`          | Never picked up and cancelled (by the user, admin, or auto-cancel). |
 
 ### Status derivation
 
@@ -100,12 +100,12 @@ to `start_time + 15` minutes (`START_WINDOW_GRACE_MS`). Started from either:
 `sendBookingReminders` sends four Telegram reminders, each idempotent via its
 own tracking column on the booking:
 
-| Kind            | When                                        | Tracking column        |
-| --------------- | ------------------------------------------- | ---------------------- |
-| `pre_start`     | ~15 min before `start_time`                 | `start_reminder_sent_at` |
-| `start_warning` | at `start_time` (booking still `booked`)    | `start_warning_sent_at` |
-| `return_warning`| at `end_time` (items not returned/cancelled)| `return_reminder_sent_at` |
-| `grace_5min`    | 5 min before the end of the 15-min grace    | `grace_warning_sent_at` |
+| Kind             | When                                         | Tracking column           |
+| ---------------- | -------------------------------------------- | ------------------------- |
+| `pre_start`      | ~15 min before `start_time`                  | `start_reminder_sent_at`  |
+| `start_warning`  | at `start_time` (booking still `booked`)     | `start_warning_sent_at`   |
+| `return_warning` | at `end_time` (items not returned/cancelled) | `return_reminder_sent_at` |
+| `grace_5min`     | 5 min before the end of the 15-min grace     | `grace_warning_sent_at`   |
 
 ### 5. Auto-cancel of never-started bookings (cron, every 5 minutes)
 
@@ -231,13 +231,13 @@ sent as separate messages.
 
 ## Implementation map
 
-| Concern                    | Location                                                  |
-| -------------------------- | --------------------------------------------------------- |
-| Status derivation          | `src/lib/booking/status.ts`                               |
-| Start (shared)             | `src/lib/booking/start-booking.ts`                        |
-| Cancel/return items (shared)| `src/lib/booking/booking-items.ts`                        |
-| Booking detail formatter   | `src/lib/booking/details.ts`                              |
-| Web booking functions      | `src/lib/booking/functions/*`                             |
-| Telegram return flow       | `src/lib/telegram/commands/end-booking.ts`, `callback.ts`, `photo.ts` |
-| Telegram cancel flow       | `src/lib/telegram/commands/cancel-booking.ts`             |
-| Cron jobs                  | `server.ts` (`cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders`) |
+| Concern                      | Location                                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| Status derivation            | `src/lib/booking/status.ts`                                                              |
+| Start (shared)               | `src/lib/booking/start-booking.ts`                                                       |
+| Cancel/return items (shared) | `src/lib/booking/booking-items.ts`                                                       |
+| Booking detail formatter     | `src/lib/booking/details.ts`                                                             |
+| Web booking functions        | `src/lib/booking/functions/*`                                                            |
+| Telegram return flow         | `src/lib/telegram/commands/end-booking.ts`, `callback.ts`, `photo.ts`                    |
+| Telegram cancel flow         | `src/lib/telegram/commands/cancel-booking.ts`                                            |
+| Cron jobs                    | `server.ts` (`cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders`) |

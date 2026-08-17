@@ -103,9 +103,7 @@
       "indexes": {
         "account_userId_idx": {
           "name": "account_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -114,12 +112,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -194,30 +188,22 @@
       "indexes": {
         "booking_userId_idx": {
           "name": "booking_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         },
         "booking_status_idx": {
           "name": "booking_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "booking_startTime_idx": {
           "name": "booking_startTime_idx",
-          "columns": [
-            "start_time"
-          ],
+          "columns": ["start_time"],
           "isUnique": false
         },
         "booking_endTime_idx": {
           "name": "booking_endTime_idx",
-          "columns": [
-            "end_time"
-          ],
+          "columns": ["end_time"],
           "isUnique": false
         }
       },
@@ -226,12 +212,8 @@
           "name": "booking_user_id_user_id_fk",
           "tableFrom": "booking",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -306,23 +288,17 @@
       "indexes": {
         "booking_item_bookingId_idx": {
           "name": "booking_item_bookingId_idx",
-          "columns": [
-            "booking_id"
-          ],
+          "columns": ["booking_id"],
           "isUnique": false
         },
         "booking_item_equipmentId_idx": {
           "name": "booking_item_equipmentId_idx",
-          "columns": [
-            "equipment_id"
-          ],
+          "columns": ["equipment_id"],
           "isUnique": false
         },
         "booking_item_status_idx": {
           "name": "booking_item_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },
@@ -331,12 +307,8 @@
           "name": "booking_item_booking_id_booking_id_fk",
           "tableFrom": "booking_item",
           "tableTo": "booking",
-          "columnsFrom": [
-            "booking_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["booking_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -344,12 +316,8 @@
           "name": "booking_item_equipment_id_equipment_id_fk",
           "tableFrom": "booking_item",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -410,9 +378,7 @@
       "indexes": {
         "category_name_unique": {
           "name": "category_name_unique",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         }
       },
@@ -509,30 +475,22 @@
       "indexes": {
         "equipment_gcal_id_unique": {
           "name": "equipment_gcal_id_unique",
-          "columns": [
-            "gcal_id"
-          ],
+          "columns": ["gcal_id"],
           "isUnique": true
         },
         "equipment_categoryId_idx": {
           "name": "equipment_categoryId_idx",
-          "columns": [
-            "category_id"
-          ],
+          "columns": ["category_id"],
           "isUnique": false
         },
         "equipment_isActive_idx": {
           "name": "equipment_isActive_idx",
-          "columns": [
-            "is_active"
-          ],
+          "columns": ["is_active"],
           "isUnique": false
         },
         "equipment_requiredClearanceLevel_idx": {
           "name": "equipment_requiredClearanceLevel_idx",
-          "columns": [
-            "required_clearance_level"
-          ],
+          "columns": ["required_clearance_level"],
           "isUnique": false
         }
       },
@@ -541,12 +499,8 @@
           "name": "equipment_category_id_category_id_fk",
           "tableFrom": "equipment",
           "tableTo": "category",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["category_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -619,16 +573,12 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         },
         "session_userId_idx": {
           "name": "session_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -637,12 +587,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -738,12 +684,8 @@
           "name": "telegram_link_token_user_id_user_id_fk",
           "tableFrom": "telegram_link_token",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -913,44 +855,32 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         },
         "user_google_id_unique": {
           "name": "user_google_id_unique",
-          "columns": [
-            "google_id"
-          ],
+          "columns": ["google_id"],
           "isUnique": true
         },
         "user_nu_id_unique": {
           "name": "user_nu_id_unique",
-          "columns": [
-            "nu_id"
-          ],
+          "columns": ["nu_id"],
           "isUnique": true
         },
         "user_role_idx": {
           "name": "user_role_idx",
-          "columns": [
-            "role"
-          ],
+          "columns": ["role"],
           "isUnique": false
         },
         "user_status_idx": {
           "name": "user_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "user_clearanceLevel_idx": {
           "name": "user_clearanceLevel_idx",
-          "columns": [
-            "clearance_level"
-          ],
+          "columns": ["clearance_level"],
           "isUnique": false
         }
       },
@@ -1010,9 +940,7 @@
       "indexes": {
         "verification_identifier_idx": {
           "name": "verification_identifier_idx",
-          "columns": [
-            "identifier"
-          ],
+          "columns": ["identifier"],
           "isUnique": false
         }
       },
