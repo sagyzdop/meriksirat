@@ -1,16 +1,27 @@
 import * as React from 'react'
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Info,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { AlbumPhoto } from '@/lib/albums'
 import { downloadPhotoFile } from '@/lib/albums/download'
 import { formatBytes, formatUtcDateTime } from '@/lib/format'
-import 'photoswipe/style.css'
+import { PhotoImage } from './photo-image'
 
 interface PhotoLightboxProps {
   photos: AlbumPhoto[]
@@ -23,353 +34,354 @@ interface PhotoLightboxProps {
   onDeletePhoto?: (photo: AlbumPhoto) => void
 }
 
+const CHROME_TIMEOUT_MS = 3000
+
 export function PhotoLightbox({
   photos,
   index,
   onIndexChange,
+  onClose,
+  canManage = false,
   coverFileId = null,
   onSetCover,
   onDeletePhoto,
 }: PhotoLightboxProps) {
+  const photo = photos[index]
+  const [chromeVisible, setChromeVisible] = React.useState(true)
+  const [infoOpen, setInfoOpen] = React.useState(false)
+  const [downloading, setDownloading] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
-  const containerRef = React.useRef<HTMLDivElement | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const lightboxRef = React.useRef<any>(null)
-  const photosRef = React.useRef(photos)
-  const infoPanelRef = React.useRef<HTMLDivElement | null>(null)
+  const hideTimer = React.useRef<number | null>(null)
 
-  photosRef.current = photos
+  const wakeChrome = React.useCallback(() => {
+    setChromeVisible(true)
+    if (hideTimer.current !== null) window.clearTimeout(hideTimer.current)
+    hideTimer.current = window.setTimeout(
+      () => setChromeVisible(false),
+      CHROME_TIMEOUT_MS
+    )
+  }, [])
 
-  const currentPhoto = photos[index]
-
-  const buildInfoContent = React.useCallback(
-    (photo: AlbumPhoto, idx: number, total: number) => {
-      const frag = document.createDocumentFragment()
-
-      const header = document.createElement('div')
-      header.style.cssText =
-        'display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid rgba(255,255,255,0.1)'
-      const title = document.createElement('h2')
-      title.style.cssText = 'font-size:14px;font-weight:600;color:#fff'
-      title.textContent = 'Details'
-      const closeBtn = document.createElement('button')
-      closeBtn.innerHTML =
-        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>'
-      closeBtn.style.cssText =
-        'background:none;border:none;color:#fff;cursor:pointer;padding:4px;border-radius:4px;display:flex;align-items:center'
-      closeBtn.addEventListener('mouseenter', () => {
-        closeBtn.style.background = 'rgba(255,255,255,0.1)'
-      })
-      closeBtn.addEventListener('mouseleave', () => {
-        closeBtn.style.background = 'none'
-      })
-      closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        lightboxRef.current?.pswp?.close()
-      })
-      header.appendChild(title)
-      header.appendChild(closeBtn)
-      frag.appendChild(header)
-
-      const body = document.createElement('div')
-      body.style.cssText =
-        'flex:1;overflow-y:auto;padding:16px;color:#fff;font-size:14px'
-
-      const addField = (label: string, value: string) => {
-        const d = document.createElement('div')
-        d.style.cssText = 'margin-bottom:16px'
-        d.innerHTML = `<div style="font-size:12px;color:#a1a1aa;font-weight:500">${label}</div><div style="margin-top:2px;word-break:break-word">${value}</div>`
-        body.appendChild(d)
-      }
-
-      const addGrid = (fields: Array<{ label: string; value: string }>) => {
-        const grid = document.createElement('div')
-        grid.style.cssText =
-          'display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px'
-        fields.forEach(({ label, value }) => {
-          const cell = document.createElement('div')
-          cell.innerHTML = `<div style="font-size:12px;color:#a1a1aa;font-weight:500">${label}</div><div style="margin-top:2px">${value}</div>`
-          grid.appendChild(cell)
-        })
-        body.appendChild(grid)
-      }
-
-      addField('Name', photo.name)
-      addGrid([
-        { label: 'Photo', value: `${idx} of ${total}` },
-        { label: 'Type', value: photo.mimeType },
-        {
-          label: 'Size',
-          value: photo.size != null ? formatBytes(photo.size) : '—',
-        },
-        {
-          label: 'Date',
-          value: formatUtcDateTime(photo.capturedAt) || '—',
-        },
-      ])
-
-      if (photo.exif) {
-        const exif = photo.exif
-        const sep = document.createElement('div')
-        sep.style.cssText =
-          'border-top:1px solid rgba(255,255,255,0.1);margin:8px 0 16px'
-        body.appendChild(sep)
-
-        const exifTitle = document.createElement('div')
-        exifTitle.style.cssText =
-          'font-size:12px;color:#a1a1aa;font-weight:500;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em'
-        exifTitle.textContent = 'Camera Info'
-        body.appendChild(exifTitle)
-
-        if (exif.cameraMake || exif.cameraModel) {
-          const make = exif.cameraMake || ''
-          const model = exif.cameraModel || ''
-          addField('Camera', [make, model].filter(Boolean).join(' '))
-        }
-        if (exif.focalLength != null)
-          addField('Focal length', `${exif.focalLength}mm`)
-        if (exif.aperture != null) addField('Aperture', `f/${exif.aperture}`)
-        if (exif.exposureTime)
-          addField('Shutter speed', `${exif.exposureTime}s`)
-        if (exif.isoSpeed != null) addField('ISO', `ISO ${exif.isoSpeed}`)
-        if (exif.whiteBalance) addField('White balance', exif.whiteBalance)
-        if (exif.width != null && exif.height != null) {
-          addField('Dimensions', `${exif.width} × ${exif.height}`)
-        }
-      }
-
-      return frag
-    },
-    []
+  const prev = React.useCallback(
+    () => onIndexChange((index - 1 + photos.length) % photos.length),
+    [index, photos.length, onIndexChange]
   )
-
-  const updateInfoPanel = React.useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (pswp: any) => {
-      const panel = infoPanelRef.current
-      if (!panel || !pswp) return
-      const idx = pswp.currIndex
-      const photo = photosRef.current[idx]
-      if (!photo) return
-      const content = panel.querySelector(
-        '[data-pswp-info-content]'
-      ) as HTMLElement
-      if (!content) return
-      content.innerHTML = ''
-      content.appendChild(
-        buildInfoContent(photo, idx + 1, photosRef.current.length)
-      )
-    },
-    [buildInfoContent]
+  const next = React.useCallback(
+    () => onIndexChange((index + 1) % photos.length),
+    [index, photos.length, onIndexChange]
   )
 
   React.useEffect(() => {
-    let destroyed = false
-
-    const openLightbox = async () => {
-      const lightboxModule = await import('photoswipe/lightbox')
-      if (destroyed) return
-
-      const lightbox = new lightboxModule.default({
-        dataSource: photos.map((p) => ({
-          src: p.url,
-          width: p.exif?.width || 1920,
-          height: p.exif?.height || 1080,
-          msrc: p.thumbnailUrl,
-          alt: p.name,
-        })),
-        appendToEl: containerRef.current!,
-        bgOpacity: 0.9,
-        showHideAnimationType: 'zoom',
-        loop: photos.length > 1,
-        preload: [1, 2] as [number, number],
-        arrowKeys: true,
-        escKey: true,
-        pinchToClose: true,
-        closeOnVerticalDrag: true,
-        zoom: true,
-        counter: true,
-        pswpModule: () => import('photoswipe'),
-      })
-
-      lightboxRef.current = lightbox
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      lightbox.on('uiRegister', function (this: any) {
-        const pswp = this.pswp
-        if (!pswp) return
-
-        pswp.ui.registerElement({
-          name: 'album-back',
-          appendTo: 'bar',
-          order: 0,
-          isButton: true,
-          tagName: 'button',
-          title: 'Back to album',
-          ariaLabel: 'Back to album',
-          onClick: () => pswp.close(),
-        })
-
-        pswp.ui.registerElement({
-          name: 'album-cover',
-          appendTo: 'bar',
-          order: 2,
-          isButton: true,
-          tagName: 'button',
-          title:
-            coverFileId === photos[pswp.currIndex]?.id
-              ? 'Current cover'
-              : 'Set as album cover',
-          ariaLabel: 'Set as album cover',
-          onClick: () => {
-            const photo = photosRef.current[pswp.currIndex]
-            if (photo) onSetCover?.(photo)
-          },
-        })
-
-        pswp.ui.registerElement({
-          name: 'album-delete',
-          appendTo: 'bar',
-          order: 3,
-          isButton: true,
-          tagName: 'button',
-          title: 'Delete photo',
-          ariaLabel: 'Delete photo',
-          onClick: () => setConfirmDelete(true),
-        })
-
-        pswp.ui.registerElement({
-          name: 'album-download',
-          appendTo: 'bar',
-          order: 4,
-          isButton: true,
-          tagName: 'button',
-          title: 'Download photo',
-          ariaLabel: 'Download photo',
-          onClick: async () => {
-            const photo = photosRef.current[pswp.currIndex]
-            if (!photo) return
-            try {
-              await downloadPhotoFile(photo)
-            } catch (error) {
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : 'Could not download photo'
-              )
-            }
-          },
-        })
-
-        pswp.ui.registerElement({
-          name: 'album-info',
-          appendTo: 'bar',
-          order: 9,
-          isButton: true,
-          tagName: 'button',
-          title: 'Photo details',
-          ariaLabel: 'Photo details',
-          onClick: () => {
-            const panel = infoPanelRef.current
-            if (!panel) return
-            const isOpen = panel.style.display === 'flex'
-            panel.style.display = isOpen ? 'none' : 'flex'
-            if (!isOpen) updateInfoPanel(pswp)
-          },
-        })
-
-        pswp.ui.registerElement({
-          name: 'album-info-panel',
-          appendTo: 'root',
-          order: 0,
-        })
-
-        const panel = document.createElement('div')
-        panel.setAttribute('data-pswp-info-panel', '')
-        panel.style.cssText =
-          'position:absolute;inset:0;z-index:40;display:none'
-        panel.innerHTML = `
-          <div data-pswp-info-backdrop style="position:absolute;inset:0;background:rgba(0,0,0,0.6)"></div>
-          <div data-pswp-info-content style="position:absolute;inset-y-0;right:0;width:320px;max-width:100%;background:#18181b;display:flex;flex-direction:column;overflow:hidden"></div>
-        `
-
-        const backdrop = panel.querySelector(
-          '[data-pswp-info-backdrop]'
-        ) as HTMLElement
-        backdrop.addEventListener('click', () => pswp.close())
-
-        pswp.element?.appendChild(panel)
-        infoPanelRef.current = panel
-        updateInfoPanel(pswp)
-      })
-
-      lightbox.on('change', () => {
-        const pswp = lightbox.pswp
-        if (pswp) updateInfoPanel(pswp)
-      })
-
-      lightbox.on('close', () => {
-        const pswp = lightbox.pswp
-        if (pswp) {
-          onIndexChange(pswp.currIndex)
-        }
-      })
-
-      lightbox.on('destroy', () => {
-        infoPanelRef.current = null
-        lightboxRef.current = null
-      })
-
-      lightbox.init()
-      lightbox.loadAndOpen(index)
-    }
-
-    openLightbox()
-
-    return () => {
-      destroyed = true
-      const lb = lightboxRef.current
-      if (lb) {
-        lightboxRef.current = null
-        infoPanelRef.current = null
-        lb.destroy()
-      }
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleConfirmDelete = React.useCallback(() => {
-    const lb = lightboxRef.current
-    const pswp = lb?.pswp
-    if (!pswp) return
-    const photo = photosRef.current[pswp.currIndex]
-    if (photo && onDeletePhoto) onDeletePhoto(photo)
+    setInfoOpen(false)
     setConfirmDelete(false)
-    pswp.close()
-  }, [onDeletePhoto])
+    wakeChrome()
+    return () => {
+      if (hideTimer.current !== null) window.clearTimeout(hideTimer.current)
+    }
+  }, [index, wakeChrome])
 
-  if (!currentPhoto) return null
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') next()
+      else if (e.key === 'ArrowLeft') prev()
+      else if (e.key === 'Escape') onClose()
+      wakeChrome()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [next, prev, onClose, wakeChrome])
+
+  React.useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [])
+
+  if (!photo) return null
+
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      await downloadPhotoFile(photo)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not download photo'
+      )
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const exif = photo.exif
 
   return (
-    <>
-      <div ref={containerRef} className="pswp-photo-lightbox" />
+    <div
+      className="fixed inset-0 z-50 flex bg-black"
+      onMouseMove={wakeChrome}
+      onTouchStart={wakeChrome}
+    >
+      <PhotoImage
+        key={photo.id}
+        src={photo.url}
+        alt={photo.name}
+        fit="contain"
+        eager
+        placeholderSrc={photo.thumbnailUrl}
+        containerClassName="bg-transparent h-full w-full"
+        onClick={() => setChromeVisible((v) => !v)}
+      />
+
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-3 transition-opacity duration-300 sm:p-4',
+          chromeVisible ? 'opacity-100' : 'opacity-0'
+        )}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="pointer-events-auto text-white hover:bg-white/10 hover:text-white"
+          onClick={onClose}
+          aria-label="Back to album"
+        >
+          <ArrowLeft className="size-6" />
+        </Button>
+        <div className="pointer-events-auto flex items-center gap-1">
+          {canManage && onSetCover && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 hover:text-white"
+              disabled={coverFileId === photo.id}
+              title={
+                coverFileId === photo.id
+                  ? 'This is the current cover'
+                  : 'Set as album cover'
+              }
+              onClick={() => onSetCover(photo)}
+            >
+              <Star
+                className="size-5"
+                fill={coverFileId === photo.id ? 'currentColor' : 'none'}
+              />
+              Set as cover
+            </Button>
+          )}
+          {canManage && onDeletePhoto && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-red-500/20 hover:text-red-400"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Delete photo"
+            >
+              <Trash2 className="size-6" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/10 hover:text-white"
+            disabled={downloading}
+            onClick={handleDownload}
+            aria-label="Download photo"
+          >
+            <Download className="size-6" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/10 hover:text-white"
+            onClick={() => setInfoOpen((o) => !o)}
+            aria-label="Photo details"
+          >
+            <Info className="size-6" />
+          </Button>
+        </div>
+      </div>
+
+      {photos.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={prev}
+            aria-label="Previous photo"
+            className={cn(
+              'absolute top-1/2 left-2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-opacity duration-300 hover:bg-black/70 sm:left-4 sm:p-3',
+              chromeVisible ? 'opacity-100' : 'opacity-0'
+            )}
+          >
+            <ChevronLeft className="size-7" />
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            aria-label="Next photo"
+            className={cn(
+              'absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-opacity duration-300 hover:bg-black/70 sm:right-4 sm:p-3',
+              chromeVisible ? 'opacity-100' : 'opacity-0'
+            )}
+          >
+            <ChevronRight className="size-7" />
+          </button>
+        </>
+      )}
+
+      {infoOpen && (
+        <>
+          <div
+            className="absolute inset-0 z-20 bg-black/40 md:hidden"
+            onClick={() => setInfoOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 z-30 flex max-h-[70vh] flex-col bg-zinc-900 text-white md:inset-y-0 md:right-0 md:left-auto md:h-full md:max-h-none md:w-80">
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 p-4">
+              <h2 className="truncate text-sm font-semibold">Details</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-white hover:bg-white/10 hover:text-white"
+                onClick={() => setInfoOpen(false)}
+                aria-label="Close details"
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
+            <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
+              <div>
+                <div className="text-xs font-medium text-zinc-400">Name</div>
+                <div className="mt-0.5 break-words">{photo.name}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs font-medium text-zinc-400">Photo</div>
+                  <div className="mt-0.5">
+                    {index + 1} of {photos.length}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-400">Type</div>
+                  <div className="mt-0.5 break-words">{photo.mimeType}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-400">Size</div>
+                  <div className="mt-0.5">
+                    {photo.size != null ? formatBytes(photo.size) : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-400">Date</div>
+                  <div className="mt-0.5">
+                    {formatUtcDateTime(photo.capturedAt) || '—'}
+                  </div>
+                </div>
+              </div>
+
+              {exif && (
+                <>
+                  <div className="border-t border-white/10" />
+                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                    Camera Info
+                  </div>
+                  {(exif.cameraMake || exif.cameraModel) && (
+                    <div>
+                      <div className="text-xs font-medium text-zinc-400">
+                        Camera
+                      </div>
+                      <div className="mt-0.5">
+                        {[exif.cameraMake, exif.cameraModel]
+                          .filter(Boolean)
+                          .join(' ')}
+                      </div>
+                    </div>
+                  )}
+                  {exif.focalLength != null && (
+                    <div>
+                      <div className="text-xs font-medium text-zinc-400">
+                        Focal length
+                      </div>
+                      <div className="mt-0.5">{exif.focalLength}mm</div>
+                    </div>
+                  )}
+                  {exif.aperture != null && (
+                    <div>
+                      <div className="text-xs font-medium text-zinc-400">
+                        Aperture
+                      </div>
+                      <div className="mt-0.5">f/{exif.aperture}</div>
+                    </div>
+                  )}
+                  {exif.exposureTime && (
+                    <div>
+                      <div className="text-xs font-medium text-zinc-400">
+                        Shutter speed
+                      </div>
+                      <div className="mt-0.5">
+                        {(() => {
+                          const t = parseFloat(exif.exposureTime)
+                          if (isNaN(t)) return exif.exposureTime
+                          return t < 1 ? `1/${Math.round(1 / t)}` : `${t}"`
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                  {exif.isoSpeed != null && (
+                    <div>
+                      <div className="text-xs font-medium text-zinc-400">
+                        ISO
+                      </div>
+                      <div className="mt-0.5">ISO {exif.isoSpeed}</div>
+                    </div>
+                  )}
+                  {exif.whiteBalance && (
+                    <div>
+                      <div className="text-xs font-medium text-zinc-400">
+                        White balance
+                      </div>
+                      <div className="mt-0.5">{exif.whiteBalance}</div>
+                    </div>
+                  )}
+                  {exif.width != null && exif.height != null && (
+                    <div>
+                      <div className="text-xs font-medium text-zinc-400">
+                        Dimensions
+                      </div>
+                      <div className="mt-0.5">
+                        {exif.width} × {exif.height}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
           <DialogTitle>Delete photo?</DialogTitle>
           <DialogDescription>
-            This permanently removes &quot;{currentPhoto.name}&quot; from the
-            album and your Drive storage.
+            This permanently removes &quot;{photo.name}&quot; from the album and
+            your Drive storage.
           </DialogDescription>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setConfirmDelete(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (onDeletePhoto) onDeletePhoto(photo)
+                setConfirmDelete(false)
+              }}
+            >
               Delete
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
