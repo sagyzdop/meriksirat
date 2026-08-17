@@ -19,6 +19,7 @@ export type UserExportFieldKey =
   | 'memberSince'
   | 'autoCancelled'
   | 'overdue'
+  | 'albums'
 
 export interface AdminUserExportField {
   key: UserExportFieldKey
@@ -40,6 +41,7 @@ export const USER_EXPORT_FIELDS: AdminUserExportField[] = [
   { key: 'memberSince', label: 'Member Since' },
   { key: 'autoCancelled', label: 'Auto-Cancelled' },
   { key: 'overdue', label: 'Overdue' },
+  { key: 'albums', label: 'Albums' },
 ]
 
 /** Every exportable column, in display order. Used as the default selection. */
@@ -79,6 +81,8 @@ export function getUserExportFieldValue(
       return String(user.cancelledInStartWindowCount)
     case 'overdue':
       return String(user.overdueCount)
+    case 'albums':
+      return String(user.albumCount)
     case 'email':
     case 'role':
     case 'status':

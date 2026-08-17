@@ -237,6 +237,7 @@ export interface AdminUserExport {
   onboardingComplete: boolean
   cancelledInStartWindowCount: number
   overdueCount: number
+  albumCount: number
   createdAt: Date | string
   updatedAt: Date | string
 }

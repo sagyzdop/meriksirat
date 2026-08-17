@@ -751,6 +751,7 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
         onboardingComplete: user.onboardingComplete,
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
         overdueCount: user.overdueCount,
+        albumCount: user.albumCount,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })

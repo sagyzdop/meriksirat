@@ -29,6 +29,7 @@ const sampleUser: AdminUserExport = {
   onboardingComplete: true,
   cancelledInStartWindowCount: 2,
   overdueCount: 1,
+  albumCount: 5,
   createdAt: new Date('2025-03-15T10:00:00Z'),
   updatedAt: new Date('2025-03-16T10:00:00Z'),
 }
