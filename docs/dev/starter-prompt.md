@@ -8,7 +8,7 @@ You are working on **Meriksirat**, a full-stack equipment booking & management p
 
 ## Before you edit
 
-- Read `docs/dev/conventions.md` and `docs/dev/architecture.md`, plus `docs/data-loading.md`.
+- Read `docs/dev/conventions.md` and `docs/dev/architecture.md`, plus `docs/dev/data-loading.md`.
 - Run `npx tsc --noEmit` first — it must stay at 0 errors.
 - Format touched files with `npx prettier --write <files>` (`.prettierrc`: no semi, single quotes, 80 cols).
 - `npm run lint` is broken at baseline; ignore its output.
@@ -31,7 +31,8 @@ You are working on **Meriksirat**, a full-stack equipment booking & management p
 - `src/components/ui/` — shadcn primitives; `src/components/shared/` — cross-page components
 - `src/lib/{equipment,booking,user}/` — server functions (`functions.ts`), queries (`queries.ts`), types
 - `src/lib/search-params.ts`, `src/lib/query-client.ts`, `src/router.tsx`
-- `docs/` — Albums, data-loading, worker-import-convention, dev/conventions, dev/architecture
+- `docs/dev/` — architecture, conventions, data-loading, albums, calendar-viewer, worker-import-convention, shadcn-reference, logs, availability-badges, starter-prompt
+- `docs/user/` — booking, member-guide, admin-guide
 
 ## Conventions for this repo
 

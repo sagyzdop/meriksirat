@@ -144,7 +144,7 @@ The albums filter (`AlbumFilterSchema` in `types.ts`, enforced in `getMyAlbumsFn
 | `setCoverPhotoFn`       | manager/owner/editor                   | set `cover_file_id`                                                |
 | `removeMemberFn`        | manager/owner (anyone) / editor (self) | remove co-author / leave album                                     |
 
-All handlers follow the repo's worker-import convention: `env`/`db`/schema/drive imports are `await import(...)` inside handlers (see `docs/worker-import-convention.md`).
+All handlers follow the repo's worker-import convention: `env`/`db`/schema/drive imports are `await import(...)` inside handlers (see `docs/dev/worker-import-convention.md`).
 
 ## Query keys
 
@@ -157,7 +157,7 @@ All handlers follow the repo's worker-import convention: `env`/`db`/schema/drive
 | `['albums','manage']`         | all albums (admin)           |
 | `['albums','detail',albumId]` | single album detail          |
 
-Invalidate by the `albumQueries.all` prefix (`['albums']`) after any mutation. Album routes preload their query in the route loader via `ensureQueryData` (SSR-friendly), consistent with `docs/data-loading.md`.
+Invalidate by the `albumQueries.all` prefix (`['albums']`) after any mutation. Album routes preload their query in the route loader via `ensureQueryData` (SSR-friendly), consistent with `docs/dev/data-loading.md`.
 
 ## Environment & bindings
 

@@ -101,7 +101,7 @@ Shared domain form pieces that fit under a specific page tree go in that page's 
 
 ## Data loading
 
-See `docs/data-loading.md`. All list/detail data flows through TanStack Query `queryOptions` factories (`src/lib/{equipment,booking,user}/queries.ts`); mutations call server functions and invalidate by query-key prefix.
+See `docs/dev/data-loading.md`. All list/detail data flows through TanStack Query `queryOptions` factories (`src/lib/{equipment,booking,user}/queries.ts`); mutations call server functions and invalidate by query-key prefix.
 
 ## Code style
 

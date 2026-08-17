@@ -46,7 +46,7 @@ Each domain (`equipment`, `booking`, `user`) splits into:
 - `queries.ts` — `queryOptions` factories with structured query keys
 - `types.ts` — shared types
 
-Data flow is documented in detail in `docs/data-loading.md`.
+Data flow is documented in detail in `docs/dev/data-loading.md`.
 
 ## The refactor conventions
 

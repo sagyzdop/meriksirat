@@ -11,6 +11,7 @@ import {
   Images,
   FolderOpen,
   Cake,
+  FileText,
 } from 'lucide-react'
 
 import {
@@ -69,6 +70,12 @@ const data = {
       title: 'FAQ',
       url: '/faq',
       icon: HelpCircle,
+    },
+    {
+      title: 'Terms of Service',
+      url: 'https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md',
+      icon: FileText,
+      external: true,
     },
   ],
   navAdmin: [

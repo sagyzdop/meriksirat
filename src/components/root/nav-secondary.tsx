@@ -21,6 +21,7 @@ export function NavSecondary({
     title: string
     url: string
     icon: LucideIcon
+    external?: boolean
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
@@ -31,10 +32,22 @@ export function NavSecondary({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
-                <Link to={item.url} aria-label={`Navigate to ${item.title}`}>
-                  <item.icon aria-hidden="true" />
-                  <span>{item.title}</span>
-                </Link>
+                {item.external ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Navigate to ${item.title}`}
+                  >
+                    <item.icon aria-hidden="true" />
+                    <span>{item.title}</span>
+                  </a>
+                ) : (
+                  <Link to={item.url} aria-label={`Navigate to ${item.title}`}>
+                    <item.icon aria-hidden="true" />
+                    <span>{item.title}</span>
+                  </Link>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

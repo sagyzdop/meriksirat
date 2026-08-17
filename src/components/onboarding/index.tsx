@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { OnboardingHeader } from '@/components/onboarding/components/onboarding-header'
 import { ProfileStep } from '@/components/onboarding/components/profile-step'
 import { TelegramStep } from '@/components/onboarding/components/telegram-step'
+import { TosAcceptanceDialog } from '@/components/onboarding/components/tos-acceptance-dialog'
 
 const updateOnboardingSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -36,6 +37,10 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   const [telegramUrl, setTelegramUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isCheckingTelegram, setIsCheckingTelegram] = useState(false)
+  const [showTosDialog, setShowTosDialog] = useState(false)
+  const [pendingFormData, setPendingFormData] = useState<OnboardingForm | null>(
+    null
+  )
 
   const form = useForm<OnboardingForm>({
     resolver: zodResolver(updateOnboardingSchema),
@@ -54,6 +59,18 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   })
 
   const onSubmit = async (data: OnboardingForm) => {
+    setPendingFormData(data)
+    setShowTosDialog(true)
+  }
+
+  const handleTosAccept = async () => {
+    if (!pendingFormData) return
+
+    setShowTosDialog(false)
+    await submitOnboarding(pendingFormData)
+  }
+
+  const submitOnboarding = async (data: OnboardingForm) => {
     try {
       setError(null)
       const result = await updateUserOnboardingFn({
@@ -137,6 +154,12 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
           <ProfileStep form={form} error={error} onSubmit={onSubmit} />
         </>
       )}
+      <TosAcceptanceDialog
+        open={showTosDialog}
+        onOpenChange={setShowTosDialog}
+        onAccept={handleTosAccept}
+        isSubmitting={form.formState.isSubmitting}
+      />
     </div>
   )
 }
