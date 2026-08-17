@@ -263,3 +263,22 @@ export interface BroadcastResult {
   /** Users without a linked Telegram chat (never eligible for delivery). */
   skipped: number
 }
+
+// ---------------------------------------------------------------------------
+// Album export
+// ---------------------------------------------------------------------------
+
+export interface AdminAlbumExport {
+  id: string
+  title: string
+  event: string
+  eventDate: Date | string | null
+  createdAt: Date | string
+  isShared: boolean
+  albumUrl: string
+  authors: {
+    name: string
+    email: string | null
+    telegramUsername: string | null
+  }[]
+}

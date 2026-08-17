@@ -10,6 +10,7 @@ import {
   ViolationsFiltersSchema,
 } from '../dashboard-types'
 import type {
+  AdminAlbumExport,
   AdminDashboardStats,
   AdminUserAlbum,
   AdminUserExport,
@@ -765,6 +766,126 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
       onboardingComplete: !!row.onboardingComplete,
     }))
   })
+
+// ---------------------------------------------------------------------------
+// Album export
+// ---------------------------------------------------------------------------
+
+export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<AdminAlbumExport[]> => {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db/index')
+    const { album, albumMember, user } = await import('@/db/schema')
+    const { eq, inArray } = await import('drizzle-orm')
+
+    const headers = getRequestHeaders()
+    await checkAdminPermission(headers, ['admin', 'manager'])
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    const rows = await database
+      .select({
+        id: album.id,
+        title: album.title,
+        event: album.event,
+        eventDate: album.eventDate,
+        createdAt: album.createdAt,
+        isShared: album.isShared,
+        ownerUserId: album.ownerUserId,
+      })
+      .from(album)
+      .orderBy(album.createdAt)
+      .all()
+
+    const albumIds = rows.map((r) => r.id)
+
+    const memberRows =
+      albumIds.length > 0
+        ? await database
+            .select({
+              albumId: albumMember.albumId,
+              name: user.name,
+              email: user.email,
+              telegramUsername: user.telegramUsername,
+            })
+            .from(albumMember)
+            .innerJoin(user, eq(albumMember.userId, user.id))
+            .where(
+              albumIds.length === 1
+                ? eq(albumMember.albumId, albumIds[0])
+                : inArray(albumMember.albumId, albumIds)
+            )
+            .all()
+        : []
+
+    const membersByAlbum = new Map<
+      string,
+      {
+        name: string
+        email: string | null
+        telegramUsername: string | null
+      }[]
+    >()
+    for (const m of memberRows) {
+      const list = membersByAlbum.get(m.albumId) ?? []
+      list.push({
+        name: m.name,
+        email: m.email,
+        telegramUsername: m.telegramUsername,
+      })
+      membersByAlbum.set(m.albumId, list)
+    }
+
+    const ownerIds = [...new Set(rows.map((r) => r.ownerUserId))]
+    const ownerRows =
+      ownerIds.length > 0
+        ? await database
+            .select({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              telegramUsername: user.telegramUsername,
+            })
+            .from(user)
+            .where(
+              ownerIds.length === 1
+                ? eq(user.id, ownerIds[0])
+                : inArray(user.id, ownerIds)
+            )
+            .all()
+        : []
+
+    const ownerMap = new Map(ownerRows.map((o) => [o.id, o]))
+
+    return rows.map((row) => {
+      const owner = ownerMap.get(row.ownerUserId)
+      const members = membersByAlbum.get(row.id) ?? []
+      const authors = [
+        ...(owner
+          ? [
+              {
+                name: owner.name,
+                email: owner.email,
+                telegramUsername: owner.telegramUsername,
+              },
+            ]
+          : []),
+        ...members,
+      ]
+      return {
+        id: row.id,
+        title: row.title,
+        event: row.event,
+        eventDate: row.eventDate,
+        createdAt: row.createdAt,
+        isShared: !!row.isShared,
+        albumUrl: `https://meriksirat.nu.edu.kz/a/${row.id}`,
+        authors,
+      }
+    })
+  }
+)
 
 // ---------------------------------------------------------------------------
 // Telegram broadcast (admin only)

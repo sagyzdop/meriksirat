@@ -40,6 +40,7 @@ interface AlbumsPageProps {
   showVisibilityFilter?: boolean
   canCreate?: boolean
   onCreated: () => void
+  headerActions?: React.ReactNode
 }
 
 export function AlbumsPage({
@@ -55,6 +56,7 @@ export function AlbumsPage({
   showVisibilityFilter = true,
   canCreate = true,
   onCreated,
+  headerActions,
 }: AlbumsPageProps) {
   const [createOpen, setCreateOpen] = React.useState(false)
   const [title, setTitle] = React.useState('')
@@ -98,7 +100,9 @@ export function AlbumsPage({
         title={mode === 'manage' ? 'Manage Albums' : 'My Albums'}
         description="Photo albums backed by Google Drive."
         actions={
-          mode === 'mine' && (
+          mode === 'manage' ? (
+            headerActions
+          ) : (
             <Button
               type="button"
               onClick={() => setCreateOpen(true)}

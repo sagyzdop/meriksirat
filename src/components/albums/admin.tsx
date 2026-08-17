@@ -4,6 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { albumQueries } from '@/lib/albums'
 import type { AlbumListFilters } from '@/lib/albums'
 import { AlbumsPage } from '@/components/albums/albums-page'
+import { ExportAlbumsDialog } from '@/components/shared/export-albums-dialog'
 
 interface AdminAlbumsProps {
   search: AlbumListFilters
@@ -37,6 +38,7 @@ export function AdminAlbums({ search }: AdminAlbumsProps) {
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
       onCreated={() => {}}
+      headerActions={<ExportAlbumsDialog />}
     />
   )
 }

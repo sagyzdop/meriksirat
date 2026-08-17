@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import {
   broadcastTelegramMessageFn,
+  exportAlbumsFn,
   exportUsersFn,
   getAdminDashboardAlertsFn,
   getAdminDashboardStatsFn,
@@ -9,6 +10,7 @@ import {
   getViolationsFn,
 } from './functions/dashboard'
 import type {
+  AdminAlbumExport,
   AdminDashboardRange,
   AdminDashboardStats,
   AdminUserAlbumsFilters,
@@ -115,6 +117,12 @@ export const adminDashboardQueries = {
       staleTime: Infinity,
       queryFn: async (): Promise<AdminUserExport[]> =>
         exportUsersFn({ data: filters }),
+    }),
+  albumExport: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'album-export'],
+      staleTime: Infinity,
+      queryFn: async (): Promise<AdminAlbumExport[]> => exportAlbumsFn(),
     }),
 }
 

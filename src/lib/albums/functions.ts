@@ -477,6 +477,8 @@ async function buildAlbumDetail(
     ownerUserId: row.ownerUserId,
     title: row.title,
     description: row.description ?? '',
+    event: row.event ?? '',
+    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
     driveFolderId: row.driveFolderId,
     coverFileId,
     coverUrl: coverFileId ? albumCoverUrl(coverFileId) : null,

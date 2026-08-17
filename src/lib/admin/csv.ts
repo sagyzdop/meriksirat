@@ -1,4 +1,4 @@
-import type { AdminUserExport } from './dashboard-types'
+import type { AdminAlbumExport, AdminUserExport } from './dashboard-types'
 
 // ---------------------------------------------------------------------------
 // User export fields
@@ -135,6 +135,94 @@ export function usersToCsv(
   )
   const rows = users.map((user) =>
     keys.map((key) => getUserExportFieldValue(user, key))
+  )
+  return buildCsv([header, ...rows])
+}
+
+// ---------------------------------------------------------------------------
+// Album export fields
+// ---------------------------------------------------------------------------
+
+export type AlbumExportFieldKey =
+  | 'event'
+  | 'eventDate'
+  | 'authors'
+  | 'authorEmails'
+  | 'authorTelegramTags'
+  | 'albumUrl'
+  | 'albumDate'
+
+export interface AdminAlbumExportField {
+  key: AlbumExportFieldKey
+  label: string
+}
+
+export const ALBUM_EXPORT_FIELDS: AdminAlbumExportField[] = [
+  { key: 'event', label: 'Event' },
+  { key: 'eventDate', label: 'Event Date' },
+  { key: 'authors', label: 'Authors' },
+  { key: 'authorEmails', label: "Authors' Emails" },
+  { key: 'authorTelegramTags', label: "Authors' Telegram" },
+  { key: 'albumUrl', label: 'Album Link' },
+  { key: 'albumDate', label: 'Album Date' },
+]
+
+export const DEFAULT_ALBUM_EXPORT_KEYS: readonly AlbumExportFieldKey[] =
+  ALBUM_EXPORT_FIELDS.map((field) => field.key)
+
+function formatDateDDMMYYYY(value: Date | string | null): string {
+  if (!value) return ''
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const dd = String(date.getUTCDate()).padStart(2, '0')
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const yyyy = date.getUTCFullYear()
+  return `${dd}.${mm}.${yyyy}`
+}
+
+export function getAlbumExportFieldValue(
+  album: AdminAlbumExport,
+  key: AlbumExportFieldKey
+): string {
+  switch (key) {
+    case 'event':
+      return stringifyCsvValue(album.event)
+    case 'eventDate':
+      return formatDateDDMMYYYY(album.eventDate)
+    case 'authors':
+      return album.authors
+        .map((a) => a.name)
+        .filter(Boolean)
+        .join('; ')
+    case 'authorEmails':
+      return album.authors
+        .map((a) => a.email)
+        .filter(Boolean)
+        .join('; ')
+    case 'authorTelegramTags':
+      return album.authors
+        .map((a) => (a.telegramUsername ? `@${a.telegramUsername}` : ''))
+        .filter(Boolean)
+        .join('; ')
+    case 'albumUrl':
+      return stringifyCsvValue(album.albumUrl)
+    case 'albumDate':
+      return formatDateDDMMYYYY(album.createdAt)
+    default:
+      return ''
+  }
+}
+
+export function albumsToCsv(
+  albums: AdminAlbumExport[],
+  keys: readonly AlbumExportFieldKey[] = DEFAULT_ALBUM_EXPORT_KEYS
+): string {
+  const header = keys.map(
+    (key) =>
+      ALBUM_EXPORT_FIELDS.find((field) => field.key === key)?.label ?? key
+  )
+  const rows = albums.map((album) =>
+    keys.map((key) => getAlbumExportFieldValue(album, key))
   )
   return buildCsv([header, ...rows])
 }
