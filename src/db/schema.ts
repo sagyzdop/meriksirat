@@ -344,6 +344,8 @@ export const album = sqliteTable(
     coverFileId: text('cover_file_id'),
     editShareToken: text('edit_share_token').notNull().unique(),
     isShared: integer('is_shared', { mode: 'boolean' }).default(false),
+    event: text('event').notNull().default(''),
+    eventDate: integer('event_date', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
