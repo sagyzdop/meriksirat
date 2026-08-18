@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import { Instagram, Send } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 const CLUB_INSTAGRAM = 'https://www.instagram.com/nu_img'
 const CLUB_TELEGRAM = 'https://t.me/nu_img'
