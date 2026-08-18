@@ -33,7 +33,7 @@ export async function rateLimit(
 
   try {
     const { env } = await import('cloudflare:workers')
-    const limiter = (env as Record<string, unknown>)[limiterName] as
+    const limiter = (env as unknown as Record<string, unknown>)[limiterName] as
       | { limit(opts: { key: string }): Promise<{ success: boolean }> }
       | undefined
     if (!limiter) return { allowed: true }
