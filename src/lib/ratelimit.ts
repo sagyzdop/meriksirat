@@ -1,22 +1,14 @@
 /**
- * Minimal fixed-window rate limiter backed by KV.
+ * Rate limiter backed by Cloudflare's native Rate Limiting binding.
  *
- * This is a cheap defense-in-depth guard for unauthenticated endpoints. It is
- * approximate — KV reads/writes are not atomic, so the count can be off under
- * concurrency — and it fails open if the client IP cannot be attributed or KV
- * is unavailable. It must never be the only access control.
+ * Each limiter is declared in wrangler.jsonc under "ratelimits" and maps 1:1
+ * to a binding name. The binding counters live on the same edge machine as
+ * the Worker — no KV reads/writes involved.
+ *
+ * https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
  */
 
-const DEFAULT_WINDOW_MS = 60_000
-
-export interface RateLimitOptions {
-  /** Namespace prefix for the counters, e.g. `public-albums`. */
-  name: string
-  /** Requests allowed per window. */
-  limit: number
-  /** Window length in milliseconds. Defaults to 60s. */
-  windowMs?: number
-}
+const PERIOD_SECONDS = 60
 
 export interface RateLimitResult {
   allowed: boolean
@@ -33,37 +25,23 @@ export function clientIp(headers: Headers): string | null {
 
 export async function rateLimit(
   headers: Headers,
-  options: RateLimitOptions,
+  limiterName: string,
   identity?: string
 ): Promise<RateLimitResult> {
-  const ip = clientIp(headers)
-  const subject = identity ?? ip
+  const subject = identity ?? clientIp(headers)
   if (!subject) return { allowed: true }
 
   try {
     const { env } = await import('cloudflare:workers')
-    const kv = env.meriksirat_kv as KVNamespace | undefined
-    if (!kv) return { allowed: true }
+    const limiter = (env as Record<string, unknown>)[limiterName] as
+      | { limit(opts: { key: string }): Promise<{ success: boolean }> }
+      | undefined
+    if (!limiter) return { allowed: true }
 
-    const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS
-    const bucket = Math.floor(Date.now() / windowMs)
-    const key = `rl:${options.name}:${subject}:${bucket}`
+    const { success } = await limiter.limit({ key: subject })
+    if (success) return { allowed: true }
 
-    const current = Number((await kv.get(key)) ?? '0')
-    if (current >= options.limit) {
-      const expiresAt = (bucket + 1) * windowMs
-      return {
-        allowed: false,
-        retryAfterSeconds: Math.max(
-          1,
-          Math.ceil((expiresAt - Date.now()) / 1000)
-        ),
-      }
-    }
-
-    const ttlSeconds = Math.ceil(windowMs / 1000) + 5
-    await kv.put(key, String(current + 1), { expirationTtl: ttlSeconds })
-    return { allowed: true }
+    return { allowed: false, retryAfterSeconds: PERIOD_SECONDS }
   } catch (error) {
     console.warn('Rate limiter failed open:', error)
     return { allowed: true }

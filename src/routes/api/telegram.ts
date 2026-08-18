@@ -66,11 +66,7 @@ export const Route = createFileRoute('/api/telegram')({
             const { rateLimit } = await import('@/lib/ratelimit')
             const rl = await rateLimit(
               request.headers,
-              {
-                name: 'telegram-webhook',
-                windowMs: 60_000,
-                limit: 30,
-              },
+              'rl_telegram_webhook',
               `chat:${chatId}`
             )
             if (!rl.allowed) {

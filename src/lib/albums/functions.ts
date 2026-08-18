@@ -644,10 +644,7 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
     // can browse the shared gallery. Only `is_shared` albums appear here, so
     // the ownership filter does not apply. Rate-limited per IP to stop a
     // scripted client from hammering D1 reads.
-    const limit = await rateLimit(headers, {
-      name: 'public-albums',
-      limit: 120,
-    })
+    const limit = await rateLimit(headers, 'rl_public_albums')
     if (!limit.allowed) {
       throw new Error(
         `Too many requests. Try again in ${limit.retryAfterSeconds} seconds.`
@@ -714,10 +711,7 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
     const { getSessionUser } = await import('./server')
     if (!(await getSessionUser(headers))) {
       const { rateLimit } = await import('@/lib/ratelimit')
-      const limit = await rateLimit(headers, {
-        name: 'album-detail',
-        limit: 60,
-      })
+      const limit = await rateLimit(headers, 'rl_album_detail')
       if (!limit.allowed) {
         throw new Error(
           `Too many requests. Try again in ${limit.retryAfterSeconds} seconds.`
@@ -750,15 +744,7 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
     // the Drive API, so cap how often a user can trigger it.
     if (user?.id) {
       const { rateLimit } = await import('@/lib/ratelimit')
-      const rl = await rateLimit(
-        headers,
-        {
-          name: 'refresh-album',
-          windowMs: 60_000,
-          limit: 10,
-        },
-        user.id
-      )
+      const rl = await rateLimit(headers, 'rl_refresh_album', user.id)
       if (!rl.allowed) {
         throw new Error('Too many refresh requests. Please try again shortly.')
       }
@@ -793,15 +779,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     // Drive API, so cap how fast a user can mint them.
     if (user?.id) {
       const { rateLimit } = await import('@/lib/ratelimit')
-      const rl = await rateLimit(
-        headers,
-        {
-          name: 'create-upload-session',
-          windowMs: 60_000,
-          limit: 20,
-        },
-        user.id
-      )
+      const rl = await rateLimit(headers, 'rl_create_upload_session', user.id)
       if (!rl.allowed) {
         throw new Error('Too many upload sessions. Please try again shortly.')
       }

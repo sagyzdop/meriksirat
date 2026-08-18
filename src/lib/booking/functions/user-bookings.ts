@@ -140,11 +140,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
     const { rateLimit } = await import('@/lib/ratelimit')
     const bookingRateLimit = await rateLimit(
       headers,
-      {
-        name: 'create-booking',
-        windowMs: 60_000,
-        limit: 10,
-      },
+      'rl_create_booking',
       session.user.id
     )
     if (!bookingRateLimit.allowed) {

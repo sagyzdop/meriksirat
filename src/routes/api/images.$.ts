@@ -26,11 +26,7 @@ export const Route = createFileRoute('/api/images/$')({
           const { rateLimit } = await import('@/lib/ratelimit')
           const rl = await rateLimit(
             request.headers,
-            {
-              name: 'images',
-              windowMs: 60_000,
-              limit: 300,
-            },
+            'rl_images',
             session.user.id
           )
           if (!rl.allowed) {

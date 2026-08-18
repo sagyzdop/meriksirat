@@ -87,11 +87,7 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const { rateLimit } = await import('@/lib/ratelimit')
     const addItemsRateLimit = await rateLimit(
       headers,
-      {
-        name: 'add-booking-items',
-        windowMs: 60_000,
-        limit: 10,
-      },
+      'rl_add_booking_items',
       session.user.id
     )
     if (!addItemsRateLimit.allowed) {
