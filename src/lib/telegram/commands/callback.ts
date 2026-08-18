@@ -174,36 +174,33 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
     }
 
     // Main menu actions always take precedence, regardless of session state.
+    // Sessions are not explicitly deleted here — the 1-hour TTL handles
+    // cleanup and the next flow start overwrites any stale session.
     if (callbackData === 'menu') {
-      await deleteSession(ctx.env.meriksirat_kv, chatId)
       await showMainMenu(ctx)
       await ctx.answerCbQuery()
       return
     }
 
     if (callbackData === 'menu_bookings') {
-      await deleteSession(ctx.env.meriksirat_kv, chatId)
       await renderMyBookings(ctx)
       await ctx.answerCbQuery()
       return
     }
 
     if (callbackData === 'menu_start') {
-      await deleteSession(ctx.env.meriksirat_kv, chatId)
       await renderStartBookingList(ctx)
       await ctx.answerCbQuery()
       return
     }
 
     if (callbackData === 'menu_end') {
-      await deleteSession(ctx.env.meriksirat_kv, chatId)
       await renderEndBookingList(ctx)
       await ctx.answerCbQuery()
       return
     }
 
     if (callbackData === 'menu_cancel') {
-      await deleteSession(ctx.env.meriksirat_kv, chatId)
       await renderCancelBookingList(ctx)
       await ctx.answerCbQuery()
       return
