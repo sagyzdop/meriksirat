@@ -115,10 +115,10 @@ export function requireAccess(
 //
 // Public album views hit the Drive API once per page load. To protect the
 // master account's Drive API quota on shared links we cache the folder listing
-// in KV for ~60s. Uploads invalidate the cache right away.
+// in KV for ~5m. Uploads invalidate the cache right away.
 // ---------------------------------------------------------------------------
 
-const LISTING_TTL_SECONDS = 60
+const LISTING_TTL_SECONDS = 300
 
 export interface CachedListing {
   folderState: AlbumFolderState
