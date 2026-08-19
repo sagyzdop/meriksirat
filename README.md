@@ -1,9 +1,7 @@
-# Meriksirat - Equipment Booking Management System
+# MerikSirat
 
-A modern, full-stack equipment booking and management platform built for clubs
-and organizations. Meriksirat streamlines equipment reservations with real-time
-availability tracking, Google Calendar integration, and Telegram bot
-notifications.
+A modern, full-stack equipment booking and management platform (and more) built for clubs
+and organizations.
 
 ## Features
 
