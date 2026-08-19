@@ -5,7 +5,7 @@
  */
 
 import type { BotContext } from '../context'
-import { getSession, deleteSession } from '../kv-session'
+import { getSession } from '../kv-session'
 import { db } from '@/db'
 import { bookingItem } from '@/db/schema'
 import { inArray } from 'drizzle-orm'
@@ -66,10 +66,9 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       const result = await returnBookingItems(database, selectedItemIds)
 
       // If nothing was updated the items were already returned (e.g. a
-      // duplicate/re-sent photo racing the first one). Drop the session and
-      // return without re-logging to the channel.
+      // duplicate/re-sent photo racing the first one). The session TTL
+      // handles cleanup — no explicit delete needed.
       if (result.updated.length === 0) {
-        await deleteSession(ctx.env.meriksirat_kv, chatId)
         return
       }
 
@@ -111,8 +110,6 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       } else {
         await ctx.reply(confirmation)
       }
-
-      await deleteSession(ctx.env.meriksirat_kv, chatId)
     } catch (error) {
       console.error('Return processing error:', {
         chatId,

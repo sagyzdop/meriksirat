@@ -22,7 +22,7 @@
  */
 
 import type { BotContext } from '../context'
-import { getSession, setSession, deleteSession } from '../kv-session'
+import { getSession, setSession } from '../kv-session'
 import { inlineKeyboard } from '../server-utils'
 import { showMainMenu, backToMenuButton, backToMenuMarkup } from '../menu'
 import { handleCancelCallback, renderCancelBookingList } from './cancel-booking'
@@ -265,7 +265,6 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
             `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Return it via the End Booking flow when done.`,
             backToMenuMarkup()
           )
-          await deleteSession(ctx.env.meriksirat_kv, chatId)
         } catch (error) {
           console.error('Failed to start booking:', error)
           try {
@@ -288,7 +287,6 @@ export async function handleCallback(ctx: BotContext): Promise<void> {
       if (callbackData === 'start_cancel') {
         await ctx.editMessageText('Start cancelled.', backToMenuMarkup())
         await ctx.answerCbQuery()
-        await deleteSession(ctx.env.meriksirat_kv, chatId)
         return
       }
 

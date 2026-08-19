@@ -2,6 +2,7 @@
  * Telegram Session Management
  *
  * Handles KV storage for telegram bot sessions during equipment return flow.
+ * Sessions expire via KV's expirationTtl (1 hour) — no explicit delete needed.
  */
 
 import type { SessionData } from './types'
@@ -27,8 +28,4 @@ export async function setSession(
     }),
     { expirationTtl: 3600 }
   ) // 1 hour TTL
-}
-
-export async function deleteSession(kv: KVNamespace, chatId: string) {
-  await kv.delete(`session:${chatId}`)
 }
