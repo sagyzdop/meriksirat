@@ -1089,7 +1089,7 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedListing } =
+    const { resolveAlbumAccess, requireAccess } =
       await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
@@ -1139,8 +1139,12 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       origin: headers.get('origin') ?? undefined,
     })
 
-    // A new file is about to appear in the folder.
-    await invalidateCachedListing(row.driveFolderId)
+    // NOTE: We intentionally do NOT invalidate the listing cache here.
+    // The upload hasn't landed in Drive yet (the client is about to PUT
+    // to the resumable URL), so the cache would just be repopulated with
+    // the same stale data.  The 5-minute TTL handles expiry, and any
+    // subsequent mutation (delete, refresh) will invalidate explicitly.
+    // This avoids burning a KV delete per photo upload.
 
     return { uploadUrl }
   })
