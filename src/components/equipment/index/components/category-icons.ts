@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  cameras: Camera,
+  'camera bodies': Camera,
   lenses: Aperture,
   lighting: Lightbulb,
   triggers: Zap,
