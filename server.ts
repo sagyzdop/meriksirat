@@ -30,10 +30,10 @@ const serverEntry = createServerEntry({
  * /albums/:id constantly when links are shared. Each uncached document load
  * costs the Worker several milliseconds of CPU (auth probe, loaders, shell
  * SSR, hydration payload). Guest HTML is fully viewer-independent, so we cache
- * the rendered response in KV and replay it without executing any app code on
- * subsequent hits. Authenticated requests are never intercepted (Cookie header
- * present), and editor-token URLs (?edit=...) are never cached because they
- * unlock per-link state.
+ * the rendered response at the edge and replay it without executing any app
+ * code on subsequent hits. Authenticated requests are never intercepted
+ * (Cookie header present), and editor-token URLs (?edit=...) are never cached
+ * because they unlock per-link state.
  */
 const GUEST_HTML_TTL_SECONDS = 60
 
@@ -55,29 +55,16 @@ async function serveGuestHtmlCache(
       return run()
     }
 
-    const { env } = await import('cloudflare:workers')
-    const kv = env.meriksirat_kv as KVNamespace | undefined
-    if (!kv) return run()
-
-    const cacheKey = `html:${url.pathname}${url.search}`
-    try {
-      const cached = await kv.getWithMetadata<{
-        headers: Record<string, string>
-      }>(cacheKey, 'text')
-      if (cached.value) {
-        const headers = new Headers(
-          cached.metadata?.headers ?? {
-            'content-type': 'text/html; charset=utf-8',
-          }
-        )
-        headers.set('x-guest-html-cache', 'hit')
-        return new Response(cached.value, {
-          status: 200,
-          headers,
-        })
-      }
-    } catch {
-      // KV read failure must not take the request down; fall through.
+    // The Cache API is used instead of KV because it has no per-operation
+    // quotas (KV free tier allows only 1,000 writes/day, which a hot album
+    // link would exhaust at one write per TTL window). It is per-colo: each
+    // data center pays the first render once per TTL window.
+    const cache = (caches as unknown as { default: Cache }).default
+    const hit = await cache.match(request)
+    if (hit) {
+      const headers = new Headers(hit.headers)
+      headers.set('x-guest-html-cache', 'hit')
+      return new Response(await hit.text(), { status: 200, headers })
     }
 
     let ran = false
@@ -103,13 +90,23 @@ async function serveGuestHtmlCache(
           }
         })
         headers['x-guest-html-cache'] = 'miss'
+        const storedHeaders = new Headers(headers)
+        // The TTL is carried on the stored response only; visitors get the
+        // header stripped so browsers revalidate normally.
+        storedHeaders.set(
+          'cache-control',
+          `public, max-age=${GUEST_HTML_TTL_SECONDS}`
+        )
         try {
-          await kv.put(cacheKey, html, {
-            expirationTtl: GUEST_HTML_TTL_SECONDS,
-            metadata: { headers },
-          })
+          await cache.put(
+            request,
+            new Response(html, {
+              status: 200,
+              headers: storedHeaders,
+            })
+          )
         } catch (error) {
-          console.warn('Failed to store guest HTML cache:', error)
+          console.warn('Failed to store guest HTML in edge cache:', error)
         }
         return new Response(html, { status: 200, headers })
       }

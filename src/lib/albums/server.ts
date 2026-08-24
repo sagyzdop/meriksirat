@@ -295,9 +295,8 @@ export async function invalidateCachedDetailCore(
     const { env } = await import('cloudflare:workers')
     const kv = env.meriksirat_kv as KVNamespace
     await kv.delete(detailCoreKey(albumId))
-    // Also drop any cached guest HTML for this album so owner edits are
-    // visible to public viewers immediately.
-    await kv.delete(`html:/albums/${albumId}`)
+    // Note: guest HTML served by the edge Cache API (see server.ts) goes stale
+    // within its short TTL; per-colo purge isn't practical from here.
   } catch (error) {
     console.warn('Failed to invalidate album detail cache:', error)
   }
