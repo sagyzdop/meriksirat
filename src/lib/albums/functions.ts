@@ -448,20 +448,19 @@ function defaultCoverFileId(photos: AlbumPhoto[]): string | null {
   return earliest?.id ?? null
 }
 
-async function buildAlbumDetail(
+type AlbumRow = NonNullable<Awaited<ReturnType<typeof loadAlbumOrNull>>>
+
+/**
+ * Build the viewer-independent core of an album detail payload: the album
+ * row fields, Drive photos and author list. Per-viewer decoration (ownership,
+ * access, edit share token) is applied separately in `decorateAlbumDetail`.
+ */
+async function buildAlbumCore(
   database: ReturnType<(typeof import('@/db'))['db']>,
-  albumId: string,
-  headers: Headers
-): Promise<AlbumDetail | null> {
-  const { resolveAlbumAccess } = await import('./server')
+  row: AlbumRow
+): Promise<Record<string, unknown>> {
   const { eq } = await import('drizzle-orm')
   const { album, albumMember, user } = await import('@/db/schema')
-
-  const row = await loadAlbumOrNull(database, albumId)
-  if (!row) return null
-
-  const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-  if (!row.isShared && access === 'none') return null
 
   const [listing, owner, members] = await Promise.all([
     listAlbumPhotos(row.driveFolderId),
@@ -488,7 +487,7 @@ async function buildAlbumDetail(
     await database
       .update(album)
       .set({ coverFileId, updatedAt: new Date() })
-      .where(eq(album.id, albumId))
+      .where(eq(album.id, row.id))
   }
 
   const authors: AlbumAuthor[] = [
@@ -517,12 +516,33 @@ async function buildAlbumDetail(
     isShared: !!row.isShared,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-    ownership:
-      currentUser && row.ownerUserId === currentUser.id ? 'owner' : 'co-author',
     coAuthorCount: members.length,
     authors,
     photos: listing.photos,
     folderState: listing.folderState,
+  }
+}
+
+/**
+ * Merge the cached viewer-independent core with fields that are always derived
+ * from a freshly loaded album row and session — never from the cache.
+ */
+function decorateAlbumDetail(
+  core: Record<string, unknown>,
+  row: Pick<AlbumRow, 'isShared' | 'editShareToken'>,
+  access: import('./types').AlbumAccessLevel,
+  currentUser: { id: string } | null
+): AlbumDetail {
+  const ownership =
+    currentUser && core.ownerUserId === currentUser.id ? 'owner' : 'co-author'
+  return {
+    ...(core as unknown as Omit<
+      AlbumDetail,
+      'ownership' | 'access' | 'editShareToken'
+    >),
+    // Always fresh: controls whether guest links resolve.
+    isShared: !!row.isShared,
+    ownership,
     access,
     editShareToken: access !== 'none' ? row.editShareToken : null,
   }
@@ -653,13 +673,22 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
 
     const database = db(env.meriksirat_d1 as D1Database)
 
-    return listAlbumsPaginated({
+    // The page is fully viewer-independent, so serve it from the short-lived
+    // page cache when possible (memo layer + KV; see server.ts).
+    const { getCachedPublicPage, setCachedPublicPage } =
+      await import('./server')
+    const cachedPage = (await getCachedPublicPage(data)) as AlbumListPage | null
+    if (cachedPage) return cachedPage
+
+    const page = await listAlbumsPaginated({
       database,
       baseWhere: eq(album.isShared, true),
       ownershipWhere: () => undefined,
       ownershipOverride: 'co-author',
       query: data,
     })
+    await setCachedPublicPage(data, page)
+    return page
   })
 
 export const getAllAlbumsFn = createServerFn({ method: 'GET' })
@@ -708,7 +737,12 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
     // Guests are rate-limited per IP before any Drive or D1 work so a scripted
     // client cannot probe albums or burn Drive quota. Authenticated users are
     // unlimited (members on a shared campus NAT must not be throttled).
-    const { getSessionUser } = await import('./server')
+    const {
+      getSessionUser,
+      getCachedDetailCore,
+      setCachedDetailCore,
+      resolveAlbumAccess,
+    } = await import('./server')
     if (!(await getSessionUser(headers))) {
       const { rateLimit } = await import('@/lib/ratelimit')
       const limit = await rateLimit(headers, 'rl_album_detail')
@@ -719,7 +753,24 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
       }
     }
 
-    return buildAlbumDetail(database, data.albumId, headers)
+    // The authz gate always reads a fresh album row; only the expensive
+    // viewer-independent core comes from cache.
+    const row = await loadAlbumOrNull(database, data.albumId)
+    if (!row) return null
+
+    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
+    if (!row.isShared && access === 'none') return null
+
+    let core = (await getCachedDetailCore(data.albumId)) as Record<
+      string,
+      unknown
+    > | null
+    if (!core) {
+      core = await buildAlbumCore(database, row)
+      await setCachedDetailCore(data.albumId, core)
+    }
+
+    return decorateAlbumDetail(core, row, access, currentUser)
   })
 
 export const refreshAlbumFn = createServerFn({ method: 'POST' })
@@ -728,30 +779,40 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { resolveAlbumAccess, invalidateCachedListing } =
-      await import('./server')
+    const {
+      resolveAlbumAccess,
+      invalidateCachedListing,
+      invalidateCachedDetailCore,
+      setCachedDetailCore,
+    } = await import('./server')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
 
     const row = await loadAlbum(database, data.albumId)
-    const { access, user } = await resolveAlbumAccess(headers, row)
+    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
     if (!['owner', 'editor', 'manager'].includes(access)) {
       throw new Error('Insufficient permissions')
     }
 
     // Refreshing invalidates the listing cache and re-fetches the folder from
     // the Drive API, so cap how often a user can trigger it.
-    if (user?.id) {
+    if (currentUser?.id) {
       const { rateLimit } = await import('@/lib/ratelimit')
-      const rl = await rateLimit(headers, 'rl_refresh_album', user.id)
+      const rl = await rateLimit(headers, 'rl_refresh_album', currentUser.id)
       if (!rl.allowed) {
         throw new Error('Too many refresh requests. Please try again shortly.')
       }
     }
 
     await invalidateCachedListing(row.driveFolderId)
-    return buildAlbumDetail(database, data.albumId, headers)
+    await invalidateCachedDetailCore(data.albumId)
+
+    // Rebuild synchronously so the refresher sees fresh data immediately and
+    // the next viewers are served the refreshed core from cache.
+    const core = await buildAlbumCore(database, row)
+    await setCachedDetailCore(data.albumId, core)
+    return decorateAlbumDetail(core, row, access, currentUser)
   })
 
 export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
@@ -762,8 +823,12 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedListing } =
-      await import('./server')
+    const {
+      resolveAlbumAccess,
+      requireAccess,
+      invalidateCachedListing,
+      invalidateCachedDetailCore,
+    } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { createDriveFolder } = await import('@/lib/google/google-drive')
@@ -794,6 +859,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     )
 
     await invalidateCachedListing(row.driveFolderId)
+    await invalidateCachedDetailCore(data.albumId)
     await database
       .update(album)
       .set({ driveFolderId: folder.id, updatedAt: new Date() })
@@ -808,8 +874,12 @@ export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedListing } =
-      await import('./server')
+    const {
+      resolveAlbumAccess,
+      requireAccess,
+      invalidateCachedListing,
+      invalidateCachedDetailCore,
+    } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { restoreDriveFile } = await import('@/lib/google/google-drive')
@@ -824,6 +894,7 @@ export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })
     const accessToken = await getGoogleAccessToken()
     await restoreDriveFile(accessToken, row.driveFolderId)
     await invalidateCachedListing(row.driveFolderId)
+    await invalidateCachedDetailCore(data.albumId)
 
     return { success: true }
   })
@@ -836,7 +907,8 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
+    const { resolveAlbumAccess, requireAccess, invalidateCachedDetailCore } =
+      await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { renameDriveFile, DriveNotFoundError } =
@@ -878,6 +950,7 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
         .update(album)
         .set(updates)
         .where(eq(album.id, data.albumId))
+      await invalidateCachedDetailCore(data.albumId)
     }
 
     const detailParts: string[] = []
@@ -915,8 +988,12 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { album, user } = await import('@/db/schema')
     const { eq, sql } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedListing } =
-      await import('./server')
+    const {
+      resolveAlbumAccess,
+      requireAccess,
+      invalidateCachedListing,
+      invalidateCachedDetailCore,
+    } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { deleteDriveFile } = await import('@/lib/google/google-drive')
@@ -938,6 +1015,7 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
       )
     }
     await invalidateCachedListing(row.driveFolderId)
+    await invalidateCachedDetailCore(data.albumId)
     await database.delete(album).where(eq(album.id, data.albumId))
 
     await database
@@ -965,7 +1043,8 @@ export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
+    const { resolveAlbumAccess, requireAccess, invalidateCachedDetailCore } =
+      await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { setAnyoneReader } = await import('@/lib/google/google-drive')
@@ -989,6 +1068,7 @@ export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
       .update(album)
       .set({ isShared: data.shared, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
+    await invalidateCachedDetailCore(data.albumId)
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
@@ -1010,7 +1090,8 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { albumMember, user } = await import('@/db/schema')
     const { eq, sql } = await import('drizzle-orm')
-    const { getSessionUser } = await import('./server')
+    const { getSessionUser, invalidateCachedDetailCore } =
+      await import('./server')
     const { newId } = await import('./ids')
 
     const headers = getRequestHeaders()
@@ -1034,6 +1115,8 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
         .update(user)
         .set({ albumCount: sql`${user.albumCount} + 1` })
         .where(eq(user.id, currentUser.id))
+
+      await invalidateCachedDetailCore(row.id)
 
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
       await logAlbumActivityByUser(currentUser.id, {
@@ -1156,8 +1239,12 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedListing } =
-      await import('./server')
+    const {
+      resolveAlbumAccess,
+      requireAccess,
+      invalidateCachedListing,
+      invalidateCachedDetailCore,
+    } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { deleteDriveFile } = await import('@/lib/google/google-drive')
@@ -1179,6 +1266,7 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
         .set({ coverFileId: null, updatedAt: new Date() })
         .where(eq(album.id, data.albumId))
     }
+    await invalidateCachedDetailCore(data.albumId)
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
@@ -1200,7 +1288,8 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
+    const { resolveAlbumAccess, requireAccess, invalidateCachedDetailCore } =
+      await import('./server')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -1213,6 +1302,7 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
       .update(album)
       .set({ coverFileId: data.fileId, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
+    await invalidateCachedDetailCore(data.albumId)
 
     return { success: true }
   })
@@ -1225,7 +1315,8 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { albumMember, user } = await import('@/db/schema')
     const { and, eq, sql } = await import('drizzle-orm')
-    const { resolveAlbumAccess } = await import('./server')
+    const { resolveAlbumAccess, invalidateCachedDetailCore } =
+      await import('./server')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -1264,6 +1355,7 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
       .update(user)
       .set({ albumCount: sql`MAX(${user.albumCount} - 1, 0)` })
       .where(eq(user.id, data.userId))
+    await invalidateCachedDetailCore(data.albumId)
 
     if (currentUser) {
       const [{ logAlbumActivityByUser }, { formatUserDisplayName }] =

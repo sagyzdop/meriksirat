@@ -184,3 +184,170 @@ export async function invalidateCachedListing(folderId: string): Promise<void> {
     console.warn('Failed to invalidate album listing cache:', error)
   }
 }
+
+// ---------------------------------------------------------------------------
+// In-isolate memo layer
+//
+// KV free tier allows only 1,000 writes/day, so hot payloads must not hit KV
+// on every rebuild. A tiny per-isolate Map absorbs repeat traffic: warm
+// isolates serve everything from RAM and only cold/expired reads touch KV.
+// Entries are viewer-independent payloads (album cores / public pages) so
+// sharing them across requests within an isolate is safe. Bounded to keep
+// isolate memory usage predictable.
+// ---------------------------------------------------------------------------
+
+const MEM_TTL_MS = 30_000
+const MEM_MAX_ENTRIES = 25
+
+const memStore = new Map<string, { value: string; expiresAt: number }>()
+
+function memGet(key: string): string | null {
+  const hit = memStore.get(key)
+  if (!hit) return null
+  if (Date.now() > hit.expiresAt) {
+    memStore.delete(key)
+    return null
+  }
+  return hit.value
+}
+
+function memSet(key: string, value: string): void {
+  if (!memStore.has(key) && memStore.size >= MEM_MAX_ENTRIES) {
+    const oldest = memStore.keys().next().value
+    if (oldest !== undefined) memStore.delete(oldest)
+  }
+  memStore.set(key, { value, expiresAt: Date.now() + MEM_TTL_MS })
+}
+
+function parseCached(raw: string): unknown | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Album detail core cache
+//
+// Building an album detail payload costs a Drive listing (or KV listing hit),
+// two D1 queries and O(photos) mapping/sorting on every view. Only three
+// fields of the final detail differ per viewer (`ownership`, `access`,
+// `editShareToken`) and all of them derive from data that is always loaded
+// fresh (the album row + session), so the expensive viewer-independent "core"
+// is cached behind the memo layer + KV for a short window. Mutations that
+// change the core explicitly invalidate it; anything else goes stale for at
+// most TTL seconds.
+//
+// Write volume note: with a 300s TTL the theoretical worst case under
+// continuous viewing of a single album is ~288 KV writes/day, and the memo
+// layer keeps realistic counts far below that.
+// ---------------------------------------------------------------------------
+
+const DETAIL_CORE_TTL_SECONDS = 300
+
+function detailCoreKey(albumId: string): string {
+  return `album:detail:${albumId}`
+}
+
+export async function getCachedDetailCore(
+  albumId: string
+): Promise<unknown | null> {
+  const key = detailCoreKey(albumId)
+  const fromMem = memGet(key)
+  if (fromMem !== null) return parseCached(fromMem)
+  try {
+    const { env } = await import('cloudflare:workers')
+    const raw = await (env.meriksirat_kv as KVNamespace).get(key)
+    if (!raw) return null
+    memSet(key, raw)
+    return parseCached(raw)
+  } catch (error) {
+    console.warn('Failed to read album detail cache:', error)
+    return null
+  }
+}
+
+export async function setCachedDetailCore(
+  albumId: string,
+  core: unknown
+): Promise<void> {
+  const raw = JSON.stringify(core)
+  memSet(detailCoreKey(albumId), raw)
+  try {
+    const { env } = await import('cloudflare:workers')
+    await (env.meriksirat_kv as KVNamespace).put(detailCoreKey(albumId), raw, {
+      expirationTtl: DETAIL_CORE_TTL_SECONDS,
+    })
+  } catch (error) {
+    console.warn('Failed to write album detail cache:', error)
+  }
+}
+
+export async function invalidateCachedDetailCore(
+  albumId: string
+): Promise<void> {
+  memStore.delete(detailCoreKey(albumId))
+  try {
+    const { env } = await import('cloudflare:workers')
+    await (env.meriksirat_kv as KVNamespace).delete(detailCoreKey(albumId))
+  } catch (error) {
+    console.warn('Failed to invalidate album detail cache:', error)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public album list page cache
+//
+// The shared gallery index runs a joined D1 findMany on every view. Its
+// output is fully viewer-independent, so each distinct query (search /
+// visibility / cursor / limit) is cached behind the memo layer + KV instead.
+// No explicit invalidation: mutations surface within TTL seconds.
+// ---------------------------------------------------------------------------
+
+const PUBLIC_PAGE_TTL_SECONDS = 60
+
+function publicPageKey(query: unknown): string {
+  const raw = JSON.stringify(query)
+  let hash = 5381
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) + hash + raw.charCodeAt(i)) | 0
+  }
+  return `album:publist:${(hash >>> 0).toString(36)}`
+}
+
+export async function getCachedPublicPage(
+  query: unknown
+): Promise<unknown | null> {
+  const key = publicPageKey(query)
+  const fromMem = memGet(key)
+  if (fromMem !== null) return parseCached(fromMem)
+  try {
+    const { env } = await import('cloudflare:workers')
+    const raw = await (env.meriksirat_kv as KVNamespace).get(key)
+    if (!raw) return null
+    memSet(key, raw)
+    return parseCached(raw)
+  } catch (error) {
+    console.warn('Failed to read public album list cache:', error)
+    return null
+  }
+}
+
+export async function setCachedPublicPage(
+  query: unknown,
+  page: unknown
+): Promise<void> {
+  const raw = JSON.stringify(page)
+  memSet(publicPageKey(query), raw)
+  try {
+    const { env } = await import('cloudflare:workers')
+    await (env.meriksirat_kv as KVNamespace).put(publicPageKey(query), raw, {
+      expirationTtl: PUBLIC_PAGE_TTL_SECONDS,
+    })
+  } catch (error) {
+    console.warn('Failed to write public album list cache:', error)
+  }
+}
