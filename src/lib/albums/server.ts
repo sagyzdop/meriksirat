@@ -241,12 +241,13 @@ function parseCached(raw: string): unknown | null {
 // change the core explicitly invalidate it; anything else goes stale for at
 // most TTL seconds.
 //
-// Write volume note: with a 300s TTL the theoretical worst case under
-// continuous viewing of a single album is ~288 KV writes/day, and the memo
-// layer keeps realistic counts far below that.
+// Write volume note: with a 3600s TTL the theoretical worst case under
+// continuous viewing of a single album is ~24 KV writes/day, and the memo
+// layer keeps realistic counts far below that. Freshness is driven by the
+// explicit invalidation calls at every mutation point, not by the TTL.
 // ---------------------------------------------------------------------------
 
-const DETAIL_CORE_TTL_SECONDS = 300
+const DETAIL_CORE_TTL_SECONDS = 3600
 
 function detailCoreKey(albumId: string): string {
   return `album:detail:${albumId}`
@@ -292,7 +293,11 @@ export async function invalidateCachedDetailCore(
   memStore.delete(detailCoreKey(albumId))
   try {
     const { env } = await import('cloudflare:workers')
-    await (env.meriksirat_kv as KVNamespace).delete(detailCoreKey(albumId))
+    const kv = env.meriksirat_kv as KVNamespace
+    await kv.delete(detailCoreKey(albumId))
+    // Also drop any cached guest HTML for this album so owner edits are
+    // visible to public viewers immediately.
+    await kv.delete(`html:/albums/${albumId}`)
   } catch (error) {
     console.warn('Failed to invalidate album detail cache:', error)
   }
@@ -307,7 +312,7 @@ export async function invalidateCachedDetailCore(
 // No explicit invalidation: mutations surface within TTL seconds.
 // ---------------------------------------------------------------------------
 
-const PUBLIC_PAGE_TTL_SECONDS = 60
+const PUBLIC_PAGE_TTL_SECONDS = 600
 
 function publicPageKey(query: unknown): string {
   const raw = JSON.stringify(query)

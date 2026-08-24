@@ -17,10 +17,117 @@ interface Env {
 }
 
 const serverEntry = createServerEntry({
-  async fetch(request) {
-    return await handler.fetch(request)
+  async fetch(request): Promise<Response> {
+    const res = await serveGuestHtmlCache(request, () => handler.fetch(request))
+    return res as Response
   },
 })
+
+/**
+ * Edge cache for guest document loads of the public album pages.
+ *
+ * Logged-out visitors (and scrapers fetching link previews) hit /albums and
+ * /albums/:id constantly when links are shared. Each uncached document load
+ * costs the Worker several milliseconds of CPU (auth probe, loaders, shell
+ * SSR, hydration payload). Guest HTML is fully viewer-independent, so we cache
+ * the rendered response in KV and replay it without executing any app code on
+ * subsequent hits. Authenticated requests are never intercepted (Cookie header
+ * present), and editor-token URLs (?edit=...) are never cached because they
+ * unlock per-link state.
+ */
+const GUEST_HTML_TTL_SECONDS = 60
+
+const GUEST_HTML_PATH_RE = /^\/albums(?:\/[^/]+)?$/
+
+async function serveGuestHtmlCache(
+  request: Request,
+  run: () => Response | Promise<Response>
+): Promise<Response> {
+  try {
+    const url = new URL(request.url)
+    if (
+      request.method !== 'GET' ||
+      !GUEST_HTML_PATH_RE.test(url.pathname) ||
+      request.headers.get('cookie') ||
+      !(request.headers.get('accept') || '').includes('text/html') ||
+      url.searchParams.has('edit')
+    ) {
+      return run()
+    }
+
+    const { env } = await import('cloudflare:workers')
+    const kv = env.meriksirat_kv as KVNamespace | undefined
+    if (!kv) return run()
+
+    const cacheKey = `html:${url.pathname}${url.search}`
+    try {
+      const cached = await kv.getWithMetadata<{
+        headers: Record<string, string>
+      }>(cacheKey, 'text')
+      if (cached.value) {
+        const headers = new Headers(
+          cached.metadata?.headers ?? {
+            'content-type': 'text/html; charset=utf-8',
+          }
+        )
+        headers.set('x-guest-html-cache', 'hit')
+        return new Response(cached.value, {
+          status: 200,
+          headers,
+        })
+      }
+    } catch {
+      // KV read failure must not take the request down; fall through.
+    }
+
+    let ran = false
+    try {
+      ran = true
+      const response = await run()
+
+      // Only cache successful HTML documents. Buffer the body so it can be both
+      // returned and stored; only this first request pays for that.
+      const contentType = response.headers.get('content-type') || ''
+      if (response.status === 200 && contentType.includes('text/html')) {
+        const html = await response.text()
+        const headers: Record<string, string> = {}
+        response.headers.forEach((value, key) => {
+          if (
+            ![
+              'content-encoding',
+              'transfer-encoding',
+              'content-length',
+            ].includes(key)
+          ) {
+            headers[key] = value
+          }
+        })
+        headers['x-guest-html-cache'] = 'miss'
+        try {
+          await kv.put(cacheKey, html, {
+            expirationTtl: GUEST_HTML_TTL_SECONDS,
+            metadata: { headers },
+          })
+        } catch (error) {
+          console.warn('Failed to store guest HTML cache:', error)
+        }
+        return new Response(html, { status: 200, headers })
+      }
+
+      return response
+    } catch (error) {
+      // Never mask an app error behind a second execution of the handler.
+      if (ran) throw error
+      throw error
+    }
+  } catch (error) {
+    console.warn('Guest HTML cache layer failed:', error)
+    return new Response('Internal server error', {
+      status: 500,
+      headers: { 'content-type': 'text/plain' },
+    })
+  }
+}
 
 export default {
   ...serverEntry,
