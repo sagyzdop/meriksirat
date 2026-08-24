@@ -31,6 +31,7 @@ const searchSchema = z.object({
       'role',
       'status',
       'clearanceLevel',
+      'albumCount',
       'createdAt',
     ])
     .default('firstName'),

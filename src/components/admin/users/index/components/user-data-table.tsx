@@ -54,6 +54,7 @@ interface Filters {
     | 'role'
     | 'status'
     | 'clearanceLevel'
+    | 'albumCount'
     | 'createdAt'
   sortOrder: 'asc' | 'desc'
 }
