@@ -24,7 +24,7 @@ export const getEquipmentFn = createServerFn({
   .validator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
@@ -32,9 +32,7 @@ export const getEquipmentFn = createServerFn({
       await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       return null
@@ -148,16 +146,14 @@ export const getEquipmentByIdFn = createServerFn({
   .validator(z.object({ equipmentId: z.coerce.number() }))
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { equipment, category } = await import('@/db/schema')
     const { eq, and, lte } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       return null
@@ -206,15 +202,13 @@ export const getEquipmentByIdFn = createServerFn({
 export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { category } = await import('@/db/schema')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       return null

@@ -13,12 +13,10 @@ import {
 export const getUserFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<UserProfile | null> => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       return null
@@ -386,16 +384,14 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
   .validator(UpdateUserProfileSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Unauthorized')

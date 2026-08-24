@@ -21,14 +21,12 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
   .validator(updateOnboardingSchema)
   .handler(async ({ data }) => {
     const headers = getRequestHeaders()
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Unauthorized')
@@ -59,14 +57,12 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
   .validator(z.object({ skipTelegram: z.boolean().optional() }))
   .handler(async ({ data }) => {
     const headers = getRequestHeaders()
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Unauthorized')
@@ -107,14 +103,12 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
 export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const headers = getRequestHeaders()
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const session = await auth.api.getSession({
-      headers,
-    })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Unauthorized')
@@ -159,10 +153,8 @@ export const getTelegramUpdateLinkUrlFn = createServerFn({
   method: 'GET',
 }).handler(async () => {
   const headers = getRequestHeaders()
-  const { auth } = await import('@/lib/auth/auth')
-  const session = await auth.api.getSession({
-    headers,
-  })
+  const { resolveSession } = await import('@/lib/auth/resolve-session')
+  const session = await resolveSession(headers)
 
   if (!session?.user) {
     throw new Error('Unauthorized')

@@ -58,7 +58,7 @@ async function assertBookingAccess(params: {
 export const addBookingItemsFn = createServerFn({ method: 'POST' })
   .validator(AddBookingItemsSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -77,7 +77,7 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const { formatUserDisplayName } = await import('@/lib/utils')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
     if (!session?.user) {
       throw new Error('Not authenticated')
     }
@@ -334,14 +334,14 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
 export const cancelBookingItemFn = createServerFn({ method: 'POST' })
   .validator(CancelBookingItemSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { cancelBookingItems } = await import('../booking-items')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
     if (!session?.user) {
       throw new Error('Not authenticated')
     }
@@ -383,14 +383,14 @@ export const cancelBookingItemFn = createServerFn({ method: 'POST' })
 export const getBookingItemEquipmentIdsFn = createServerFn({ method: 'POST' })
   .validator(GetBookingByIdSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { bookingItem } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
     if (!session?.user) {
       throw new Error('Not authenticated')
     }
@@ -420,14 +420,14 @@ export const getBookingItemEquipmentIdsFn = createServerFn({ method: 'POST' })
 export const getBookingWindowFn = createServerFn({ method: 'POST' })
   .validator(GetBookingByIdSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
     if (!session?.user) {
       throw new Error('Not authenticated')
     }

@@ -12,10 +12,8 @@ export const Route = createFileRoute('/api/images/$')({
           }
 
           // Check authentication
-          const { auth } = await import('@/lib/auth/auth')
-          const session = await auth.api.getSession({
-            headers: request.headers,
-          })
+          const { resolveSession } = await import('@/lib/auth/resolve-session')
+          const session = await resolveSession(request.headers)
 
           if (!session) {
             return new Response('Unauthorized', { status: 401 })

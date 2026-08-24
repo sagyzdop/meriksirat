@@ -74,7 +74,10 @@ export function AvailabilityFilters({
             checked={availableOnly}
             onCheckedChange={onAvailableOnlyChange}
           />
-          <Label htmlFor="available-only-mobile" className="cursor-pointer text-sm">
+          <Label
+            htmlFor="available-only-mobile"
+            className="cursor-pointer text-sm"
+          >
             Show Available Only
           </Label>
         </div>

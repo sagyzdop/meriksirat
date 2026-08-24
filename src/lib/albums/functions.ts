@@ -1089,8 +1089,7 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { resolveAlbumAccess, requireAccess } =
-      await import('./server')
+    const { resolveAlbumAccess, requireAccess } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { mintResumableUpload, findDriveFileByName, getDriveFolderState } =

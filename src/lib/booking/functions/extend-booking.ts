@@ -23,7 +23,7 @@ export const EXTEND_BOOKING_MINUTES = 30
 export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const { checkMultipleCalendarsFreeBusyRaw, updateCalendarEventRaw } =
@@ -37,7 +37,7 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
     const { recomputeBookingStatus } = await import('../status')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Not authenticated')

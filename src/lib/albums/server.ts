@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth/auth'
+import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { albumMember, user } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -20,7 +20,7 @@ export interface SessionUser {
 export async function getSessionUser(
   headers: Headers
 ): Promise<SessionUser | null> {
-  const session = await auth.api.getSession({ headers })
+  const session = await resolveSession(headers)
   if (!session?.user) return null
 
   const su = session.user as {

@@ -81,7 +81,7 @@ export const getTelegramBotUsernameFn = createServerFn({
 export const createBookingFn = createServerFn({ method: 'POST' })
   .validator(CreateBookingSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const {
@@ -129,7 +129,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
     }
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Not authenticated')
@@ -366,7 +366,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
 export const getUserBookingsFn = createServerFn({ method: 'GET' })
   .validator(BookingFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedBookingsResponse | null> => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, category } =
@@ -375,7 +375,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
       await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       return null
@@ -573,7 +573,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
 export const getBookingByIdFn = createServerFn({ method: 'GET' })
   .validator(GetBookingByIdSchema)
   .handler(async ({ data }): Promise<BookingWithItems | null> => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, category } =
@@ -581,7 +581,7 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
     const { eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       return null
@@ -656,7 +656,7 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
 export const cancelBookingFn = createServerFn({ method: 'POST' })
   .validator(CancelBookingSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { deleteCalendarEventRaw } =
       await import('@/lib/google/google-calendar-client')
     const { env } = await import('cloudflare:workers')
@@ -667,7 +667,7 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
     const { recomputeBookingStatus } = await import('../status')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Not authenticated')
@@ -763,7 +763,7 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
 export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const { checkCalendarFreeBusyRaw, updateCalendarEventRaw } =
@@ -776,7 +776,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Not authenticated')

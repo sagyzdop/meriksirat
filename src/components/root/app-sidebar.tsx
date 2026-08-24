@@ -24,7 +24,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { getSessionFn } from '@/lib/auth/session'
+import { authClient } from '@/lib/auth/auth-client'
 import { ALBUM_CREATE_MIN_CLEARANCE } from '@/lib/albums'
 import { EQUIPMENT_MIN_CLEARANCE } from '@/lib/equipment'
 import { Link, useRouter } from '@tanstack/react-router'
@@ -140,21 +140,12 @@ export function AppSidebar({
   }
   onLogout?: () => void
 }) {
-  const [user, setUser] = React.useState<{
-    id: string
-    name: string
-    email: string
-    image?: string | null
-  } | null>(null)
-
   const { isMobile, setOpenMobile } = useSidebar()
   const router = useRouter()
 
-  React.useEffect(() => {
-    getSessionFn().then((session) => {
-      setUser(session?.user || null)
-    })
-  }, [])
+  // Reuses better-auth's shared client session store instead of issuing a
+  // second /api/auth/get-session request alongside other useSession consumers.
+  const { data: session } = authClient.useSession()
 
   // Close mobile sidebar on navigation
   React.useEffect(() => {
@@ -173,7 +164,8 @@ export function AppSidebar({
           [userData.firstName, userData.lastName].filter(Boolean).join(' ') ||
           userData.email,
         email: userData.email,
-        avatar: userData.image || user?.image || '/avatars/default.jpg',
+        avatar:
+          userData.image || session?.user?.image || '/avatars/default.jpg',
       }
     : {
         name: 'Loading...',

@@ -320,14 +320,14 @@ export const syncBirthdaysToCalendarFn = createServerFn({
 export const getBirthdayWishMessageFn = createServerFn({
   method: 'GET',
 }).handler(async (): Promise<string | null> => {
-  const { auth } = await import('@/lib/auth/auth')
+  const { resolveSession } = await import('@/lib/auth/resolve-session')
   const { env } = await import('cloudflare:workers')
   const { db } = await import('@/db')
   const { user } = await import('@/db/schema')
   const { inArray, isNotNull, and, eq } = await import('drizzle-orm')
 
   const headers = getRequestHeaders()
-  const session = await auth.api.getSession({ headers })
+  const session = await resolveSession(headers)
   if (!session?.user) return null
 
   const database = db(env.meriksirat_d1 as D1Database)

@@ -11,14 +11,14 @@ import { startBooking, listStartableBookings } from '../start-booking'
 export const startBookingFn = createServerFn({ method: 'POST' })
   .validator(StartBookingSchema)
   .handler(async ({ data }) => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { booking } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       throw new Error('Not authenticated')
@@ -52,12 +52,12 @@ export const startBookingFn = createServerFn({ method: 'POST' })
  */
 export const getStartableBookingsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const { auth } = await import('@/lib/auth/auth')
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
 
     const headers = getRequestHeaders()
-    const session = await auth.api.getSession({ headers })
+    const session = await resolveSession(headers)
 
     if (!session?.user) {
       return []

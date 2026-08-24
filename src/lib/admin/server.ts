@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers'
-import { auth } from '@/lib/auth/auth'
+import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { user } from '@/db/schema'
 import { eq } from 'drizzle-orm'
@@ -14,7 +14,7 @@ export async function checkAdminPermission(
   headers: Headers,
   requiredRoles: ('admin' | 'manager')[]
 ): Promise<AdminUser> {
-  const session = await auth.api.getSession({ headers })
+  const session = await resolveSession(headers)
 
   if (!session?.user) {
     console.warn('Unauthorized admin access attempt: No session')

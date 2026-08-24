@@ -8,8 +8,8 @@
 export async function requireAuthenticatedUser(): Promise<{ id: string }> {
   const { getRequestHeaders } = await import('@tanstack/react-start/server')
   const headers = getRequestHeaders()
-  const { auth } = await import('@/lib/auth/auth')
-  const session = await auth.api.getSession({ headers })
+  const { resolveSession } = await import('@/lib/auth/resolve-session')
+  const session = await resolveSession(headers)
   if (!session?.user) {
     throw new Error('Not authenticated')
   }
