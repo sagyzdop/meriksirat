@@ -4,6 +4,10 @@ import { getUserFn } from '@/lib/user'
 import { AuthenticatedShell } from '@/components/root/authenticated-shell'
 
 export const Route = createFileRoute('/_authenticated')({
+  // Authenticated pages are rendered client-side only: the server still runs
+  // beforeLoad/loaders (auth gate + data), but skips React SSR, which was
+  // burning 40-90ms of CPU per document load on the free Workers plan.
+  ssr: 'data-only',
   beforeLoad: async () => {
     const user = await getUserFn()
 
