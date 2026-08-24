@@ -3,8 +3,12 @@ import { authClient } from '@/lib/auth/auth-client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
+import { useSearch } from '@tanstack/react-router'
 
 export function Page({ className, ...props }: React.ComponentProps<'div'>) {
+  const search = useSearch({ strict: false }) as { error?: string }
+  const error = search.error
+
   const handleGoogleSignIn = async () => {
     try {
       await authClient.signIn.social({
@@ -32,6 +36,11 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
       </div>
 
       <FieldGroup>
+        {error === 'account_inactive' && (
+          <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
+            Your account has been deactivated. Please contact an administrator.
+          </div>
+        )}
         <Field className="grid gap-4">
           <Button
             variant="outline"
