@@ -15,6 +15,10 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/albums/$albumId')({
   validateSearch: searchSchema,
+  // Skip React SSR but keep server-side loaders and head(): shared-link
+  // visitors and scrapers still get OG/twitter meta in the HTML shell,
+  // while the grid renders client-side instead of burning Worker CPU.
+  ssr: 'data-only',
   loader: async ({ context, params }) => {
     const albumKey = albumQueries.detail(params.albumId)
     const [user] = await Promise.all([
