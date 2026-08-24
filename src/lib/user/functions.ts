@@ -24,31 +24,6 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
       return null
     }
 
-    const sessionUser = session.user as typeof session.user & {
-      onboardingComplete?: boolean | null
-    }
-
-    // Optimization: If user is not fully onboarded in the session, check the DB directly.
-    // This allows us to catch the status change immediately without waiting for session refresh/expiry,
-    // while keeping performance high for fully onboarded users (no extra DB call).
-    if (!sessionUser.onboardingComplete) {
-      const { db } = await import('@/db')
-      const { user } = await import('@/db/schema')
-      const { eq } = await import('drizzle-orm')
-      const { env } = await import('cloudflare:workers')
-
-      const database = db(env.meriksirat_d1 as D1Database)
-      const freshUser = await database
-        .select()
-        .from(user)
-        .where(eq(user.id, session.user.id))
-        .get()
-
-      if (freshUser) {
-        return freshUser as UserProfile
-      }
-    }
-
     // session.user from better-auth contains the user table data.
     // We return it directly to avoid a redundant database hit on every page load.
     // The session is kept fresh by better-auth.
