@@ -40,18 +40,27 @@ export const Route = createFileRoute('/api/images/$')({
             return new Response('Storage not configured', { status: 500 })
           }
 
-          // Fetch image from R2
-          const object = await bucket.get(imagePath)
+          // Conditional read: when the client revalidates with If-None-Match,
+          // R2 evaluates it server-side and skips the body transfer entirely,
+          // letting us answer 304 without streaming the object.
+          const object = await bucket.get(imagePath, {
+            onlyIf: request.headers,
+          })
 
           if (!object) {
             return new Response('Image not found', { status: 404 })
           }
 
+          const hasBody = 'body' in object && object.body != null
+
           // Return image with appropriate headers
-          return new Response(object.body, {
+          return new Response(hasBody ? object.body : null, {
+            status: hasBody ? 200 : 304,
             headers: {
               'Content-Type': object.httpMetadata?.contentType || 'image/jpeg',
-              'Cache-Control': 'private, max-age=3600', // Private cache since authenticated
+              // Private cache since authenticated; one day of reuse cuts
+              // repeat R2 reads and Worker CPU dramatically.
+              'Cache-Control': 'private, max-age=86400',
               ETag: object.httpEtag || '',
             },
           })
