@@ -38,7 +38,7 @@ export const auth = betterAuth({
         await database
           .delete(sessionTable)
           .where(eq(sessionTable.userId, newSession.user.id))
-        throw ctx.redirect('/?error=account_inactive')
+        throw ctx.redirect('/login/?error=account_inactive')
       }
     }),
   },
