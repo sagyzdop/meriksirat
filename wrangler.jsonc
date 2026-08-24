@@ -89,9 +89,11 @@
   },
   /**
    * Smart Placement
+   * Runs the Worker in the data center closest to the origin (D1/R2), cutting
+   * subrequest latency and the CPU spent waiting on them.
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
    */
-  // "placement": {  "mode": "smart" }
+  "placement": { "mode": "smart" },
   /**
    * Bindings
    * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
