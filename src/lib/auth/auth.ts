@@ -1,5 +1,4 @@
 import { betterAuth } from 'better-auth'
-import { createAuthMiddleware, APIError } from 'better-auth/api'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { drizzle } from 'drizzle-orm/d1'
@@ -24,22 +23,22 @@ export const auth = betterAuth({
     }
   ),
   plugins: [tanstackStartCookies()],
-  hooks: {
-    after: createAuthMiddleware(async (ctx) => {
-      const newSession = ctx.context.newSession
-      if (!newSession) return
-      const database = drizzle(env.meriksirat_d1 as D1Database, { schema })
-      const row = await database
-        .select({ status: user.status })
-        .from(user)
-        .where(eq(user.id, newSession.user.id))
-        .get()
-      if (row?.status === 'Inactive') {
-        throw new APIError('FORBIDDEN', {
-          message: 'Account is inactive',
-        })
-      }
-    }),
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session) => {
+          const database = drizzle(env.meriksirat_d1 as D1Database, { schema })
+          const row = await database
+            .select({ status: user.status })
+            .from(user)
+            .where(eq(user.id, session.userId))
+            .get()
+          if (row?.status === 'Inactive') {
+            return false
+          }
+        },
+      },
+    },
   },
   rateLimit: {
     enabled: true,

@@ -8,6 +8,20 @@ export const getSessionFn = createServerFn({ method: 'GET' }).handler(
     const session = await auth.api.getSession({
       headers,
     })
+    if (!session?.user) return null
+
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const database = db(env.meriksirat_d1 as D1Database)
+    const row = await database
+      .select({ status: user.status })
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get()
+    if (row?.status === 'Inactive') return null
+
     return session
   }
 )
