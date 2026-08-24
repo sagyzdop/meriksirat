@@ -260,6 +260,14 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
       } catch (syncError) {
         console.error('Failed to sync birthday to calendar:', syncError)
       }
+
+      if (data.status === 'Inactive') {
+        const { session: sessionTable } = await import('@/db/schema')
+        const { eq: eqOp } = await import('drizzle-orm')
+        await database
+          .delete(sessionTable)
+          .where(eqOp(sessionTable.userId, data.userId))
+      }
     }
 
     // Return updated user data
