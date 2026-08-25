@@ -87,9 +87,11 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
     const { checkThirtyMinuteExtension } =
       await import('@/lib/booking/operating-hours')
     const { settings } = await import('@/db/schema')
-    const settingsRow = await database.query.settings.findFirst({
-      where: eq(settings.id, 'global'),
-    })
+    const settingsRow = await database
+      .select()
+      .from(settings)
+      .where(eq(settings.id, 'global'))
+      .get()
     const operatingHoursEnd = settingsRow?.operatingHoursEnd ?? 1439
 
     const extensionCheck = checkThirtyMinuteExtension(

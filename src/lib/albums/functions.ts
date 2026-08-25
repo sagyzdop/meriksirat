@@ -168,19 +168,6 @@ interface ListAlbumsPaginatedArgs {
   query: AlbumListQuery
 }
 
-const withAuthors = {
-  owner: {
-    columns: { id: true, name: true, telegramUsername: true },
-  },
-  members: {
-    with: {
-      user: {
-        columns: { id: true, name: true, telegramUsername: true },
-      },
-    },
-  },
-} as const
-
 /**
  * Run a paginated album list query applying filters (search over title and
  * description, ownership, visibility) and keyset pagination.
@@ -193,8 +180,9 @@ async function listAlbumsPaginated({
   ownershipOverride,
   query,
 }: ListAlbumsPaginatedArgs): Promise<AlbumListPage> {
-  const { album } = await import('@/db/schema')
-  const { and, desc, eq, lt, like, or, sql } = await import('drizzle-orm')
+  const { album, albumMember, user } = await import('@/db/schema')
+  const { and, desc, eq, getTableColumns, inArray, lt, like, or, sql } =
+    await import('drizzle-orm')
 
   const conditions: import('drizzle-orm').SQL[] = []
   if (baseWhere) conditions.push(baseWhere)
@@ -252,12 +240,66 @@ async function listAlbumsPaginated({
   const where = conditions.length ? and(...conditions) : undefined
   const limit = query.limit ?? 24
 
-  const rows = await database.query.album.findMany({
-    where,
-    orderBy: [desc(album.createdAt), desc(album.id)],
-    limit: limit + 1,
-    with: withAuthors,
-  })
+  // Flat select: album + owner join (avoids Drizzle relational query engine)
+  const albumCols = getTableColumns(album)
+  const albumRows = await database
+    .select({
+      ...albumCols,
+      ownerId: user.id,
+      ownerName: user.name,
+      ownerTelegramUsername: user.telegramUsername,
+    })
+    .from(album)
+    .leftJoin(user, eq(album.ownerUserId, user.id))
+    .where(where)
+    .orderBy(desc(album.createdAt), desc(album.id))
+    .limit(limit + 1)
+    .all()
+
+  // Fetch members + user info for the fetched album IDs
+  const albumIds = albumRows.map((r) => r.id)
+  const memberRows = albumIds.length
+    ? await database
+        .select({
+          albumId: albumMember.albumId,
+          userId: user.id,
+          userName: user.name,
+          userTelegramUsername: user.telegramUsername,
+        })
+        .from(albumMember)
+        .innerJoin(user, eq(albumMember.userId, user.id))
+        .where(inArray(albumMember.albumId, albumIds))
+        .all()
+    : []
+
+  // Group members by albumId
+  const membersByAlbum = new Map<string, typeof memberRows>()
+  for (const m of memberRows) {
+    const list = membersByAlbum.get(m.albumId) || []
+    list.push(m)
+    membersByAlbum.set(m.albumId, list)
+  }
+
+  // Assemble nested structure matching AlbumRowWithAuthors
+  const rows = albumRows.map((r) => ({
+    ...r,
+    owner: r.ownerId
+      ? {
+          id: r.ownerId,
+          name: r.ownerName,
+          telegramUsername: r.ownerTelegramUsername,
+        }
+      : null,
+    members: (membersByAlbum.get(r.id) || []).map((m) => ({
+      user: m.userId
+        ? {
+            id: m.userId,
+            name: m.userName,
+            telegramUsername: m.userTelegramUsername,
+          }
+        : null,
+    })),
+  }))
 
   const hasMore = rows.length > limit
   const pageRows = hasMore ? rows.slice(0, limit) : rows
