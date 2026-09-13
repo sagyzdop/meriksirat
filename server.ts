@@ -442,7 +442,7 @@ async function updateOverdueBookings(env: Env): Promise<void> {
         try {
           await telegram.sendMessage(
             info.telegramChatId,
-            `⚠️ Booking #${bookingId} is now overdue.\n\nPlease return the equipment as soon as possible via the End Booking flow.`
+            `⚠️ Booking #${bookingId} is now overdue.\n\nPlease return the equipment as soon as possible via the Return Equipment flow.`
           )
         } catch (error) {
           console.error('Failed to send overdue notification:', error)
@@ -633,12 +633,12 @@ function buildReminderMessage(
 
   switch (kind) {
     case 'pre_start':
-      return `⏰ Booking Reminder\n\nYour booking starts in ~15 minutes.\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${time(info.startTime)} - ${time(info.endTime)}\n\nPlease arrive on time. Use the "Start Booking" button when you pick up the equipment.`
+      return `⏰ Booking Reminder\n\nYour booking starts in ~15 minutes.\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${time(info.startTime)} - ${time(info.endTime)}\n\nPlease arrive on time. Tap "▶️ Start Booking" when you pick up the equipment.`
     case 'start_warning':
-      return `🔔 Booking Start Time\n\nYour booking was supposed to start now.\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${time(info.startTime)} - ${time(info.endTime)}\n\nPress "Start Booking" now, or the booking will be automatically cancelled in 15 minutes.`
+      return `🔔 Booking Start Time\n\nYour booking was supposed to start now.\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${time(info.startTime)} - ${time(info.endTime)}\n\nTap "▶️ Start Booking" now, or the booking will be automatically cancelled in 15 minutes.`
     case 'return_warning':
-      return `⏰ Time's Up\n\nYour booking time has ended.\n\n📦 Equipment: ${equipmentLabel}\n\nPlease return the equipment within the 15-minute grace period. Use the "End Booking" button and send a photo of the equipment.`
+      return `⏰ Time's Up\n\nYour booking time has ended.\n\n📦 Equipment: ${equipmentLabel}\n\nPlease return the equipment within the 15-minute grace period. Tap "↩️ Return Equipment" and send a photo of the equipment.`
     case 'grace_5min':
-      return `⏰ 5 Minutes Left\n\nYou have 5 minutes left in the grace period to return equipment.\n\n📦 Equipment: ${equipmentLabel}\n\nPlease return it now via the "End Booking" button.`
+      return `⏰ 5 Minutes Left\n\nYou have 5 minutes left in the grace period to return equipment.\n\n📦 Equipment: ${equipmentLabel}\n\nPlease return it now via "↩️ Return Equipment".`
   }
 }

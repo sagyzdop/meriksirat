@@ -252,16 +252,24 @@ export const BroadcastMessageSchema = z.object({
     .trim()
     .min(1, 'Message is required')
     .max(4000, 'Message must be at most 4000 characters'),
+  offset: z.number().int().min(0).optional().default(0),
+  limit: z.number().int().min(1).max(50).optional().default(20),
 })
 export type BroadcastMessage = z.infer<typeof BroadcastMessageSchema>
 
 export interface BroadcastResult {
   total: number
   linked: number
+  /** Messages delivered in this chunk. */
   sent: number
+  /** Failed in this chunk. */
   failed: number
   /** Users without a linked Telegram chat (never eligible for delivery). */
   skipped: number
+  /** Index of the first recipient of this chunk (0-based). */
+  offset: number
+  /** True when this was the final chunk of the broadcast. */
+  done: boolean
 }
 
 // ---------------------------------------------------------------------------

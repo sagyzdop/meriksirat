@@ -169,3 +169,44 @@ export const getTelegramUpdateLinkUrlFn = createServerFn({
     url,
   }
 })
+
+/**
+ * Deletes an account that never finished onboarding. Called when the user
+ * confirms leaving the onboarding page — an incomplete account is abandoned
+ * data, so it is removed instead of lingering forever.
+ *
+ * Sessions, accounts and telegram link tokens cascade via foreign keys; an
+ * unfinished account can never have bookings, so nothing else references it.
+ */
+export const deleteOnboardingAccountFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ confirm: z.literal(true) }))
+  .handler(async () => {
+    const headers = getRequestHeaders()
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const sessionData = await resolveSession(headers)
+
+    if (!sessionData?.user) {
+      throw new Error('Unauthorized')
+    }
+
+    // Safety: an onboarded account must never be deleted through this path.
+    const database = db(env.meriksirat_d1 as D1Database)
+    const record = await database
+      .select({ onboardingComplete: user.onboardingComplete })
+      .from(user)
+      .where(eq(user.id, sessionData.user.id))
+      .limit(1)
+      .then((rows) => rows[0])
+
+    if (!record || record.onboardingComplete) {
+      throw new Error('Account is already onboarded')
+    }
+
+    await database.delete(user).where(eq(user.id, sessionData.user.id))
+
+    return { success: true }
+  })

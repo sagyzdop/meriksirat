@@ -898,6 +898,7 @@ export const broadcastTelegramMessageFn = createServerFn({ method: 'POST' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { user } = await import('@/db/schema')
+    const { desc } = await import('drizzle-orm')
     const { TelegramAPI } = await import('@/lib/telegram/api')
     const { formatUserDisplayName } = await import('@/lib/utils')
 
@@ -917,6 +918,7 @@ export const broadcastTelegramMessageFn = createServerFn({ method: 'POST' })
         telegramChatId: user.telegramChatId,
       })
       .from(user)
+      .orderBy(desc(user.createdAt), desc(user.id))
       .all()
 
     const total = allUsers.length
@@ -924,55 +926,65 @@ export const broadcastTelegramMessageFn = createServerFn({ method: 'POST' })
     const skipped = total - linked.length
 
     if (linked.length === 0) {
-      return { total, linked: 0, sent: 0, failed: 0, skipped }
+      return { total, linked: 0, sent: 0, failed: 0, skipped, offset: 0, done: true }
     }
 
+    // One chunk per invocation. A broadcast is usually larger than a single
+    // Worker invocation can deliver (Telegram rate limits + the per-request
+    // subrequest budget), so the caller drives `offset` chunk by chunk and
+    // this function stays small and fast.
     const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)
+
+    const chunk = linked.slice(data.offset, data.offset + data.limit)
+    const results = await Promise.allSettled(
+      chunk.map(async (row) => {
+        const displayName = formatUserDisplayName({
+          firstName: row.firstName,
+          lastName: row.lastName,
+          name: row.name,
+          telegramUsername: row.telegramUsername,
+        })
+        await telegram.sendMessage(
+          row.telegramChatId!,
+          `${data.message}\n\n— ${displayName}`,
+          { disable_web_page_preview: true }
+        )
+      })
+    )
 
     let sent = 0
     let failed = 0
+    for (const result of results) {
+      if (result.status === 'fulfilled') sent += 1
+      else failed += 1
+    }
 
-    // Telegram allows roughly 30 messages/second per bot; batch conservatively.
-    const BATCH_SIZE = 25
-    for (let i = 0; i < linked.length; i += BATCH_SIZE) {
-      const batch = linked.slice(i, i + BATCH_SIZE)
-      const results = await Promise.allSettled(
-        batch.map(async (row) => {
-          const displayName = formatUserDisplayName({
-            firstName: row.firstName,
-            lastName: row.lastName,
-            name: row.name,
-            telegramUsername: row.telegramUsername,
-          })
+    const processed = data.offset + sent + failed
+    const done = processed >= linked.length
+
+    // Log a summary to the club channel once the whole broadcast finishes.
+    if (done) {
+      try {
+        const channel = env.TELEGRAM_CLUB_CHANNEL_ID
+        if (channel) {
           await telegram.sendMessage(
-            row.telegramChatId!,
-            `${data.message}\n\n— ${displayName}`,
+            channel,
+            `Broadcast sent to ${processed - failed} user(s)${failed ? `, ${failed} failed` : ''}.`,
             { disable_web_page_preview: true }
           )
-        })
-      )
-      for (const result of results) {
-        if (result.status === 'fulfilled') sent += 1
-        else failed += 1
-      }
-      if (i + BATCH_SIZE < linked.length) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+      } catch (error) {
+        console.warn('Failed to log broadcast to the club channel:', error)
       }
     }
 
-    // Log a summary to the club channel for auditability.
-    try {
-      const channel = env.TELEGRAM_CLUB_CHANNEL_ID
-      if (channel) {
-        await telegram.sendMessage(
-          channel,
-          `Broadcast sent to ${sent} user(s)${failed ? `, ${failed} failed` : ''}.`,
-          { disable_web_page_preview: true }
-        )
-      }
-    } catch (error) {
-      console.warn('Failed to log broadcast to the club channel:', error)
+    return {
+      total,
+      linked: linked.length,
+      sent,
+      failed,
+      skipped,
+      offset: data.offset,
+      done,
     }
-
-    return { total, linked: linked.length, sent, failed, skipped }
   })

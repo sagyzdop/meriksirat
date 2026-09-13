@@ -85,17 +85,20 @@ export function TimeSlotPicker({
   }
 
   // Drop previously selected slots that fall outside the current operating
-  // hours (e.g. hours changed after an existing booking was made).
+  // hours (e.g. hours changed after an existing booking was made). Returns the
+  // same array ref when nothing is dropped, otherwise the change propagates an
+  // onSlotsChange → parent render → checkAvailability identity change loop.
   React.useEffect(() => {
-    setSelectedSlots((prev) =>
-      prev.filter((time) => {
+    setSelectedSlots((prev) => {
+      const kept = prev.filter((time) => {
         const slotMinutes = timeToMinutes(time)
         return (
           slotMinutes >= operatingHoursStart &&
           slotMinutes + 30 <= operatingHoursEnd
         )
       })
-    )
+      return kept.length === prev.length ? prev : kept
+    })
   }, [operatingHoursStart, operatingHoursEnd])
 
   // Check availability for selected date
@@ -202,7 +205,10 @@ export function TimeSlotPicker({
         // Drop any previously selected slots that are now too soon (e.g. an
         // existing booking edited during its start window), so the derived
         // booking times can never start within the advance window.
-        setSelectedSlots((prev) => prev.filter((t) => !tooSoonTimes.has(t)))
+        setSelectedSlots((prev) => {
+          const kept = prev.filter((t) => !tooSoonTimes.has(t))
+          return kept.length === prev.length ? prev : kept
+        })
       } catch (error) {
         console.error('Failed to check availability:', error)
         toast.error('Failed to load availability')

@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -42,15 +41,11 @@ export function BookingConfirmationDialog({
 }: BookingConfirmationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Confirm Booking</DialogTitle>
-          <DialogDescription>
-            Please review your booking details and add any notes.
-          </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium">Equipment</Label>
             <div className="text-sm text-muted-foreground">
@@ -100,10 +95,15 @@ export function BookingConfirmationDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Label htmlFor="notes" className="flex items-center gap-2">
+              Event Details
+              <span className="text-xs font-normal text-muted-foreground">
+                (required)
+              </span>
+            </Label>
             <Textarea
               id="notes"
-              placeholder="Add any notes about your booking..."
+              placeholder="Describe the event or reason for this booking..."
               value={notes}
               onChange={(e) => onNotesChange(e.target.value)}
               rows={4}
@@ -119,7 +119,7 @@ export function BookingConfirmationDialog({
           >
             Cancel
           </Button>
-          <Button onClick={onConfirm} disabled={isSubmitting}>
+          <Button onClick={onConfirm} disabled={isSubmitting || !notes.trim()}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

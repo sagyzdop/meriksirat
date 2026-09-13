@@ -92,24 +92,9 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
         bookingId,
       })
 
-      // Confirm in place by editing the "please send a photo" prompt, keeping
-      // the conversation message-sparse.
+      // Confirm by sending a fresh message with the main-menu keyboard.
       const confirmation = `✅ Return logged for ${itemCount} item(s).\n\nPhoto sent to the club channel.`
-      if (session.photoPromptMessageId) {
-        try {
-          await ctx.telegram.editMessageText(
-            chatId,
-            session.photoPromptMessageId,
-            confirmation,
-            backToMenuMarkup()
-          )
-        } catch (editError) {
-          console.error('Failed to edit photo prompt after return:', editError)
-          await ctx.reply(confirmation)
-        }
-      } else {
-        await ctx.reply(confirmation)
-      }
+      await ctx.reply(confirmation, backToMenuMarkup())
     } catch (error) {
       console.error('Return processing error:', {
         chatId,
@@ -119,22 +104,7 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       })
 
       const errorText = '❌ Error processing return. Please try again.'
-      if (session.photoPromptMessageId) {
-        try {
-          await ctx.telegram.editMessageText(
-            chatId,
-            session.photoPromptMessageId,
-            errorText,
-            backToMenuMarkup()
-          )
-        } catch (editError) {
-          console.error('Failed to edit photo prompt after error:', editError)
-          await ctx.reply(errorText)
-        }
-      } else {
-        await ctx.reply(errorText)
-      }
-
+      await ctx.reply(errorText, backToMenuMarkup())
       return
     }
   } catch (error) {

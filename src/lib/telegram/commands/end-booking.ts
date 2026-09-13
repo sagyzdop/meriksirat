@@ -1,11 +1,19 @@
+/**
+ * Telegram Return Equipment Command
+ *
+ * Handles the equipment return flow (formerly "End Booking"): the user picks
+ * the booking and then the items to return, and sends a photo as proof.
+ * Driven by reply-keyboard buttons whose labels carry the booking/item ids.
+ */
+
 import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { BOOKING_STATUS } from '../types'
-import { inlineKeyboard, removeKeyboard } from '../server-utils'
-import { renderInPlace, backToMenuMarkup, backToMenuButton } from '../menu'
+import { removeKeyboard, replyKeyboard } from '../server-utils'
+import { renderInPlace, backToMenuButton, backToMenuMarkup } from '../menu'
 
 interface BookingWithItems {
   id: number
@@ -76,8 +84,7 @@ async function fetchReturnableBookings(
 }
 
 /**
- * Renders the "select which booking to return" list. Used by both the text
- * command and the main-menu button so the flow renders in place.
+ * Renders the "select which booking to return" list as a reply keyboard.
  */
 export async function renderEndBookingList(ctx: BotContext): Promise<void> {
   const chatId = String(ctx.chat?.id)
@@ -114,8 +121,6 @@ export async function renderEndBookingList(ctx: BotContext): Promise<void> {
 
   const activeBookingIds = bookings.map((b) => b.id)
 
-  // Always show the booking list first so the user can confirm which booking
-  // they are returning equipment for.
   await setSession(ctx.env.meriksirat_kv, chatId, {
     step: 'awaiting_booking_selection',
     userId: userRecord.id,
@@ -123,28 +128,113 @@ export async function renderEndBookingList(ctx: BotContext): Promise<void> {
     createdAt: Date.now(),
   })
 
-  const buttons = bookings.map((b) => ({
-    text: `#${b.id} — ${b.items.map((it) => it.equipmentName).join(', ')}`,
-    callback_data: `book_${b.id}`,
-  }))
+  const buttons = bookings.map(
+    (b) =>
+      `Booking #${b.id} — ${b.items.map((it) => it.equipmentName).join(', ')}`
+  )
   buttons.push(backToMenuButton())
 
   await renderInPlace(
     ctx,
     'Select which booking to return:',
-    inlineKeyboard(buttons)
+    replyKeyboard(buttons)
   )
 }
 
 /**
- * Handles the /return_equipment command to initiate equipment return flow
- *
- * Flow:
- * 1. Verify user is linked to Telegram account
- * 2. Fetch bookings with returnable items
- * 3. Show a booking list to pick from
- *
- * @param ctx - Bot context with environment bindings
+ * Returns the returnable (active/overdue) items of a booking, ordered by id.
+ * Shared between the item-selection renderer and the text router, which maps
+ * the tapped number back to an item id.
+ */
+export async function getReturnableItemsForBooking(
+  ctx: BotContext,
+  userId: string,
+  bookingId: number
+): Promise<Array<{ itemId: number; equipmentName: string }>> {
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  return await database
+    .select({
+      itemId: bookingItem.id,
+      equipmentName: equipment.modelName,
+    })
+    .from(bookingItem)
+    .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
+    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .where(
+      and(
+        eq(bookingItem.bookingId, bookingId),
+        eq(booking.userId, userId),
+        inArray(bookingItem.status, [
+          BOOKING_STATUS.ACTIVE,
+          BOOKING_STATUS.OVERDUE,
+        ])
+      )
+    )
+    .orderBy(bookingItem.id)
+}
+
+/**
+ * Renders the "select which items to return" list for a booking as a reply
+ * keyboard of numbered item labels.
+ */
+export async function renderReturnItemSelection(
+  ctx: BotContext,
+  bookingId: number
+): Promise<void> {
+  const chatId = String(ctx.chat?.id)
+  if (!chatId) return
+
+  const userRecord = await db(ctx.env.meriksirat_d1 as D1Database)
+    .select()
+    .from(user)
+    .where(eq(user.telegramChatId, chatId))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!userRecord) {
+    await renderInPlace(
+      ctx,
+      'Please link your account via /start first.',
+      removeKeyboard()
+    )
+    return
+  }
+
+  const items = await getReturnableItemsForBooking(
+    ctx,
+    userRecord.id,
+    bookingId
+  )
+
+  if (items.length === 0) {
+    await ctx.reply('No items to return for this booking.', backToMenuMarkup())
+    await renderEndBookingList(ctx)
+    return
+  }
+
+  await setSession(ctx.env.meriksirat_kv, chatId, {
+    step: 'awaiting_item_selection',
+    userId: userRecord.id,
+    activeBookingIds: [bookingId],
+    selectedBookingIds: [bookingId],
+    createdAt: Date.now(),
+  })
+
+  const lines = [
+    `Select which items to return for booking #${bookingId}:`,
+    ...items.map((it, index) => `${index + 1}. ${it.equipmentName}`),
+  ]
+
+  const buttons = items.map((_, index) => String(index + 1))
+  buttons.push('Return All Items')
+  buttons.push(backToMenuButton())
+
+  await ctx.reply(lines.join('\n'), replyKeyboard(buttons))
+}
+
+/**
+ * Handles the /return_equipment command to initiate the equipment return flow.
  */
 export async function handleEndBooking(ctx: BotContext): Promise<void> {
   try {
@@ -154,7 +244,7 @@ export async function handleEndBooking(ctx: BotContext): Promise<void> {
 
     await renderEndBookingList(ctx)
   } catch (error) {
-    console.error('End booking command error:', {
+    console.error('Return equipment command error:', {
       chatId: ctx.chat?.id,
       username: ctx.from?.username,
       error: error instanceof Error ? error.message : String(error),

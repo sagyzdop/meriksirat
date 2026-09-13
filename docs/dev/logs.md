@@ -203,14 +203,14 @@ You have 5 minutes left in the grace period to return equipment.
 
 📦 Equipment: {equipmentLabel}
 
-Please return it now via the "End Booking" button.
+Please return it now via "↩️ Return Equipment".
 ```
 
 ---
 
 ## 5. Bot conversation messages (user-facing)
 
-Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `src/lib/telegram/commands/callback.ts`.
+Destination: the user's chat. Implementation: `src/lib/telegram/commands/*` + `src/lib/telegram/commands/text-router.ts`.
 
 ### 5a. Account linking (`start.ts`)
 

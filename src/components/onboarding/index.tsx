@@ -1,19 +1,34 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useNavigate, useRouter } from '@tanstack/react-router'
+import {
+  useBlocker,
+  useNavigate,
+  useRouter,
+} from '@tanstack/react-router'
 import {
   updateUserOnboardingFn,
   completeTelegramOnboardingFn,
   getTelegramLinkUrlFn,
+  deleteOnboardingAccountFn,
 } from '@/lib/auth/onboarding'
 import { cn } from '@/lib/utils'
 import { toDateOnlyString } from '@/lib/format'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { OnboardingHeader } from '@/components/onboarding/components/onboarding-header'
 import { ProfileStep } from '@/components/onboarding/components/profile-step'
 import { TelegramStep } from '@/components/onboarding/components/telegram-step'
 import { TosAcceptanceDialog } from '@/components/onboarding/components/tos-acceptance-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const updateOnboardingSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -41,6 +56,37 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   const [pendingFormData, setPendingFormData] = useState<OnboardingForm | null>(
     null
   )
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // While onboarding is unfinished, leaving the page means discarding an
+  // incomplete account — block navigation and confirm the deletion up front.
+  // The ref is flipped synchronously on successful completion so the
+  // finishing navigation is never blocked.
+  const completeNavigatingRef = useRef(false)
+  const blocker = useBlocker({
+    enableBeforeUnload: true,
+    withResolver: true,
+    shouldBlockFn: ({ next }) =>
+      !completeNavigatingRef.current && next.fullPath !== '/onboarding',
+  })
+
+  const handleStayOnboarding = () => {
+    if (blocker.status === 'blocked') blocker.reset()
+  }
+
+  const handleDeleteAndLeave = async () => {
+    if (blocker.status !== 'blocked') return
+    setIsDeleting(true)
+    try {
+      await deleteOnboardingAccountFn({ data: { confirm: true } })
+      blocker.proceed()
+    } catch (error) {
+      console.error('Failed to delete onboarding account:', error)
+      setError('Could not delete the account. Please close this page.')
+      setIsDeleting(false)
+      if (blocker.status === 'blocked') blocker.reset()
+    }
+  }
 
   const form = useForm<OnboardingForm>({
     resolver: zodResolver(updateOnboardingSchema),
@@ -92,6 +138,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         if (tokenResult.isDevelopment) {
           await completeTelegramOnboardingFn({ data: { skipTelegram: true } })
           await router.invalidate()
+          completeNavigatingRef.current = true
           await navigate({ to: '/equipment' })
           return
         }
@@ -101,6 +148,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         if (tokenResult.alreadyLinked) {
           await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
           await router.invalidate()
+          completeNavigatingRef.current = true
           navigate({ to: '/equipment' })
         } else {
           setTelegramUrl(tokenResult.url)
@@ -124,6 +172,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
     try {
       await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
       await router.invalidate()
+      completeNavigatingRef.current = true
       navigate({ to: '/equipment' })
     } catch {
       setTimeout(checkTelegramStatus, 3000)
@@ -160,6 +209,39 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         onAccept={handleTosAccept}
         isSubmitting={form.formState.isSubmitting}
       />
+
+      <AlertDialog
+        open={blocker.status === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open && blocker.status === 'blocked') blocker.reset()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave onboarding?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your profile is not complete yet. If you leave now, your new
+              account will be deleted and any information you entered will be
+              lost. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} onClick={handleStayOnboarding}>
+              Stay
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDeleteAndLeave()
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting account...' : 'Delete account and leave'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

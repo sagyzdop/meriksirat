@@ -109,11 +109,16 @@ export interface SessionData {
     | 'awaiting_photo'
     | 'awaiting_start_selection'
     | 'awaiting_start_confirm'
+    | 'awaiting_cancel_selection'
+    | 'awaiting_cancel_items'
+    | 'awaiting_cancel_confirm'
   userId?: string
   activeBookingIds?: number[]
   selectedBookingIds?: number[]
   selectedItemIds?: number[]
   startBookingId?: number
+  cancelBookingId?: number
+  pendingCancelItemIds?: number[]
   photoPromptMessageId?: number
   createdAt?: number
 }

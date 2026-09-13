@@ -18,17 +18,14 @@ import { eq } from 'drizzle-orm'
 // ============================================================================
 
 /**
- * Builds an inline keyboard from a flat button list, 2 buttons per row.
- * Buttons are `{ text, callback_data }` objects.
+ * Builds a persistent reply keyboard from button labels. Each label (or row
+ * array) becomes a tappable button; tapping one sends its text as a message.
  */
-export function inlineKeyboard(
-  buttons: Array<{ text: string; callback_data: string }>
-) {
-  const rows: Array<Array<{ text: string; callback_data: string }>> = []
-  for (let i = 0; i < buttons.length; i += 2) {
-    rows.push(buttons.slice(i, i + 2))
-  }
-  return { reply_markup: { inline_keyboard: rows } }
+export function replyKeyboard(buttons: string[] | string[][]) {
+  const rows = Array.isArray(buttons[0])
+    ? (buttons as string[][])
+    : (buttons as string[]).map((label) => [label])
+  return { reply_markup: { keyboard: rows, resize_keyboard: true } }
 }
 
 /**

@@ -127,9 +127,11 @@ export const adminDashboardQueries = {
 }
 
 export async function broadcastMessage(
-  message: string
+  message: string,
+  offset = 0,
+  limit = 20
 ): Promise<BroadcastResult> {
   return broadcastTelegramMessageFn({
-    data: { message } satisfies BroadcastMessage,
+    data: { message, offset, limit } satisfies BroadcastMessage,
   })
 }

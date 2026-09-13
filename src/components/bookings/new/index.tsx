@@ -53,6 +53,17 @@ export function NewBookingPage() {
     [selectedEquipment]
   )
 
+  // Stable calendar id array: recreating it per render would give
+  // TimeSlotPicker's checkAvailability a new identity and re-trigger free/busy
+  // POSTs on every parent render.
+  const googleCalendarIds = React.useMemo(
+    () =>
+      selectedEquipment
+        .map((item) => item.googleCalendarId)
+        .filter((id): id is string => Boolean(id)),
+    [selectedEquipment]
+  )
+
   const equipmentColorMap = React.useMemo(() => {
     const palette: EventColor[] = [
       'sky',
@@ -248,9 +259,7 @@ export function NewBookingPage() {
         {selectedEquipment.length > 0 && (
           <Section title="Availability" spacing="compact">
             <GoogleCalendarView
-              calendarIds={selectedEquipment
-                .map((item) => item.googleCalendarId)
-                .filter((id): id is string => Boolean(id))}
+              calendarIds={googleCalendarIds}
               colorByCalendarId={equipmentColorMap}
               legendLabels={Object.fromEntries(
                 selectedEquipment
@@ -264,9 +273,7 @@ export function NewBookingPage() {
         {selectedEquipment.length > 0 && (
           <Section title="Select Date & Time" spacing="compact">
             <TimeSlotPicker
-              googleCalendarIds={selectedEquipment
-                .map((item) => item.googleCalendarId)
-                .filter((id): id is string => Boolean(id))}
+              googleCalendarIds={googleCalendarIds}
               onSlotsChange={handleSlotsChange}
             />
           </Section>

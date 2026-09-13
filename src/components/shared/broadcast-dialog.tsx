@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { broadcastMessage } from '@/lib/admin/dashboard-queries'
 import type { BroadcastResult } from '@/lib/admin/dashboard-types'
+import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 
 const MAX_MESSAGE_LENGTH = 4000
@@ -31,12 +32,17 @@ export function BroadcastDialog({ className }: BroadcastDialogProps) {
   const [step, setStep] = React.useState<Step>('compose')
   const [message, setMessage] = React.useState('')
   const [isSending, setIsSending] = React.useState(false)
+  const [progress, setProgress] = React.useState<{
+    linked: number
+    processed: number
+  } | null>(null)
   const [result, setResult] = React.useState<BroadcastResult | null>(null)
 
   const reset = React.useCallback(() => {
     setStep('compose')
     setMessage('')
     setIsSending(false)
+    setProgress(null)
     setResult(null)
   }, [])
 
@@ -45,11 +51,44 @@ export function BroadcastDialog({ className }: BroadcastDialogProps) {
     if (!nextOpen) reset()
   }
 
+  // Sends the broadcast in chunks: each server call delivers a small slice so
+  // no single invocation stretches Telegram rate limits or the Worker request
+  // budget, while the progress bar shows how far along the fan-out is.
   const handleSend = async () => {
     setIsSending(true)
+    setProgress(null)
+    setResult(null)
+
+    let offset = 0
+    let sentSoFar = 0
+    let failedSoFar = 0
+    let total = 0
+    let linked = 0
+    let skipped = 0
+
     try {
-      const broadcastResult = await broadcastMessage(message)
-      setResult(broadcastResult)
+      while (true) {
+        const chunk = await broadcastMessage(message, offset)
+        total = chunk.total
+        linked = chunk.linked
+        skipped = chunk.skipped
+        sentSoFar += chunk.sent
+        failedSoFar += chunk.failed
+        const processed = chunk.offset + chunk.sent + chunk.failed
+        setProgress({ linked, processed })
+        if (chunk.done) break
+        offset = chunk.offset + chunk.sent + chunk.failed
+      }
+
+      setResult({
+        total,
+        linked,
+        sent: sentSoFar,
+        failed: failedSoFar,
+        skipped,
+        offset: 0,
+        done: true,
+      })
       setStep('result')
     } catch (error) {
       toast.error('Broadcast failed', {
@@ -80,7 +119,8 @@ export function BroadcastDialog({ className }: BroadcastDialogProps) {
               <DialogTitle>Broadcast Message</DialogTitle>
               <DialogDescription>
                 Send a Telegram message to every member with a linked chat. A
-                signature with your name is appended automatically.
+                signature line with the recipient's name is appended to each
+                message.
               </DialogDescription>
             </DialogHeader>
 
@@ -157,6 +197,19 @@ export function BroadcastDialog({ className }: BroadcastDialogProps) {
                   linked chat are skipped.
                 </p>
               </div>
+              {isSending && progress && (
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Sending… {Math.min(100, Math.round((progress.processed / Math.max(1, progress.linked)) * 100))}%
+                  </span>
+                  <Progress
+                    value={Math.min(
+                      100,
+                      (progress.processed / Math.max(1, progress.linked)) * 100
+                    )}
+                  />
+                </div>
+              )}
             </div>
 
             <DialogFooter>

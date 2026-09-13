@@ -3,15 +3,17 @@
  *
  * Handles the "Start Booking" flow: shows the user's bookings whose start
  * window is currently open and lets them mark the equipment as picked up.
+ * Driven by reply-keyboard buttons whose labels carry the booking id
+ * ("Booking #<id> — <equipment>").
  */
 
 import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and, inArray, notInArray } from 'drizzle-orm'
-import { user, bookingItem, equipment } from '@/db/schema'
+import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
-import { inlineKeyboard, removeKeyboard } from '../server-utils'
-import { renderInPlace, backToMenuMarkup, backToMenuButton } from '../menu'
+import { removeKeyboard, replyKeyboard } from '../server-utils'
+import { renderInPlace, backToMenuButton, backToMenuMarkup } from '../menu'
 import {
   listStartableBookings,
   startBooking,
@@ -76,8 +78,7 @@ async function fetchStartableBookings(
 }
 
 /**
- * Renders the "select which booking to start" list. Used by both the text
- * command and the main-menu button so the flow renders in place.
+ * Renders the "select which booking to start" list as a reply keyboard.
  */
 export async function renderStartBookingList(ctx: BotContext): Promise<void> {
   const chatId = String(ctx.chat?.id)
@@ -119,16 +120,85 @@ export async function renderStartBookingList(ctx: BotContext): Promise<void> {
     createdAt: Date.now(),
   })
 
-  const buttons = bookings.map((b) => ({
-    text: `#${b.id} — ${b.equipmentNames.join(', ')}`,
-    callback_data: `start_${b.id}`,
-  }))
+  const buttons = bookings.map(
+    (b) => `Booking #${b.id} — ${b.equipmentNames.join(', ')}`
+  )
   buttons.push(backToMenuButton())
 
   await renderInPlace(
     ctx,
     'Select which booking to start:',
-    inlineKeyboard(buttons)
+    replyKeyboard(buttons)
+  )
+}
+
+/**
+ * Renders the "start this booking now?" confirmation with a reply keyboard.
+ */
+export async function renderStartConfirm(
+  ctx: BotContext,
+  bookingId: number
+): Promise<void> {
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+
+  const parent = await database
+    .select({
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+    })
+    .from(booking)
+    .where(eq(booking.id, bookingId))
+    .get()
+
+  if (!parent) {
+    await ctx.reply('Booking not found.', backToMenuMarkup())
+    return
+  }
+
+  const items = await database
+    .select({ equipmentName: equipment.modelName })
+    .from(bookingItem)
+    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
+    .where(
+      and(
+        eq(bookingItem.bookingId, bookingId),
+        notInArray(bookingItem.status, ['cancelled', 'returned'])
+      )
+    )
+
+  const timeStart = parent.startTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Karachi',
+  })
+  const timeEnd = parent.endTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Karachi',
+  })
+  const equipmentLabel = items.map((i) => i.equipmentName).join(', ')
+
+  await ctx.reply(
+    `Start booking #${bookingId} now?\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${timeStart} - ${timeEnd}\n\nTap Confirm to start, or Cancel.`,
+    replyKeyboard(['✅ Confirm', 'Cancel', backToMenuButton()])
+  )
+}
+
+/**
+ * Starts the given booking for the linked Telegram user and replies with the
+ * result. Shared with the confirm step in the text router.
+ */
+export async function startBookingForChat(
+  ctx: BotContext,
+  bookingId: number
+): Promise<void> {
+  const database = db(ctx.env.meriksirat_d1 as D1Database)
+  await startBooking(database, bookingId)
+  await ctx.reply(
+    `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Use the Return Equipment flow when done.`,
+    backToMenuMarkup()
   )
 }
 
@@ -138,7 +208,7 @@ export async function renderStartBookingList(ctx: BotContext): Promise<void> {
  * Flow:
  * 1. Verify user is linked to Telegram account
  * 2. Fetch bookings with an open start window
- * 3. Show a booking list to pick from (confirm happens in the callback step)
+ * 3. Show a booking list to pick from (confirm happens via confirm/cancel)
  */
 export async function handleStartBooking(ctx: BotContext): Promise<void> {
   try {
@@ -157,16 +227,4 @@ export async function handleStartBooking(ctx: BotContext): Promise<void> {
 
     await ctx.reply('Error fetching bookings. Please try again.')
   }
-}
-
-/**
- * Starts the given booking for the linked Telegram user.
- * Shared with the callback handler.
- */
-export async function startBookingForChat(
-  bookingId: number,
-  ctx: BotContext
-): Promise<void> {
-  const database = db(ctx.env.meriksirat_d1 as D1Database)
-  await startBooking(database, bookingId)
 }

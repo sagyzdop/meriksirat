@@ -19,8 +19,8 @@ import { handleEndBooking } from '@/lib/telegram/commands/end-booking'
 import { handleListBookings } from '@/lib/telegram/commands/list-bookings'
 import { handleCancelBooking } from '@/lib/telegram/commands/cancel-booking'
 import { handleStartBooking } from '@/lib/telegram/commands/start-booking'
-import { handleCallback } from '@/lib/telegram/commands/callback'
 import { handlePhoto } from '@/lib/telegram/commands/photo'
+import { handleFlowText } from '@/lib/telegram/commands/text-router'
 import { showMainMenu } from '@/lib/telegram/menu'
 
 export const Route = createFileRoute('/api/telegram')({
@@ -104,30 +104,6 @@ export const Route = createFileRoute('/api/telegram')({
                 )
               }
             },
-            answerCbQuery: async (text?: string) => {
-              if ('callback_query' in update && update.callback_query) {
-                return await telegram.answerCallbackQuery(
-                  update.callback_query.id,
-                  text
-                )
-              }
-            },
-            editMessageText: async (
-              text: string,
-              extra?: Record<string, unknown>
-            ) => {
-              if (
-                'callback_query' in update &&
-                update.callback_query?.message
-              ) {
-                return await telegram.editMessageText(
-                  update.callback_query.message.chat.id,
-                  update.callback_query.message.message_id,
-                  text,
-                  extra
-                )
-              }
-            },
           }
 
           // Add update-specific properties to context
@@ -145,41 +121,51 @@ export const Route = createFileRoute('/api/telegram')({
           if (
             'message' in update &&
             update.message &&
-            'text' in update.message
-          ) {
-            const text = update.message.text
-
-            if (text && text.startsWith('/start_booking')) {
-              await handleStartBooking(ctx)
-            } else if (text && text.startsWith('/return_equipment')) {
-              await handleEndBooking(ctx)
-            } else if (text && text.startsWith('/my_bookings')) {
-              await handleListBookings(ctx)
-            } else if (text && text.startsWith('/cancel_booking')) {
-              await handleCancelBooking(ctx)
-            } else if (text && text.startsWith('/start')) {
-              // /start (bare) or /start <token> deep link (account linking)
-              await handleStart(ctx)
-            } else if (text === 'Start Booking') {
-              await handleStartBooking(ctx)
-            } else if (text === 'End Booking') {
-              await handleEndBooking(ctx)
-            } else if (text === 'My Bookings') {
-              await handleListBookings(ctx)
-            } else if (text === 'Cancel Booking') {
-              await handleCancelBooking(ctx)
-            } else {
-              // Unknown text: show the main menu
-              await showMainMenu(ctx)
-            }
-          } else if ('callback_query' in update) {
-            await handleCallback(ctx)
-          } else if (
-            'message' in update &&
-            update.message &&
             'photo' in update.message
           ) {
             await handlePhoto(ctx)
+          } else if (
+            'message' in update &&
+            update.message &&
+            'text' in update.message
+          ) {
+            const text = (update.message.text || '').trim()
+
+            if (text.startsWith('/start_booking')) {
+              await handleStartBooking(ctx)
+            } else if (text.startsWith('/return_equipment')) {
+              await handleEndBooking(ctx)
+            } else if (text.startsWith('/my_bookings')) {
+              await handleListBookings(ctx)
+            } else if (text.startsWith('/cancel_booking')) {
+              await handleCancelBooking(ctx)
+            } else if (text.startsWith('/start')) {
+              // /start (bare) or /start <token> deep link (account linking)
+              await handleStart(ctx)
+            } else if (text === '📋 My Bookings' || text === 'My Bookings') {
+              await handleListBookings(ctx)
+            } else if (
+              text === '▶️ Start Booking' ||
+              text === 'Start Booking'
+            ) {
+              await handleStartBooking(ctx)
+            } else if (
+              text === '↩️ Return Equipment' ||
+              text === 'End Booking'
+            ) {
+              await handleEndBooking(ctx)
+            } else if (
+              text === '❌ Cancel Booking' ||
+              text === 'Cancel Booking'
+            ) {
+              await handleCancelBooking(ctx)
+            } else if (text === '🏠 Main Menu') {
+              await showMainMenu(ctx)
+            } else {
+              // Flow-step text from reply-keyboard taps (booking/item ids,
+              // confirm/cancel) - route via the session.
+              await handleFlowText(ctx)
+            }
           }
 
           return new Response('OK', { status: 200 })

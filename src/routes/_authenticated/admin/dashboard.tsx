@@ -5,7 +5,6 @@ import { stringArrayParam } from '@/lib/search-params'
 import { Page } from '@/components/admin/dashboard'
 import {
   adminDashboardQueries,
-  effectiveDashboardRange,
 } from '@/lib/admin/dashboard-queries'
 import type {
   MostActiveUsersFilters,
@@ -44,15 +43,13 @@ const searchSchema = z.object({
 type DashboardSearch = z.infer<typeof searchSchema>
 
 function mostActiveFilters(search: DashboardSearch): MostActiveUsersFilters {
-  // Always send an explicit range so the table agrees with the Overview stats:
-  // when no custom range is in the URL this resolves to the current month.
-  const range = effectiveDashboardRange({
+  // Pass the raw search dates. The server resolves missing bounds to the
+  // current month (same default as the Overview stats), and the query key must
+  // stay value-stable: resolving to millisecond-precision ISO strings here
+  // would change the key on every render and refetch endlessly.
+  return {
     startDate: search.startDate,
     endDate: search.endDate,
-  })
-  return {
-    startDate: range.startDate,
-    endDate: range.endDate,
     search: search.activeSearch,
     page: search.activePage,
     limit: search.activeLimit,
