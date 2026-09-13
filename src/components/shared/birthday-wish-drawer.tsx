@@ -78,7 +78,7 @@ export function BirthdayWishDrawer({ userId }: { userId: string }) {
           </DialogHeader>
           <div className="flex justify-end">
             <DialogClose asChild>
-              <Button variant="outline">Thank You!</Button>
+              <Button variant="outline">Dismiss</Button>
             </DialogClose>
           </div>
         </DialogContent>
@@ -97,7 +97,7 @@ export function BirthdayWishDrawer({ userId }: { userId: string }) {
         </DrawerHeader>
         <DrawerFooter>
           <DrawerClose asChild>
-            <Button>Thank You!</Button>
+            <Button>Dismiss</Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>

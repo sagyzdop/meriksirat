@@ -50,7 +50,7 @@ export function Page({
 
   const description =
     pagination.totalCount > 0
-      ? `${pagination.totalCount} upcoming birthday${pagination.totalCount === 1 ? '' : 's'} in the next 30 days`
+      ? `${pagination.totalCount} upcoming birthday${pagination.totalCount === 1 ? '' : 's'}`
       : 'No birthdays found'
 
   return (
