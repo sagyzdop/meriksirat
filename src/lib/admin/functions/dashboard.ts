@@ -777,13 +777,17 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { album, albumMember, user } = await import('@/db/schema')
-    const { eq, inArray } = await import('drizzle-orm')
+    const { eq } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
 
     const database = db(env.meriksirat_d1 as D1Database)
 
+    // D1 caps bound parameters at 100/query, so this export avoids inArray:
+    // the owner comes from a join and the member query is intentionally
+    // unfiltered (its rows are keyed by album id and only exported albums
+    // are ever looked up).
     const rows = await database
       .select({
         id: album.id,
@@ -792,32 +796,25 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
         eventDate: album.eventDate,
         createdAt: album.createdAt,
         isShared: album.isShared,
-        ownerUserId: album.ownerUserId,
+        ownerName: user.name,
+        ownerEmail: user.email,
+        ownerTelegramUsername: user.telegramUsername,
       })
       .from(album)
+      .leftJoin(user, eq(album.ownerUserId, user.id))
       .orderBy(album.createdAt)
       .all()
 
-    const albumIds = rows.map((r) => r.id)
-
-    const memberRows =
-      albumIds.length > 0
-        ? await database
-            .select({
-              albumId: albumMember.albumId,
-              name: user.name,
-              email: user.email,
-              telegramUsername: user.telegramUsername,
-            })
-            .from(albumMember)
-            .innerJoin(user, eq(albumMember.userId, user.id))
-            .where(
-              albumIds.length === 1
-                ? eq(albumMember.albumId, albumIds[0])
-                : inArray(albumMember.albumId, albumIds)
-            )
-            .all()
-        : []
+    const memberRows = await database
+      .select({
+        albumId: albumMember.albumId,
+        name: user.name,
+        email: user.email,
+        telegramUsername: user.telegramUsername,
+      })
+      .from(albumMember)
+      .innerJoin(user, eq(albumMember.userId, user.id))
+      .all()
 
     const membersByAlbum = new Map<
       string,
@@ -837,42 +834,17 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
       membersByAlbum.set(m.albumId, list)
     }
 
-    const ownerIds = [...new Set(rows.map((r) => r.ownerUserId))]
-    const ownerRows =
-      ownerIds.length > 0
-        ? await database
-            .select({
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              telegramUsername: user.telegramUsername,
-            })
-            .from(user)
-            .where(
-              ownerIds.length === 1
-                ? eq(user.id, ownerIds[0])
-                : inArray(user.id, ownerIds)
-            )
-            .all()
-        : []
-
-    const ownerMap = new Map(ownerRows.map((o) => [o.id, o]))
-
     return rows.map((row) => {
-      const owner = ownerMap.get(row.ownerUserId)
+      const owner =
+        row.ownerName !== null
+          ? {
+              name: row.ownerName,
+              email: row.ownerEmail,
+              telegramUsername: row.ownerTelegramUsername,
+            }
+          : null
       const members = membersByAlbum.get(row.id) ?? []
-      const authors = [
-        ...(owner
-          ? [
-              {
-                name: owner.name,
-                email: owner.email,
-                telegramUsername: owner.telegramUsername,
-              },
-            ]
-          : []),
-        ...members,
-      ]
+      const authors = [...(owner ? [owner] : []), ...members]
       return {
         id: row.id,
         title: row.title,
@@ -926,7 +898,15 @@ export const broadcastTelegramMessageFn = createServerFn({ method: 'POST' })
     const skipped = total - linked.length
 
     if (linked.length === 0) {
-      return { total, linked: 0, sent: 0, failed: 0, skipped, offset: 0, done: true }
+      return {
+        total,
+        linked: 0,
+        sent: 0,
+        failed: 0,
+        skipped,
+        offset: 0,
+        done: true,
+      }
     }
 
     // One chunk per invocation. A broadcast is usually larger than a single
