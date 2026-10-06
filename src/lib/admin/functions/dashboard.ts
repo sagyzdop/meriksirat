@@ -586,24 +586,17 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
 
     const database = db(env.meriksirat_d1 as D1Database)
 
-    const memberRows = await database
+    // D1 caps bound parameters at 100/query, so membership is expressed as a
+    // subquery rather than an in-memory id list.
+    const memberAlbums = database
       .select({ albumId: albumMember.albumId })
       .from(albumMember)
       .where(eq(albumMember.userId, data.userId))
-      .all()
-    const memberAlbumIds = memberRows.map((row) => row.albumId)
 
     const conditions: import('drizzle-orm').SQL[] = []
-    if (memberAlbumIds.length > 0) {
-      conditions.push(
-        or(
-          eq(album.ownerUserId, data.userId),
-          inArray(album.id, memberAlbumIds)
-        )!
-      )
-    } else {
-      conditions.push(eq(album.ownerUserId, data.userId))
-    }
+    conditions.push(
+      or(eq(album.ownerUserId, data.userId), inArray(album.id, memberAlbums))!
+    )
 
     const search = (data.search ?? '').trim()
     if (search) {

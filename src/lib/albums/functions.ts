@@ -256,21 +256,31 @@ async function listAlbumsPaginated({
     .limit(limit + 1)
     .all()
 
-  // Fetch members + user info for the fetched album IDs
+  // Fetch members + user info for the fetched album IDs. A page can carry
+  // limit + 1 (up to 101) ids and D1 caps bound parameters at 100/query,
+  // so the ids are sent in chunks of 100.
   const albumIds = albumRows.map((r) => r.id)
-  const memberRows = albumIds.length
-    ? await database
-        .select({
-          albumId: albumMember.albumId,
-          userId: user.id,
-          userName: user.name,
-          userTelegramUsername: user.telegramUsername,
-        })
-        .from(albumMember)
-        .innerJoin(user, eq(albumMember.userId, user.id))
-        .where(inArray(albumMember.albumId, albumIds))
-        .all()
-    : []
+  const idChunks: string[][] = []
+  for (let i = 0; i < albumIds.length; i += 100) {
+    idChunks.push(albumIds.slice(i, i + 100))
+  }
+  const memberRows = (
+    await Promise.all(
+      idChunks.map((chunk) =>
+        database
+          .select({
+            albumId: albumMember.albumId,
+            userId: user.id,
+            userName: user.name,
+            userTelegramUsername: user.telegramUsername,
+          })
+          .from(albumMember)
+          .innerJoin(user, eq(albumMember.userId, user.id))
+          .where(inArray(albumMember.albumId, chunk))
+          .all()
+      )
+    )
+  ).flat()
 
   // Group members by albumId
   const membersByAlbum = new Map<string, typeof memberRows>()
@@ -330,23 +340,22 @@ async function listAlbumsForCurrentUser(
   if (!currentUser) return { albums: [], nextCursor: null }
   const me = currentUser.id
 
-  const memberRows = await database
+  // D1 caps bound parameters at 100/query, so membership is expressed as a
+  // subquery rather than an in-memory id list.
+  const memberAlbums = database
     .select({ albumId: albumMember.albumId })
     .from(albumMember)
     .where(eq(albumMember.userId, me))
-    .all()
-  const memberAlbumIds = memberRows.map((r) => r.albumId)
 
-  const baseWhere = memberAlbumIds.length
-    ? or(eq(album.ownerUserId, me), inArray(album.id, memberAlbumIds))
-    : eq(album.ownerUserId, me)
+  const baseWhere = or(
+    eq(album.ownerUserId, me),
+    inArray(album.id, memberAlbums)
+  )
 
   const ownershipWhere = (ownership: 'owner' | 'co-author') =>
     ownership === 'owner'
       ? eq(album.ownerUserId, me)
-      : memberAlbumIds.length
-        ? and(ne(album.ownerUserId, me), inArray(album.id, memberAlbumIds))
-        : undefined
+      : and(ne(album.ownerUserId, me), inArray(album.id, memberAlbums))
 
   return listAlbumsPaginated({
     database,
