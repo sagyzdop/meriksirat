@@ -41,7 +41,10 @@ export function BookingConfirmationDialog({
 }: BookingConfirmationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        className="max-h-[85vh] overflow-y-auto"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Confirm Booking</DialogTitle>
         </DialogHeader>
