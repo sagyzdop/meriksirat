@@ -159,7 +159,10 @@ async function configureTelegramBot(env: Env): Promise<void> {
       await import('./src/lib/telegram/configure')
     await configure(env)
   } catch (error) {
-    console.error('Error in configureTelegramBot:', error)
+    console.error(
+      'Error in configureTelegramBot:',
+      error instanceof Error ? error.message : error
+    )
   }
 }
 

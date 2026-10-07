@@ -130,10 +130,4 @@ export class TelegramAPI {
       commands,
     })
   }
-
-  async setChatMenuButton(menuButton: Record<string, unknown>) {
-    return await callAPI(this.token, 'setChatMenuButton', {
-      menu_button: menuButton,
-    })
-  }
 }
