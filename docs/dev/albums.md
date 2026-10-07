@@ -69,7 +69,7 @@ A Drive folder can become unusable even though its album row still exists. `Albu
 
 `listAlbumPhotos` lists the folder with `listDriveFolderFiles` (pages through all results, `trashed=false`), keeps only `image/*` files, maps each to an `AlbumPhoto` (sorted by capture time), and returns it together with `folderState`.
 
-The Drive folder listing is cached in **KV** (`meriksirat_kv`, key `album:list:<folderId>`, TTL 60s) because public album views hit the Drive API once per page load and shared links would otherwise hammer the master account's quota. Any mutation that changes the folder contents (upload session minted, photo deleted, folder deleted/recreated/restored) calls `invalidateCachedListing` immediately. The cache also stores `folderState`, so the trashed/missing state is served from cache too.
+The Drive folder listing is cached in **KV** (`meriksirat_kv`, key `album:list:<folderId>`, TTL 300s) because public album views hit the Drive API once per page load and shared links would otherwise hammer the master account's quota. Any mutation that changes the folder contents (upload session minted, photo deleted, folder deleted/recreated/restored) calls `invalidateCachedListing` immediately. The cache also stores `folderState`, so the trashed/missing state is served from cache too.
 
 ## Photo URLs & privacy
 

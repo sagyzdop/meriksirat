@@ -23,12 +23,13 @@ src/
 │   ├── layout/              # PageContainer, PageHeader, Section, sidebar shell
 │   ├── root/                # SiteHeader, authenticated shell
 │   ├── admin/               # Admin pages (mirror routes)
-│   ├── albums/  bookings/  equipment/  faq/  onboarding/  profile/  auth/
+│   ├── albums/  bookings/  equipment/  onboarding/  profile/  auth/
 │   └── <page>/              # Page components, one folder per route (see conventions.md)
 ├── lib/
 │   ├── admin/               # Admin server functions + queries
 │   ├── albums/              # Album pages/upload manager
 │   ├── auth/                # Better Auth setup + onboarding
+│   ├── birthdays/           # Birthday calendar sync
 │   ├── booking/             # createServerFn + queryOptions + types
 │   ├── equipment/           # createServerFn + queryOptions + types
 │   ├── user/                # User admin queries

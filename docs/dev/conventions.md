@@ -89,15 +89,7 @@ const searchSchema = z.object({
 
 ## Shared components
 
-`src/components/shared/` holds components used by more than one page:
-
-- `data-table-faceted-filter.tsx` — faceted multi-select filter column header
-- `bulk-edit-clearance-dialog.tsx` — generic bulk-edit dialog (props: `open`, `onOpenChange`, `count`, `itemNoun`, `actionPhrase`, `successMessage`, `errorTitle`, `onSubmit`, `onSuccess`)
-- `bulk-cancel-bookings-dialog.tsx` — generic bulk-cancel for bookings (user + admin)
-- `booking-detail.tsx`, `booking-equipment-table.tsx`, `booking-schedule.tsx`, `booking-status-badge.tsx`, `time-slot-picker.tsx`, `event-calendar/`
-- `data-table/` — generic TanStack Table wrapper (currently unused; page-specific tables live next to their pages)
-
-Shared domain form pieces that fit under a specific page tree go in that page's `components/` folder (e.g. `admin/equipment/components/`).
+`src/components/shared/` holds components used by more than one page — scan the folder for what already exists (faceted filter, bulk dialogs, booking detail/schedule pieces, `data-table/`, `event-calendar/`) before building anew. Shared domain form pieces that fit under a specific page tree go in that page's `components/` folder (e.g. `admin/equipment/components/`).
 
 ## Data loading
 
@@ -108,7 +100,7 @@ See `docs/dev/data-loading.md`. All list/detail data flows through TanStack Quer
 - No comments unless asked. Self-documenting names and small components instead.
 - Format with `npx prettier --write` on touched files (`.prettierrc`: no semi, single quotes, tabWidth 2, printWidth 80).
 - `npx tsc --noEmit` must stay clean (currently 0 errors).
-- `npm run lint` is broken at baseline (TSX parser failures) — do not treat its output as actionable.
+- `npm run lint` is broken at baseline — do not treat its output as actionable (details in `../../AGENTS.md`).
 
 ## shadcn/ui everywhere
 

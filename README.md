@@ -79,34 +79,7 @@ The app will be available at `http://localhost:3000`
 
 ### Environment Variables
 
-Create a `.env` file with the following:
-
-```env
-# Better Auth
-BETTER_AUTH_SECRET=your_secret_key
-BETTER_AUTH_URL=http://localhost:3000
-
-# Cloudflare (for local dev — production uses wrangler bindings)
-CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_DATABASE_ID=
-CLOUDFLARE_D1_TOKEN=
-
-# Google OAuth (Calendar + Drive)
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_MASTER_ACCESS_TOKEN=your_access_token
-GOOGLE_MASTER_REFRESH_TOKEN=your_refresh_token
-
-# Telegram Bot
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_CLUB_CHANNEL_ID=your_channel_id
-TELEGRAM_WEBHOOK_SECRET=your_webhook_secret
-TELEGRAM_BOT_USERNAME=your_bot_username
-TELEGRAM_RETURN_ENABLED=true
-
-# Development mode (auto-skips Telegram onboarding step)
-DEV=true
-```
+`.env.example` is the canonical key list — copy it (see Installation above) and fill in values. Production builds read bindings from `wrangler.jsonc`; secrets are set via `wrangler secrets`.
 
 ## Development
 
@@ -163,67 +136,15 @@ The app uses the following Cloudflare resources:
 
 ## Project Structure
 
-```
-src/
-├── routes/                  # File-based router (TanStack). Thin page constructors.
-│   ├── _public/             # Public routes (login, signup)
-│   └── _authenticated/      # Authed area: equipment, bookings, albums, admin/*
-├── components/
-│   ├── ui/                  # shadcn/ui primitives
-│   ├── shared/              # Cross-page components (faceted filter, dialogs, calendar)
-│   ├── layout/              # PageContainer, PageHeader, sidebar shell
-│   ├── root/                # SiteHeader, authenticated shell
-│   ├── admin/               # Admin pages (mirror routes)
-│   ├── albums/              # Album pages
-│   ├── bookings/            # Booking pages
-│   ├── equipment/           # Equipment pages
-│   ├── onboarding/          # Onboarding flow
-│   └── profile/             # User profile
-├── lib/
-│   ├── admin/               # Admin server functions + queries
-│   ├── albums/              # Album server functions + upload manager
-│   ├── auth/                # Better Auth setup + onboarding
-│   ├── booking/             # Server functions, queries, types
-│   ├── equipment/           # Server functions, queries, types
-│   ├── user/                # User admin queries
-│   ├── google/              # Google Calendar + Drive integration
-│   ├── telegram/            # Telegram bot commands + logging
-│   ├── search-params.ts     # URL array-param zod helpers
-│   └── query-client.ts      # SSR-aware QueryClient factory
-├── db/                      # Database schema and migrations
-└── router.tsx               # Router + SSR query integration
-```
+The annotated `src/` directory layout and domain library conventions live in
+[Architecture](docs/dev/architecture.md).
 
 ## Key Workflows
 
-### Booking Equipment
-
-1. Browse equipment catalog
-2. Select equipment and view calendar availability
-3. Choose date and time slots (30-minute increments)
-4. Confirm booking with optional notes
-5. Receive Telegram notification
-6. Confirm pickup within 15 minutes of start time
-
-### Returning Equipment
-
-1. Open Telegram bot
-2. Select "End Booking" from the menu
-3. Choose the booking and items to return
-4. Send a photo of the equipment
-5. Photo and return logged to the club channel
-
-## Telegram Bot
-
-The bot is menu-driven (inline keyboard, no slash commands):
-
-- **My Bookings** — view active and upcoming bookings with item statuses
-- **Start Booking** — confirm pickup for bookings in the start window
-- **End Booking** — return equipment by selecting items and sending a photo
-- **Cancel Booking** — cancel bookings that haven't been picked up yet
-
-Reminders, overdue alerts, and admin notifications are sent as separate
-messages. See `docs/dev/logs.md` for the full list of message formats.
+Booking, pickup, returns, and extensions end to end:
+[Booking Flow](docs/user/booking.md). Bot usage:
+[Telegram Bot](docs/user/telegram-bot.md). Exact notification message formats:
+[Telegram Logs](docs/dev/logs.md).
 
 ## Documentation
 
@@ -239,17 +160,17 @@ Detailed documentation lives in `docs/`:
 - [Architecture](docs/dev/architecture.md) — stack overview and directory layout
 - [Conventions](docs/dev/conventions.md) — route/component patterns, code style
 - [Data Loading](docs/dev/data-loading.md) — TanStack Query + SSR integration
+- [Workers KV](docs/dev/kv-architecture.md) — KV namespaces and caching layers
 - [Albums](docs/dev/albums.md) — Drive-backed photo galleries and upload system
 - [Calendar Viewer](docs/dev/calendar-viewer.md) — custom calendar replacing iframe embeds
 - [Availability Badges](docs/dev/availability-badges.md) — Google Calendar free/busy batching
 - [Worker Import Convention](docs/dev/worker-import-convention.md) — server-only import rules
 - [Telegram Logs](docs/dev/logs.md) — inventory of all Telegram message formats
-- [shadcn Reference](docs/dev/shadcn-reference.md) — component index
-- [Starter Prompt](docs/dev/starter-prompt.md) — AI session bootstrap
 
 ### User docs (`docs/user/`)
 
 - [Booking Flow](docs/user/booking.md) — full booking lifecycle
+- [Booking Internals](docs/dev/booking-internals.md) — data model, status derivation, cron mechanics
 - [Telegram Bot](docs/user/telegram-bot.md) — bot usage guide
 - [Member Guide](docs/user/member-guide.md) — how to use the platform
 - [Admin Guide](docs/user/admin-guide.md) — administrative operations

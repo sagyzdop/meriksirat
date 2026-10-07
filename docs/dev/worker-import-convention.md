@@ -44,20 +44,7 @@ Modules that are guaranteed **server-only** (imported only from API routes or ot
 
 ## Current status
 
-| File                                                 | Client-reachable?            | Pattern                                                                                                |
-| ---------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `src/lib/equipment/functions.ts`                     | yes                          | lazy imports in handlers; `getUserClearanceLevel` is a static top-level import of a client-safe module |
-| `src/lib/equipment/server.ts`                        | via `functions.ts`           | client-safe (its only `cloudflare:workers` usage is a lazy import)                                     |
-| `src/lib/user/functions.ts`                          | yes                          | lazy imports in handlers                                                                               |
-| `src/lib/admin/functions.ts`, `settings.ts`          | yes                          | lazy imports in handlers                                                                               |
-| `src/lib/booking/functions/*`                        | yes                          | lazy imports in handlers                                                                               |
-| `src/lib/auth/session.ts`                            | yes (`app-sidebar.tsx`)      | lazy `auth` import in handler                                                                          |
-| `src/lib/auth/onboarding.ts`                         | yes (`onboarding/index.tsx`) | lazy imports in all 3 handlers                                                                         |
-| `src/lib/auth/auth.ts`                               | never                        | module-scope `env`; consumed only dynamically                                                          |
-| `src/lib/admin/server.ts`                            | no                           | top-level (only imported via `await import()` in handlers)                                             |
-| `src/lib/telegram/commands/start.ts`                 | no                           | top-level worker imports; server route only                                                            |
-| `src/lib/telegram/{context,logging,server-utils}.ts` | no                           | top-level worker imports; server only                                                                  |
-| `src/lib/booking/server.ts`                          | no                           | top-level; **currently imported nowhere** (possibly dead)                                              |
+Do not trust a hand-maintained table here — client-reachability changes with every edit. Verify instead: build and run the leak check below; grep the import graph when touching a module's top-level imports.
 
 ## Incidents fixed
 
