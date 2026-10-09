@@ -136,44 +136,19 @@ The app uses the following Cloudflare resources:
 
 ## Project Structure
 
-The annotated `src/` directory layout and domain library conventions live in
-[Architecture](docs/dev/architecture.md).
-
-## Key Workflows
-
-Booking, pickup, returns, and extensions end to end:
-[Booking Flow](docs/user/booking.md). Bot usage:
-[Telegram Bot](docs/user/telegram-bot.md). Exact notification message formats:
-[Telegram Logs](docs/dev/logs.md).
+The code lives in `src/`. Domain vocabulary is fixed in
+[GLOSSARY.md](GLOSSARY.md); architectural decisions are recorded as
+[ADRs](docs/adr/).
 
 ## Documentation
 
-Detailed documentation lives in `docs/`:
-
-### User-facing
-
+- [Glossary](GLOSSARY.md) — canonical domain vocabulary
+- [ADRs](docs/adr/) — architectural decisions that are hard to reverse
+- [Issue tracker](docs/agents/issue-tracker.md) — where issues live (GitHub)
+- [Triage labels](docs/agents/triage-labels.md) — canonical triage roles → repo label strings
+- [Domain docs](docs/agents/domain.md) — how skills read the glossary / ADRs
 - [FAQ](https://github.com/sagyzdop/meriksirat/blob/main/docs/faq.md) — common questions (linked from sidebar)
 - [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md) — user agreement (linked from sidebar + onboarding)
-
-### Developer docs (`docs/dev/`)
-
-- [Architecture](docs/dev/architecture.md) — stack overview and directory layout
-- [Conventions](docs/dev/conventions.md) — route/component patterns, code style
-- [Data Loading](docs/dev/data-loading.md) — TanStack Query + SSR integration
-- [Workers KV](docs/dev/kv-architecture.md) — KV namespaces and caching layers
-- [Albums](docs/dev/albums.md) — Drive-backed photo galleries and upload system
-- [Calendar Viewer](docs/dev/calendar-viewer.md) — custom calendar replacing iframe embeds
-- [Availability Badges](docs/dev/availability-badges.md) — Google Calendar free/busy batching
-- [Worker Import Convention](docs/dev/worker-import-convention.md) — server-only import rules
-- [Telegram Logs](docs/dev/logs.md) — inventory of all Telegram message formats
-
-### User docs (`docs/user/`)
-
-- [Booking Flow](docs/user/booking.md) — full booking lifecycle
-- [Booking Internals](docs/dev/booking-internals.md) — data model, status derivation, cron mechanics
-- [Telegram Bot](docs/user/telegram-bot.md) — bot usage guide
-- [Member Guide](docs/user/member-guide.md) — how to use the platform
-- [Admin Guide](docs/user/admin-guide.md) — administrative operations
 
 ## Contributing
 

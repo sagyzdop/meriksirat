@@ -15,7 +15,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 
 ## Worker import convention (critical)
 
-`createServerFn` handler bodies are compiled twice (server Worker + client stub). Anything client-reachable must NOT statically import worker-only modules (`cloudflare:workers`, `@/lib/auth/auth`, `@/db`, `@/db/schema`, `drizzle-orm`). Worker-only imports go inside handlers via `await import(...)`. Rule of thumb: a browser-reachable file's top-level imports must be client-safe (zod, types, react-start). Modules only imported from `src/routes/api/*` or `src/lib/telegram/*` may use top-level worker imports freely. See `docs/dev/worker-import-convention.md`.
+`createServerFn` handler bodies are compiled twice (server Worker + client stub). Anything client-reachable must NOT statically import worker-only modules (`cloudflare:workers`, `@/lib/auth/auth`, `@/db`, `@/db/schema`, `drizzle-orm`). Worker-only imports go inside handlers via `await import(...)`. Rule of thumb: a browser-reachable file's top-level imports must be client-safe (zod, types, react-start). Modules only imported from `src/routes/api/*` or `src/lib/telegram/*` may use top-level worker imports freely.
 
 ## Data loading (TanStack Query + SSR)
 
@@ -47,10 +47,22 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 
 ## Cron / scheduled work
 
-`server.ts` handles the `*/5 * * * *` cron: auto-cancel unstarted bookings, mark overdue, send 4 idempotent Telegram reminders (each tracks a `*_sent_at` column). Test with `wrangler dev --test-scheduled`. Reminder message formats are documented in `docs/dev/logs.md`.
+`server.ts` handles the `*/5 * * * *` cron: auto-cancel unstarted bookings, mark overdue, send 4 idempotent Telegram reminders (each tracks a `*_sent_at` column). Test with `wrangler dev --test-scheduled`.
 
 ## Docs
 
-`docs/` is the knowledge layer — folder roles, pinned files, and how to add a doc are in `docs/CONTEXT.md`. Dev conventions (`conventions.md`, `data-loading.md`, `worker-import-convention.md`, `architecture.md`) are the source of truth; read them before making non-trivial changes.
+`docs/` holds published and generated docs only: `faq.md` and `terms-of-service.md` are URL-pinned from `src/` and must never move. Domain vocabulary lives in `GLOSSARY.md`; decisions live in `docs/adr/`; agent-skill config lives in `docs/agents/`. One home per fact — link, never copy. Before restructuring `docs/`, load the `icm-architect` skill and run its Restructure mode (reference-integrity check + human approval gate).
 
-Before editing under `docs/`: read that folder's `CONTEXT.md` contract first. Keep the README → Documentation inventory in sync; one home per fact (link, never copy); never move `docs/faq.md` or `docs/terms-of-service.md` (URL-pinned from `src/`). Restructuring `docs/` (moves, renames, new folders)? Load the `icm-architect` skill and run its Restructure mode — reference-integrity check and human approval gate included — before touching files.
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for `sagyzdop/meriksirat`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: root `GLOSSARY.md` + `docs/adr/`. See `docs/agents/domain.md`.
