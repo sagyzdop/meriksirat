@@ -5,4 +5,4 @@ data lives in D1 (via Drizzle), images in R2, and ephemeral state in KV. We chos
 Cloudflare for a zero-ops deploy (`wrangler deploy`) and one runtime target over
 managing servers. The cost is lock-in and a constrained runtime — most visibly,
 server code is compiled twice (Worker + client stub), which drives the
-lazy-import rule in ADR-0003.
+lazy-import rule described in `AGENTS.md` § Worker import convention (critical).
