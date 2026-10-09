@@ -29,6 +29,8 @@ import { cn } from '@/lib/utils'
 interface ExportUsersDialogProps {
   filters?: ExportUsersFilters
   className?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 function downloadCsv(csv: string, filename: string) {
@@ -46,9 +48,19 @@ function downloadCsv(csv: string, filename: string) {
 export function ExportUsersDialog({
   filters = {},
   className,
+  open: openProp,
+  onOpenChange,
 }: ExportUsersDialogProps) {
   const queryClient = useQueryClient()
-  const [open, setOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  // Controlled when the caller drives the dialog (e.g. a dropdown menu item);
+  // otherwise keep the built-in trigger button.
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : internalOpen
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setInternalOpen(next)
+    onOpenChange?.(next)
+  }
   const [selectedKeys, setSelectedKeys] = React.useState<UserExportFieldKey[]>([
     ...DEFAULT_USER_EXPORT_KEYS,
   ])
@@ -92,12 +104,14 @@ export function ExportUsersDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className={cn('h-8', className)}>
-          <Download className="mr-2 h-4 w-4" />
-          Export Users
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className={cn('h-8', className)}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Users
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Export Users</DialogTitle>

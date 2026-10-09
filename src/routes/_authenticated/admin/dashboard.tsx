@@ -1,10 +1,19 @@
-import { createFileRoute, useRouterState } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  useNavigate,
+  useRouterState,
+} from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
 import { Page } from '@/components/admin/dashboard'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   adminDashboardQueries,
+  DASHBOARD_TABS,
+  type DashboardTab,
 } from '@/lib/admin/dashboard-queries'
 import type {
   MostActiveUsersFilters,
@@ -16,6 +25,7 @@ import type {
 const searchSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  tab: z.enum(DASHBOARD_TABS).default('overview'),
   activePage: z.coerce.number().min(1).default(1),
   activeLimit: z.coerce.number().min(1).max(100).default(10),
   activeSortBy: z
@@ -71,24 +81,25 @@ function violationsFilters(search: DashboardSearch): ViolationsFilters {
 
 export const Route = createFileRoute('/_authenticated/admin/dashboard')({
   component: RouteComponent,
+  pendingComponent: DashboardPending,
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({ search }),
+  // Only depend on the values the loader reads. Tab switches and table
+  // pagination must reuse the existing match instead of re-running the
+  // loader — otherwise every tab click drops the page into a pending state.
+  loaderDeps: ({ search }) => ({
+    startDate: search.startDate,
+    endDate: search.endDate,
+  }),
   loader: async ({ deps, context }) => {
     try {
       await Promise.all([
         context.queryClient.ensureQueryData(
           adminDashboardQueries.stats({
-            startDate: deps.search.startDate,
-            endDate: deps.search.endDate,
+            startDate: deps.startDate,
+            endDate: deps.endDate,
           })
         ),
         context.queryClient.ensureQueryData(adminDashboardQueries.alerts()),
-        context.queryClient.ensureQueryData(
-          adminDashboardQueries.mostActive(mostActiveFilters(deps.search))
-        ),
-        context.queryClient.ensureQueryData(
-          adminDashboardQueries.violations(violationsFilters(deps.search))
-        ),
       ])
     } catch (error) {
       console.error('[Dashboard Route Loader] Failed to load dashboard:', error)
@@ -99,23 +110,38 @@ export const Route = createFileRoute('/_authenticated/admin/dashboard')({
 function RouteComponent() {
   const search = Route.useSearch()
   const { adminUser } = Route.useRouteContext()
+  const navigate = useNavigate()
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })
 
-  const { data: stats, isFetching } = useQuery(
+  const { data: stats, isFetching: isStatsFetching } = useQuery(
     adminDashboardQueries.stats({
       startDate: search.startDate,
       endDate: search.endDate,
     })
   )
-  const { data: alerts } = useQuery(adminDashboardQueries.alerts())
-  const { data: mostActive } = useQuery(
-    adminDashboardQueries.mostActive(mostActiveFilters(search))
+  const { data: alerts, isFetching: isAlertsFetching } = useQuery(
+    adminDashboardQueries.alerts()
   )
-  const { data: violations } = useQuery(
-    adminDashboardQueries.violations(violationsFilters(search))
-  )
+  // Non-default tabs fetch lazily: disabled until their tab is active, then
+  // standard `enabled` fetch on first activation.
+  const { data: mostActive, isFetching: isMostActiveFetching } = useQuery({
+    ...adminDashboardQueries.mostActive(mostActiveFilters(search)),
+    enabled: search.tab === 'albums',
+  })
+  const { data: violations, isFetching: isViolationsFetching } = useQuery({
+    ...adminDashboardQueries.violations(violationsFilters(search)),
+    enabled: search.tab === 'violations',
+  })
+  const { data: settings, isFetching: isSettingsFetching } = useQuery({
+    ...adminDashboardQueries.settings(),
+    enabled: search.tab === 'settings',
+  })
+
+  const handleTabChange = (tab: DashboardTab) => {
+    navigate({ to: '.', search: { ...search, tab } as never })
+  }
 
   const emptyMostActive: PaginatedMostActiveUsersResponse = {
     users: [],
@@ -139,12 +165,48 @@ function RouteComponent() {
   return (
     <Page
       search={search}
+      tab={search.tab}
+      onTabChange={handleTabChange}
       stats={stats}
+      statsLoading={isRouterPending || (isStatsFetching && !stats)}
       alerts={alerts ?? []}
+      alertsLoading={isRouterPending || (isAlertsFetching && !alerts)}
       mostActive={mostActive ?? emptyMostActive}
+      mostActiveLoading={
+        isRouterPending || (isMostActiveFetching && !mostActive)
+      }
       violations={violations ?? emptyViolations}
-      isLoading={isRouterPending || isFetching}
+      violationsLoading={
+        isRouterPending || (isViolationsFetching && !violations)
+      }
+      settings={settings}
+      settingsLoading={isRouterPending || (isSettingsFetching && !settings)}
       canBroadcast={adminUser?.role === 'admin'}
     />
+  )
+}
+
+function DashboardPending() {
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Dashboard"
+        description="Monitor bookings, album storage, user activity, and club health"
+      />
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-9 w-72" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Skeleton key={index} className="h-28 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-64 w-full rounded-lg" />
+        </div>
+      </div>
+    </PageContainer>
   )
 }

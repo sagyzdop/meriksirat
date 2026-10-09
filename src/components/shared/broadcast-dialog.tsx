@@ -25,10 +25,24 @@ type Step = 'compose' | 'confirm' | 'result'
 
 interface BroadcastDialogProps {
   className?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function BroadcastDialog({ className }: BroadcastDialogProps) {
-  const [open, setOpen] = React.useState(false)
+export function BroadcastDialog({
+  className,
+  open: openProp,
+  onOpenChange,
+}: BroadcastDialogProps) {
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  // Controlled when the caller drives the dialog (e.g. a dropdown menu item);
+  // otherwise keep the built-in trigger button.
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : internalOpen
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setInternalOpen(next)
+    onOpenChange?.(next)
+  }
   const [step, setStep] = React.useState<Step>('compose')
   const [message, setMessage] = React.useState('')
   const [isSending, setIsSending] = React.useState(false)
@@ -106,12 +120,14 @@ export function BroadcastDialog({ className }: BroadcastDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className={cn('h-8', className)}>
-          <Megaphone className="mr-2 h-4 w-4" />
-          Broadcast Message
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className={cn('h-8', className)}>
+            <Megaphone className="mr-2 h-4 w-4" />
+            Broadcast Message
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         {step === 'compose' && (
           <>
@@ -200,7 +216,15 @@ export function BroadcastDialog({ className }: BroadcastDialogProps) {
               {isSending && progress && (
                 <div className="space-y-1.5">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Sending… {Math.min(100, Math.round((progress.processed / Math.max(1, progress.linked)) * 100))}%
+                    Sending…{' '}
+                    {Math.min(
+                      100,
+                      Math.round(
+                        (progress.processed / Math.max(1, progress.linked)) *
+                          100
+                      )
+                    )}
+                    %
                   </span>
                   <Progress
                     value={Math.min(

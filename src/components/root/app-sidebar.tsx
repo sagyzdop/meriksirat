@@ -2,7 +2,6 @@ import * as React from 'react'
 import {
   HelpCircle,
   Layers,
-  Settings,
   Camera,
   ShieldCheck,
   Users,
@@ -114,11 +113,6 @@ const data = {
       title: 'Album Management',
       url: '/admin/albums',
       icon: Images,
-    },
-    {
-      title: 'Admin Settings',
-      url: '/admin/settings',
-      icon: Settings,
     },
   ],
 }

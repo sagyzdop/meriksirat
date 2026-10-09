@@ -25,6 +25,20 @@ import type {
   PaginatedViolationsResponse,
   ViolationsFilters,
 } from './dashboard-types'
+import { getSettingsFn, type SettingsData } from './functions/settings'
+
+/**
+ * Dashboard tabs, in display order. Single source shared by the route's
+ * search schema and the page's tab bar so the `?tab=` keys never drift.
+ */
+export const DASHBOARD_TABS = [
+  'overview',
+  'albums',
+  'violations',
+  'settings',
+] as const
+
+export type DashboardTab = (typeof DASHBOARD_TABS)[number]
 
 /**
  * Search params owned by the dashboard route. Each table on the page owns a
@@ -33,6 +47,7 @@ import type {
 export interface DashboardSearchParams {
   startDate?: string
   endDate?: string
+  tab?: DashboardTab
   activePage?: number
   activeLimit?: number
   activeSortBy?: 'albumCount' | 'firstName' | 'email' | 'createdAt'
@@ -104,6 +119,11 @@ export const adminDashboardQueries = {
       queryKey: [...adminDashboardQueries.all, 'violations', filters],
       queryFn: async (): Promise<PaginatedViolationsResponse> =>
         getViolationsFn({ data: filters }),
+    }),
+  settings: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'settings'],
+      queryFn: async (): Promise<SettingsData> => getSettingsFn(),
     }),
   userAlbums: (filters: AdminUserAlbumsFilters) =>
     queryOptions({

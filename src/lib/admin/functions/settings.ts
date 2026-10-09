@@ -14,6 +14,17 @@ export const UpdateSettingsSchema = z.object({
 
 export type UpdateSettingsInput = z.infer<typeof UpdateSettingsSchema>
 
+/** The global settings row as returned by getSettingsFn. */
+export interface SettingsData {
+  id: string
+  globalBookingNote: string | null
+  birthdaysCalendarId: string | null
+  operatingHoursStart: number | null
+  operatingHoursEnd: number | null
+  createdAt: Date | null
+  updatedAt: Date | null
+}
+
 /**
  * Get system settings
  * Returns the global settings or creates default if not exists

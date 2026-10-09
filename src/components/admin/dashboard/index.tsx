@@ -1,45 +1,60 @@
-import { Link, useNavigate } from '@tanstack/react-router'
-import { Users, Camera, Calendar } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-import { Section } from '@/components/layout/section'
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
-import { ExportUsersDialog } from '@/components/shared/export-users-dialog'
-import { BroadcastDialog } from '@/components/shared/broadcast-dialog'
-import { DashboardAlerts } from './components/dashboard-alerts'
 import { BookingStatCards } from './components/booking-stat-cards'
 import { AlbumStorageCards } from './components/album-storage-cards'
-import { AlbumsChart } from './components/albums-chart'
+import { DashboardHeaderActions } from './components/header-actions'
 import { MostActiveUsersTable } from './components/most-active-users-table'
 import { ViolationsTable } from './components/violations-table'
-import type { DashboardSearchParams } from '@/lib/admin/dashboard-queries'
+import { SettingsTab, SettingsTabSkeleton } from './components/settings-tab'
 import { effectiveDashboardRange } from '@/lib/admin/dashboard-queries'
+import type {
+  DashboardSearchParams,
+  DashboardTab,
+} from '@/lib/admin/dashboard-queries'
 import type {
   AdminDashboardStats,
   DashboardAlert,
   PaginatedMostActiveUsersResponse,
   PaginatedViolationsResponse,
 } from '@/lib/admin/dashboard-types'
+import type { SettingsData } from '@/lib/admin/functions/settings'
 
 interface PageProps {
   search: DashboardSearchParams
+  tab: DashboardTab
+  onTabChange: (tab: DashboardTab) => void
   stats?: AdminDashboardStats
+  statsLoading: boolean
   alerts: DashboardAlert[]
+  alertsLoading: boolean
   mostActive: PaginatedMostActiveUsersResponse
+  mostActiveLoading: boolean
   violations: PaginatedViolationsResponse
-  isLoading?: boolean
-  canBroadcast?: boolean
+  violationsLoading: boolean
+  settings?: SettingsData
+  settingsLoading: boolean
+  canBroadcast: boolean
 }
 
 export function Page({
   search,
+  tab,
+  onTabChange,
   stats,
+  statsLoading,
   alerts,
+  alertsLoading,
   mostActive,
+  mostActiveLoading,
   violations,
-  isLoading = false,
-  canBroadcast = false,
+  violationsLoading,
+  settings,
+  settingsLoading,
+  canBroadcast,
 }: PageProps) {
   const navigate = useNavigate()
 
@@ -84,46 +99,61 @@ export function Page({
       <PageHeader
         title="Dashboard"
         description="Monitor bookings, album storage, user activity, and club health"
+        actions={
+          <DashboardHeaderActions
+            alerts={alerts}
+            alertsLoading={alertsLoading}
+            canBroadcast={canBroadcast}
+          />
+        }
       />
 
-      <div className="space-y-8">
-        <Section title="Quick Actions">
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/admin/users">
-                <Users className="mr-2 h-4 w-4" />
-                View All Users
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/admin/equipment/new">
-                <Camera className="mr-2 h-4 w-4" />
-                Add Equipment
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/admin/bookings">
-                <Calendar className="mr-2 h-4 w-4" />
-                View All Bookings
-              </Link>
-            </Button>
-            <ExportUsersDialog className="w-full sm:w-auto" />
-            {canBroadcast && <BroadcastDialog className="w-full sm:w-auto" />}
-          </div>
-        </Section>
-
-        <Section
-          title="Alerts"
-          description="Current items that need attention."
+      <div className="space-y-6">
+        <Tabs
+          value={tab}
+          onValueChange={(value) => onTabChange(value as DashboardTab)}
+          className="gap-4"
         >
-          <DashboardAlerts alerts={alerts} isLoading={isLoading} />
-        </Section>
+          <TabsList variant="line">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="albums">Albums</TabsTrigger>
+            <TabsTrigger value="violations">Violations</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
 
-        <Section
-          title="Overview"
-          description="Booking activity, album creation, and storage in the selected range."
-          actions={
-            <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center">
+          <TabsContent value="overview">
+            <div className="space-y-4">
+              <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-end">
+                {hasCustomRange && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-full text-muted-foreground md:w-auto"
+                    onClick={resetRange}
+                  >
+                    Reset range
+                  </Button>
+                )}
+                <DateRangeFilter
+                  from={effectiveRange.startDate}
+                  to={effectiveRange.endDate}
+                  onChange={handleRangeChange}
+                  className="w-full md:w-auto"
+                />
+              </div>
+              <BookingStatCards
+                stats={stats?.bookingStats}
+                isLoading={statsLoading}
+              />
+              <AlbumStorageCards
+                stats={stats?.albumStorage}
+                isLoading={statsLoading}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="albums">
+            <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-end">
               {hasCustomRange && (
                 <Button
                   variant="ghost"
@@ -141,67 +171,53 @@ export function Page({
                 className="w-full md:w-auto"
               />
             </div>
-          }
-        >
-          <div className="space-y-4">
-            <BookingStatCards
-              stats={stats?.bookingStats}
-              isLoading={isLoading}
+            <MostActiveUsersTable
+              users={mostActive.users}
+              pagination={mostActive.pagination}
+              filters={{
+                startDate: search.startDate,
+                endDate: search.endDate,
+                search: search.activeSearch,
+                page: search.activePage ?? 1,
+                limit: search.activeLimit ?? 10,
+                sortBy: search.activeSortBy ?? 'albumCount',
+                sortOrder: search.activeSortOrder ?? 'desc',
+              }}
+              search={search}
+              isLoading={mostActiveLoading}
             />
-            <AlbumStorageCards
-              stats={stats?.albumStorage}
-              isLoading={isLoading}
-            />
-          </div>
-        </Section>
+          </TabsContent>
 
-        <Section>
-          <AlbumsChart
-            data={stats?.albumsPerMonth ?? []}
-            isLoading={isLoading}
-          />
-        </Section>
+          <TabsContent value="violations">
+            <div className="space-y-4">
+              <ViolationsTable
+                users={violations.users}
+                pagination={violations.pagination}
+                filters={{
+                  violationType: search.violationType,
+                  search: search.violationSearch,
+                  page: search.violationPage ?? 1,
+                  limit: search.violationLimit ?? 10,
+                  sortBy:
+                    search.violationSortBy ?? 'cancelledInStartWindowCount',
+                  sortOrder: search.violationSortOrder ?? 'desc',
+                }}
+                search={search}
+                isLoading={violationsLoading}
+              />
+            </div>
+          </TabsContent>
 
-        <Section
-          title="Most Active Users"
-          description="Users with the most albums (owned or co-authored) in the selected range."
-        >
-          <MostActiveUsersTable
-            users={mostActive.users}
-            pagination={mostActive.pagination}
-            filters={{
-              startDate: search.startDate,
-              endDate: search.endDate,
-              search: search.activeSearch,
-              page: search.activePage ?? 1,
-              limit: search.activeLimit ?? 10,
-              sortBy: search.activeSortBy ?? 'albumCount',
-              sortOrder: search.activeSortOrder ?? 'desc',
-            }}
-            search={search}
-            isLoading={isLoading}
-          />
-        </Section>
-
-        <Section
-          title="Violations"
-          description="All-time auto-cancelled and overdue counters per user."
-        >
-          <ViolationsTable
-            users={violations.users}
-            pagination={violations.pagination}
-            filters={{
-              violationType: search.violationType,
-              search: search.violationSearch,
-              page: search.violationPage ?? 1,
-              limit: search.violationLimit ?? 10,
-              sortBy: search.violationSortBy ?? 'cancelledInStartWindowCount',
-              sortOrder: search.violationSortOrder ?? 'desc',
-            }}
-            search={search}
-            isLoading={isLoading}
-          />
-        </Section>
+          <TabsContent value="settings">
+            <div className="space-y-4">
+              {settings ? (
+                <SettingsTab settings={settings} />
+              ) : settingsLoading ? (
+                <SettingsTabSkeleton />
+              ) : null}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </PageContainer>
   )
