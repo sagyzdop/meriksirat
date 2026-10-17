@@ -109,5 +109,12 @@
     "vite": "^7.3.6",
     "vitest": "^4.1.10",
     "wrangler": "^4.60.0"
+  },
+  "overrides": {
+    "vite-tsconfig-paths": {
+      "tsconfck": {
+        "typescript": "$typescript"
+      }
+    }
   }
 }
