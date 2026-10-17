@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Images, Link2, Lock, Share2, Users } from 'lucide-react'
+import { FolderOpen, Images, Link2, Lock, Share2, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -26,6 +26,7 @@ import {
 } from '@/lib/albums'
 import type { AlbumPhoto } from '@/lib/albums'
 import { useUploads, revealUploadDetails } from '@/lib/albums/upload-manager'
+import { driveFolderUrl } from '@/lib/albums/urls'
 import { formatUtcDate } from '@/lib/format'
 import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
@@ -214,17 +215,32 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         description={album.description || undefined}
         onBack={isLoggedIn ? goBack : undefined}
         actions={
-          !canManage ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleShare}
-              title="Share this album"
-            >
-              <Share2 />
-              Share
-            </Button>
-          ) : undefined
+          <>
+            {album.photos.length > 0 && (
+              <Button asChild variant="secondary">
+                <a
+                  href={driveFolderUrl(album.driveFolderId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Opens this album's folder in Google Drive, where Drive's own Download button zips every photo"
+                >
+                  <FolderOpen />
+                  Download
+                </a>
+              </Button>
+            )}
+            {!canManage && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleShare}
+                title="Share this album"
+              >
+                <Share2 />
+                Share
+              </Button>
+            )}
+          </>
         }
       />
 

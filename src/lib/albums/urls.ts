@@ -22,6 +22,21 @@ export function driveDownloadUrl(fileId: string): string {
   return `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
 }
 
+/**
+ * The album's folder in the Drive web UI, where Drive's own Download button
+ * zips the whole folder server-side.
+ *
+ * This is the only route to a full-size zip of an album. Drive's API has no
+ * folder-zip method, and the `drive.usercontent` export endpoint rejects a
+ * folder id anonymously (HTTP 500), so zipping has to happen on Drive's side
+ * behind a signed-in session. Doing it ourselves would mean pushing ~1.1 GB of
+ * full-size originals (100 photos x 11 MB) through the user's browser at the
+ * ~1 MB/s that CDN serves them, which takes ~20 minutes.
+ */
+export function driveFolderUrl(folderId: string): string {
+  return `https://drive.google.com/drive/folders/${folderId}`
+}
+
 export function albumPhotoUrls(fileId: string): {
   url: string
   thumbnailUrl: string
