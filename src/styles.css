@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 body {
   @apply m-0;
@@ -126,6 +126,9 @@ code {
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+  /* halloween.js defaults this to 999, which would paint decorations over
+     modals and dropdowns (both z-50). Keep it below the overlay layer. */
+  --halloween-page-z-index: 40;
 }
 
 .dark {

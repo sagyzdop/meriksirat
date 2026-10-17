@@ -2,6 +2,7 @@ import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useLocation } from '@tanstack/react-router'
 import { UploadProgressWidget } from '@/components/root/components/upload-progress-widget'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 export function SiteHeader() {
   const location = useLocation()
@@ -20,6 +21,7 @@ export function SiteHeader() {
         <h1 className="text-base font-medium">{pageName}</h1>
         <div className="ml-auto flex items-center gap-2">
           <UploadProgressWidget />
+          <ThemeToggle />
         </div>
       </div>
     </header>

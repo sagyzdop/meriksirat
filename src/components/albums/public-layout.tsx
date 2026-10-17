@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Instagram, Send } from 'lucide-react'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 const CLUB_INSTAGRAM = 'https://www.instagram.com/nu_img'
 const CLUB_TELEGRAM = 'https://t.me/nu_img'
@@ -22,6 +23,7 @@ export function PublicAlbumsHeader() {
             NU Image Albums
           </span>
         </Link>
+        <ThemeToggle />
       </div>
     </header>
   )
