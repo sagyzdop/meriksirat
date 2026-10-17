@@ -4,6 +4,7 @@ import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 const CLUB_INSTAGRAM = 'https://www.instagram.com/nu_img'
 const CLUB_TELEGRAM = 'https://t.me/nu_img'
+const BOO_VIDEO = 'https://www.youtube.com/watch?v=sVjk5nrb_lI'
 
 export function PublicAlbumsHeader() {
   return (
@@ -12,7 +13,7 @@ export function PublicAlbumsHeader() {
         <Link
           to="/albums"
           className="flex min-w-0 items-center gap-2.5 font-medium"
-          aria-label="NU Image Albums home"
+          aria-label="NU Image home"
         >
           <img
             src="/logo.png"
@@ -20,10 +21,22 @@ export function PublicAlbumsHeader() {
             className="size-8 shrink-0 rounded-md object-contain"
           />
           <span className="truncate text-lg font-semibold tracking-tight">
-            NU Image Albums
+            NU Image
           </span>
         </Link>
-        <ThemeToggle />
+        <div className="flex shrink-0 items-center gap-4">
+          <a
+            href={BOO_VIDEO}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Boo! (opens a YouTube video in a new tab)"
+            title="Boo!"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          >
+            Boo!
+          </a>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   )

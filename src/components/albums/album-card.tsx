@@ -69,7 +69,7 @@ export function AlbumCard({ album, showPrivacy = false }: AlbumCardProps) {
       <CardHeader>
         <CardTitle className="line-clamp-1 min-h-6">{album.title}</CardTitle>
         <CardDescription className="line-clamp-2 min-h-10">
-          {album.description || 'No description'}
+          {album.description}
         </CardDescription>
         <p className="flex min-h-5 items-center gap-1.5 truncate text-xs text-muted-foreground">
           <Users className="size-3.5 shrink-0" aria-hidden="true" />

@@ -70,20 +70,12 @@ export function AlbumGroupedList({
     <div className="space-y-10">
       {sections.map(({ year, months }) => (
         <section key={year} aria-labelledby={`album-year-${year}`}>
-          <div className="mb-4 flex items-center gap-2">
-            <h2
-              id={`album-year-${year}`}
-              className="text-2xl font-bold tracking-tight"
-            >
-              {year}
-            </h2>
-            <span className="text-sm text-muted-foreground">
-              {months.reduce((sum, m) => sum + m.albums.length, 0)} album
-              {months.reduce((sum, m) => sum + m.albums.length, 0) !== 1
-                ? 's'
-                : ''}
-            </span>
-          </div>
+          <h2
+            id={`album-year-${year}`}
+            className="mb-4 text-2xl font-bold tracking-tight"
+          >
+            {year}
+          </h2>
 
           <div className="space-y-8">
             {months.map(({ month, albums: monthAlbums }) => (
@@ -91,10 +83,6 @@ export function AlbumGroupedList({
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   <Images className="size-3.5" aria-hidden="true" />
                   {month}
-                  <span aria-hidden="true">·</span>
-                  <span className="font-normal normal-case">
-                    {monthAlbums.length}
-                  </span>
                 </h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {monthAlbums.map((album) => (
