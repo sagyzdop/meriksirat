@@ -316,7 +316,6 @@ async function updateOverdueBookings(env: Env): Promise<void> {
           googleCalendarId: equipment.googleCalendarId,
         },
         user: {
-          email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           name: user.name,
@@ -395,7 +394,6 @@ async function updateOverdueBookings(env: Env): Promise<void> {
             equipmentCalendarId: item.equipment.googleCalendarId,
             eventId: item.googleCalendarEventId,
             event,
-            userEmail: item.user?.email || '',
           })
         }
 

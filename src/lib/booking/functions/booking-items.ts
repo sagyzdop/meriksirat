@@ -120,7 +120,6 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
 
     const ownerRow = await database
       .select({
-        email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         name: user.name,
@@ -130,7 +129,6 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       .where(eq(user.id, bookingRow.userId))
       .get()
 
-    const userEmail = ownerRow?.email || session.user.email || ''
     const userDisplayName = formatUserDisplayName(ownerRow ?? {})
 
     const existingItems = await database
@@ -254,7 +252,6 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
             createCalendarEventRaw({
               equipmentCalendarId: calendarId,
               event,
-              userEmail,
             }),
           3,
           400

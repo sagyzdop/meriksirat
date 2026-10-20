@@ -56,7 +56,6 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
         userEventDetails: booking.userEventDetails,
         user: {
           id: user.id,
-          email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           name: user.name,
@@ -237,7 +236,6 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
               timeZone: CLUB_TIMEZONE,
             },
           },
-          userEmail: parent.user?.email || '',
         })
       } catch (calendarError) {
         console.error(

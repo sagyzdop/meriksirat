@@ -148,10 +148,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
     }
 
     const userId = session.user.id
-    const userEmail = session.user.email
     if (!userId) throw new Error('Unable to determine user id from session')
-    if (!userEmail)
-      throw new Error('Unable to determine user email from session')
 
     const equipmentCalendarIds = await Promise.all(
       dedupedEquipmentIds.map(async (equipmentId) => ({
@@ -280,7 +277,6 @@ export const createBookingFn = createServerFn({ method: 'POST' })
             createCalendarEventRaw({
               equipmentCalendarId: calendarId,
               event,
-              userEmail,
             }),
           3,
           400
@@ -783,7 +779,6 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     }
 
     const userId = session.user.id
-    const userEmail = session.user.email
     const database = db(env.meriksirat_d1 as D1Database)
     const userDisplayName = await resolveUserDisplayName({
       database,
@@ -938,7 +933,6 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
           equipmentCalendarId: item.equipmentCalendarId,
           eventId: item.googleCalendarEventId,
           event,
-          userEmail,
         })
       } catch (err) {
         console.error('Failed to update calendar event:', err)

@@ -40,7 +40,6 @@ export async function startBooking(
       startedAt: booking.startedAt,
       userEventDetails: booking.userEventDetails,
       user: {
-        email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         name: user.name,
@@ -152,7 +151,6 @@ export async function startBooking(
             timeZone: CLUB_TIMEZONE,
           },
         },
-        userEmail: bookingData.user?.email || '',
       })
     } catch (error) {
       console.error(

@@ -21,7 +21,6 @@ type CalendarEvent = {
   start?: { dateTime?: string; date?: string; timeZone?: string }
   end?: { dateTime?: string; date?: string; timeZone?: string }
   status?: string
-  attendees?: Array<{ email: string }>
 }
 
 type CalendarEventInput = {
@@ -29,7 +28,6 @@ type CalendarEventInput = {
   description?: string
   start?: { dateTime?: string; date?: string; timeZone?: string }
   end?: { dateTime?: string; date?: string; timeZone?: string }
-  attendees?: Array<{ email: string }>
   [key: string]: unknown
 }
 
@@ -189,32 +187,30 @@ export async function getCalendarEventsRaw(args: {
 
 /**
  * Insert an event into a calendar.
+ *
+ * Events are created WITHOUT attendees and with `sendUpdates=none`: the user
+ * must not get an email per equipment event. The member is identified in the
+ * event description instead.
  */
 export async function createCalendarEventRaw(args: {
   equipmentCalendarId: string
   event: CalendarEventInput
-  userEmail?: string
 }): Promise<{ success: boolean; eventId: string; event: CalendarEvent }> {
-  const { equipmentCalendarId, event, userEmail = '' } = args
+  const { equipmentCalendarId, event } = args
 
   const accessToken = await getGoogleAccessToken()
-
-  const eventWithAttendee = {
-    ...event,
-    attendees: [...(event.attendees || []), { email: userEmail }],
-  }
 
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
       equipmentCalendarId
-    )}/events?sendUpdates=all`,
+    )}/events?sendUpdates=none`,
     {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(eventWithAttendee),
+      body: JSON.stringify(event),
     }
   )
 
@@ -231,33 +227,30 @@ export async function createCalendarEventRaw(args: {
 
 /**
  * Patch (partially update) an existing event.
+ *
+ * No attendees are added and `sendUpdates=none` keeps Google from emailing the
+ * member about status changes (started / returned / extended).
  */
 export async function updateCalendarEventRaw(args: {
   equipmentCalendarId: string
   eventId: string
   event: CalendarEventInput
-  userEmail?: string
 }): Promise<{ success: boolean; event: CalendarEvent }> {
-  const { equipmentCalendarId, eventId, event, userEmail = '' } = args
+  const { equipmentCalendarId, eventId, event } = args
 
   const accessToken = await getGoogleAccessToken()
-
-  const updatedEvent = { ...event }
-  if (userEmail) {
-    updatedEvent.attendees = [...(event.attendees || []), { email: userEmail }]
-  }
 
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
       equipmentCalendarId
-    )}/events/${encodeURIComponent(eventId)}?sendUpdates=all`,
+    )}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
     {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(updatedEvent),
+      body: JSON.stringify(event),
     }
   )
 
@@ -284,7 +277,7 @@ export async function deleteCalendarEventRaw(args: {
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
       equipmentCalendarId
-    )}/events/${encodeURIComponent(eventId)}?sendUpdates=all`,
+    )}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
     {
       method: 'DELETE',
       headers: {

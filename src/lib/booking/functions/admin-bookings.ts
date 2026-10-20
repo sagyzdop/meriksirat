@@ -385,7 +385,6 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         startedAt: booking.startedAt,
         userEventDetails: booking.userEventDetails,
         user: {
-          email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
           name: user.name,
@@ -596,7 +595,6 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
           equipmentCalendarId: item.equipmentCalendarId,
           eventId: item.googleCalendarEventId,
           event,
-          userEmail: bookingData.user?.email || '',
         })
       } catch (calendarError) {
         console.error('Failed to update calendar event:', calendarError)

@@ -52,7 +52,6 @@ interface BookingItemWithContext {
   userLastName: string | null
   userName: string | null
   userTelegramUsername: string | null
-  userEmail: string | null
 }
 
 async function selectItemsWithContext(
@@ -75,7 +74,6 @@ async function selectItemsWithContext(
       userLastName: user.lastName,
       userName: user.name,
       userTelegramUsername: user.telegramUsername,
-      userEmail: user.email,
     })
     .from(bookingItem)
     .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
@@ -227,7 +225,6 @@ export async function returnBookingItems(
             timeZone: CLUB_TIMEZONE,
           },
         },
-        userEmail: it.userEmail || '',
       })
     } catch (err) {
       console.error('Failed to update calendar event for returned item:', err)
