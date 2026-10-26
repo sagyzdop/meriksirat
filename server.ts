@@ -249,6 +249,7 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
               hour: '2-digit',
               minute: '2-digit',
               hour12: false,
+              timeZone: 'Asia/Almaty',
             })
             await telegram.sendMessage(
               stale.telegramChatId,
@@ -626,6 +627,7 @@ function buildReminderMessage(
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+      timeZone: 'Asia/Almaty',
     })
   const equipmentLabel =
     info.equipmentNames.length === 1

@@ -252,7 +252,7 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-      timeZone: 'Asia/Karachi',
+      timeZone: 'Asia/Almaty',
     })
 
     try {

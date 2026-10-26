@@ -5,7 +5,7 @@ import { z } from 'zod'
  * Club timezone (UTC+5). All calendar event payloads and rendered timestamps
  * use the club's local time so events show up at the correct local time.
  */
-export const CLUB_TIMEZONE = 'Asia/Karachi'
+export const CLUB_TIMEZONE = 'Asia/Almaty'
 
 /**
  * Formats a Date (or ISO string) as the club's local wall-clock time,

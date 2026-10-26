@@ -82,19 +82,19 @@ function formatTimeRange(startTime: Date, endTime: Date): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
   const timeStart = startTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
   const timeEnd = endTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
   return `${date}, ${timeStart} - ${timeEnd}`
 }

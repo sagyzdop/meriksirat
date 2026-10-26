@@ -44,7 +44,7 @@ function formatStatus(status: string): string {
   return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
 
-// All log timestamps are rendered in the club's timezone (UTC+5, Asia/Karachi)
+// All log timestamps are rendered in the club's timezone (UTC+5, Asia/Almaty)
 // so channel text shows club-local times and never depends on the worker's
 // local timezone.
 function formatLogDate(date: Date): string {
@@ -52,7 +52,7 @@ function formatLogDate(date: Date): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   }).format(date)
 }
 
@@ -61,7 +61,7 @@ function formatLogTime(date: Date): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   }).format(date)
 }
 

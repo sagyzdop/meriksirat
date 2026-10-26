@@ -137,19 +137,19 @@ export async function sendBookingReminder(
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
   const endTimeStr = endTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
   const dateStr = startTime.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
 
   let message = `⏰ *Booking Reminder*\n\n`

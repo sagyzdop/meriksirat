@@ -5,7 +5,7 @@ import { minutesToTime } from './functions/settings'
  * Club-local wall-clock helpers used to enforce operating hours.
  *
  * Operating hours are stored as minutes since midnight in the club's local
- * timezone (CLUB_TIMEZONE, Asia/Karachi). All comparisons must use the club
+ * timezone (CLUB_TIMEZONE, Asia/Almaty). All comparisons must use the club
  * timezone so that e.g. a booking ending at 23:30 cannot be extended into the
  * next club day.
  */
@@ -44,7 +44,7 @@ export function getClubLocalParts(date: Date | string): ClubLocalParts {
  *
  * The naive guess (the wall-clock time read as UTC) is corrected by the club
  * offset: `utc = naive - offset`. Two passes converge exactly even for DST
- * zones; Asia/Karachi has a fixed UTC+5 offset so a single pass is exact.
+ * zones; Asia/Almaty has a fixed UTC+5 offset so a single pass is exact.
  */
 export function clubLocalToUtc(dateKey: string, time: string): Date {
   const [year, month, day] = dateKey.split('-').map(Number)

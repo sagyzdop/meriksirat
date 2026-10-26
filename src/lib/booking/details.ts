@@ -32,7 +32,7 @@ export interface BookingDetailInput {
  * Club timezone (UTC+5). Used for all rendered booking timestamps so calendar
  * event descriptions and channel logs show the club's local time.
  */
-const CLUB_TIMEZONE = 'Asia/Karachi'
+const CLUB_TIMEZONE = 'Asia/Almaty'
 
 export function formatBookingTimestamp(value: Date | string | number): string {
   const date = value instanceof Date ? value : new Date(value)

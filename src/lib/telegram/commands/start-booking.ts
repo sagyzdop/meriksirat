@@ -170,13 +170,13 @@ export async function renderStartConfirm(
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
   const timeEnd = parent.endTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'Asia/Karachi',
+    timeZone: 'Asia/Almaty',
   })
   const equipmentLabel = items.map((i) => i.equipmentName).join(', ')
 
