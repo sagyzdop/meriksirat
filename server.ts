@@ -233,12 +233,7 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
           .where(eq(user.id, stale.userId))
 
         try {
-          await logBookingActivityById(stale.id, 'cancelled', {
-            previousStatus: 'booked',
-            newStatus: 'cancelled',
-            notes:
-              'Booking auto-cancelled: equipment was not picked up within 15 minutes of the start time',
-          })
+          await logBookingActivityById(stale.id, 'auto_cancelled')
         } catch (logError) {
           console.error('Failed to log auto-cancel:', logError)
         }
@@ -397,16 +392,6 @@ async function updateOverdueBookings(env: Env): Promise<void> {
             event,
           })
         }
-
-        try {
-          await logBookingActivityById(item.bookingId, 'updated', {
-            previousStatus: 'active',
-            newStatus: 'overdue',
-            notes: `Automatically marked as overdue by system (item ${item.id})`,
-          })
-        } catch (logError) {
-          console.error('Failed to log overdue booking:', logError)
-        }
       } catch (error) {
         console.error(`Failed to update booking item ${item.id}:`, error)
       }
@@ -433,6 +418,12 @@ async function updateOverdueBookings(env: Env): Promise<void> {
           `Failed to increment overdue count for user ${info.userId}:`,
           error
         )
+      }
+
+      try {
+        await logBookingActivityById(bookingId, 'overdue')
+      } catch (logError) {
+        console.error('Failed to log overdue booking:', logError)
       }
     }
 

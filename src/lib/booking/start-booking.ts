@@ -161,10 +161,7 @@ export async function startBooking(
   }
 
   try {
-    await logBookingActivityById(bookingId, 'updated', {
-      previousStatus: 'booked',
-      newStatus: 'active',
-    })
+    await logBookingActivityById(bookingId, 'picked_up')
   } catch (error) {
     console.error('Failed to log booking start:', error)
   }

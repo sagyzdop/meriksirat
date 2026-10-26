@@ -345,10 +345,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
 
     // Log booking creation to Telegram channel
     try {
-      await logBookingActivityById(bookingId, 'created', {
-        newStatus: 'booked',
-        notes,
-      })
+      await logBookingActivityById(bookingId, 'booked')
     } catch (logError) {
       console.error('Failed to log booking creation:', logError)
     }
@@ -731,10 +728,7 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
 
     // Log booking cancellation to Telegram channel
     try {
-      await logBookingActivityById(data.bookingId, 'cancelled', {
-        previousStatus: bookingData.status,
-        newStatus: 'cancelled',
-      })
+      await logBookingActivityById(data.bookingId, 'cancelled')
     } catch (logError) {
       console.error('Failed to log booking cancellation:', logError)
     }
@@ -891,9 +885,12 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
 
     // Log booking update to Telegram channel
     try {
-      await logBookingActivityById(data.bookingId, 'updated', {
-        notes: newNotes,
-        newStatus: bookingData.status,
+      await logBookingActivityById(data.bookingId, 'edited', {
+        previous: {
+          startTime: bookingData.startTime,
+          endTime: bookingData.endTime,
+          eventDetails: bookingData.userEventDetails,
+        },
       })
     } catch (logError) {
       console.error('Failed to log booking update:', logError)

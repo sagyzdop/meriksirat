@@ -245,21 +245,10 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
       }
     }
 
-    const formattedNewEndTime = newEndTime.toLocaleString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'Asia/Almaty',
-    })
-
     try {
-      await logBookingActivityById(data.bookingId, 'updated', {
-        previousStatus: parent.status,
-        newStatus: undidOverdue ? 'active' : parent.status,
-        notes: `Booking extended by ${EXTEND_BOOKING_MINUTES} minutes to ${formattedNewEndTime}${undidOverdue ? '; overdue status reset' : ''}`,
+      await logBookingActivityById(data.bookingId, 'extended', {
+        extendedMinutes: EXTEND_BOOKING_MINUTES,
+        overdueCleared: undidOverdue,
       })
     } catch (logError) {
       console.error('Failed to log booking extension:', logError)

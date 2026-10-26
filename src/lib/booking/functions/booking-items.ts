@@ -318,8 +318,10 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       .where(eq(booking.id, data.bookingId))
 
     try {
-      await logBookingActivityById(data.bookingId, 'updated', {
-        notes: `Added equipment to booking: ${equipmentIds.map((id) => equipmentNameMap.get(id) || `Equipment ${id}`).join(', ')}`,
+      await logBookingActivityById(data.bookingId, 'items_added', {
+        addedItems: equipmentIds.map(
+          (id) => equipmentNameMap.get(id) || `Equipment ${id}`
+        ),
       })
     } catch (logError) {
       console.error('Failed to log booking update:', logError)
@@ -360,10 +362,7 @@ export const cancelBookingItemFn = createServerFn({ method: 'POST' })
 
     for (const bookingId of result.touchedBookings) {
       try {
-        await logBookingActivityById(bookingId, 'cancelled', {
-          newStatus: 'cancelled',
-          notes: 'Item cancelled via web',
-        })
+        await logBookingActivityById(bookingId, 'cancelled')
       } catch (logError) {
         console.error('Failed to log item cancellation:', logError)
       }

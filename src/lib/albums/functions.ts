@@ -1024,7 +1024,7 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
         albumId: data.albumId,
         albumTitle: row.title,
         action: 'updated',
-        detail: detailParts.join('\n'),
+        details: detailParts,
       })
     }
 
@@ -1418,13 +1418,15 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
         albumId: data.albumId,
         albumTitle: row.title,
         action: 'member_removed',
-        detail: removedUser
-          ? `Removed: ${formatUserDisplayName({
-              firstName: removedUser.firstName ?? undefined,
-              lastName: removedUser.lastName ?? undefined,
-              name: removedUser.name ?? undefined,
-              telegramUsername: removedUser.telegramUsername ?? undefined,
-            })}`
+        details: removedUser
+          ? [
+              `👤 Removed: ${formatUserDisplayName({
+                firstName: removedUser.firstName ?? undefined,
+                lastName: removedUser.lastName ?? undefined,
+                name: removedUser.name ?? undefined,
+                telegramUsername: removedUser.telegramUsername ?? undefined,
+              })}`,
+            ]
           : undefined,
       })
     }

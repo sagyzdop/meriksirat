@@ -139,11 +139,7 @@ export async function cancelItems(
 
   for (const bookingId of result.touchedBookings) {
     try {
-      await logBookingActivityById(bookingId, 'cancelled', {
-        previousStatus: result.updated.find((it) => it.bookingId === bookingId)
-          ?.itemStatus,
-        newStatus: 'cancelled',
-      })
+      await logBookingActivityById(bookingId, 'cancelled')
     } catch (logError) {
       console.error('Failed to log item cancellation:', logError)
     }

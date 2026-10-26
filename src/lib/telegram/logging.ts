@@ -2,68 +2,40 @@
  * Telegram Logging
  *
  * Handles logging booking and album activity to the club Telegram channel for
- * audit and notification purposes.
+ * audit and notification purposes. Message text is built in `./log-format`.
  */
 
-import { TelegramAPI } from './api'
 import { env } from 'cloudflare:workers'
-import type { BookingLogData } from './types'
 import {
   createTelegramForLogging,
   isTelegramLoggingEnabled,
   getBookingDetailsForLogging,
 } from './server-utils'
+import {
+  formatAlbumLog,
+  formatBookingLog,
+  visibleLength,
+  MAX_CAPTION_LENGTH,
+  type AlbumLogAction,
+  type BookingLogData,
+  type BookingLogEvent,
+} from './log-format'
 import { formatUserDisplayName } from '@/lib/utils'
 import { db } from '@/db'
 import { user } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
-const ACTION_LABELS = {
-  created: 'Created',
-  updated: 'Updated',
-  cancelled: 'Cancelled',
-  returned: 'Returned',
-  deleted: 'Deleted',
-} as const
+export type { AlbumLogAction, BookingLogEvent }
 
-const ALBUM_ACTION_LABELS = {
-  created: 'Created',
-  updated: 'Updated',
-  deleted: 'Deleted',
-  shared: 'Shared',
-  unshared: 'Unshared',
-  photo_deleted: 'Photo deleted',
-  member_added: 'Editor added',
-  member_removed: 'Editor removed',
-  token_rotated: 'Share link rotated',
-} as const
-
-export type AlbumLogAction = keyof typeof ALBUM_ACTION_LABELS
-
-function formatStatus(status: string): string {
-  return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
-}
-
-// All log timestamps are rendered in the club's timezone (UTC+5, Asia/Almaty)
-// so channel text shows club-local times and never depends on the worker's
-// local timezone.
-function formatLogDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'Asia/Almaty',
-  }).format(date)
-}
-
-function formatLogTime(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'Asia/Almaty',
-  }).format(date)
-}
+export type BookingLogOptions = Pick<
+  BookingLogData,
+  | 'actorName'
+  | 'previous'
+  | 'addedItems'
+  | 'extendedMinutes'
+  | 'overdueCleared'
+  | 'reason'
+>
 
 /**
  * Public app origin used to build resource links in log messages.
@@ -73,263 +45,88 @@ function appOrigin(): string {
   return (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
 }
 
-function bookingUrl(bookingId: number): string {
+function bookingUrl(bookingId: number): string | undefined {
   const origin = appOrigin()
-  return origin ? `${origin}/bookings/${bookingId}` : ''
+  return origin ? `${origin}/admin/bookings/${bookingId}` : undefined
 }
 
-function albumUrl(albumId: string): string {
+function albumUrl(albumId: string): string | undefined {
   const origin = appOrigin()
-  return origin ? `${origin}/albums/${albumId}` : ''
+  return origin ? `${origin}/albums/${albumId}` : undefined
 }
 
 /**
- * Describes whether an action covered the whole booking or only some of its
- * items, based on the per-item statuses fetched after the action ran.
+ * Loads the booking's current state and merges in the event-specific options.
  */
-function getItemStatuses(data: BookingLogData): {
-  names: string[]
-  statuses: string[]
-  target: 'cancelled' | 'returned'
-  affected: string[]
-} {
-  const names = data.equipmentNames?.length
-    ? data.equipmentNames
-    : data.equipmentName
-      ? [data.equipmentName]
-      : []
-  const statuses = data.itemStatuses ?? []
-  const target = data.action === 'cancelled' ? 'cancelled' : 'returned'
-  const affected = names
-    .map((name, i) => ({ name, status: statuses[i] }))
-    .filter((item) => item.status === target)
-    .map((item) => item.name)
-
-  return { names, statuses, target, affected }
-}
-
-function formatBookingLogMessage(data: BookingLogData): string {
-  const { names, statuses, target, affected } = getItemStatuses(data)
-
-  const isPartialEvent =
-    statuses.length === names.length &&
-    names.length > 0 &&
-    affected.length > 0 &&
-    affected.length < names.length
-
-  const eventText = isPartialEvent
-    ? `${affected.length} of ${names.length} ${
-        names.length === 1 ? 'item' : 'items'
-      } ${target}`
-    : ACTION_LABELS[data.action]
-
-  const lines: string[] = []
-
-  lines.push(`Event: ${eventText} — Booking #${data.bookingId}`)
-
-  const url = bookingUrl(data.bookingId)
-  if (url) {
-    lines.push(`Resource: ${url}`)
-  }
-
-  lines.push(`User: ${data.userName}`)
-
-  if (data.actorName && data.actorName !== data.userName) {
-    lines.push(`By: ${data.actorName}`)
-  }
-
-  if (
-    data.previousStatus &&
-    data.newStatus &&
-    data.previousStatus !== data.newStatus
-  ) {
-    lines.push(
-      `Status: ${formatStatus(data.previousStatus)} → ${formatStatus(data.newStatus)}`
-    )
-  }
-
-  if (isPartialEvent) {
-    lines.push(`Items ${target}: ${affected.join(', ')}`)
-    const remaining = names.filter((_, i) => statuses[i] !== target)
-    if (remaining.length > 0) {
-      lines.push(`Remaining: ${remaining.join(', ')}`)
-    }
-  } else if (names.length > 0) {
-    lines.push(`Equipment: ${names.join(', ')}`)
-  }
-
-  if (data.startTime && data.endTime) {
-    lines.push(
-      `Time: ${formatLogDate(data.startTime)}, ${formatLogTime(data.startTime)} – ${formatLogTime(data.endTime)}`
-    )
-  }
-
-  if (data.startedAt) {
-    lines.push(`Started: ${formatLogTime(data.startedAt)}`)
-  }
-
-  if (data.notes) {
-    lines.push(`Notes: ${data.notes}`)
-  }
-
-  return lines.join('\n')
-}
-
-/**
- * Sends a booking activity log to the Telegram channel
- *
- * @param telegram - Telegram API instance
- * @param channelId - Telegram channel ID (from TELEGRAM_CLUB_CHANNEL_ID)
- * @param logData - Booking activity data
- */
-export async function logBookingActivity(
-  telegram: TelegramAPI,
-  channelId: string,
-  logData: BookingLogData
-): Promise<void> {
-  try {
-    if (!channelId) {
-      console.warn(
-        'TELEGRAM_CLUB_CHANNEL_ID not configured, skipping booking log'
-      )
-      return
-    }
-
-    const message = formatBookingLogMessage(logData)
-
-    await telegram.sendMessage(channelId, message, {
-      disable_web_page_preview: true,
-    })
-  } catch (error) {
-    console.error('Failed to log booking activity to Telegram channel:', {
-      bookingId: logData.bookingId,
-      action: logData.action,
-      error: error instanceof Error ? error.message : String(error),
-    })
-    // Don't throw - logging failures shouldn't break the main flow
-  }
-}
-
-/**
- * High-level function to log booking activity with automatic data fetching
- * Reduces repetitive code in booking operations
- */
-export async function logBookingActivityById(
+async function loadBookingLogData(
   bookingId: number,
-  action: BookingLogData['action'],
-  options: {
-    previousStatus?: string
-    newStatus?: string
-    notes?: string
-    actorName?: string
-  } = {}
-): Promise<void> {
-  try {
-    if (!isTelegramLoggingEnabled()) {
-      return
-    }
+  event: BookingLogEvent,
+  options: BookingLogOptions
+): Promise<BookingLogData | null> {
+  const details = await getBookingDetailsForLogging(bookingId)
+  if (!details) return null
 
-    const bookingDetails = await getBookingDetailsForLogging(bookingId)
-    if (!bookingDetails) {
-      console.warn(`Booking ${bookingId} not found for logging`)
-      return
-    }
-
-    const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
-
-    const userName = formatUserDisplayName({
-      firstName: bookingDetails.userFirstName,
-      lastName: bookingDetails.userLastName,
-      name: bookingDetails.userName,
-      telegramUsername: bookingDetails.userTelegramUsername,
-    })
-
-    await logBookingActivity(telegram, env.TELEGRAM_CLUB_CHANNEL_ID!, {
-      bookingId: bookingDetails.bookingId,
-      userId: bookingDetails.userId,
-      userName,
-      equipmentName: bookingDetails.equipmentName,
-      equipmentNames: bookingDetails.equipmentNames,
-      itemStatuses: bookingDetails.itemStatuses,
-      action,
-      startTime: bookingDetails.startTime,
-      endTime: bookingDetails.endTime,
-      startedAt: bookingDetails.startedAt,
-      notes: options.notes || bookingDetails.notes,
-      previousStatus: options.previousStatus,
-      newStatus: options.newStatus || bookingDetails.status,
-      actorName: options.actorName,
-    })
-  } catch (error) {
-    console.error('Failed to log booking activity by ID:', {
-      bookingId,
-      action,
-      error: error instanceof Error ? error.message : String(error),
-    })
+  return {
+    bookingId: details.bookingId,
+    event,
+    userName: formatUserDisplayName({
+      firstName: details.userFirstName,
+      lastName: details.userLastName,
+      name: details.userName,
+      telegramUsername: details.userTelegramUsername,
+    }),
+    equipmentNames: details.equipmentNames,
+    itemStatuses: details.itemStatuses,
+    startTime: details.startTime,
+    endTime: details.endTime,
+    startedAt: details.startedAt,
+    eventDetails: details.notes,
+    url: bookingUrl(details.bookingId),
+    ...options,
   }
 }
 
 /**
- * Logs a booking status change to the Telegram channel
- *
- * @param bookingId - The booking ID
- * @param previousStatus - The previous status
- * @param newStatus - The new status
- * @param action - The action type (defaults to 'updated')
- */
-export async function logBookingStatusChange(
-  bookingId: number,
-  previousStatus: string,
-  newStatus: string,
-  action: 'updated' | 'returned' = 'updated'
-): Promise<void> {
-  await logBookingActivityById(bookingId, action, {
-    previousStatus,
-    newStatus,
-  })
-}
-
-/**
- * Logs multiple booking status changes (useful for batch operations)
- */
-export async function logMultipleBookingStatusChanges(
-  changes: Array<{
-    bookingId: number
-    previousStatus: string
-    newStatus: string
-    action?: 'updated' | 'returned'
-  }>
-): Promise<void> {
-  // Log each change individually to avoid overwhelming the channel
-  for (const change of changes) {
-    await logBookingStatusChange(
-      change.bookingId,
-      change.previousStatus,
-      change.newStatus,
-      change.action
-    )
-
-    // Small delay between messages to avoid rate limiting
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Generic channel messages (albums, return photos, ...)
-// ---------------------------------------------------------------------------
-
-/**
- * Sends a text message to the club Telegram channel. Never throws.
+ * Sends an HTML message to the club Telegram channel. Never throws.
  */
 async function sendChannelText(text: string): Promise<void> {
   if (!isTelegramLoggingEnabled()) return
   try {
     const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
     await telegram.sendMessage(env.TELEGRAM_CLUB_CHANNEL_ID!, text, {
+      parse_mode: 'HTML',
       disable_web_page_preview: true,
     })
   } catch (error) {
     console.error('Failed to send Telegram channel log:', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * Logs a booking event to the club Telegram channel, loading the booking's
+ * current state from the database. Never throws.
+ */
+export async function logBookingActivityById(
+  bookingId: number,
+  event: BookingLogEvent,
+  options: BookingLogOptions = {}
+): Promise<void> {
+  try {
+    if (!isTelegramLoggingEnabled()) return
+
+    const data = await loadBookingLogData(bookingId, event, options)
+    if (!data) {
+      console.warn(`Booking ${bookingId} not found for logging`)
+      return
+    }
+
+    await sendChannelText(formatBookingLog(data))
+  } catch (error) {
+    console.error('Failed to log booking activity by ID:', {
+      bookingId,
+      event,
       error: error instanceof Error ? error.message : String(error),
     })
   }
@@ -365,25 +162,20 @@ export async function logAlbumActivity(input: {
     name?: string | null
     telegramUsername?: string | null
   } | null
-  detail?: string
+  details?: string[]
 }): Promise<void> {
   if (!isTelegramLoggingEnabled()) return
 
-  const lines = [
-    `Event: ${ALBUM_ACTION_LABELS[input.action]} — Album "${input.albumTitle}"`,
-  ]
-  const url = albumUrl(input.albumId)
-  if (url) {
-    lines.push(`Resource: ${url}`)
-  }
-  if (input.actor) {
-    lines.push(`By: ${formatLogActor(input.actor)}`)
-  }
-  if (input.detail) {
-    lines.push(input.detail)
-  }
-
-  await sendChannelText(lines.join('\n'))
+  await sendChannelText(
+    formatAlbumLog({
+      albumId: input.albumId,
+      albumTitle: input.albumTitle,
+      action: input.action,
+      actorName: input.actor ? formatLogActor(input.actor) : null,
+      details: input.details,
+      url: albumUrl(input.albumId),
+    })
+  )
 }
 
 /**
@@ -421,9 +213,9 @@ export async function logAlbumActivityByUser(
 
 /**
  * Logs an equipment return to the club Telegram channel as a single photo
- * message. The caption is the full booking-return log — Event, Resource, user,
- * items, times — rendered by the same formatter the text logs use, so a return
- * produces exactly one channel message. Never throws.
+ * message whose caption is the full "Returned" booking log. Falls back to an
+ * item count when the equipment list would push the caption past Telegram's
+ * limit. Never throws.
  */
 export async function logReturnPhotoToChannel(input: {
   photoFileId: string
@@ -431,33 +223,21 @@ export async function logReturnPhotoToChannel(input: {
 }): Promise<void> {
   if (!isTelegramLoggingEnabled()) return
   try {
-    const bookingDetails = await getBookingDetailsForLogging(input.bookingId)
-    if (!bookingDetails) {
+    const data = await loadBookingLogData(input.bookingId, 'returned', {})
+    if (!data) {
       console.warn(`Booking ${input.bookingId} not found for return photo log`)
       return
     }
 
-    const message = formatBookingLogMessage({
-      bookingId: bookingDetails.bookingId,
-      userId: bookingDetails.userId,
-      userName: formatUserDisplayName({
-        firstName: bookingDetails.userFirstName,
-        lastName: bookingDetails.userLastName,
-        name: bookingDetails.userName,
-        telegramUsername: bookingDetails.userTelegramUsername,
-      }),
-      equipmentName: bookingDetails.equipmentName,
-      equipmentNames: bookingDetails.equipmentNames,
-      itemStatuses: bookingDetails.itemStatuses,
-      action: 'returned',
-      startTime: bookingDetails.startTime,
-      endTime: bookingDetails.endTime,
-      startedAt: bookingDetails.startedAt,
-    })
+    let caption = formatBookingLog(data)
+    if (visibleLength(caption) > MAX_CAPTION_LENGTH) {
+      caption = formatBookingLog(data, { compactEquipment: true })
+    }
 
     const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
     await telegram.sendPhoto(env.TELEGRAM_CLUB_CHANNEL_ID!, input.photoFileId, {
-      caption: message,
+      caption,
+      parse_mode: 'HTML',
     })
   } catch (error) {
     console.error('Failed to log return photo to Telegram channel:', {

@@ -76,30 +76,6 @@ export const BOOKING_STATUS = {
 export type BookingStatus = (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS]
 
 /**
- * Booking log data structure for telegram logging
- */
-export interface BookingLogData {
-  bookingId: number
-  userId: string
-  userName: string
-  equipmentName: string
-  equipmentNames?: string[]
-  // Per-item statuses, aligned with equipmentNames. Used to distinguish
-  // whole-booking actions from partial (per-item) cancellations/returns.
-  itemStatuses?: string[]
-  action: 'created' | 'updated' | 'cancelled' | 'returned' | 'deleted'
-  startTime?: Date
-  endTime?: Date
-  startedAt?: Date | null
-  notes?: string | null
-  previousStatus?: string
-  newStatus?: string
-  // Who performed the action, when it wasn't the booking's own user (e.g.
-  // admin edits). Only rendered when it differs from `userName`.
-  actorName?: string
-}
-
-/**
  * Session data structure for KV storage
  */
 export interface SessionData {

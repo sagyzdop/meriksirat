@@ -516,10 +516,8 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
 
       try {
         await logBookingActivityById(data.bookingId, 'cancelled', {
-          previousStatus,
-          newStatus: 'cancelled',
           actorName: adminDisplayName,
-          notes: data.notes ? `Reason: ${data.notes}` : undefined,
+          reason: data.notes || undefined,
         })
       } catch (logError) {
         console.error('Failed to log booking cancellation:', logError)
@@ -543,19 +541,14 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     // Times / notes update only (status is unchanged)
     await recomputeBookingStatus(database, data.bookingId)
 
-    const updateLogNotes = [
-      timesChanged ? 'Schedule updated' : null,
-      data.notes ? `Notes: ${data.notes}` : null,
-    ]
-      .filter(Boolean)
-      .join(' · ')
-
     try {
-      await logBookingActivityById(data.bookingId, 'updated', {
-        previousStatus,
-        newStatus: previousStatus,
+      await logBookingActivityById(data.bookingId, 'edited', {
         actorName: adminDisplayName,
-        notes: updateLogNotes || undefined,
+        previous: {
+          startTime: bookingData.startTime,
+          endTime: bookingData.endTime,
+          eventDetails: bookingData.userEventDetails,
+        },
       })
     } catch (logError) {
       console.error('Failed to log booking update:', logError)
