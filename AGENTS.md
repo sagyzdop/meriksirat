@@ -51,7 +51,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 
 ## Docs
 
-`docs/` holds published and generated docs only: `faq.md` and `terms-of-service.md` are URL-pinned from `src/` and must never move. Domain vocabulary lives in `GLOSSARY.md`; decisions live in `docs/adr/`; agent-skill config lives in `docs/agents/`. One home per fact — link, never copy. Before restructuring `docs/`, load the `icm-architect` skill and run its Restructure mode (reference-integrity check + human approval gate).
+`docs/` holds published and generated docs only: `faq.md`, `terms-of-service.md` and `privacy-policy.md` are URL-pinned from `src/` and must never move. Domain vocabulary lives in `GLOSSARY.md`; decisions live in `docs/adr/`; agent-skill config lives in `docs/agents/`. One home per fact — link, never copy. Before restructuring `docs/`, load the `icm-architect` skill and run its Restructure mode (reference-integrity check + human approval gate).
 
 ## Agent skills
 

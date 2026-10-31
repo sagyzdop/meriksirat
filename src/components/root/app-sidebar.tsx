@@ -77,6 +77,12 @@ const data = {
       icon: FileText,
       external: true,
     },
+    {
+      title: 'Privacy Policy',
+      url: 'https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md',
+      icon: ShieldCheck,
+      external: true,
+    },
   ],
   navAdmin: [
     {
