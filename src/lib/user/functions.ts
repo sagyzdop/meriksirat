@@ -24,12 +24,13 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
 
     const sessionUser = session.user as typeof session.user & {
       onboardingComplete?: boolean | null
+      isMember?: boolean | null
     }
 
     // If the session snapshot lacks onboardingComplete, fall back to the DB.
     // Better-auth's session may not reflect custom column changes immediately,
     // so users who just completed onboarding must be resolved from the table.
-    if (!sessionUser.onboardingComplete) {
+    if (!sessionUser.onboardingComplete || !sessionUser.isMember) {
       const { db } = await import('@/db')
       const { user } = await import('@/db/schema')
       const { eq } = await import('drizzle-orm')
