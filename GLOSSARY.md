@@ -88,12 +88,20 @@ _Avoid_: User state
 ### Albums
 
 **Album**:
-A photo gallery: a root folder in the club's master Google Drive account holding shortcuts to one or more volumes.
+A photo gallery: one public folder in the club's master Google Drive account, whose photos are owned by flamekeepers.
 _Avoid_: Gallery, collection
 
+**Photo**:
+One image in an album, with a stable ID of its own and a current Drive file ID that changes when the photo moves.
+_Avoid_: Image, file, picture
+
 **Volume**:
-One folder of an album's photos, stored in one flamekeeper's Drive and shown in the root folder as "Part N".
+The photos of one album held by one flamekeeper. A database grouping, never a Drive folder.
 _Avoid_: Chunk, shard, part
+
+**Favorite**:
+A photo a user has saved. Albums with favorites come after albums without them in the deletion suggestions.
+_Avoid_: Bookmark, like, star
 
 **Expiry**:
 The date an album is deleted, by default two years after its event; shown on the album in its last 30 days.
@@ -150,11 +158,11 @@ The total free space across all active flamekeepers.
 _Avoid_: Storage, capacity
 
 **Draining**:
-A flamekeeper state in which their volumes are being moved elsewhere before they leave or graduate.
+A flamekeeper state in which their photos are being moved to other flamekeepers, through the browser, before they leave or graduate.
 _Avoid_: Evacuating, migrating
 
 **Lost flamekeeper**:
-A flamekeeper whose Drive access can no longer be refreshed; their volumes are deleted unless they reconnect within 7 days.
+A flamekeeper whose Drive access can no longer be refreshed; their photos drop out of the app unless they reconnect within 7 days.
 _Avoid_: Revoked, disconnected
 
 ### Notifications
