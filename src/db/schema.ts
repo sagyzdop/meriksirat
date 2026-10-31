@@ -46,6 +46,9 @@ export const user = sqliteTable(
     }).default('Active'),
     clearanceLevel: integer('clearance_level').default(1),
     role: text('role', { enum: ['user', 'manager', 'admin'] }).default('user'),
+    isMember: integer('is_member', { mode: 'boolean' })
+      .default(false)
+      .notNull(),
     onboardingComplete: integer('onboarding_complete', {
       mode: 'boolean',
     }).default(false),
@@ -465,6 +468,8 @@ export const settings = sqliteTable('settings', {
 
   // Notifications
   globalBookingNote: text('global_booking_note').default(''),
+
+  clubCode: text('club_code'),
 
   // Dedicated Google Calendar for member birthdays (overrides the default)
   birthdaysCalendarId: text('birthdays_calendar_id'),

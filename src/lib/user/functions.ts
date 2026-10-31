@@ -24,12 +24,13 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
 
     const sessionUser = session.user as typeof session.user & {
       onboardingComplete?: boolean | null
+      isMember?: boolean | null
     }
 
     // If the session snapshot lacks onboardingComplete, fall back to the DB.
     // Better-auth's session may not reflect custom column changes immediately,
     // so users who just completed onboarding must be resolved from the table.
-    if (!sessionUser.onboardingComplete) {
+    if (!sessionUser.onboardingComplete || !sessionUser.isMember) {
       const { db } = await import('@/db')
       const { user } = await import('@/db/schema')
       const { eq } = await import('drizzle-orm')
@@ -201,13 +202,27 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
 
     // Check if target user exists
     const targetUser = await database
-      .select({ id: user.id, role: user.role })
+      .select({
+        id: user.id,
+        role: user.role,
+        isMember: user.isMember,
+        email: user.email,
+      })
       .from(user)
       .where(eq(user.id, data.userId))
       .get()
 
     if (!targetUser) {
       throw new Error('User not found')
+    }
+
+    if (data.role && ['admin', 'manager'].includes(data.role)) {
+      const { getAccessRules } = await import('@/lib/access/access-rules')
+      if (!getAccessRules(targetUser).canHoldStaffRole) {
+        throw new Error(
+          'Only club members can be assigned the manager or admin role.'
+        )
+      }
     }
 
     // Validate role assignment permissions

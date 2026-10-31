@@ -9,6 +9,7 @@ import { AlbumStorageCards } from './components/album-storage-cards'
 import { DashboardHeaderActions } from './components/header-actions'
 import { MostActiveUsersTable } from './components/most-active-users-table'
 import { ViolationsTable } from './components/violations-table'
+import { ClubCodeCard } from './components/club-code-card'
 import { SettingsTab, SettingsTabSkeleton } from './components/settings-tab'
 import { effectiveDashboardRange } from '@/lib/admin/dashboard-queries'
 import type {
@@ -37,6 +38,7 @@ interface PageProps {
   violationsLoading: boolean
   settings?: SettingsData
   settingsLoading: boolean
+  clubCode?: string
   canBroadcast: boolean
 }
 
@@ -54,6 +56,7 @@ export function Page({
   violationsLoading,
   settings,
   settingsLoading,
+  clubCode,
   canBroadcast,
 }: PageProps) {
   const navigate = useNavigate()
@@ -210,6 +213,9 @@ export function Page({
 
           <TabsContent value="settings">
             <div className="space-y-4">
+              {canBroadcast && clubCode ? (
+                <ClubCodeCard clubCode={clubCode} />
+              ) : null}
               {settings ? (
                 <SettingsTab settings={settings} />
               ) : settingsLoading ? (

@@ -135,6 +135,14 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       throw new Error('Not authenticated')
     }
 
+    const { assertAccess } = await import('@/lib/access/server')
+    await assertAccess(
+      db(env.meriksirat_d1 as D1Database),
+      session.user.id,
+      'canBook',
+      'Only club members can book equipment'
+    )
+
     // Per-user rate limit so a single member cannot spam booking creation
     // (each attempt runs free/busy queries + calendar event inserts).
     const { rateLimit } = await import('@/lib/ratelimit')

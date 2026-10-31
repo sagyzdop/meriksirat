@@ -1,21 +1,20 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  useBlocker,
-  useNavigate,
-  useRouter,
-} from '@tanstack/react-router'
+import { useBlocker, useNavigate, useRouter } from '@tanstack/react-router'
 import {
   updateUserOnboardingFn,
   completeTelegramOnboardingFn,
   getTelegramLinkUrlFn,
   deleteOnboardingAccountFn,
+  submitClubCodeFn,
 } from '@/lib/auth/onboarding'
 import { cn } from '@/lib/utils'
 import { toDateOnlyString } from '@/lib/format'
 import { useRef, useState } from 'react'
 import { OnboardingHeader } from '@/components/onboarding/components/onboarding-header'
+import { PathStep } from '@/components/onboarding/components/path-step'
+import { ClubCodeStep } from '@/components/onboarding/components/club-code-step'
 import { ProfileStep } from '@/components/onboarding/components/profile-step'
 import { TelegramStep } from '@/components/onboarding/components/telegram-step'
 import { TosAcceptanceDialog } from '@/components/onboarding/components/tos-acceptance-dialog'
@@ -43,12 +42,21 @@ const updateOnboardingSchema = z.object({
 
 type OnboardingForm = z.infer<typeof updateOnboardingSchema>
 
-type OnboardingStep = 'profile' | 'telegram'
+type OnboardingStep = 'path' | 'code' | 'profile' | 'telegram'
 
-export function Page({ className, ...props }: React.ComponentProps<'div'>) {
+interface PageProps extends React.ComponentProps<'div'> {
+  isMember: boolean
+}
+
+export function Page({ isMember, className, ...props }: PageProps) {
   const navigate = useNavigate()
   const router = useRouter()
-  const [step, setStep] = useState<OnboardingStep>('profile')
+  const [step, setStep] = useState<OnboardingStep>(
+    isMember ? 'profile' : 'path'
+  )
+  const [showFlamekeeperNotice, setShowFlamekeeperNotice] = useState(false)
+  const [codeError, setCodeError] = useState<string | null>(null)
+  const [isCheckingCode, setIsCheckingCode] = useState(false)
   const [telegramUrl, setTelegramUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isCheckingTelegram, setIsCheckingTelegram] = useState(false)
@@ -160,6 +168,24 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
     }
   }
 
+  const handleClubCode = async (code: string) => {
+    setIsCheckingCode(true)
+    setCodeError(null)
+    try {
+      const result = await submitClubCodeFn({ data: { code } })
+      if (result.success) {
+        setStep('profile')
+      } else {
+        setCodeError('That code is not correct. Check it and try again.')
+      }
+    } catch (error) {
+      console.error('Club code check failed:', error)
+      setCodeError('Could not check the code. Please try again.')
+    } finally {
+      setIsCheckingCode(false)
+    }
+  }
+
   const handleTelegramLink = () => {
     if (telegramUrl) {
       window.open(telegramUrl, '_blank')
@@ -181,7 +207,35 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      {step === 'telegram' ? (
+      {step === 'path' ? (
+        <>
+          <OnboardingHeader
+            title="Welcome"
+            description="Tell us how you are joining"
+          />
+          <PathStep
+            showFlamekeeperNotice={showFlamekeeperNotice}
+            onChooseMember={() => setStep('code')}
+            onChooseFlamekeeper={() => setShowFlamekeeperNotice(true)}
+          />
+        </>
+      ) : step === 'code' ? (
+        <>
+          <OnboardingHeader
+            title="Join as a club member"
+            description="Enter the club code to continue"
+          />
+          <ClubCodeStep
+            error={codeError}
+            isSubmitting={isCheckingCode}
+            onSubmit={handleClubCode}
+            onBack={() => {
+              setCodeError(null)
+              setStep('path')
+            }}
+          />
+        </>
+      ) : step === 'telegram' ? (
         <>
           <OnboardingHeader
             title="Link Your Telegram"
@@ -226,7 +280,10 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting} onClick={handleStayOnboarding}>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              onClick={handleStayOnboarding}
+            >
               Stay
             </AlertDialogCancel>
             <AlertDialogAction

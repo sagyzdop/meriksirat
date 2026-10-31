@@ -64,7 +64,8 @@ export const getSettingsFn = createServerFn({ method: 'GET' }).handler(
       settingsData = result[0]
     }
 
-    return settingsData
+    const { clubCode: _clubCode, ...publicSettings } = settingsData
+    return publicSettings
   }
 )
 

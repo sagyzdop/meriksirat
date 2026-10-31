@@ -703,6 +703,14 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       )
     }
 
+    const { assertAccess } = await import('@/lib/access/server')
+    await assertAccess(
+      db(env.meriksirat_d1 as D1Database),
+      currentUser.id,
+      'canCreateAlbum',
+      'Only club members can create albums'
+    )
+
     const accessToken = await getGoogleAccessToken()
     const monthFolder = await resolveMonthFolder(accessToken)
     const folder = await createDriveFolder(

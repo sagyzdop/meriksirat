@@ -15,7 +15,7 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ to: '/login' })
     }
 
-    if (!user.onboardingComplete) {
+    if (!user.onboardingComplete || !user.isMember) {
       throw redirect({ to: '/onboarding' })
     }
 

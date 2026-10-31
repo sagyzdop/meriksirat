@@ -1,0 +1,58 @@
+import { eq } from 'drizzle-orm'
+import { settings, user } from '@/db/schema'
+import type { db as createDb } from '@/db'
+import { generateClubCode } from './club-code'
+import { getAccessRules, type AccessRules } from './access-rules'
+
+type Database = ReturnType<typeof createDb>
+
+export async function getClubCode(database: Database): Promise<string> {
+  const row = await database
+    .select({ clubCode: settings.clubCode })
+    .from(settings)
+    .where(eq(settings.id, 'global'))
+    .get()
+
+  if (row?.clubCode) return row.clubCode
+  return rotateClubCode(database)
+}
+
+export async function rotateClubCode(database: Database): Promise<string> {
+  const code = generateClubCode()
+  await database
+    .insert(settings)
+    .values({ id: 'global', clubCode: code })
+    .onConflictDoUpdate({
+      target: settings.id,
+      set: { clubCode: code, updatedAt: new Date() },
+    })
+  return code
+}
+
+export async function loadAccessRules(
+  database: Database,
+  userId: string
+): Promise<AccessRules> {
+  const row = await database
+    .select({
+      isMember: user.isMember,
+      role: user.role,
+      email: user.email,
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get()
+
+  if (!row) throw new Error('User not found')
+  return getAccessRules(row)
+}
+
+export async function assertAccess(
+  database: Database,
+  userId: string,
+  rule: 'canBook' | 'canCreateAlbum',
+  message: string
+): Promise<void> {
+  const rules = await loadAccessRules(database, userId)
+  if (!rules[rule]) throw new Error(message)
+}

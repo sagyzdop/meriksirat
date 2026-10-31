@@ -20,6 +20,7 @@ export interface UserProfile {
   status: string | null
   clearanceLevel: number | null
   role: string | null
+  isMember: boolean
   onboardingComplete: boolean | null
   createdAt: Date
   updatedAt: Date

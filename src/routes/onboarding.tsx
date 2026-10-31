@@ -6,17 +6,21 @@ export const Route = createFileRoute('/onboarding')({
   beforeLoad: async () => {
     const user = await getUserFn()
 
-    if (user?.onboardingComplete) {
+    if (user?.onboardingComplete && user.isMember) {
       throw redirect({ to: '/equipment' })
     }
+
+    return { isMember: user?.isMember ?? false }
   },
   component: RouteComponent,
 })
 
 function RouteComponent() {
+  const { isMember } = Route.useRouteContext()
+
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Page />
+      <Page isMember={isMember} />
     </div>
   )
 }
