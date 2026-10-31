@@ -142,6 +142,9 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       .select({
         id: album.id,
         driveFolderId: album.driveFolderId,
+        photoCount: album.photoCount,
+        photoBytes: album.photoBytes,
+        photosIndexedAt: album.photosIndexedAt,
       })
       .from(album)
       .where(rangeWhere)
@@ -150,7 +153,17 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
     let photoCount = 0
     let totalBytes = 0
 
-    if (rangeAlbums.length > 0) {
+    const unindexedAlbums: typeof rangeAlbums = []
+    for (const row of rangeAlbums) {
+      if (row.photosIndexedAt) {
+        photoCount += row.photoCount
+        totalBytes += row.photoBytes
+      } else {
+        unindexedAlbums.push(row)
+      }
+    }
+
+    if (unindexedAlbums.length > 0) {
       const { getCachedListing } = await import('@/lib/albums/server')
       const { getGoogleAccessToken } =
         await import('@/lib/google/google-calendar-auth')
@@ -159,8 +172,8 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
 
       // Reuse the per-album KV cache; only uncached albums hit the Drive API.
       const accessToken = await getGoogleAccessToken()
-      for (let i = 0; i < rangeAlbums.length; i += 4) {
-        const chunk = rangeAlbums.slice(i, i + 4)
+      for (let i = 0; i < unindexedAlbums.length; i += 4) {
+        const chunk = unindexedAlbums.slice(i, i + 4)
         await Promise.all(
           chunk.map(async (row) => {
             try {

@@ -3,6 +3,7 @@ import {
   ALBUM_CREATE_MIN_CLEARANCE,
   AlbumListQuerySchema,
   ClaimEditAccessSchema,
+  ConfirmPhotoUploadSchema,
   CreateAlbumSchema,
   CreateUploadSessionSchema,
   DeleteAlbumSchema,
@@ -386,10 +387,65 @@ function normalizeCapturedAt(value: string | undefined): string {
   return Number.isNaN(exifParsed.getTime()) ? '' : exifParsed.toISOString()
 }
 
-async function listAlbumPhotos(driveFolderId: string): Promise<{
+async function listIndexedAlbumPhotos(
+  database: ReturnType<(typeof import('@/db'))['db']>,
+  row: AlbumRow
+): Promise<{
   photos: AlbumPhoto[]
   folderState: AlbumFolderState
 }> {
+  const { getCachedListing, setCachedListing } = await import('./server')
+  const { getGoogleAccessToken } =
+    await import('@/lib/google/google-calendar-auth')
+  const { getDriveFolderState, DriveNotFoundError } =
+    await import('@/lib/google/google-drive')
+  const { photo } = await import('@/db/schema')
+  const { and, eq } = await import('drizzle-orm')
+  const { photoRowToAlbumPhoto, sortPhotosByCapture } =
+    await import('./photo-backfill')
+
+  let folderState: AlbumFolderState
+  const cached = await getCachedListing(row.driveFolderId)
+  if (cached) {
+    folderState = cached.folderState
+  } else {
+    try {
+      folderState = await getDriveFolderState(
+        await getGoogleAccessToken(),
+        row.driveFolderId
+      )
+    } catch (error) {
+      if (!(error instanceof DriveNotFoundError)) throw error
+      folderState = 'missing'
+    }
+    await setCachedListing(row.driveFolderId, [], folderState)
+  }
+
+  if (folderState === 'missing') return { photos: [], folderState }
+
+  const rows = await database
+    .select()
+    .from(photo)
+    .where(and(eq(photo.albumId, row.id), eq(photo.state, 'live')))
+    .all()
+  return {
+    photos: sortPhotosByCapture(rows.map(photoRowToAlbumPhoto)),
+    folderState,
+  }
+}
+
+async function listAlbumPhotos(
+  database: ReturnType<(typeof import('@/db'))['db']>,
+  row: AlbumRow
+): Promise<{
+  photos: AlbumPhoto[]
+  folderState: AlbumFolderState
+}> {
+  const driveFolderId = row.driveFolderId
+  if (row.photosIndexedAt) return listIndexedAlbumPhotos(database, row)
+  const { requestAlbumIndex } = await import('./photo-index')
+  await requestAlbumIndex(database, row.id)
+
   const { getCachedListing, setCachedListing } = await import('./server')
   const { getGoogleAccessToken } =
     await import('@/lib/google/google-calendar-auth')
@@ -514,7 +570,7 @@ async function buildAlbumCore(
   const { album, albumMember, user } = await import('@/db/schema')
 
   const [listing, owner, members] = await Promise.all([
-    listAlbumPhotos(row.driveFolderId),
+    listAlbumPhotos(database, row),
     database
       .select({ name: user.name, telegramUsername: user.telegramUsername })
       .from(user)
@@ -672,6 +728,7 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       driveFolderId: folder.id,
       editShareToken: newShareToken(),
       isShared: true,
+      photosIndexedAt: new Date(),
     })
 
     await database
@@ -915,6 +972,8 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       .update(album)
       .set({ driveFolderId: folder.id, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
+    const { resetAlbumPhotos } = await import('./photo-index')
+    await resetAlbumPhotos(database, data.albumId)
 
     return { success: true }
   })
@@ -944,6 +1003,14 @@ export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })
 
     const accessToken = await getGoogleAccessToken()
     await restoreDriveFile(accessToken, row.driveFolderId)
+    if (row.photosIndexSkipped) {
+      const { album } = await import('@/db/schema')
+      const { eq } = await import('drizzle-orm')
+      await database
+        .update(album)
+        .set({ photosIndexSkipped: null })
+        .where(eq(album.id, data.albumId))
+    }
     await invalidateCachedListing(row.driveFolderId)
     await invalidateCachedDetailCore(data.albumId)
 
@@ -1262,6 +1329,12 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       row.driveFolderId
     )
     if (existing) {
+      try {
+        const { registerDriveFileById } = await import('./photo-index')
+        await registerDriveFileById(database, accessToken, row, existing.id)
+      } catch (error) {
+        console.warn('Failed to register existing upload:', error)
+      }
       throw new Error(`Photo "${data.fileName}" already exists in this album`)
     }
 
@@ -1282,14 +1355,41 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     return { uploadUrl }
   })
 
+export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
+  .validator(ConfirmPhotoUploadSchema)
+  .handler(async ({ data }) => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { resolveAlbumAccess, requireAccess } = await import('./server')
+    const { getGoogleAccessToken } =
+      await import('@/lib/google/google-calendar-auth')
+    const { registerDriveFileById } = await import('./photo-index')
+
+    const headers = getRequestHeaders()
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    const row = await loadAlbum(database, data.albumId)
+    const { access } = await resolveAlbumAccess(headers, row)
+    requireAccess(access, ['owner', 'editor', 'manager'])
+
+    const registered = await registerDriveFileById(
+      database,
+      await getGoogleAccessToken(),
+      row,
+      data.fileId
+    )
+    return { registered }
+  })
+
 export const deletePhotoFn = createServerFn({ method: 'POST' })
   .validator(DeletePhotoSchema)
   .handler(async ({ data }) => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
+    const { album, photo } = await import('@/db/schema')
+    const { and, eq, sql } = await import('drizzle-orm')
     const {
       resolveAlbumAccess,
       requireAccess,
@@ -1307,8 +1407,27 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
+    const registered = await database
+      .select({ id: photo.id, bytes: photo.bytes })
+      .from(photo)
+      .where(and(eq(photo.driveFileId, data.fileId), eq(photo.albumId, row.id)))
+      .get()
+    if (!registered && row.photosIndexedAt) {
+      throw new Error('Photo not found in this album')
+    }
+
     const accessToken = await getGoogleAccessToken()
     await deleteDriveFile(accessToken, data.fileId)
+    if (registered) {
+      await database.delete(photo).where(eq(photo.id, registered.id))
+      await database
+        .update(album)
+        .set({
+          photoCount: sql`MAX(${album.photoCount} - 1, 0)`,
+          photoBytes: sql`MAX(${album.photoBytes} - ${registered.bytes}, 0)`,
+        })
+        .where(eq(album.id, row.id))
+    }
     await invalidateCachedListing(row.driveFolderId)
 
     if (row.coverFileId === data.fileId) {
@@ -1337,8 +1456,8 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
+    const { album, photo } = await import('@/db/schema')
+    const { and, eq } = await import('drizzle-orm')
     const { resolveAlbumAccess, requireAccess, invalidateCachedDetailCore } =
       await import('./server')
 
@@ -1348,6 +1467,17 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
     const row = await loadAlbum(database, data.albumId)
     const { access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
+
+    if (row.photosIndexedAt) {
+      const registered = await database
+        .select({ id: photo.id })
+        .from(photo)
+        .where(
+          and(eq(photo.driveFileId, data.fileId), eq(photo.albumId, row.id))
+        )
+        .get()
+      if (!registered) throw new Error('Photo not found in this album')
+    }
 
     await database
       .update(album)

@@ -142,12 +142,25 @@ export default {
         updateOverdueBookings(env),
         sendBookingReminders(env),
         configureTelegramBot(env),
+        backfillAlbumPhotos(env),
       ])
     )
   },
 }
 
 const GRACE_MS = 15 * 60 * 1000
+
+async function backfillAlbumPhotos(env: Env): Promise<void> {
+  try {
+    const { runPhotoBackfill } = await import('./src/lib/albums/photo-index')
+    await runPhotoBackfill(env)
+  } catch (error) {
+    console.error(
+      'Error in backfillAlbumPhotos:',
+      error instanceof Error ? error.message : error
+    )
+  }
+}
 
 /**
  * Keeps the bot's global configuration in sync (clears the command menu so the

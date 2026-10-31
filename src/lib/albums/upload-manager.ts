@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { createUploadSessionFn } from './functions'
+import { confirmPhotoUploadFn, createUploadSessionFn } from './functions'
 import {
   deleteUploadFiles,
   getUploadFiles,
@@ -360,17 +360,16 @@ class UploadManager {
         },
       })
 
-      const ok = await this.putFile(job.id, uploadUrl)
-      if (ok) {
-        this.patch(job.id, {
-          status: 'done',
-          progress: 100,
-          attempts: attempt,
-          finishedAt: Date.now(),
-        })
-        this.filesById.delete(job.id)
-        void deleteUploadFiles([job.id])
-      }
+      const fileId = await this.putFile(job.id, uploadUrl)
+      if (fileId) await this.confirmUpload(job.albumId, fileId)
+      this.patch(job.id, {
+        status: 'done',
+        progress: 100,
+        attempts: attempt,
+        finishedAt: Date.now(),
+      })
+      this.filesById.delete(job.id)
+      void deleteUploadFiles([job.id])
     } catch (error) {
       const current = this.snapshot.find((j) => j.id === job.id)
       if (current?.status !== 'cancelled') {
@@ -418,7 +417,19 @@ class UploadManager {
     }
   }
 
-  private putFile(jobId: string, uploadUrl: string): Promise<boolean> {
+  private async confirmUpload(albumId: string, fileId: string): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await confirmPhotoUploadFn({ data: { albumId, fileId } })
+        return
+      } catch (error) {
+        if (attempt >= 3) throw new TransientUploadError(String(error))
+        await new Promise((r) => setTimeout(r, 500 * attempt))
+      }
+    }
+  }
+
+  private putFile(jobId: string, uploadUrl: string): Promise<string | null> {
     return new Promise((resolve, reject) => {
       const file = this.filesById.get(jobId)
       if (!file) {
@@ -439,7 +450,12 @@ class UploadManager {
       xhr.onload = () => {
         this.xhrsById.delete(jobId)
         if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(true)
+          try {
+            const body = JSON.parse(xhr.responseText) as { id?: string }
+            resolve(body.id ?? null)
+          } catch {
+            resolve(null)
+          }
         } else if (
           xhr.status === 408 ||
           xhr.status === 429 ||
