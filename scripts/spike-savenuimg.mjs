@@ -14,6 +14,8 @@
  *   Q5  Can A's drive.file token upload into a folder B owns and shared with
  *       A as writer? Is the file owned by A, and can B's token list it?
  *   Q6  Can B create a Google Doc / text file whose links open A's folder?
+ *   Q7  Is A's file inside B's public folder public too (CDN, logged out),
+ *       and can A's token list its own files there?
  *
  * Usage:
  *   node scripts/spike-savenuimg.mjs
@@ -340,6 +342,64 @@ async function main() {
   if (runs('Q2')) await testRelay(tokenA, tokenB, folderA, folderB)
   if (runs('Q5')) await testUploadIntoSharedFolder(tokenA, tokenB, emailA)
   if (runs('Q6')) await testLinkFiles(tokenB, folderA, folderB)
+  if (runs('Q7')) await testPublicFileInSharedFolder(tokenA, tokenB, emailA)
+}
+
+async function testPublicFileInSharedFolder(tokenA, tokenB, emailA) {
+  const album = await createFolder(tokenB, 'savenuimg-spike-album-root')
+  if (!album.ok) {
+    record('Q7', 'B creates an album folder', false, describe(album))
+    return
+  }
+  await setAnyoneReader(tokenB, album.body.id)
+  await drive(
+    tokenB,
+    `${API}/files/${album.body.id}/permissions?sendNotificationEmail=false`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'user',
+        role: 'writer',
+        emailAddress: emailA,
+      }),
+    }
+  )
+  const fileId = await uploadPng(tokenA, 'photo-by-A.png', album.body.id)
+  const perms = await drive(
+    tokenA,
+    `${API}/files/${fileId}?fields=permissions(type,role,permissionDetails)`
+  )
+  const anyone = perms.body?.permissions?.find((p) => p.type === 'anyone')
+  record(
+    'Q7',
+    "A's file inherits the folder's public permission",
+    Boolean(anyone),
+    perms.ok
+      ? JSON.stringify(anyone ?? perms.body.permissions)
+      : describe(perms)
+  )
+  await new Promise((r) => setTimeout(r, 5000))
+  const cdn = await fetchWithRetry(
+    `https://lh3.googleusercontent.com/d/${fileId}=w100`,
+    { redirect: 'follow' }
+  )
+  record(
+    'Q7',
+    'a logged-out visitor loads it from the Google CDN',
+    cdn.ok && (cdn.headers.get('content-type') ?? '').startsWith('image/'),
+    `HTTP ${cdn.status} ${cdn.headers.get('content-type')}`
+  )
+  const list = await drive(
+    tokenA,
+    `${API}/files?q=${encodeURIComponent(`'${album.body.id}' in parents and trashed = false`)}&fields=files(id)`
+  )
+  record(
+    'Q7',
+    "A's token lists its own files in B's folder",
+    list.ok && list.body.files.some((f) => f.id === fileId),
+    list.ok ? `${list.body.files.length} file(s) listed` : describe(list)
+  )
 }
 
 async function testTransfer(tokenA, tokenB, emailB, folderA) {
@@ -603,7 +663,9 @@ async function runCleanup() {
         drive(token, `${API}/files/${id}`, { method: 'DELETE' })
       )
   )
-  const left = listed.filter((r) => !r.ok && r.status !== 404).length
+  const failed = listed.filter((r) => !r.ok && r.status !== 404)
+  for (const r of failed) console.log(`  could not delete: ${describe(r)}`)
+  const left = failed.length
   console.log(
     `\nCleanup: deleted test files (${left} could not be deleted; check Drive for "savenuimg-spike").`
   )
