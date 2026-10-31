@@ -201,13 +201,27 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
 
     // Check if target user exists
     const targetUser = await database
-      .select({ id: user.id, role: user.role })
+      .select({
+        id: user.id,
+        role: user.role,
+        isMember: user.isMember,
+        email: user.email,
+      })
       .from(user)
       .where(eq(user.id, data.userId))
       .get()
 
     if (!targetUser) {
       throw new Error('User not found')
+    }
+
+    if (data.role && ['admin', 'manager'].includes(data.role)) {
+      const { getAccessRules } = await import('@/lib/access/access-rules')
+      if (!getAccessRules(targetUser).canHoldStaffRole) {
+        throw new Error(
+          'Only club members can be assigned the manager or admin role.'
+        )
+      }
     }
 
     // Validate role assignment permissions

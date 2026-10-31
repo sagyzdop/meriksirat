@@ -25,6 +25,7 @@ import type {
   PaginatedViolationsResponse,
   ViolationsFilters,
 } from './dashboard-types'
+import { getClubCodeFn } from './functions/club-code'
 import { getSettingsFn, type SettingsData } from './functions/settings'
 
 /**
@@ -124,6 +125,11 @@ export const adminDashboardQueries = {
     queryOptions({
       queryKey: [...adminDashboardQueries.all, 'settings'],
       queryFn: async (): Promise<SettingsData> => getSettingsFn(),
+    }),
+  clubCode: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'club-code'],
+      queryFn: async (): Promise<string> => getClubCodeFn(),
     }),
   userAlbums: (filters: AdminUserAlbumsFilters) =>
     queryOptions({

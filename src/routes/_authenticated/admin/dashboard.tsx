@@ -139,6 +139,11 @@ function RouteComponent() {
     enabled: search.tab === 'settings',
   })
 
+  const { data: clubCode } = useQuery({
+    ...adminDashboardQueries.clubCode(),
+    enabled: search.tab === 'settings' && adminUser?.role === 'admin',
+  })
+
   const handleTabChange = (tab: DashboardTab) => {
     navigate({ to: '.', search: { ...search, tab } as never })
   }
@@ -181,6 +186,7 @@ function RouteComponent() {
       }
       settings={settings}
       settingsLoading={isRouterPending || (isSettingsFetching && !settings)}
+      clubCode={clubCode}
       canBroadcast={adminUser?.role === 'admin'}
     />
   )

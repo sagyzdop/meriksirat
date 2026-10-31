@@ -2,6 +2,10 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
+const clubCodeSchema = z.object({
+  code: z.string().min(1, 'Enter the club code').max(64),
+})
+
 const updateOnboardingSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -16,6 +20,37 @@ const updateOnboardingSchema = z.object({
     .min(2010)
     .max(3000, 'Graduation year must be between 2010 and 3000'),
 })
+
+export const submitClubCodeFn = createServerFn({ method: 'POST' })
+  .validator(clubCodeSchema)
+  .handler(async ({ data }) => {
+    const headers = getRequestHeaders()
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { clubCodeMatches } = await import('@/lib/access/access-rules')
+    const { getClubCode } = await import('@/lib/access/server')
+    const session = await resolveSession(headers)
+
+    if (!session?.user) {
+      throw new Error('Unauthorized')
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    if (!clubCodeMatches(data.code, await getClubCode(database))) {
+      return { success: false as const }
+    }
+
+    await database
+      .update(user)
+      .set({ isMember: true, updatedAt: new Date() })
+      .where(eq(user.id, session.user.id))
+
+    return { success: true as const }
+  })
 
 export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
   .validator(updateOnboardingSchema)
@@ -33,6 +68,12 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
     }
 
     const database = db(env.meriksirat_d1 as D1Database)
+
+    const { loadAccessRules } = await import('@/lib/access/server')
+    const rules = await loadAccessRules(database, session.user.id)
+    if (rules.onboardingPath !== 'member') {
+      throw new Error('Club membership is required')
+    }
 
     // Update user info but don't mark onboarding as complete yet
     await database
