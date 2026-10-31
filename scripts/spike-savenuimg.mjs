@@ -82,8 +82,22 @@ function record(id, question, ok, detail) {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${id}  ${question}\n      ${detail}`)
 }
 
+async function fetchWithRetry(url, init, attempts = 4) {
+  for (let i = 1; ; i++) {
+    try {
+      return await fetch(url, init)
+    } catch (err) {
+      if (i >= attempts) throw err
+      console.log(
+        `  (network error: ${err.cause?.code ?? err.message}; retry ${i}/${attempts - 1})`
+      )
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** i))
+    }
+  }
+}
+
 async function drive(token, url, init = {}) {
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, ...init.headers },
   })
@@ -158,7 +172,7 @@ async function setAnyoneReader(token, id) {
 async function refreshMasterToken() {
   const refreshToken = process.env.GOOGLE_MASTER_REFRESH_TOKEN
   if (!refreshToken) return null
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await fetchWithRetry('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -192,7 +206,7 @@ function signIn(label) {
 }
 
 async function exchangeCode(code) {
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await fetchWithRetry('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
