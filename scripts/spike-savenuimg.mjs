@@ -14,10 +14,12 @@
  *
  * Usage:
  *   node scripts/spike-savenuimg.mjs
+ *   node scripts/spike-savenuimg.mjs --redirect-uri http://localhost/api/auth/callback/google
  *   SPIKE_API_KEY=... node scripts/spike-savenuimg.mjs   # also test API-key download
  *
  * Needs GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env, and
- * http://localhost:8788/oauth registered as a redirect URI (the same one
+ * the redirect URI (default http://localhost:8788/oauth, or --redirect-uri)
+ * registered on the OAuth client (the same default one
  * google-mint-token.mjs uses). GOOGLE_MASTER_REFRESH_TOKEN is optional (Q3).
  */
 import { createServer } from 'node:http'
@@ -43,9 +45,14 @@ for (const key of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']) {
   if (!process.env[key]) throw new Error(`${key} is not set in .env`)
 }
 
-const PORT = 8788
-const ORIGIN = `http://localhost:${PORT}`
-const REDIRECT_URI = `${ORIGIN}/oauth`
+const argRedirect = process.argv.indexOf('--redirect-uri')
+const REDIRECT_URI =
+  argRedirect !== -1
+    ? process.argv[argRedirect + 1]
+    : 'http://localhost:8788/oauth'
+const redirect = new URL(REDIRECT_URI)
+const PORT = Number(redirect.port || 80)
+const ORIGIN = redirect.origin
 const API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3'
 const SCOPES = ['openid', 'email', 'https://www.googleapis.com/auth/drive.file']
@@ -228,7 +235,7 @@ async function attempt(name, fn) {
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, ORIGIN)
-  if (url.pathname === '/oauth') {
+  if (url.pathname === redirect.pathname) {
     const entry = pending.get(url.searchParams.get('state'))
     const code = url.searchParams.get('code')
     if (!entry || !code) {
