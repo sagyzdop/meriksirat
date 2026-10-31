@@ -656,18 +656,14 @@ async function testLinkFiles(tokenB, folderA, folderB) {
 }
 
 async function runCleanup() {
-  const listed = await Promise.all(
-    cleanup
-      .reverse()
-      .map(({ token, id }) =>
-        drive(token, `${API}/files/${id}`, { method: 'DELETE' })
-      )
-  )
-  const failed = listed.filter((r) => !r.ok && r.status !== 404)
+  const failed = []
+  for (const { token, id } of cleanup.reverse()) {
+    const r = await drive(token, `${API}/files/${id}`, { method: 'DELETE' })
+    if (!r.ok && r.status !== 404) failed.push(r)
+  }
   for (const r of failed) console.log(`  could not delete: ${describe(r)}`)
-  const left = failed.length
   console.log(
-    `\nCleanup: deleted test files (${left} could not be deleted; check Drive for "savenuimg-spike").`
+    `\nCleanup: deleted test files (${failed.length} could not be deleted; check Drive for "savenuimg-spike").`
   )
 }
 
