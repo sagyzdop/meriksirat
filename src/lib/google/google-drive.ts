@@ -142,6 +142,26 @@ export async function listDriveFolderFiles(
   return files
 }
 
+export interface DriveFileWithParents extends DriveFileMeta {
+  parents?: string[]
+  trashed?: boolean
+}
+
+export async function getDriveFileMeta(
+  accessToken: string,
+  fileId: string
+): Promise<DriveFileWithParents> {
+  const params = new URLSearchParams({
+    fields:
+      'id, name, mimeType, size, createdTime, parents, trashed, imageMediaMetadata',
+  })
+  const response = await driveFetch(
+    accessToken,
+    `${API}/files/${fileId}?${params.toString()}`
+  )
+  return (await response.json()) as DriveFileWithParents
+}
+
 export type DriveFolderState = 'ok' | 'trashed' | 'missing'
 
 /**

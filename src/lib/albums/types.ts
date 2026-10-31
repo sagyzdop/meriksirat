@@ -89,6 +89,11 @@ export const DeletePhotoSchema = z.object({
   fileId: z.string(),
 })
 
+export const ConfirmPhotoUploadSchema = z.object({
+  albumId: z.string(),
+  fileId: z.string().min(1).max(200),
+})
+
 export const SetCoverPhotoSchema = z.object({
   albumId: z.string(),
   fileId: z.string(),

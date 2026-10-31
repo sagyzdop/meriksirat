@@ -342,6 +342,15 @@ export const album = sqliteTable(
     description: text('description').default(''),
     driveFolderId: text('drive_folder_id').notNull().unique(),
     coverFileId: text('cover_file_id'),
+    photoCount: integer('photo_count').default(0).notNull(),
+    photoBytes: integer('photo_bytes').default(0).notNull(),
+    photosIndexedAt: integer('photos_indexed_at', { mode: 'timestamp_ms' }),
+    photosIndexRequestedAt: integer('photos_index_requested_at', {
+      mode: 'timestamp_ms',
+    }),
+    photosIndexSkipped: text('photos_index_skipped', {
+      enum: ['trashed', 'missing'],
+    }),
     editShareToken: text('edit_share_token').notNull().unique(),
     isShared: integer('is_shared', { mode: 'boolean' }).default(false),
     event: text('event').notNull().default(''),
@@ -380,6 +389,34 @@ export const albumMember = sqliteTable(
       table.userId
     ),
     index('album_member_userId_idx').on(table.userId),
+  ]
+)
+
+export const photo = sqliteTable(
+  'photo',
+  {
+    id: text('id').primaryKey(),
+    albumId: text('album_id')
+      .notNull()
+      .references(() => album.id, { onDelete: 'cascade' }),
+    driveFileId: text('drive_file_id').notNull(),
+    name: text('name').notNull(),
+    bytes: integer('bytes').default(0).notNull(),
+    mimeType: text('mime_type').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    capturedAt: integer('captured_at', { mode: 'timestamp_ms' }),
+    exif: text('exif'),
+    state: text('state', { enum: ['live', 'moving', 'deleted'] })
+      .default('live')
+      .notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    index('photo_albumId_idx').on(table.albumId),
+    uniqueIndex('photo_driveFileId_idx').on(table.driveFileId),
   ]
 )
 
