@@ -2,7 +2,8 @@
  * Re-run the master-account OAuth flow to mint a NEW refresh token.
  *
  * Use this when you need to grant additional scopes (e.g. drive.file for
- * photo albums) to the existing GOOGLE_MASTER_REFRESH_TOKEN. Scopes are
+ * photo albums, gmail.send for email notifications) to the existing
+ * GOOGLE_MASTER_REFRESH_TOKEN. Scopes are
  * fixed when a token is issued, so a fresh consent + token is required.
  *
  * Usage:
@@ -49,6 +50,7 @@ const SCOPES = [
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/gmail.send',
 ]
 
 const argPort = process.argv.indexOf('--port')
@@ -59,6 +61,8 @@ const REDIRECT_URI =
   argRedirect !== -1
     ? process.argv[argRedirect + 1]
     : `http://localhost:${PORT}/oauth`
+const redirect = new URL(REDIRECT_URI)
+const LISTEN_PORT = Number(redirect.port || 80)
 const state = Math.random().toString(36).slice(2)
 
 const authUrl =
@@ -102,7 +106,7 @@ async function checkScopes(accessToken) {
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, REDIRECT_URI)
-  if (url.pathname !== '/oauth') {
+  if (url.pathname !== redirect.pathname) {
     res.writeHead(404)
     res.end('Not found')
     return
@@ -137,7 +141,7 @@ const server = createServer((req, res) => {
     .finally(() => server.close())
 })
 
-server.listen(PORT, () => {
+server.listen(LISTEN_PORT, () => {
   console.log(`Listening on ${REDIRECT_URI}`)
   console.log(`Using OAuth client ...${GOOGLE_CLIENT_ID.slice(-8)} from .env`)
   console.log('Opening browser for Google consent...')
