@@ -6,9 +6,11 @@ import {
   Calendar,
   ChevronDown,
   Download,
+  Mail,
   Megaphone,
   Users,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +27,7 @@ import {
 } from '@/components/ui/popover'
 import { ExportUsersDialog } from '@/components/shared/export-users-dialog'
 import { BroadcastDialog } from '@/components/shared/broadcast-dialog'
+import { sendTestEmailFn } from '@/lib/admin/functions/test-email'
 import { DashboardAlerts } from './dashboard-alerts'
 import type { DashboardAlert } from '@/lib/admin/dashboard-types'
 
@@ -41,9 +44,36 @@ export function DashboardHeaderActions({
 }: DashboardHeaderActionsProps) {
   const [exportOpen, setExportOpen] = React.useState(false)
   const [broadcastOpen, setBroadcastOpen] = React.useState(false)
+  const [isSendingTestEmail, setIsSendingTestEmail] = React.useState(false)
+
+  const handleSendTestEmail = async () => {
+    setIsSendingTestEmail(true)
+    try {
+      const { sentTo } = await sendTestEmailFn()
+      toast.success(`Test email sent to ${sentTo}`)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to send test email'
+      )
+    } finally {
+      setIsSendingTestEmail(false)
+    }
+  }
 
   return (
     <>
+      {canBroadcast && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8"
+          disabled={isSendingTestEmail}
+          onClick={handleSendTestEmail}
+        >
+          <Mail className="mr-2 h-4 w-4" />
+          {isSendingTestEmail ? 'Sending...' : 'Send test email'}
+        </Button>
+      )}
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="relative h-8">
