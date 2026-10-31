@@ -11,10 +11,14 @@
  *   Q3  Can a drive.file token create a shortcut to a folder another account
  *       owns? (tried with the master token, then with B)
  *   Q4  Does about.get report the per-user cap or the org-wide pool?
+ *   Q5  Can A's drive.file token upload into a folder B owns and shared with
+ *       A as writer? Is the file owned by A, and can B's token list it?
+ *   Q6  Can B create a Google Doc / text file whose links open A's folder?
  *
  * Usage:
  *   node scripts/spike-savenuimg.mjs
  *   node scripts/spike-savenuimg.mjs --redirect-uri http://localhost/api/auth/callback/google
+ *   node scripts/spike-savenuimg.mjs --only q5,q6   # run just some questions
  *   SPIKE_API_KEY=... node scripts/spike-savenuimg.mjs   # also test API-key download
  *
  * Needs GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env, and
@@ -25,6 +29,7 @@
 import { createServer } from 'node:http'
 import { readFileSync, existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { createInterface } from 'node:readline/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -45,6 +50,12 @@ for (const key of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']) {
   if (!process.env[key]) throw new Error(`${key} is not set in .env`)
 }
 
+const argOnly = process.argv.indexOf('--only')
+const ONLY =
+  argOnly !== -1
+    ? new Set(process.argv[argOnly + 1].toUpperCase().split(','))
+    : null
+const runs = (q) => !ONLY || ONLY.has(q)
 const argRedirect = process.argv.indexOf('--redirect-uri')
 const REDIRECT_URI =
   argRedirect !== -1
@@ -286,10 +297,12 @@ async function main() {
   console.log(`\nA = ${emailA}\nB = ${emailB}\n`)
 
   const gb = (n) => (n == null ? 'none' : `${(Number(n) / 1e9).toFixed(2)} GB`)
-  for (const [label, about] of [
-    ['A', aboutA],
-    ['B', aboutB],
-  ]) {
+  for (const [label, about] of runs('Q4')
+    ? [
+        ['A', aboutA],
+        ['B', aboutB],
+      ]
+    : []) {
     const q = about.body.storageQuota
     record(
       'Q4',
@@ -308,6 +321,14 @@ async function main() {
     throw new Error(`B cannot create a folder: ${describe(folderB)}`)
   await setAnyoneReader(tokenA, folderA.body.id)
 
+  if (runs('Q1')) await testTransfer(tokenA, tokenB, emailB, folderA)
+  if (runs('Q3')) await testShortcut(tokenB, folderA, folderB)
+  if (runs('Q2')) await testRelay(tokenA, tokenB, folderA, folderB)
+  if (runs('Q5')) await testUploadIntoSharedFolder(tokenA, tokenB, emailA)
+  if (runs('Q6')) await testLinkFiles(tokenB, folderA, folderB)
+}
+
+async function testTransfer(tokenA, tokenB, emailB, folderA) {
   const fileT = await uploadPng(tokenA, 'transfer-me.png', folderA.body.id)
   const transfer = await drive(
     tokenA,
@@ -350,7 +371,9 @@ async function main() {
     })
     record('Q1', "B's token deletes it", del.ok, describe(del))
   }
+}
 
+async function testShortcut(tokenB, folderA, folderB) {
   const masterToken = await refreshMasterToken()
   const shortcutOwners = masterToken
     ? [
@@ -392,7 +415,9 @@ async function main() {
       describe(shortcut)
     )
   }
+}
 
+async function testRelay(tokenA, tokenB, folderA, folderB) {
   const fileR = await uploadPng(tokenA, 'relay-me.png', folderA.body.id)
   const session = await drive(
     tokenB,
@@ -428,6 +453,134 @@ async function main() {
   }
 }
 
+async function testUploadIntoSharedFolder(tokenA, tokenB, emailA) {
+  const shared = await createFolder(tokenB, 'savenuimg-spike-shared-by-B')
+  if (!shared.ok) {
+    record('Q5', 'B creates a folder to share', false, describe(shared))
+    return
+  }
+  const share = await drive(
+    tokenB,
+    `${API}/files/${shared.body.id}/permissions?sendNotificationEmail=false`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'user',
+        role: 'writer',
+        emailAddress: emailA,
+      }),
+    }
+  )
+  record(
+    'Q5',
+    'B shares its folder with A as writer',
+    share.ok,
+    describe(share)
+  )
+  if (!share.ok) return
+
+  const see = await drive(tokenA, `${API}/files/${shared.body.id}?fields=id`)
+  record('Q5', "A's token sees B's folder", see.ok, describe(see))
+
+  let fileId = null
+  try {
+    fileId = await uploadPng(tokenA, 'uploaded-by-A.png', shared.body.id)
+    record('Q5', "A's token uploads into B's folder", true, `file ${fileId}`)
+  } catch (err) {
+    record('Q5', "A's token uploads into B's folder", false, err.message)
+    return
+  }
+  const meta = await drive(
+    tokenA,
+    `${API}/files/${fileId}?fields=owners(emailAddress),parents,quotaBytesUsed`
+  )
+  record(
+    'Q5',
+    'the uploaded file is owned by A (counts against A)',
+    meta.ok && meta.body.owners?.[0]?.emailAddress === emailA,
+    meta.ok
+      ? `owner ${meta.body.owners?.[0]?.emailAddress}, parent ${meta.body.parents?.[0]}`
+      : describe(meta)
+  )
+  const list = await drive(
+    tokenB,
+    `${API}/files?q=${encodeURIComponent(`'${shared.body.id}' in parents and trashed = false`)}&fields=files(id)`
+  )
+  const listed = list.ok && list.body.files.some((f) => f.id === fileId)
+  record(
+    'Q5',
+    "B's token lists A's file inside B's folder",
+    listed,
+    list.ok ? `${list.body.files.length} file(s) listed` : describe(list)
+  )
+}
+
+async function testLinkFiles(tokenB, folderA, folderB) {
+  const target = `https://drive.google.com/drive/folders/${folderA.body.id}`
+  const html = `<p>This album is stored in several parts:</p><p><a href="${target}">Part 1</a></p>`
+  const kinds = [
+    [
+      'Google Doc',
+      'Album parts',
+      'application/vnd.google-apps.document',
+      'text/html',
+      html,
+    ],
+    [
+      'text file',
+      'Album parts.txt',
+      'text/plain',
+      'text/plain',
+      `Part 1: ${target}\n`,
+    ],
+  ]
+  const links = []
+  for (const [label, name, mimeType, mediaType, content] of kinds) {
+    const boundary = 'spike' + Math.random().toString(36).slice(2)
+    const meta = JSON.stringify({ name, mimeType, parents: [folderB.body.id] })
+    const res = await drive(
+      tokenB,
+      `${UPLOAD_API}/files?uploadType=multipart&fields=id,webViewLink`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+        body:
+          `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n` +
+          `--${boundary}\r\nContent-Type: ${mediaType}\r\n\r\n${content}\r\n--${boundary}--`,
+      }
+    )
+    if (res.ok) {
+      cleanup.push({ token: tokenB, id: res.body.id })
+      await setAnyoneReader(tokenB, res.body.id)
+      links.push(`${label}: ${res.body.webViewLink}`)
+    }
+    record(
+      'Q6',
+      `B creates a ${label} linking to A's folder`,
+      res.ok,
+      describe(res)
+    )
+  }
+  if (!links.length) return
+  console.log(
+    `\n>>> Open these in a private window (logged out) and check that "Part 1" is clickable and opens A's folder:\n  ${links.join('\n  ')}`
+  )
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  for (const link of links) {
+    const answer = await rl.question(
+      `Clickable and opens the folder? (${link.split(':')[0]}) [y/n] `
+    )
+    record(
+      'Q6',
+      `${link.split(':')[0]} link works for a logged-out viewer`,
+      answer.trim().toLowerCase() === 'y',
+      'manual check'
+    )
+  }
+  rl.close()
+}
+
 async function runCleanup() {
   const listed = await Promise.all(
     cleanup
@@ -443,7 +596,7 @@ async function runCleanup() {
 }
 
 main()
-  .catch((err) => console.error('\nERROR:', err.message))
+  .catch((err) => console.error('\nERROR:', err.message, err.cause ?? ''))
   .finally(async () => {
     await runCleanup()
     console.log('\n=== Summary ===')
