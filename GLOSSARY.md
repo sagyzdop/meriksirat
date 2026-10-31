@@ -88,8 +88,24 @@ _Avoid_: User state
 ### Albums
 
 **Album**:
-A photo gallery whose photos live in a folder in the club's shared master Google Drive account.
+A photo gallery: a root folder in the club's master Google Drive account holding shortcuts to one or more volumes.
 _Avoid_: Gallery, collection
+
+**Volume**:
+One folder of an album's photos, stored in one flamekeeper's Drive and shown in the root folder as "Part N".
+_Avoid_: Chunk, shard, part
+
+**Expiry**:
+The date an album is deleted, by default two years after its event; shown on the album in its last 30 days.
+_Avoid_: TTL, deletion deadline
+
+**Pin**:
+An admin's mark that keeps an album past its expiry for as long as there is space.
+_Avoid_: Keep, archive
+
+**Tombstone**:
+The page an album's URL shows once the album has been deleted, saying why.
+_Avoid_: Dead link, 404
 
 **Album owner**:
 The member who created an album.
@@ -110,6 +126,36 @@ _Avoid_: Public album, private album
 **Folder state**:
 The health of an album's Drive folder: `ok`, `trashed` (in the Drive bin), or `missing` (permanently gone).
 _Avoid_: Album state, drive status
+
+### Save NU Image (#savenuimg)
+
+**Member**:
+A user who unlocked membership with the club code; only members can book equipment and create albums. Permanent.
+_Avoid_: Club user, regular user
+
+**Club code**:
+The single, rotatable code a user enters to become a member.
+_Avoid_: Invite code, password
+
+**Flamekeeper**:
+An `@nu.edu.kz` user who lends part of their Google Drive storage to hold volumes. May also be a member.
+_Avoid_: Donor, contributor, host
+
+**Pledge**:
+The maximum GB a flamekeeper lets the app use. A cap on what the app uses, not space set aside in Google.
+_Avoid_: Allocation, quota
+
+**Pool**:
+The total free space across all active flamekeepers.
+_Avoid_: Storage, capacity
+
+**Draining**:
+A flamekeeper state in which their volumes are being moved elsewhere before they leave or graduate.
+_Avoid_: Evacuating, migrating
+
+**Lost flamekeeper**:
+A flamekeeper whose Drive access can no longer be refreshed; their volumes are deleted unless they reconnect within 7 days.
+_Avoid_: Revoked, disconnected
 
 ### Notifications
 
