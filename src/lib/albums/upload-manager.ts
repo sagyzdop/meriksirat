@@ -4,6 +4,7 @@ import {
   createUploadSessionFn,
   releaseUploadFn,
 } from './functions'
+import { planEnqueue } from './upload-dedupe'
 import {
   deleteUploadFiles,
   getUploadFiles,
@@ -218,31 +219,18 @@ class UploadManager {
     files: File[],
     existingNames: Set<string> = new Set()
   ): { accepted: UploadJob[]; skipped: string[] } {
-    const skipped: string[] = []
     const accepted: UploadJob[] = []
-    const acceptedNames = new Set<string>()
-    const inFlightNames = new Set(
-      this.snapshot
-        .filter(
-          (job) =>
-            job.albumId === albumId &&
-            (job.status === 'queued' ||
-              job.status === 'uploading' ||
-              job.status === 'error')
-        )
-        .map((job) => job.name)
+    const plan = planEnqueue(
+      albumId,
+      files.map((file) => file.name),
+      this.snapshot,
+      existingNames
     )
+    const skipped = plan.skipped
+    const acceptable = new Set(plan.acceptNames)
 
     for (const file of files) {
-      if (
-        existingNames.has(file.name) ||
-        inFlightNames.has(file.name) ||
-        acceptedNames.has(file.name)
-      ) {
-        skipped.push(file.name)
-        continue
-      }
-      acceptedNames.add(file.name)
+      if (!acceptable.delete(file.name)) continue
       const job: UploadJob = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         albumId,
@@ -262,7 +250,14 @@ class UploadManager {
       return { accepted, skipped }
     }
 
-    this.emit([...this.snapshot, ...accepted])
+    const replaced = new Set(plan.replaceJobIds)
+    replaced.forEach((id) => this.filesById.delete(id))
+    if (replaced.size > 0) void deleteUploadFiles([...replaced])
+
+    this.emit([
+      ...this.snapshot.filter((job) => !replaced.has(job.id)),
+      ...accepted,
+    ])
     this.persist()
     void saveUploadFiles(
       accepted.flatMap((job) => {
