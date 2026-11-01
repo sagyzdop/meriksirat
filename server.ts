@@ -147,9 +147,23 @@ export default {
         maintainPool(env),
         checkFlamekeeperHealth(env),
         drainFlamekeepers(env),
+        cleanupStaleSignups(env),
       ])
     )
   },
+}
+
+async function cleanupStaleSignups(env: Env): Promise<void> {
+  try {
+    const { runStaleSignupCleanup } =
+      await import('./src/lib/auth/stale-signups-server')
+    await runStaleSignupCleanup(env)
+  } catch (error) {
+    console.error(
+      'Error in cleanupStaleSignups:',
+      error instanceof Error ? error.message : error
+    )
+  }
 }
 
 const GRACE_MS = 15 * 60 * 1000
