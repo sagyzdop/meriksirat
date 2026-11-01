@@ -144,6 +144,11 @@ function RouteComponent() {
     enabled: search.tab === 'settings' && adminUser?.role === 'admin',
   })
 
+  const { data: freeSpace, isFetching: isFreeSpaceFetching } = useQuery({
+    ...adminDashboardQueries.freeSpace(),
+    enabled: search.tab === 'albums' && adminUser?.role === 'admin',
+  })
+
   const handleTabChange = (tab: DashboardTab) => {
     navigate({ to: '.', search: { ...search, tab } as never })
   }
@@ -187,6 +192,8 @@ function RouteComponent() {
       settings={settings}
       settingsLoading={isRouterPending || (isSettingsFetching && !settings)}
       clubCode={clubCode}
+      freeSpace={adminUser?.role === 'admin' ? (freeSpace ?? []) : undefined}
+      freeSpaceLoading={isFreeSpaceFetching && !freeSpace}
       canBroadcast={adminUser?.role === 'admin'}
     />
   )

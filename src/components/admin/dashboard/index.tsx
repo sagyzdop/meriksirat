@@ -10,6 +10,8 @@ import { DashboardHeaderActions } from './components/header-actions'
 import { MostActiveUsersTable } from './components/most-active-users-table'
 import { ViolationsTable } from './components/violations-table'
 import { ClubCodeCard } from './components/club-code-card'
+import { FreeSpacePanel } from './components/free-space-panel'
+import type { FreeSpaceSuggestion } from '@/lib/admin/functions/free-space'
 import { SettingsTab, SettingsTabSkeleton } from './components/settings-tab'
 import { effectiveDashboardRange } from '@/lib/admin/dashboard-queries'
 import type {
@@ -39,6 +41,8 @@ interface PageProps {
   settings?: SettingsData
   settingsLoading: boolean
   clubCode?: string
+  freeSpace?: FreeSpaceSuggestion[]
+  freeSpaceLoading: boolean
   canBroadcast: boolean
 }
 
@@ -57,6 +61,8 @@ export function Page({
   settings,
   settingsLoading,
   clubCode,
+  freeSpace,
+  freeSpaceLoading,
   canBroadcast,
 }: PageProps) {
   const navigate = useNavigate()
@@ -155,7 +161,13 @@ export function Page({
             </div>
           </TabsContent>
 
-          <TabsContent value="albums">
+          <TabsContent value="albums" className="space-y-4">
+            {freeSpace ? (
+              <FreeSpacePanel
+                suggestions={freeSpace}
+                isLoading={freeSpaceLoading}
+              />
+            ) : null}
             <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-end">
               {hasCustomRange && (
                 <Button

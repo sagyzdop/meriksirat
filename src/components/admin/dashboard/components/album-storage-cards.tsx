@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { AlbumStorageStats } from '@/lib/admin/dashboard-types'
 import { cn } from '@/lib/utils'
 
-function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   const exponent = Math.min(

@@ -26,6 +26,10 @@ import type {
   ViolationsFilters,
 } from './dashboard-types'
 import { getClubCodeFn } from './functions/club-code'
+import {
+  getDeletionSuggestionsFn,
+  type FreeSpaceSuggestion,
+} from './functions/free-space'
 import { getSettingsFn, type SettingsData } from './functions/settings'
 
 /**
@@ -125,6 +129,12 @@ export const adminDashboardQueries = {
     queryOptions({
       queryKey: [...adminDashboardQueries.all, 'settings'],
       queryFn: async (): Promise<SettingsData> => getSettingsFn(),
+    }),
+  freeSpace: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'free-space'],
+      queryFn: async (): Promise<FreeSpaceSuggestion[]> =>
+        getDeletionSuggestionsFn(),
     }),
   clubCode: () =>
     queryOptions({
