@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  drainAdminAlertDue,
   drainBytesLeft,
   drainReminderDue,
   isDrainOverdue,
@@ -291,5 +292,44 @@ describe('relay destination', () => {
         exclude: ['src'],
       })
     ).toEqual({ kind: 'no_space' })
+  })
+})
+
+describe('drainAdminAlertDue', () => {
+  const alert = (over = {}) => ({
+    state: 'draining' as const,
+    drainingDeadline: IN_14_DAYS,
+    drainAdminStartedAt: null,
+    drainAdminRemindedAt: null,
+    ...over,
+  })
+  it('announces a new drain first', () => {
+    expect(drainAdminAlertDue(alert(), NOW)).toBe('started')
+  })
+  it('stays quiet in between', () => {
+    expect(
+      drainAdminAlertDue(alert({ drainAdminStartedAt: NOW }), NOW)
+    ).toBeNull()
+  })
+  it('reminds once in the last 3 days', () => {
+    const late = new Date(IN_14_DAYS.getTime() - 3 * DAY)
+    const started = { drainAdminStartedAt: NOW }
+    expect(drainAdminAlertDue(alert(started), late)).toBe('reminder')
+    expect(
+      drainAdminAlertDue(
+        alert({ ...started, drainAdminRemindedAt: late }),
+        late
+      )
+    ).toBeNull()
+  })
+  it('sends nothing after the deadline or when not draining', () => {
+    const started = { drainAdminStartedAt: NOW }
+    expect(
+      drainAdminAlertDue(alert(started), new Date(IN_14_DAYS.getTime() + 1))
+    ).toBeNull()
+    expect(drainAdminAlertDue(alert({ state: 'active' }), NOW)).toBeNull()
+    expect(
+      drainAdminAlertDue(alert({ drainingDeadline: null }), NOW)
+    ).toBeNull()
   })
 })

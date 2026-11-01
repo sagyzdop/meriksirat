@@ -1,6 +1,7 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull } from 'drizzle-orm'
 import { db } from '@/db'
 import { flamekeeper, photo, user, volume } from '@/db/schema'
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import {
   applyDrainTransition,
   drainColumns,
@@ -23,6 +24,15 @@ async function holdsPhotos(
   database: Database,
   userId: string
 ): Promise<boolean> {
+  const pending = await database
+    .select({ albumId: volume.albumId })
+    .from(volume)
+    .where(
+      and(eq(volume.flamekeeperUserId, userId), isNotNull(volume.droppedAt))
+    )
+    .limit(1)
+    .get()
+  if (pending) return true
   const row = await database
     .select({ id: photo.id })
     .from(volume)
@@ -60,9 +70,10 @@ function profileLink(): string {
  * domain trigger wins over graduation. Both are bounded per run to stay
  * inside the subrequest limit.
  */
-export async function runGraduationMaintenance(env: {
-  meriksirat_d1: D1Database
-}): Promise<void> {
+export async function runGraduationMaintenance(
+  env: { meriksirat_d1: D1Database },
+  budget?: Budget
+): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
 
@@ -92,6 +103,7 @@ export async function runGraduationMaintenance(env: {
       plan = planGraduation(row, row.graduationDate, now, true)
     }
     if (plan.kind !== 'drain' && plan.kind !== 'drained') continue
+    if (!takeIfBudgeted(budget, 2)) break
     triggers++
     try {
       if (plan.kind === 'drained' || !needsPhotoCheck) {
@@ -99,7 +111,7 @@ export async function runGraduationMaintenance(env: {
       } else if (!(await holdsPhotos(database, row.userId))) {
         plan = { kind: 'drained' }
       }
-      await applyDrainTransition(database, row.userId, plan, now)
+      await applyDrainTransition(database, row.userId, plan, now, budget)
       if (plan.kind === 'drain') {
         started.add(row.userId)
         const updated: DrainRow = {
@@ -120,6 +132,7 @@ export async function runGraduationMaintenance(env: {
   for (const row of rows) {
     if (prompts >= PROMPTS_PER_RUN) break
     if (started.has(row.userId) || !graduationPromptEmailDue(row, now)) continue
+    if (!takeIfBudgeted(budget, 1)) break
     prompts++
     const sent = await sendEmail({
       to: row.email,

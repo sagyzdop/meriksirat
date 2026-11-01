@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm'
 import { db } from '@/db'
 import { album, booking, bookingItem, session, user, volume } from '@/db/schema'
 import { cancelBookingItems } from '@/lib/booking/booking-items'
@@ -9,6 +9,11 @@ import {
   logUserBanActivity,
 } from '@/lib/telegram/logging'
 import { formatUserDisplayName } from '@/lib/utils'
+import {
+  takeIfBudgeted,
+  takeUpToIfBudgeted,
+  type Budget,
+} from '@/lib/cron/budget'
 import { checkBan, pickPendingRevokes, planBanDrain } from './ban'
 import {
   applyDrainTransition,
@@ -56,7 +61,10 @@ async function loadNames(database: Database, ids: string[]) {
  * shared cancel (calendar events, status) and never touches the violation
  * counters.
  */
-async function cancelBannedBookings(database: Database): Promise<void> {
+async function cancelBannedBookings(
+  database: Database,
+  budget?: Budget
+): Promise<void> {
   const upcoming = await database
     .select({ id: booking.id })
     .from(booking)
@@ -72,6 +80,7 @@ async function cancelBannedBookings(database: Database): Promise<void> {
         .from(bookingItem)
         .where(eq(bookingItem.bookingId, id))
         .all()
+      if (!takeIfBudgeted(budget, items.length + 2)) return
       if (items.length > 0) {
         await cancelBookingItems(
           database,
@@ -93,7 +102,10 @@ async function cancelBannedBookings(database: Database): Promise<void> {
  * inside the subrequest limit. The volume rows stay: they record who owns
  * which photos until those are moved.
  */
-async function revokeBannedWriterAccess(database: Database): Promise<void> {
+async function revokeBannedWriterAccess(
+  database: Database,
+  budget?: Budget
+): Promise<void> {
   const rows = await database
     .select({
       albumId: volume.albumId,
@@ -105,12 +117,24 @@ async function revokeBannedWriterAccess(database: Database): Promise<void> {
     .from(volume)
     .innerJoin(user, eq(user.id, volume.flamekeeperUserId))
     .innerJoin(album, eq(album.id, volume.albumId))
-    .where(and(isNotNull(user.bannedAt), isNull(volume.writerRevokedAt)))
+    .where(
+      and(
+        isNotNull(user.bannedAt),
+        isNull(volume.writerRevokedAt),
+        ne(volume.permissionId, '')
+      )
+    )
     .limit(REVOKES_PER_RUN)
     .all()
 
-  const pending = pickPendingRevokes(rows, REVOKES_PER_RUN)
+  let pending = pickPendingRevokes(rows, REVOKES_PER_RUN)
   if (pending.length === 0) return
+  if (budget) {
+    pending = takeIfBudgeted(budget, 1)
+      ? pending.slice(0, takeUpToIfBudgeted(budget, pending.length))
+      : []
+    if (pending.length === 0) return
+  }
   const masterToken = await getGoogleAccessToken()
   const now = new Date()
   for (const row of pending) {
@@ -138,19 +162,23 @@ async function revokeBannedWriterAccess(database: Database): Promise<void> {
   }
 }
 
-async function finishBanWork(database: Database): Promise<void> {
-  await cancelBannedBookings(database)
-  await revokeBannedWriterAccess(database)
+async function finishBanWork(
+  database: Database,
+  budget?: Budget
+): Promise<void> {
+  await cancelBannedBookings(database, budget)
+  await revokeBannedWriterAccess(database, budget)
 }
 
 /**
  * Cron step: keep working through what a ban leaves behind, in small
  * batches.
  */
-export async function runBanMaintenance(env: {
-  meriksirat_d1: D1Database
-}): Promise<void> {
-  await finishBanWork(db(env.meriksirat_d1))
+export async function runBanMaintenance(
+  env: { meriksirat_d1: D1Database },
+  budget?: Budget
+): Promise<void> {
+  await finishBanWork(db(env.meriksirat_d1), budget)
 }
 
 /**

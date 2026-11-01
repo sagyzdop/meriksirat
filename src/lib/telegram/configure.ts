@@ -7,12 +7,15 @@
  * deliberately not touched here.
  */
 
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import { TelegramAPI } from './api'
 
-export async function configureTelegramBot(env: {
-  TELEGRAM_BOT_TOKEN?: string
-}): Promise<void> {
+export async function configureTelegramBot(
+  env: { TELEGRAM_BOT_TOKEN?: string },
+  budget?: Budget
+): Promise<void> {
   if (!env.TELEGRAM_BOT_TOKEN) return
+  if (!takeIfBudgeted(budget, 1)) return
 
   const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)
 

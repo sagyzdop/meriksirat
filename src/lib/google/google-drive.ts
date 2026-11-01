@@ -123,7 +123,8 @@ export async function getOrCreateDriveFolder(
  */
 export async function listDriveFolderFiles(
   accessToken: string,
-  folderId: string
+  folderId: string,
+  beforeRequest?: () => void
 ): Promise<DriveFileMeta[]> {
   const files: DriveFileMeta[] = []
   let pageToken: string | undefined
@@ -138,6 +139,7 @@ export async function listDriveFolderFiles(
     })
     if (pageToken) params.set('pageToken', pageToken)
 
+    beforeRequest?.()
     const response = await driveFetch(
       accessToken,
       `${API}/files?${params.toString()}`
@@ -359,21 +361,31 @@ export async function deleteDrivePermission(
   }
 }
 
+export interface DriveAbout {
+  email: string | null
+  usageInDrive: number | null
+}
+
 /**
- * Bytes this account's Drive files take up. `about.get` reports the org-wide
- * limit, so only `usageInDrive` is meaningful per account.
+ * One `about.get` for a flamekeeper: the account email and the bytes its
+ * Drive files take up. `about.get` reports the org-wide limit, so only
+ * `usageInDrive` is meaningful per account. Either value is null when Google
+ * leaves it out (`user` may not come back under the `drive.file` scope).
  */
-export async function getDriveUsageInDrive(
-  accessToken: string
-): Promise<number> {
+export async function getDriveAbout(accessToken: string): Promise<DriveAbout> {
   const response = await driveFetch(
     accessToken,
-    `${API}/about?fields=storageQuota(usageInDrive)`
+    `${API}/about?fields=user(emailAddress),storageQuota(usageInDrive)`
   )
   const data = (await response.json()) as {
+    user?: { emailAddress?: string }
     storageQuota?: { usageInDrive?: string }
   }
-  return Number(data.storageQuota?.usageInDrive ?? 0)
+  const usage = data.storageQuota?.usageInDrive
+  return {
+    email: data.user?.emailAddress?.trim() || null,
+    usageInDrive: usage === undefined ? null : Number(usage) || 0,
+  }
 }
 
 /**

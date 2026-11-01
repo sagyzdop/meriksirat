@@ -58,8 +58,6 @@ export function expiryBannerDate(
   return album.expiresAt
 }
 
-export const REMINDER_SUBREQUEST_BUDGET = 40
-
 export function reminderRecipients(
   ownerChatId: string | null | undefined,
   memberChatIds: (string | null | undefined)[]
@@ -102,4 +100,19 @@ export function tombstoneCopy(reason: TombstoneReason | null): {
           'Albums are kept for two years after their event, and there is no backup copy. The photos have been deleted.',
       }
   }
+}
+
+export type FlamekeeperTombstoneReason = 'flamekeeper_lost' | 'flamekeeper_left'
+
+export function tombstoneNoticeText(
+  reason: FlamekeeperTombstoneReason,
+  albumTitle: string,
+  albumUrl?: string
+): string {
+  const why =
+    reason === 'flamekeeper_lost'
+      ? 'The flamekeeper who stored its photos could no longer be reached, so the album is hidden. If they reconnect their Drive before the album expires, it comes back.'
+      : 'The flamekeeper who stored its photos left the initiative before they could be moved, so the photos were deleted.'
+  const link = albumUrl ? `\n${albumUrl}` : ''
+  return `Your album "${albumTitle}" is gone. ${why}${link}`
 }

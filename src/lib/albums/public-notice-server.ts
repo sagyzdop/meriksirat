@@ -1,15 +1,19 @@
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
 import { db } from '@/db'
 import { album, user } from '@/db/schema'
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import { buildPublicNoticeText } from './public-notice'
 
 const MAX_OWNERS_PER_RUN = 5
 
-export async function runPublicAlbumNotices(env: {
-  meriksirat_d1: D1Database
-  TELEGRAM_BOT_TOKEN?: string
-  BETTER_AUTH_URL?: string
-}): Promise<void> {
+export async function runPublicAlbumNotices(
+  env: {
+    meriksirat_d1: D1Database
+    TELEGRAM_BOT_TOKEN?: string
+    BETTER_AUTH_URL?: string
+  },
+  budget?: Budget
+): Promise<void> {
   const database = db(env.meriksirat_d1)
 
   const pending = await database
@@ -49,7 +53,7 @@ export async function runPublicAlbumNotices(env: {
   for (const rows of byOwner.values()) {
     const chatId = rows[0].chatId
     if (chatId) {
-      if (sent >= MAX_OWNERS_PER_RUN) break
+      if (sent >= MAX_OWNERS_PER_RUN || !takeIfBudgeted(budget, 1)) break
       sent++
       try {
         await telegram.sendMessage(chatId, buildPublicNoticeText(rows, origin))

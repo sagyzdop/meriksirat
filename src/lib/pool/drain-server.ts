@@ -27,13 +27,17 @@ import {
 } from '@/lib/flamekeeper/rules'
 import type { DrainStatus, RelayHandout } from '@/lib/flamekeeper/types'
 import { dropPhotoRows, removeAlbum } from '@/lib/albums/expiry'
+import { batchDeleteCost, takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import { OUT_OF_SPACE_MESSAGE } from './placement'
 import {
   deleteOwnedPhotos,
   releaseOwnedBytes,
+  sendAdminsTelegram,
   startFlamekeeperUpload,
 } from './server'
+import { notifyAlbumTombstoned, type NoticeEnv } from './notices'
 import {
+  drainAdminAlertDue,
   drainBytesLeft,
   drainReminderDue,
   isDrainOverdue,
@@ -52,10 +56,14 @@ const VOLUME_REVOKES_PER_CALL = 20
 const DEADLINE_DELETES_PER_RUN = 200
 const REMINDERS_PER_RUN = 2
 const ADVANCES_PER_RUN = 2
+const ADMIN_ALERTS_PER_RUN = 2
+const DEADLINE_ALBUMS_PER_RUN = 3
 
 export interface DrainRow extends DrainFlamekeeper {
   userId: string
   graduationDate: string
+  drainAdminStartedAt: Date | null
+  drainAdminRemindedAt: Date | null
 }
 
 export const drainColumns = {
@@ -66,6 +74,8 @@ export const drainColumns = {
   drainReason: flamekeeper.drainReason,
   drainingDeadline: flamekeeper.drainingDeadline,
   drainReminderSentAt: flamekeeper.drainReminderSentAt,
+  drainAdminStartedAt: flamekeeper.drainAdminStartedAt,
+  drainAdminRemindedAt: flamekeeper.drainAdminRemindedAt,
   graduationDate: flamekeeper.graduationDate,
 }
 
@@ -145,7 +155,8 @@ export async function hasPhotosLeft(
 async function releaseEmptyVolumes(
   database: Database,
   userId: string,
-  albumIds?: string[]
+  albumIds?: string[],
+  budget?: Budget
 ): Promise<boolean> {
   const rows = await database
     .select({
@@ -153,7 +164,7 @@ async function releaseEmptyVolumes(
       permissionId: volume.permissionId,
       writerRevokedAt: volume.writerRevokedAt,
       driveFolderId: album.driveFolderId,
-      hasPhotos: sql<number>`EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId})`,
+      hasPhotos: sql<number>`EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${photo.state} != 'deleted')`,
     })
     .from(volume)
     .innerJoin(album, eq(album.id, volume.albumId))
@@ -170,25 +181,44 @@ async function releaseEmptyVolumes(
     .filter((r) => !Number(r.hasPhotos))
     .slice(0, VOLUME_REVOKES_PER_CALL)
   if (empty.length === 0) return rows.length <= VOLUME_REVOKES_PER_CALL
-  const masterToken = await getGoogleAccessToken()
-  for (const r of empty) {
-    if (r.writerRevokedAt) continue
-    try {
-      await deleteDrivePermission(masterToken, r.driveFolderId, r.permissionId)
-    } catch (error) {
-      console.warn(`Failed to revoke share on album ${r.albumId}:`, error)
+
+  const needsRevoke = empty.filter((r) => !r.writerRevokedAt && r.permissionId)
+  let revokable = needsRevoke
+  if (needsRevoke.length > 0 && budget) {
+    const granted = budget.take(1) ? budget.takeUpTo(needsRevoke.length) : 0
+    revokable = needsRevoke.slice(0, granted)
+  }
+  const skipped = needsRevoke.length - revokable.length
+  const done = empty.filter(
+    (r) => !needsRevoke.includes(r) || revokable.includes(r)
+  )
+
+  if (revokable.length > 0) {
+    const masterToken = await getGoogleAccessToken()
+    for (const r of revokable) {
+      try {
+        await deleteDrivePermission(
+          masterToken,
+          r.driveFolderId,
+          r.permissionId
+        )
+      } catch (error) {
+        console.warn(`Failed to revoke share on album ${r.albumId}:`, error)
+      }
     }
   }
-  await database.delete(volume).where(
-    and(
-      eq(volume.flamekeeperUserId, userId),
-      inArray(
-        volume.albumId,
-        empty.map((r) => r.albumId)
+  if (done.length > 0) {
+    await database.delete(volume).where(
+      and(
+        eq(volume.flamekeeperUserId, userId),
+        inArray(
+          volume.albumId,
+          done.map((r) => r.albumId)
+        )
       )
     )
-  )
-  return rows.length <= VOLUME_REVOKES_PER_CALL
+  }
+  return skipped === 0 && rows.length <= VOLUME_REVOKES_PER_CALL
 }
 
 /**
@@ -199,9 +229,12 @@ async function releaseEmptyVolumes(
 async function finalizeDrained(
   database: Database,
   userId: string,
-  now: Date
+  now: Date,
+  budget?: Budget
 ): Promise<boolean> {
-  if (!(await releaseEmptyVolumes(database, userId))) return false
+  if (!(await releaseEmptyVolumes(database, userId, undefined, budget))) {
+    return false
+  }
   const left = await database
     .select({ albumId: volume.albumId })
     .from(volume)
@@ -222,6 +255,7 @@ async function finalizeDrained(
     .get()
   if (inFlight) return false
 
+  if (!takeIfBudgeted(budget, 1)) return false
   await database
     .delete(uploadReservation)
     .where(eq(uploadReservation.flamekeeperUserId, userId))
@@ -235,6 +269,8 @@ async function finalizeDrained(
       drainReason: null,
       drainingDeadline: null,
       drainReminderSentAt: null,
+      drainAdminStartedAt: null,
+      drainAdminRemindedAt: null,
       updatedAt: now,
     })
     .where(eq(flamekeeper.userId, userId))
@@ -245,7 +281,8 @@ export async function applyDrainTransition(
   database: Database,
   userId: string,
   transition: DrainTransition,
-  now: Date
+  now: Date,
+  budget?: Budget
 ): Promise<void> {
   switch (transition.kind) {
     case 'drain':
@@ -256,6 +293,8 @@ export async function applyDrainTransition(
           drainReason: transition.drainReason,
           drainingDeadline: transition.drainingDeadline,
           drainReminderSentAt: null,
+          drainAdminStartedAt: null,
+          drainAdminRemindedAt: null,
           updatedAt: now,
         })
         .where(eq(flamekeeper.userId, userId))
@@ -268,12 +307,14 @@ export async function applyDrainTransition(
           drainReason: null,
           drainingDeadline: null,
           drainReminderSentAt: null,
+          drainAdminStartedAt: null,
+          drainAdminRemindedAt: null,
           updatedAt: now,
         })
         .where(eq(flamekeeper.userId, userId))
       return
     case 'drained':
-      await finalizeDrained(database, userId, now)
+      await finalizeDrained(database, userId, now, budget)
       return
     case 'refuse':
       throw new Error(transition.message)
@@ -283,7 +324,8 @@ export async function applyDrainTransition(
 async function advanceDrain(
   database: Database,
   userId: string,
-  now: Date
+  now: Date,
+  budget?: Budget
 ): Promise<DrainRow | null> {
   const row = await loadDrainRow(database, userId)
   if (!row || row.state !== 'draining') return row
@@ -292,7 +334,7 @@ async function advanceDrain(
     row.drainReason !== 'pledge' ? await hasPhotosLeft(database, userId) : true
   )
   if (transition.kind === 'none') return row
-  await applyDrainTransition(database, userId, transition, now)
+  await applyDrainTransition(database, userId, transition, now, budget)
   return loadDrainRow(database, userId)
 }
 
@@ -632,22 +674,48 @@ export async function confirmRelay(
   return toStatus(row!)
 }
 
+function albumsOf(photos: { albumId: string }[]): number {
+  return new Set(photos.map((p) => p.albumId)).size
+}
+
+/**
+ * Requests to delete `photos` at the deadline: a batch delete with the
+ * owner's token, then for each album that may empty out the master token
+ * (once), the folder delete and the owner's notice, plus one spare.
+ */
+function deadlineCost(photos: { albumId: string }[]): number {
+  if (photos.length === 0) return 0
+  return batchDeleteCost(photos.length) + 1 + 3 * albumsOf(photos)
+}
+
 /**
  * Deadline passed: delete what is still with the flamekeeper (all of it for
  * an opt-out, the excess for a lowered pledge), with their own token.
- * Albums left without photos become tombstones.
+ * Albums left without photos become tombstones. A few albums per run, and
+ * only as many photos as the shared budget pays for; the rest waits.
  */
 async function deleteOverdue(
   database: Database,
   row: DrainRow,
-  now: Date
+  now: Date,
+  env: NoticeEnv,
+  budget?: Budget
 ): Promise<void> {
   const candidates = await loadVolumePhotos(
     database,
     row.userId,
     DEADLINE_DELETES_PER_RUN
   )
-  const picked = pickDeadlineDeletions(row, candidates)
+  const albumsSeen = new Set<string>()
+  let picked = pickDeadlineDeletions(row, candidates).filter((p) => {
+    if (albumsSeen.has(p.albumId)) return true
+    if (albumsSeen.size >= DEADLINE_ALBUMS_PER_RUN) return false
+    albumsSeen.add(p.albumId)
+    return true
+  })
+  while (picked.length > 0 && !takeIfBudgeted(budget, deadlineCost(picked))) {
+    picked = picked.slice(0, Math.floor(picked.length / 2))
+  }
   if (picked.length > 0) {
     const { deleted, error } = await deleteOwnedPhotos(database, picked)
     const byAlbum = new Map<string, string[]>()
@@ -672,7 +740,7 @@ async function deleteOverdue(
           )
         )
     }
-    await tombstoneEmptyAlbums(database, [...byAlbum.keys()])
+    await tombstoneEmptyAlbums(database, [...byAlbum.keys()], env)
     if (byAlbum.size > 0) {
       await releaseEmptyVolumes(database, row.userId, [...byAlbum.keys()])
     }
@@ -686,17 +754,19 @@ async function deleteOverdue(
       }
     }
   }
-  await advanceDrain(database, row.userId, now)
+  await advanceDrain(database, row.userId, now, budget)
 }
 
 async function tombstoneEmptyAlbums(
   database: Database,
-  albumIds: string[]
+  albumIds: string[],
+  env: NoticeEnv
 ): Promise<void> {
   if (albumIds.length === 0) return
   const empty = await database
     .select({
       id: album.id,
+      title: album.title,
       driveFolderId: album.driveFolderId,
       ownerUserId: album.ownerUserId,
       deletedAt: album.deletedAt,
@@ -716,20 +786,82 @@ async function tombstoneEmptyAlbums(
       await removeAlbum(database, a, masterToken, {
         tombstone: 'flamekeeper_left',
       })
+      await notifyAlbumTombstoned(database, env, a, 'flamekeeper_left')
     } catch (error) {
       console.error(`Failed to tombstone album ${a.id}:`, error)
     }
   }
 }
 
+function adminAlertText(
+  kind: 'started' | 'reminder',
+  who: string,
+  row: DrainRow
+): string {
+  const left = formatGb(drainBytesLeft(row))
+  const deadline = formatDay(row.drainingDeadline)
+  if (kind === 'started') {
+    return `#savenuimg drain started: ${who} (${row.drainReason ?? 'drain'}) has ${left} to move off. Deadline ${deadline}; photos still there then are deleted.`
+  }
+  return `#savenuimg drain deadline in 3 days: ${who} still holds ${left}. Photos left on ${deadline} are deleted. Move them or ask the flamekeeper to.`
+}
+
 /**
- * Cron step: finish drains with nothing left, send one reminder in the last
- * days before the deadline, and delete what is still held after it. One
- * overdue flamekeeper is handled per run to stay inside subrequest limits.
+ * Tell admins when a drain starts and again in its last 3 days, once each.
+ * A drain that finished at once (nothing held) never reaches `draining`, so
+ * it never alerts.
  */
-export async function runDrainMaintenance(env: {
-  meriksirat_d1: D1Database
-}): Promise<void> {
+async function alertAdminsOfDrains(
+  database: Database,
+  rows: DrainRow[],
+  now: Date,
+  botToken: string | undefined,
+  budget?: Budget
+): Promise<void> {
+  let alerts = 0
+  for (const row of rows) {
+    if (alerts >= ADMIN_ALERTS_PER_RUN) break
+    const due = drainAdminAlertDue(row, now)
+    if (!due) continue
+    alerts++
+    const owner = await database
+      .select({ email: user.email, name: user.name })
+      .from(user)
+      .where(eq(user.id, row.userId))
+      .get()
+    const who = owner ? `${owner.name} <${owner.email}>` : row.userId
+    const handled = await sendAdminsTelegram(
+      database,
+      botToken,
+      adminAlertText(due, who, row),
+      budget
+    )
+    if (!handled) return
+    await database
+      .update(flamekeeper)
+      .set(
+        due === 'started'
+          ? { drainAdminStartedAt: now }
+          : { drainAdminRemindedAt: now }
+      )
+      .where(eq(flamekeeper.userId, row.userId))
+  }
+}
+
+/**
+ * Cron step: tell admins about drains, finish drains with nothing left, send
+ * one reminder in the last days before the deadline, and delete what is
+ * still held after it. One overdue flamekeeper is handled per run. Every
+ * outside request is paid from the shared budget.
+ */
+export async function runDrainMaintenance(
+  env: {
+    meriksirat_d1: D1Database
+    TELEGRAM_BOT_TOKEN?: string
+    BETTER_AUTH_URL?: string
+  },
+  budget?: Budget
+): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
 
@@ -740,10 +872,13 @@ export async function runDrainMaintenance(env: {
     .all()
   if (rows.length === 0) return
 
+  await alertAdminsOfDrains(database, rows, now, env.TELEGRAM_BOT_TOKEN, budget)
+
   let reminders = 0
   for (const row of rows) {
     if (row.drainReason === 'ban') continue
     if (reminders >= REMINDERS_PER_RUN || !drainReminderDue(row, now)) continue
+    if (!takeIfBudgeted(budget, 1)) break
     reminders++
     const left = formatGb(drainBytesLeft(row))
     const sent = await sendFlamekeeperEmail(
@@ -767,9 +902,9 @@ export async function runDrainMaintenance(env: {
   for (const row of rows) {
     try {
       if (row === pick) {
-        await deleteOverdue(database, row, now)
+        await deleteOverdue(database, row, now, env, budget)
       } else if (advanced < ADVANCES_PER_RUN) {
-        const after = await advanceDrain(database, row.userId, now)
+        const after = await advanceDrain(database, row.userId, now, budget)
         if (after?.state !== 'draining') advanced++
       }
     } catch (error) {

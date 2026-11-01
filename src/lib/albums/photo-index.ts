@@ -1,6 +1,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { album, photo } from '@/db/schema'
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import { newId } from './ids'
 import {
   MAX_ALBUMS_PER_RUN,
@@ -147,10 +148,13 @@ async function readBudget(kv: KVNamespace): Promise<BudgetState | null> {
   }
 }
 
-export async function runPhotoBackfill(env: {
-  meriksirat_d1: D1Database
-  meriksirat_kv: KVNamespace
-}): Promise<void> {
+export async function runPhotoBackfill(
+  env: {
+    meriksirat_d1: D1Database
+    meriksirat_kv: KVNamespace
+  },
+  cronBudget?: Budget
+): Promise<void> {
   const budget = parseDailyWriteBudget(
     process.env.PHOTO_BACKFILL_DAILY_WRITE_BUDGET
   )
@@ -188,6 +192,7 @@ export async function runPhotoBackfill(env: {
     requestedAt: r.requestedAt ? r.requestedAt.getTime() : null,
   }))
 
+  if (!takeIfBudgeted(cronBudget, 1)) return
   const accessToken = await getGoogleAccessToken()
   const done = new Set<string>()
   let photosLeft = MAX_PHOTOS_PER_RUN
@@ -196,6 +201,7 @@ export async function runPhotoBackfill(env: {
     for (let n = 0; n < MAX_ALBUMS_PER_RUN; n++) {
       const afford = photosAffordable(budget, state.spent, photosLeft)
       if (afford === 0) break
+      if (!takeIfBudgeted(cronBudget, 2)) break
       const next = selectNextAlbum(candidates, done)
       if (!next) break
       done.add(next.id)
@@ -215,7 +221,14 @@ export async function runPhotoBackfill(env: {
           continue
         }
 
-        const files = await listDriveFolderFiles(accessToken, row.driveFolderId)
+        let pages = 0
+        const files = await listDriveFolderFiles(
+          accessToken,
+          row.driveFolderId,
+          () => {
+            if (pages++ > 0) cronBudget?.spend(1)
+          }
+        )
         const known = await database
           .select({ driveFileId: photo.driveFileId })
           .from(photo)

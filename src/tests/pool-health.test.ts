@@ -6,7 +6,13 @@ import {
   findMissingPhotos,
   isInvalidGrantResponse,
   planHealthBatch,
+  planEmailSync,
   planLost,
+  planRecovery,
+  isUniqueConstraintError,
+  oldEnoughToAudit,
+  volumesAfterCursor,
+  MISSING_GRACE_MS,
   type HealthCandidate,
   type LostFlamekeeper,
 } from '@/lib/pool/health'
@@ -58,7 +64,8 @@ describe('planHealthBatch', () => {
         cand({ userId: 'old', healthCheckedAt: ago(HEALTH_INTERVAL_MS + 5) }),
         cand({ userId: 'never' }),
       ],
-      now
+      now,
+      10
     )
     expect(picked).toEqual(['never', 'old'])
   })
@@ -66,30 +73,23 @@ describe('planHealthBatch', () => {
     expect(
       planHealthBatch(
         [cand({ userId: 'l', state: 'lost' }), cand({ state: 'drained' })],
-        now
+        now,
+        10
       )
     ).toEqual([])
   })
-  it('stops at the budget but always takes the first', () => {
-    const picked = planHealthBatch(
-      [
-        cand({ userId: 'a', volumeCount: 20 }),
-        cand({ userId: 'b', volumeCount: 1 }),
-      ],
-      now,
-      12
-    )
-    expect(picked).toEqual(['a'])
-    const two = planHealthBatch(
-      [
-        cand({ userId: 'a', volumeCount: 4 }),
-        cand({ userId: 'b', volumeCount: 4 }),
-        cand({ userId: 'c', volumeCount: 4 }),
-      ],
-      now,
-      12
-    )
-    expect(two).toEqual(['a', 'b'])
+  it('takes as many as the budget covers at the least a check costs', () => {
+    const many = [
+      cand({ userId: 'a', volumeCount: 20 }),
+      cand({ userId: 'b', volumeCount: 1 }),
+      cand({ userId: 'c', volumeCount: 4 }),
+    ]
+    expect(planHealthBatch(many, now, 4)).toEqual(['a', 'b'])
+    expect(planHealthBatch(many, now, 1)).toEqual([])
+    expect(planHealthBatch(many, now, 0)).toEqual([])
+  })
+  it('needs only the token refresh for a flamekeeper with no volumes', () => {
+    expect(planHealthBatch([cand({ volumeCount: 0 })], now, 1)).toEqual(['a'])
   })
 })
 
@@ -112,6 +112,17 @@ describe('planLost', () => {
         .finalize
     ).toEqual([])
   })
+  it('sends no reconnect email to a banned flamekeeper', () => {
+    const plan = planLost([lost({ banned: true })], now)
+    expect(plan.notify).toEqual([])
+  })
+  it('still finalizes a banned flamekeeper', () => {
+    const plan = planLost(
+      [lost({ banned: true, lostSince: ago(LOST_GRACE_MS) })],
+      now
+    )
+    expect(plan.finalize).toEqual(['a'])
+  })
   it('ignores a reconnected flamekeeper', () => {
     const plan = planLost(
       [lost({ state: 'active', lostSince: null }), lost({ userId: 'b' })],
@@ -130,5 +141,105 @@ describe('findMissingPhotos', () => {
     ]
     expect(findMissingPhotos(photos, ['f1'])).toEqual([photos[1]])
     expect(findMissingPhotos(photos, ['f1', 'f2'])).toEqual([])
+  })
+})
+
+describe('volumesAfterCursor', () => {
+  it('sorts and resumes after the cursor', () => {
+    expect(volumesAfterCursor(['c', 'a', 'b'], null)).toEqual(['a', 'b', 'c'])
+    expect(volumesAfterCursor(['c', 'a', 'b'], 'a')).toEqual(['b', 'c'])
+    expect(volumesAfterCursor(['a'], 'a')).toEqual([])
+  })
+})
+
+describe('planEmailSync', () => {
+  it('overwrites a different email', () => {
+    expect(planEmailSync('a@nu.edu.kz', 'a@alumni.nu.edu.kz')).toEqual({
+      kind: 'update',
+      email: 'a@alumni.nu.edu.kz',
+    })
+  })
+  it('ignores the same email regardless of case', () => {
+    expect(planEmailSync('a@nu.edu.kz', ' A@NU.edu.kz ')).toEqual({
+      kind: 'none',
+    })
+  })
+  it('does not trust a missing or malformed email', () => {
+    expect(planEmailSync('a@nu.edu.kz', undefined)).toEqual({ kind: 'none' })
+    expect(planEmailSync('a@nu.edu.kz', null)).toEqual({ kind: 'none' })
+    expect(planEmailSync('a@nu.edu.kz', '')).toEqual({ kind: 'none' })
+    expect(planEmailSync('a@nu.edu.kz', 'nonsense')).toEqual({ kind: 'none' })
+  })
+})
+
+describe('isUniqueConstraintError', () => {
+  it('spots D1 unique failures, also as a cause', () => {
+    expect(
+      isUniqueConstraintError(new Error('UNIQUE constraint failed: user.email'))
+    ).toBe(true)
+    expect(
+      isUniqueConstraintError(
+        new Error('Failed query', {
+          cause: new Error('D1_ERROR: UNIQUE constraint failed: user.email'),
+        })
+      )
+    ).toBe(true)
+    expect(isUniqueConstraintError(new Error('network down'))).toBe(false)
+  })
+})
+
+describe('planRecovery', () => {
+  const album = (over = {}) => ({
+    deletedAt: null,
+    tombstoneReason: null,
+    expiresAt: new Date(now.getTime() + 1000 * 60 * 60 * 24),
+    pinned: false,
+    ...over,
+  })
+  it('restores photos of a live album', () => {
+    expect(planRecovery(album(), now)).toBe('restore')
+  })
+  it('restores a flamekeeper_lost tombstone before its expiry', () => {
+    expect(
+      planRecovery(
+        album({ deletedAt: ago(10), tombstoneReason: 'flamekeeper_lost' }),
+        now
+      )
+    ).toBe('restore')
+  })
+  it('abandons photos once the album has expired', () => {
+    expect(planRecovery(album({ expiresAt: ago(1) }), now)).toBe('abandon')
+    expect(
+      planRecovery(
+        album({
+          deletedAt: ago(10),
+          tombstoneReason: 'flamekeeper_lost',
+          expiresAt: ago(1),
+        }),
+        now
+      )
+    ).toBe('abandon')
+  })
+  it('keeps pinned albums recoverable past their date', () => {
+    expect(planRecovery(album({ expiresAt: ago(1), pinned: true }), now)).toBe(
+      'restore'
+    )
+  })
+  it('abandons albums removed for another reason', () => {
+    for (const reason of ['expired', 'flamekeeper_left', 'no_space', null]) {
+      expect(
+        planRecovery(
+          album({ deletedAt: ago(10), tombstoneReason: reason }),
+          now
+        )
+      ).toBe('abandon')
+    }
+  })
+})
+
+describe('oldEnoughToAudit', () => {
+  it('spares photos uploaded within the grace period', () => {
+    expect(oldEnoughToAudit(ago(MISSING_GRACE_MS - 1), now)).toBe(false)
+    expect(oldEnoughToAudit(ago(MISSING_GRACE_MS), now)).toBe(true)
   })
 })

@@ -96,7 +96,7 @@ export async function expireAlbumEarly(
     .from(favorite)
     .innerJoin(photo, eq(photo.id, favorite.photoId))
     .innerJoin(user, eq(user.id, favorite.userId))
-    .where(eq(photo.albumId, albumId))
+    .where(and(eq(photo.albumId, albumId), eq(photo.state, 'live')))
     .all()
   const owner = await database
     .select({

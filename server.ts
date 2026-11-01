@@ -7,6 +7,7 @@
  */
 
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
+import { createBudget, type Budget } from './src/lib/cron/budget'
 
 interface Env {
   meriksirat_d1: D1Database
@@ -14,6 +15,7 @@ interface Env {
   meriksirat_kv: KVNamespace
   TELEGRAM_BOT_TOKEN?: string
   TELEGRAM_CLUB_CHANNEL_ID?: string
+  BETTER_AUTH_URL?: string
 }
 
 const serverEntry = createServerEntry({
@@ -135,25 +137,39 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<void> {
-    // Run all status update and reminder functions in parallel
-    ctx.waitUntil(
-      Promise.all([
-        cancelUnstartedBookings(env),
-        updateOverdueBookings(env),
-        sendBookingReminders(env),
-        configureTelegramBot(env),
-        backfillAlbumPhotos(env),
-        expireAlbums(env),
-        notifyPublicAlbums(env),
-        maintainPool(env),
-        checkFlamekeeperHealth(env),
-        drainFlamekeepers(env),
-        cleanupStaleSignups(env),
-        graduateFlamekeepers(env),
-        finishBans(env),
-      ])
-    )
+    ctx.waitUntil(runScheduled(env))
   },
+}
+
+/**
+ * One cron run. Workers' free plan allows 50 subrequests per invocation, so
+ * the steps run one after another and spend from a single budget of outside
+ * requests (Google, Telegram), highest priority first: bookings, then the
+ * daily flamekeeper health pass, then drains, then reminders and emails.
+ * Whatever does not fit waits for the next run; every step is idempotent.
+ */
+async function runScheduled(env: Env): Promise<void> {
+  const budget = createBudget()
+
+  await cancelUnstartedBookings(env, budget)
+  await updateOverdueBookings(env, budget)
+  await sendBookingReminders(env, budget)
+
+  await checkFlamekeeperHealth(env, budget)
+  await maintainPool(env, budget)
+
+  await drainFlamekeepers(env, budget)
+  await finishBans(env, budget)
+  await graduateFlamekeepers(env, budget)
+
+  await expireAlbums(env, budget)
+  await notifyPublicAlbums(env, budget)
+  await backfillAlbumPhotos(env, budget)
+  await configureTelegramBot(env, budget)
+
+  await cleanupStaleSignups(env)
+
+  console.log(`[cron] outside requests ${budget.spent()}/${budget.total}`)
 }
 
 async function cleanupStaleSignups(env: Env): Promise<void> {
@@ -171,10 +187,10 @@ async function cleanupStaleSignups(env: Env): Promise<void> {
 
 const GRACE_MS = 15 * 60 * 1000
 
-async function backfillAlbumPhotos(env: Env): Promise<void> {
+async function backfillAlbumPhotos(env: Env, budget: Budget): Promise<void> {
   try {
     const { runPhotoBackfill } = await import('./src/lib/albums/photo-index')
-    await runPhotoBackfill(env)
+    await runPhotoBackfill(env, budget)
   } catch (error) {
     console.error(
       'Error in backfillAlbumPhotos:',
@@ -183,10 +199,10 @@ async function backfillAlbumPhotos(env: Env): Promise<void> {
   }
 }
 
-async function expireAlbums(env: Env): Promise<void> {
+async function expireAlbums(env: Env, budget: Budget): Promise<void> {
   try {
     const { runAlbumExpiry } = await import('./src/lib/albums/expiry')
-    await runAlbumExpiry(env)
+    await runAlbumExpiry(env, budget)
   } catch (error) {
     console.error(
       'Error in expireAlbums:',
@@ -195,11 +211,11 @@ async function expireAlbums(env: Env): Promise<void> {
   }
 }
 
-async function notifyPublicAlbums(env: Env): Promise<void> {
+async function notifyPublicAlbums(env: Env, budget: Budget): Promise<void> {
   try {
     const { runPublicAlbumNotices } =
       await import('./src/lib/albums/public-notice-server')
-    await runPublicAlbumNotices(env)
+    await runPublicAlbumNotices(env, budget)
   } catch (error) {
     console.error(
       'Error in notifyPublicAlbums:',
@@ -208,11 +224,11 @@ async function notifyPublicAlbums(env: Env): Promise<void> {
   }
 }
 
-async function checkFlamekeeperHealth(env: Env): Promise<void> {
+async function checkFlamekeeperHealth(env: Env, budget: Budget): Promise<void> {
   try {
     const { runFlamekeeperHealth } =
       await import('./src/lib/pool/health-server')
-    await runFlamekeeperHealth(env)
+    await runFlamekeeperHealth(env, budget)
   } catch (error) {
     console.error(
       'Error in checkFlamekeeperHealth:',
@@ -221,10 +237,10 @@ async function checkFlamekeeperHealth(env: Env): Promise<void> {
   }
 }
 
-async function maintainPool(env: Env): Promise<void> {
+async function maintainPool(env: Env, budget: Budget): Promise<void> {
   try {
     const { runPoolMaintenance } = await import('./src/lib/pool/server')
-    await runPoolMaintenance(env)
+    await runPoolMaintenance(env, budget)
   } catch (error) {
     console.error(
       'Error in maintainPool:',
@@ -233,10 +249,10 @@ async function maintainPool(env: Env): Promise<void> {
   }
 }
 
-async function drainFlamekeepers(env: Env): Promise<void> {
+async function drainFlamekeepers(env: Env, budget: Budget): Promise<void> {
   try {
     const { runDrainMaintenance } = await import('./src/lib/pool/drain-server')
-    await runDrainMaintenance(env)
+    await runDrainMaintenance(env, budget)
   } catch (error) {
     console.error(
       'Error in drainFlamekeepers:',
@@ -245,10 +261,10 @@ async function drainFlamekeepers(env: Env): Promise<void> {
   }
 }
 
-async function finishBans(env: Env): Promise<void> {
+async function finishBans(env: Env, budget: Budget): Promise<void> {
   try {
     const { runBanMaintenance } = await import('./src/lib/pool/ban-server')
-    await runBanMaintenance(env)
+    await runBanMaintenance(env, budget)
   } catch (error) {
     console.error(
       'Error in finishBans:',
@@ -257,11 +273,11 @@ async function finishBans(env: Env): Promise<void> {
   }
 }
 
-async function graduateFlamekeepers(env: Env): Promise<void> {
+async function graduateFlamekeepers(env: Env, budget: Budget): Promise<void> {
   try {
     const { runGraduationMaintenance } =
       await import('./src/lib/pool/graduation-server')
-    await runGraduationMaintenance(env)
+    await runGraduationMaintenance(env, budget)
   } catch (error) {
     console.error(
       'Error in graduateFlamekeepers:',
@@ -274,11 +290,11 @@ async function graduateFlamekeepers(env: Env): Promise<void> {
  * Keeps the bot's global configuration in sync (clears the command menu so the
  * bot is driven purely by the inline-button interface).
  */
-async function configureTelegramBot(env: Env): Promise<void> {
+async function configureTelegramBot(env: Env, budget: Budget): Promise<void> {
   try {
     const { configureTelegramBot: configure } =
       await import('./src/lib/telegram/configure')
-    await configure(env)
+    await configure(env, budget)
   } catch (error) {
     console.error(
       'Error in configureTelegramBot:',
@@ -293,7 +309,10 @@ async function configureTelegramBot(env: Env): Promise<void> {
  * without the user starting it. The user's `cancelled_in_start_window_count`
  * is incremented once per booking.
  */
-async function cancelUnstartedBookings(env: Env): Promise<void> {
+async function cancelUnstartedBookings(
+  env: Env,
+  budget: Budget
+): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
     const { booking, bookingItem, user } = await import('./src/db/schema')
@@ -339,6 +358,10 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
           .select({ id: bookingItem.id })
           .from(bookingItem)
           .where(eq(bookingItem.bookingId, stale.id))
+
+        const cost =
+          items.length + 1 + (telegram && stale.telegramChatId ? 1 : 0)
+        if (!budget.take(cost)) break
 
         if (items.length > 0) {
           await cancelBookingItems(
@@ -395,7 +418,7 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
  * summary/description status is updated. The user's `overdue_count` is
  * incremented once per booking.
  */
-async function updateOverdueBookings(env: Env): Promise<void> {
+async function updateOverdueBookings(env: Env, budget: Budget): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -461,7 +484,29 @@ async function updateOverdueBookings(env: Env): Promise<void> {
       }
     >()
 
+    // A booking is handled whole in one run (its counters and notices fire
+    // once), so the budget is spent per booking: calendar updates, the
+    // channel log and the user's message.
+    const byBooking = new Map<number, typeof overdueItems>()
     for (const item of overdueItems) {
+      byBooking.set(item.bookingId, [
+        ...(byBooking.get(item.bookingId) ?? []),
+        item,
+      ])
+    }
+    const affordable: typeof overdueItems = []
+    for (const items of byBooking.values()) {
+      const cost =
+        items.filter(
+          (it) => it.googleCalendarEventId && it.equipment.googleCalendarId
+        ).length +
+        1 +
+        (items[0].user?.telegramChatId && env.TELEGRAM_BOT_TOKEN ? 1 : 0)
+      if (!budget.take(cost)) break
+      affordable.push(...items)
+    }
+
+    for (const item of affordable) {
       try {
         await database
           .update(bookingItem)
@@ -578,7 +623,7 @@ async function updateOverdueBookings(env: Env): Promise<void> {
  * - return_warning: at/just after end time         (booking.return_reminder_sent_at)
  * - grace_5min:    10-15 min after end time        (booking.grace_warning_sent_at)
  */
-async function sendBookingReminders(env: Env): Promise<void> {
+async function sendBookingReminders(env: Env, budget: Budget): Promise<void> {
   try {
     const { db } = await import('./src/db/index')
     const { booking, bookingItem, equipment, user } =
@@ -705,6 +750,7 @@ async function sendBookingReminders(env: Env): Promise<void> {
           const message = buildReminderMessage(kind.name, info)
           if (!message) continue
 
+          if (!budget.take(1)) return
           try {
             await telegram.sendMessage(info.telegramChatId, message)
             await database

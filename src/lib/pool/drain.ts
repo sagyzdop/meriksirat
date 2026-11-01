@@ -121,6 +121,31 @@ export function drainReminderDue(fk: DrainFlamekeeper, now: Date): boolean {
   return left > 0 && left <= DRAIN_REMINDER_MS
 }
 
+export interface DrainAdminAlertState {
+  state: FlamekeeperState
+  drainingDeadline: Date | null
+  drainAdminStartedAt: Date | null
+  drainAdminRemindedAt: Date | null
+}
+
+export type DrainAdminAlert = 'started' | 'reminder' | null
+
+/**
+ * Which Telegram message admins still owe for a drain: one when it starts,
+ * one in the last 3 days before the deadline. The start message goes first
+ * and each is sent once.
+ */
+export function drainAdminAlertDue(
+  fk: DrainAdminAlertState,
+  now: Date
+): DrainAdminAlert {
+  if (fk.state !== 'draining' || !fk.drainingDeadline) return null
+  if (!fk.drainAdminStartedAt) return 'started'
+  if (fk.drainAdminRemindedAt) return null
+  const left = fk.drainingDeadline.getTime() - now.getTime()
+  return left > 0 && left <= DRAIN_REMINDER_MS ? 'reminder' : null
+}
+
 export function pickDeadlineDeletions<T extends { id: string; bytes: number }>(
   fk: DrainFlamekeeper,
   photos: T[]

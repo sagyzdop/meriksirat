@@ -1333,7 +1333,13 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     const duplicate = await database
       .select({ id: photo.id })
       .from(photo)
-      .where(and(eq(photo.albumId, row.id), eq(photo.name, data.fileName)))
+      .where(
+        and(
+          eq(photo.albumId, row.id),
+          eq(photo.name, data.fileName),
+          eq(photo.state, 'live')
+        )
+      )
       .get()
     if (duplicate) {
       throw new Error(`Photo "${data.fileName}" already exists in this album`)

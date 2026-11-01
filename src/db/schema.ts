@@ -431,7 +431,9 @@ export const photo = sqliteTable(
     capturedAt: integer('captured_at', { mode: 'timestamp_ms' }),
     exif: text('exif'),
     flamekeeperUserId: text('flamekeeper_user_id'),
-    state: text('state', { enum: ['live', 'moving', 'deleted'] })
+    state: text('state', {
+      enum: ['live', 'moving', 'deleted', 'dropped'],
+    })
       .default('live')
       .notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
@@ -534,6 +536,13 @@ export const flamekeeper = sqliteTable(
     drainReminderSentAt: integer('drain_reminder_sent_at', {
       mode: 'timestamp_ms',
     }),
+    drainAdminStartedAt: integer('drain_admin_started_at', {
+      mode: 'timestamp_ms',
+    }),
+    drainAdminRemindedAt: integer('drain_admin_reminded_at', {
+      mode: 'timestamp_ms',
+    }),
+    healthCursor: text('health_cursor'),
     lostSince: integer('lost_since', { mode: 'timestamp_ms' }),
     lostNotifiedAt: integer('lost_notified_at', { mode: 'timestamp_ms' }),
     lostFinalizedAt: integer('lost_finalized_at', { mode: 'timestamp_ms' }),
@@ -582,6 +591,7 @@ export const volume = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     permissionId: text('permission_id').notNull(),
     writerRevokedAt: integer('writer_revoked_at', { mode: 'timestamp_ms' }),
+    droppedAt: integer('dropped_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),

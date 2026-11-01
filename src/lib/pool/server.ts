@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, lt, or, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, lt, isNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import {
   album,
@@ -14,7 +14,6 @@ import {
   batchDeleteDriveFiles,
   deleteDriveFile,
   getDriveFileMeta,
-  getDriveUsageInDrive,
   mintResumableUpload,
   shareWithWriter,
 } from '@/lib/google/google-drive'
@@ -26,6 +25,7 @@ import {
 import { isImage } from '@/lib/albums/photo-backfill'
 import { registerDrivePhotos } from '@/lib/albums/photo-index'
 import { newId } from '@/lib/albums/ids'
+import { type Budget } from '@/lib/cron/budget'
 import {
   DEFAULT_FLAMEKEEPER_CAP_BYTES,
   OUT_OF_SPACE_MESSAGE,
@@ -42,8 +42,6 @@ type Database = ReturnType<typeof db>
 const RESERVATION_TTL_MS = 2 * 60 * 60 * 1000
 const RESERVATION_KEEP_MS = 24 * 60 * 60 * 1000
 const MAX_PLACEMENT_TRIES = 4
-const USAGE_REFRESH_MS = 60 * 60 * 1000
-const USAGE_REFRESHES_PER_RUN = 10
 export const MAX_PHOTO_DELETES_PER_CALL = 2000
 
 export async function loadCapBytes(database: Database): Promise<number> {
@@ -161,7 +159,7 @@ async function ensureVolume(
       )
     )
     .get()
-  if (existing && !existing.writerRevokedAt) return
+  if (existing && !existing.writerRevokedAt && existing.permissionId) return
   const permissionId = await shareWithWriter(
     masterToken,
     albumRow.driveFolderId,
@@ -456,40 +454,58 @@ export async function loadOwnedPhotos(
     .all()
 }
 
+/**
+ * Message every admin who has a Telegram chat. Returns false only when the
+ * shared budget cannot cover all of them, so the caller leaves its sent-at
+ * flag unset and retries on a later run. Nothing to send to (no bot token or
+ * no admin chat) counts as handled. `force` spends the cost even when the
+ * budget is short, for alerts that cannot be re-derived on a later run.
+ */
 export async function sendAdminsTelegram(
   database: Database,
   botToken: string | undefined,
-  text: string
-): Promise<void> {
+  text: string,
+  budget?: Budget,
+  options: { force?: boolean } = {}
+): Promise<boolean> {
   if (!botToken) {
-    console.warn('TELEGRAM_BOT_TOKEN not configured, skipping pool alert')
-    return
+    console.warn('TELEGRAM_BOT_TOKEN not configured, skipping admin alert')
+    return true
   }
-  const { TelegramAPI } = await import('@/lib/telegram/api')
-  const telegram = new TelegramAPI(botToken)
   const admins = await database
     .select({ chatId: user.telegramChatId })
     .from(user)
     .where(and(eq(user.role, 'admin'), isNotNull(user.telegramChatId)))
     .all()
+  if (admins.length === 0) return true
+  if (budget) {
+    if (options.force) budget.spend(admins.length)
+    else if (!budget.take(admins.length)) return false
+  }
+  const { TelegramAPI } = await import('@/lib/telegram/api')
+  const telegram = new TelegramAPI(botToken)
   for (const admin of admins) {
     try {
       await telegram.sendMessage(admin.chatId!, text)
     } catch (error) {
-      console.error('Failed to send pool alert:', error)
+      console.error('Failed to send admin alert:', error)
     }
   }
+  return true
 }
 
 /**
- * Cron step: drop stale reservations, refresh Drive usage, return full
- * flamekeepers to active once space frees, and alert admins when the pool
- * runs low.
+ * Cron step: drop stale reservations, return full flamekeepers to active once
+ * space frees (from the usage the daily health pass last read), and alert
+ * admins when the pool runs low.
  */
-export async function runPoolMaintenance(env: {
-  meriksirat_d1: D1Database
-  TELEGRAM_BOT_TOKEN?: string
-}): Promise<void> {
+export async function runPoolMaintenance(
+  env: {
+    meriksirat_d1: D1Database
+    TELEGRAM_BOT_TOKEN?: string
+  },
+  budget?: Budget
+): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
 
@@ -501,37 +517,6 @@ export async function runPoolMaintenance(env: {
         new Date(now.getTime() - RESERVATION_KEEP_MS)
       )
     )
-
-  const stale = await database
-    .select({ userId: flamekeeper.userId })
-    .from(flamekeeper)
-    .where(
-      and(
-        inArray(flamekeeper.state, ['active', 'full']),
-        or(
-          isNull(flamekeeper.driveUsageCheckedAt),
-          lt(
-            flamekeeper.driveUsageCheckedAt,
-            new Date(now.getTime() - USAGE_REFRESH_MS)
-          )
-        )
-      )
-    )
-    .limit(USAGE_REFRESHES_PER_RUN)
-    .all()
-
-  for (const { userId } of stale) {
-    try {
-      const token = await getFlamekeeperAccessToken(database, userId)
-      const usage = await getDriveUsageInDrive(token)
-      await database
-        .update(flamekeeper)
-        .set({ driveUsageBytes: usage, driveUsageCheckedAt: now })
-        .where(eq(flamekeeper.userId, userId))
-    } catch (error) {
-      console.warn(`Failed to refresh Drive usage for ${userId}:`, error)
-    }
-  }
 
   const [fks, cap, settingsRow] = await Promise.all([
     loadPoolFlamekeepers(database, now),
@@ -562,11 +547,13 @@ export async function runPoolMaintenance(env: {
   const alert = poolAlert(stats, settingsRow.alertedAt)
   if (alert === 'alert') {
     const { formatGb } = await import('@/lib/flamekeeper/rules')
-    await sendAdminsTelegram(
+    const sent = await sendAdminsTelegram(
       database,
       env.TELEGRAM_BOT_TOKEN,
-      `#savenuimg pool is low: ${formatGb(stats.freeBytes)} free of ${formatGb(stats.pledgedBytes)} pledged across ${stats.flamekeepers} flamekeepers. Recruit flamekeepers or free up space.`
+      `#savenuimg pool is low: ${formatGb(stats.freeBytes)} free of ${formatGb(stats.pledgedBytes)} pledged across ${stats.flamekeepers} flamekeepers. Recruit flamekeepers or free up space.`,
+      budget
     )
+    if (!sent) return
     await database
       .update(settings)
       .set({ poolLowAlertedAt: now })
@@ -587,7 +574,13 @@ export async function countHostedAlbums(
     .select({ count: sql<number>`count(*)` })
     .from(volume)
     .innerJoin(album, eq(album.id, volume.albumId))
-    .where(and(eq(volume.flamekeeperUserId, userId), isNull(album.deletedAt)))
+    .where(
+      and(
+        eq(volume.flamekeeperUserId, userId),
+        isNull(volume.droppedAt),
+        isNull(album.deletedAt)
+      )
+    )
     .get()
   return Number(row?.count ?? 0)
 }

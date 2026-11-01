@@ -1,13 +1,14 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { album, albumMember, favorite, photo, user, volume } from '@/db/schema'
 import { DriveNotFoundError, deleteDriveFile } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
+import { planExpiry, reminderRecipients } from '@/lib/pool/expiry'
 import {
-  REMINDER_SUBREQUEST_BUDGET,
-  planExpiry,
-  reminderRecipients,
-} from '@/lib/pool/expiry'
+  albumRemovalCost,
+  takeIfBudgeted,
+  type Budget,
+} from '@/lib/cron/budget'
 import {
   MAX_PHOTO_DELETES_PER_CALL,
   deleteOwnedPhotos,
@@ -20,6 +21,7 @@ type Database = ReturnType<typeof db>
 type AlbumRecord = typeof album.$inferSelect
 
 const ROW_DELETE_CHUNK = 90
+const EXPIRES_PER_RUN = 3
 
 export async function dropPhotoRows(
   database: Database,
@@ -35,9 +37,9 @@ export async function dropPhotoRows(
   await database
     .update(album)
     .set({
-      photoCount: sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId})`,
-      photoBytes: sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId})`,
-      favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} INNER JOIN ${photo} ON ${photo.id} = ${favorite.photoId} WHERE ${photo.albumId} = ${albumId})`,
+      photoCount: sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
+      photoBytes: sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
+      favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} INNER JOIN ${photo} ON ${photo.id} = ${favorite.photoId} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
     })
     .where(eq(album.id, albumId))
 }
@@ -141,11 +143,27 @@ function formatDate(d: Date | null): string {
     : ''
 }
 
-export async function runAlbumExpiry(env: {
-  meriksirat_d1: D1Database
-  TELEGRAM_BOT_TOKEN?: string
-  BETTER_AUTH_URL?: string
-}): Promise<void> {
+async function removalCost(
+  database: Database,
+  albumId: string
+): Promise<number> {
+  const owners = await database
+    .select({ n: sql<number>`COUNT(*)` })
+    .from(photo)
+    .where(and(eq(photo.albumId, albumId), isNotNull(photo.flamekeeperUserId)))
+    .groupBy(photo.flamekeeperUserId)
+    .all()
+  return albumRemovalCost(owners.map((o) => Number(o.n)))
+}
+
+export async function runAlbumExpiry(
+  env: {
+    meriksirat_d1: D1Database
+    TELEGRAM_BOT_TOKEN?: string
+    BETTER_AUTH_URL?: string
+  },
+  budget?: Budget
+): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
 
@@ -174,6 +192,26 @@ export async function runAlbumExpiry(env: {
     return
   }
   const byId = new Map(rows.map((r) => [r.id, r]))
+
+  if (plan.expire.length > 0) {
+    let accessToken: string | null = null
+    let removed = 0
+    for (const id of plan.expire) {
+      if (removed >= EXPIRES_PER_RUN) break
+      try {
+        const cost = (await removalCost(database, id)) + (accessToken ? 0 : 1)
+        if (!takeIfBudgeted(budget, cost)) break
+        accessToken ??= await getGoogleAccessToken()
+        removed++
+        await removeAlbum(database, byId.get(id)!, accessToken, {
+          tombstone: 'expired',
+          strictDrive: true,
+        })
+      } catch (error) {
+        console.error(`Failed to expire album ${id}:`, error)
+      }
+    }
+  }
 
   const botToken = env.TELEGRAM_BOT_TOKEN
   if (botToken) {
@@ -211,7 +249,6 @@ export async function runAlbumExpiry(env: {
       }
     }
 
-    let spent = 0
     outer: for (const { ids, days, column } of reminders) {
       for (const id of ids) {
         const row = byId.get(id)!
@@ -219,9 +256,7 @@ export async function runAlbumExpiry(env: {
           ownerChat.get(id),
           memberChats.get(id) ?? []
         )
-        const cost = recipients.length + 1
-        if (spent > 0 && spent + cost > REMINDER_SUBREQUEST_BUDGET) break outer
-        spent += cost
+        if (!takeIfBudgeted(budget, recipients.length)) break outer
         try {
           const link = origin ? `\n${origin}/albums/${id}` : ''
           const text = `Your album "${row.title}" will be deleted in ${days} days, on ${formatDate(row.expiresAt)}. There is no backup, so download the photos you want to keep.${link}`
@@ -249,19 +284,5 @@ export async function runAlbumExpiry(env: {
     }
   } else if (plan.remind30.length + plan.remind7.length > 0) {
     console.warn('TELEGRAM_BOT_TOKEN not configured, skipping expiry reminders')
-  }
-
-  if (plan.expire.length > 0) {
-    const accessToken = await getGoogleAccessToken()
-    for (const id of plan.expire) {
-      try {
-        await removeAlbum(database, byId.get(id)!, accessToken, {
-          tombstone: 'expired',
-          strictDrive: true,
-        })
-      } catch (error) {
-        console.error(`Failed to expire album ${id}:`, error)
-      }
-    }
   }
 }

@@ -7,6 +7,7 @@ import {
   planExpiry,
   reminderRecipients,
   tombstoneCopy,
+  tombstoneNoticeText,
 } from '../lib/pool/expiry'
 import type { ExpiryAlbum } from '../lib/pool/expiry'
 
@@ -153,5 +154,23 @@ describe('reminderRecipients', () => {
   it('drops missing and blank chat ids', () => {
     expect(reminderRecipients(null, [undefined, '', ' ', '5'])).toEqual(['5'])
     expect(reminderRecipients(undefined, [])).toEqual([])
+  })
+})
+
+describe('tombstoneNoticeText', () => {
+  it('names the album and says it can come back when the flamekeeper was lost', () => {
+    const text = tombstoneNoticeText(
+      'flamekeeper_lost',
+      'Prom',
+      'https://x/albums/1'
+    )
+    expect(text).toContain('"Prom"')
+    expect(text).toContain('comes back')
+    expect(text).toContain('https://x/albums/1')
+  })
+  it('says the photos were deleted when the flamekeeper left', () => {
+    const text = tombstoneNoticeText('flamekeeper_left', 'Prom')
+    expect(text).toContain('were deleted')
+    expect(text).not.toContain('comes back')
   })
 })

@@ -39,7 +39,8 @@ export const getAlbumFavoritesFn = createServerFn({ method: 'GET' })
       .where(
         and(
           eq(favorite.userId, sessionUser.id),
-          eq(photo.albumId, data.albumId)
+          eq(photo.albumId, data.albumId),
+          eq(photo.state, 'live')
         )
       )
       .all()
