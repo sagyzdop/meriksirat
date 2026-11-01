@@ -1370,7 +1370,7 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       }
     }
 
-    return startFlamekeeperUpload(database, accessToken, row, {
+    return startFlamekeeperUpload(database, row, {
       name: data.fileName,
       mimeType: data.mimeType,
       bytes: data.size,

@@ -9,7 +9,7 @@ import {
   deleteDrivePermission,
   shareWithWriter,
 } from '@/lib/google/google-drive'
-import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
+import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { newId } from '@/lib/albums/ids'
 import { type Budget } from '@/lib/cron/budget'
 import { planVolumeReleases, volumeFolderName } from './volumes'
@@ -171,16 +171,22 @@ export async function releaseVolumes(
 
   const done = [...plan.drops]
   if (calls.length > 0) {
-    const masterToken = await getGoogleAccessToken()
     for (const { step, volume: v } of calls) {
       try {
         if (step === 'delete_folder') {
-          await deleteDriveFile(masterToken, v.driveFolderId!)
+          await withGoogleToken(
+            (masterToken) => deleteDriveFile(masterToken, v.driveFolderId!),
+            options.budget
+          )
         } else {
-          await deleteDrivePermission(
-            masterToken,
-            v.albumFolderId,
-            v.permissionId
+          await withGoogleToken(
+            (masterToken) =>
+              deleteDrivePermission(
+                masterToken,
+                v.albumFolderId,
+                v.permissionId
+              ),
+            options.budget
           )
         }
         done.push(v)

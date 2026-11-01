@@ -39,13 +39,27 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
     const { eq } = await import('drizzle-orm')
 
     const database = db(env.meriksirat_d1 as D1Database)
-    const row = await database
+    let row = await database
       .select()
       .from(flamekeeper)
       .where(eq(flamekeeper.userId, session.user.id))
       .get()
 
     if (!row) return null
+    if (row.state === 'draining') {
+      const { finishDrainIfEmpty } = await import('@/lib/pool/drain-server')
+      try {
+        await finishDrainIfEmpty(database, session.user.id)
+      } catch (error) {
+        console.warn('Could not finish an empty drain:', error)
+      }
+      row =
+        (await database
+          .select()
+          .from(flamekeeper)
+          .where(eq(flamekeeper.userId, session.user.id))
+          .get()) ?? row
+    }
     const { countHostedAlbums } = await import('@/lib/pool/server')
     const { drainBytesLeft } = await import('@/lib/pool/drain')
     const { graduationConfirmDue } = await import('@/lib/pool/graduation')

@@ -10,6 +10,7 @@ import {
   volume,
 } from '@/db/schema'
 import {
+  DriveAuthError,
   DriveNotFoundError,
   DriveQuotaExceededError,
   batchDeleteDriveFiles,
@@ -20,8 +21,9 @@ import {
 import {
   FlamekeeperGrantError,
   forgetFlamekeeperAccessToken,
-  getFlamekeeperAccessToken,
+  withFlamekeeperToken,
 } from '@/lib/flamekeeper/tokens'
+import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { isImage } from '@/lib/albums/photo-backfill'
 import { registerDrivePhotos } from '@/lib/albums/photo-index'
 import { newId } from '@/lib/albums/ids'
@@ -139,7 +141,6 @@ export async function markFlamekeeperFull(
 
 export async function startFlamekeeperUpload(
   database: Database,
-  masterToken: string,
   albumRow: { id: string; driveFolderId: string },
   file: { name: string; mimeType: string; bytes: number; origin?: string },
   opts: { exclude?: string[] } = {}
@@ -174,20 +175,21 @@ export async function startFlamekeeperUpload(
     if (!reserved) continue
 
     try {
-      const token = await getFlamekeeperAccessToken(database, fk.userId)
-      const folderId = await ensureVolumeFolder(
-        database,
-        masterToken,
-        albumRow,
-        fk
+      const folderId = await withGoogleToken((token) =>
+        ensureVolumeFolder(database, token, albumRow, fk)
       )
-      const uploadUrl = await mintResumableUpload(token, {
-        name: file.name,
-        folderId,
-        mimeType: file.mimeType,
-        size: file.bytes,
-        origin: file.origin,
-      })
+      const uploadUrl = await withFlamekeeperToken(
+        database,
+        fk.userId,
+        (token) =>
+          mintResumableUpload(token, {
+            name: file.name,
+            folderId,
+            mimeType: file.mimeType,
+            size: file.bytes,
+            origin: file.origin,
+          })
+      )
       return { uploadUrl, reservationId }
     } catch (error) {
       await dropReservation(database, reservationId)
@@ -199,7 +201,10 @@ export async function startFlamekeeperUpload(
         console.warn(
           `Volume folder of ${fk.userId} in album ${albumRow.id} is gone, it will be recreated`
         )
-      } else if (error instanceof FlamekeeperGrantError) {
+      } else if (
+        error instanceof FlamekeeperGrantError ||
+        error instanceof DriveAuthError
+      ) {
         console.warn(`Skipping flamekeeper ${fk.userId}:`, error.message)
       } else {
         throw error
@@ -257,8 +262,9 @@ export async function confirmFlamekeeperUpload(
   }
 
   const ownerId = reservation.flamekeeperUserId
-  const token = await getFlamekeeperAccessToken(database, ownerId)
-  const file = await getDriveFileMeta(token, fileId)
+  const file = await withFlamekeeperToken(database, ownerId, (token) =>
+    getDriveFileMeta(token, fileId)
+  )
   const parents = volumeParents(
     albumRow.driveFolderId,
     await loadVolumeFolderId(database, albumRow.id, ownerId)
@@ -268,7 +274,9 @@ export async function confirmFlamekeeperUpload(
   }
 
   if (!isImage(file)) {
-    await deleteDriveFile(token, fileId)
+    await withFlamekeeperToken(database, ownerId, (token) =>
+      deleteDriveFile(token, fileId)
+    )
     await dropReservation(database, reservationId)
     return false
   }
@@ -305,7 +313,8 @@ export interface OwnedPhoto {
 
 export async function deleteOwnedPhotos(
   database: Database,
-  photos: OwnedPhoto[]
+  photos: OwnedPhoto[],
+  budget?: Budget
 ): Promise<{ deleted: OwnedPhoto[]; lost: OwnedPhoto[]; error: unknown }> {
   const byOwner = new Map<string, OwnedPhoto[]>()
   for (const p of photos) {
@@ -321,11 +330,16 @@ export async function deleteOwnedPhotos(
 
   for (const [ownerId, owned] of byOwner) {
     try {
-      const token = await getFlamekeeperAccessToken(database, ownerId)
       const failedIds = new Set(
-        await batchDeleteDriveFiles(
-          token,
-          owned.map((p) => p.driveFileId)
+        await withFlamekeeperToken(
+          database,
+          ownerId,
+          (token) =>
+            batchDeleteDriveFiles(
+              token,
+              owned.map((p) => p.driveFileId)
+            ),
+          budget
         )
       )
       for (const p of owned) {

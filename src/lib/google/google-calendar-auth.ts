@@ -13,6 +13,9 @@
  * `cloudflare:workers` import breaks the client build.
  */
 
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
+import { withTokenRetry } from './token-retry'
+
 let cachedToken: string | null = null
 let cachedAt = 0
 
@@ -43,6 +46,30 @@ async function refreshGoogleAccessToken(
 
   const data = (await response.json()) as { access_token: string }
   return data.access_token
+}
+
+export function forgetGoogleAccessToken(): void {
+  cachedToken = null
+  cachedAt = 0
+}
+
+function hasCachedGoogleAccessToken(): boolean {
+  return !!cachedToken && Date.now() - cachedAt < TOKEN_TTL_MS
+}
+
+export function withGoogleToken<T>(
+  run: (token: string) => Promise<T>,
+  budget?: Budget
+): Promise<T> {
+  return withTokenRetry(
+    {
+      getToken: getGoogleAccessToken,
+      forget: forgetGoogleAccessToken,
+      hasCached: hasCachedGoogleAccessToken,
+      canRetry: () => takeIfBudgeted(budget, 2),
+    },
+    run
+  )
 }
 
 export async function getGoogleAccessToken(): Promise<string> {

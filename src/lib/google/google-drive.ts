@@ -51,6 +51,13 @@ export class DriveQuotaExceededError extends Error {
   }
 }
 
+export class DriveAuthError extends Error {
+  constructor(message = 'Drive rejected the access token') {
+    super(message)
+    this.name = 'DriveAuthError'
+  }
+}
+
 export class DriveAppNotAuthorizedError extends Error {
   constructor(message = 'Drive folder holds files this app may not touch') {
     super(message)
@@ -59,6 +66,9 @@ export class DriveAppNotAuthorizedError extends Error {
 }
 
 export function driveErrorFor(status: number, body: string): Error {
+  if (status === 401) {
+    return new DriveAuthError(`Drive API error (401): ${body}`)
+  }
   if (status === 404) return new DriveNotFoundError()
   if (status === 403 && body.includes('storageQuotaExceeded')) {
     return new DriveQuotaExceededError()

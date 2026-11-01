@@ -50,12 +50,17 @@ export async function dropPhotoRows(
 
 async function removeOwnedPhotos(
   database: Database,
-  albumId: string
+  albumId: string,
+  budget?: Budget
 ): Promise<boolean> {
   const owned = await loadOwnedPhotos(database, albumId)
   if (owned.length === 0) return true
   const batch = owned.slice(0, MAX_PHOTO_DELETES_PER_CALL)
-  const { deleted, lost, error } = await deleteOwnedPhotos(database, batch)
+  const { deleted, lost, error } = await deleteOwnedPhotos(
+    database,
+    batch,
+    budget
+  )
   await dropPhotoRows(
     database,
     albumId,
@@ -74,9 +79,17 @@ export async function removeAlbum(
   database: Database,
   row: Pick<AlbumRecord, 'id' | 'driveFolderId' | 'ownerUserId' | 'deletedAt'>,
   accessToken: string,
-  options: { tombstone?: TombstoneReason; strictDrive?: boolean } = {}
+  options: {
+    tombstone?: TombstoneReason
+    strictDrive?: boolean
+    budget?: Budget
+  } = {}
 ): Promise<void> {
-  const folderDeletable = await removeOwnedPhotos(database, row.id)
+  const folderDeletable = await removeOwnedPhotos(
+    database,
+    row.id,
+    options.budget
+  )
   if (!folderDeletable) {
     console.warn(
       `Album ${row.id} keeps its Drive folder: a lost flamekeeper's photos are still in it`
@@ -201,6 +214,7 @@ export async function runAlbumExpiry(
         await removeAlbum(database, byId.get(id)!, accessToken, {
           tombstone: 'expired',
           strictDrive: true,
+          budget,
         })
       } catch (error) {
         console.error(`Failed to expire album ${id}:`, error)

@@ -3,6 +3,8 @@ import type { db } from '@/db'
 import { flamekeeperGrant, user } from '@/db/schema'
 import { isMasterEmail } from './master'
 import { isInvalidGrantResponse } from '@/lib/pool/health'
+import { withTokenRetry } from '@/lib/google/token-retry'
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 
 type Database = ReturnType<typeof db>
 
@@ -57,6 +59,28 @@ export async function getFlamekeeperAccessToken(
 
 export function forgetFlamekeeperAccessToken(userId: string): void {
   cache.delete(userId)
+}
+
+function hasCachedFlamekeeperToken(userId: string): boolean {
+  const cached = cache.get(userId)
+  return !!cached && Date.now() - cached.at < TOKEN_TTL_MS
+}
+
+export function withFlamekeeperToken<T>(
+  database: Database,
+  userId: string,
+  run: (token: string) => Promise<T>,
+  budget?: Budget
+): Promise<T> {
+  return withTokenRetry(
+    {
+      getToken: () => getFlamekeeperAccessToken(database, userId),
+      forget: () => forgetFlamekeeperAccessToken(userId),
+      hasCached: () => hasCachedFlamekeeperToken(userId),
+      canRetry: () => takeIfBudgeted(budget, 2),
+    },
+    run
+  )
 }
 
 export async function dropFlamekeeperGrant(

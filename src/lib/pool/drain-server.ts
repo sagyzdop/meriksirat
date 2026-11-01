@@ -13,11 +13,12 @@ import {
   deleteDriveFile,
   getDriveFileMeta,
 } from '@/lib/google/google-drive'
-import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
+import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import {
   FlamekeeperGrantError,
   dropFlamekeeperGrant,
   getFlamekeeperAccessToken,
+  withFlamekeeperToken,
 } from '@/lib/flamekeeper/tokens'
 import {
   MIN_PLEDGE_BYTES,
@@ -26,7 +27,12 @@ import {
 } from '@/lib/flamekeeper/rules'
 import type { DrainStatus, RelayHandout } from '@/lib/flamekeeper/types'
 import { dropPhotoRows, removeAlbum } from '@/lib/albums/expiry'
-import { batchDeleteCost, takeIfBudgeted, type Budget } from '@/lib/cron/budget'
+import {
+  batchDeleteCost,
+  createBudget,
+  takeIfBudgeted,
+  type Budget,
+} from '@/lib/cron/budget'
 import { OUT_OF_SPACE_MESSAGE } from './placement'
 import {
   deleteOwnedPhotos,
@@ -272,6 +278,29 @@ async function advanceDrain(
   return loadDrainRow(database, userId)
 }
 
+const REQUEST_SUBREQUEST_BUDGET = 20
+
+async function finishedDrainStatus(
+  database: Database,
+  userId: string
+): Promise<DrainStatus> {
+  const row = await finishDrainIfEmpty(database, userId)
+  if (!row) throw new Error('Not a flamekeeper')
+  return toStatus(row)
+}
+
+export async function finishDrainIfEmpty(
+  database: Database,
+  userId: string
+): Promise<DrainRow | null> {
+  return advanceDrain(
+    database,
+    userId,
+    new Date(),
+    createBudget(REQUEST_SUBREQUEST_BUDGET)
+  )
+}
+
 async function sendFlamekeeperEmail(
   database: Database,
   userId: string,
@@ -387,8 +416,7 @@ export async function startRelay(
   sourceUserId: string,
   origin: string | undefined
 ): Promise<RelayHandout> {
-  const now = new Date()
-  const row = await advanceDrain(database, sourceUserId, now)
+  const row = await finishDrainIfEmpty(database, sourceUserId)
   if (!row) throw new Error('Not a flamekeeper')
   if (row.state !== 'draining') return { kind: 'done', status: toStatus(row) }
 
@@ -414,7 +442,6 @@ export async function startRelay(
   try {
     session = await startFlamekeeperUpload(
       database,
-      await getGoogleAccessToken(),
       albumRow,
       {
         name: pick.name,
@@ -462,7 +489,6 @@ export async function confirmRelay(
   sourceUserId: string,
   input: { photoId: string; reservationId: string; fileId: string }
 ): Promise<DrainStatus> {
-  const now = new Date()
   const reservation = await database
     .select()
     .from(uploadReservation)
@@ -479,8 +505,9 @@ export async function confirmRelay(
     .get()
   if (!albumRow) throw new Error('Album not found')
 
-  const destToken = await getFlamekeeperAccessToken(database, destUserId)
-  const copy = await getDriveFileMeta(destToken, input.fileId)
+  const copy = await withFlamekeeperToken(database, destUserId, (token) =>
+    getDriveFileMeta(token, input.fileId)
+  )
   const destParents = volumeParents(
     albumRow.driveFolderId,
     await loadVolumeFolderId(database, albumRow.id, destUserId)
@@ -513,7 +540,9 @@ export async function confirmRelay(
 
   if (stale || incomplete) {
     try {
-      await deleteDriveFile(destToken, input.fileId)
+      await withFlamekeeperToken(database, destUserId, (token) =>
+        deleteDriveFile(token, input.fileId)
+      )
     } catch (error) {
       console.warn('Failed to delete unused relay copy:', error)
     }
@@ -521,7 +550,7 @@ export async function confirmRelay(
       .delete(uploadReservation)
       .where(eq(uploadReservation.id, reservation.id))
     if (incomplete) throw new Error('The moved copy was incomplete, try again')
-    return getDrainStatus(database, sourceUserId)
+    return await finishedDrainStatus(database, sourceUserId)
   }
 
   const bytes = original.bytes || copyBytes
@@ -537,14 +566,16 @@ export async function confirmRelay(
     )
   if ((claimed.meta?.changes ?? 0) === 0) {
     try {
-      await deleteDriveFile(destToken, input.fileId)
+      await withFlamekeeperToken(database, destUserId, (token) =>
+        deleteDriveFile(token, input.fileId)
+      )
     } catch (error) {
       console.warn('Failed to delete unused relay copy:', error)
     }
     await database
       .delete(uploadReservation)
       .where(eq(uploadReservation.id, reservation.id))
-    return getDrainStatus(database, sourceUserId)
+    return await finishedDrainStatus(database, sourceUserId)
   }
   await database.batch([
     database
@@ -569,8 +600,9 @@ export async function confirmRelay(
   ])
 
   try {
-    const sourceToken = await getFlamekeeperAccessToken(database, sourceUserId)
-    await deleteDriveFile(sourceToken, original.driveFileId)
+    await withFlamekeeperToken(database, sourceUserId, (token) =>
+      deleteDriveFile(token, original.driveFileId)
+    )
   } catch (error) {
     if (!(error instanceof DriveNotFoundError)) {
       console.warn(
@@ -590,8 +622,7 @@ export async function confirmRelay(
   await releaseEmptyVolumes(database, sourceUserId, [albumRow.id])
   await invalidateAlbumDetailIfCached(albumRow.id)
 
-  const row = await advanceDrain(database, sourceUserId, now)
-  return toStatus(row!)
+  return await finishedDrainStatus(database, sourceUserId)
 }
 
 function albumsOf(photos: { albumId: string }[]): number {
@@ -626,7 +657,7 @@ async function deleteOverdue(
     picked = picked.slice(0, Math.floor(picked.length / 2))
   }
   if (picked.length > 0) {
-    const { deleted, error } = await deleteOwnedPhotos(database, picked)
+    const { deleted, error } = await deleteOwnedPhotos(database, picked, budget)
     const byAlbum = new Map<string, string[]>()
     for (const p of picked) {
       if (!deleted.some((d) => d.id === p.id)) continue
@@ -649,7 +680,7 @@ async function deleteOverdue(
           )
         )
     }
-    await tombstoneEmptyAlbums(database, [...byAlbum.keys()], env)
+    await tombstoneEmptyAlbums(database, [...byAlbum.keys()], env, budget)
     if (byAlbum.size > 0) {
       await releaseEmptyVolumes(database, row.userId, [...byAlbum.keys()])
     }
@@ -669,7 +700,8 @@ async function deleteOverdue(
 async function tombstoneEmptyAlbums(
   database: Database,
   albumIds: string[],
-  env: NoticeEnv
+  env: NoticeEnv,
+  budget?: Budget
 ): Promise<void> {
   if (albumIds.length === 0) return
   const empty = await database
@@ -685,16 +717,20 @@ async function tombstoneEmptyAlbums(
     .from(album)
     .where(inArray(album.id, albumIds))
     .all()
-  const masterToken = await getGoogleAccessToken()
   for (const a of empty) {
     if (a.deletedAt || a.photoCount > 0 || !a.photosIndexedAt) {
       await invalidateAlbumDetailIfCached(a.id)
       continue
     }
     try {
-      await removeAlbum(database, a, masterToken, {
-        tombstone: 'flamekeeper_left',
-      })
+      await withGoogleToken(
+        (masterToken) =>
+          removeAlbum(database, a, masterToken, {
+            tombstone: 'flamekeeper_left',
+            budget,
+          }),
+        budget
+      )
       await notifyAlbumTombstoned(database, env, a, 'flamekeeper_left')
     } catch (error) {
       console.error(`Failed to tombstone album ${a.id}:`, error)

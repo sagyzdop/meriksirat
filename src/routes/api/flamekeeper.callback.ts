@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { flamekeeper, flamekeeperGrant, user } from '@/db/schema'
 import { isMasterEmail } from '@/lib/flamekeeper/master'
+import { forgetFlamekeeperAccessToken } from '@/lib/flamekeeper/tokens'
 import { resolveSession } from '@/lib/auth/resolve-session'
 import {
   decodeIdTokenPayload,
@@ -163,6 +164,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
               },
             }),
         ])
+        forgetFlamekeeperAccessToken(pending.userId)
 
         return redirectTo(origin, '/profile')
       },
