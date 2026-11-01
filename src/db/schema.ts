@@ -596,7 +596,6 @@ export const volume = sqliteTable(
       mode: 'timestamp_ms',
     }),
     releaseAlertedAt: integer('release_alerted_at', { mode: 'timestamp_ms' }),
-    writerRevokedAt: integer('writer_revoked_at', { mode: 'timestamp_ms' }),
     droppedAt: integer('dropped_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)

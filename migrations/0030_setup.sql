@@ -1,0 +1,1 @@
+ALTER TABLE `volume` DROP COLUMN `writer_revoked_at`;

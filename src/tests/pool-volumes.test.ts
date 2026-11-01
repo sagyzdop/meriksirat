@@ -136,15 +136,11 @@ describe('planRecoveryShare', () => {
   const base = {
     driveFolderId: 'sub1' as string | null,
     permissionId: '',
-    writerRevokedAt: null as Date | null,
     hasPhotoRows: false,
   }
 
   it('re-shares an empty subfolder whose access is gone', () => {
     expect(planRecoveryShare(base)).toBe(true)
-    expect(
-      planRecoveryShare({ ...base, permissionId: 'p', writerRevokedAt: now })
-    ).toBe(true)
   })
 
   it('never shares a subfolder that holds photos', () => {
