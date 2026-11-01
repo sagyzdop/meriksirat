@@ -456,7 +456,7 @@ export async function loadOwnedPhotos(
     .all()
 }
 
-async function sendAdminsTelegram(
+export async function sendAdminsTelegram(
   database: Database,
   botToken: string | undefined,
   text: string

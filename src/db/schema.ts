@@ -521,6 +521,9 @@ export const flamekeeper = sqliteTable(
     }),
     drainingDeadline: integer('draining_deadline', { mode: 'timestamp_ms' }),
     lostSince: integer('lost_since', { mode: 'timestamp_ms' }),
+    lostNotifiedAt: integer('lost_notified_at', { mode: 'timestamp_ms' }),
+    lostFinalizedAt: integer('lost_finalized_at', { mode: 'timestamp_ms' }),
+    healthCheckedAt: integer('health_checked_at', { mode: 'timestamp_ms' }),
     leaderboardAnonymous: integer('leaderboard_anonymous', { mode: 'boolean' })
       .default(false)
       .notNull(),
