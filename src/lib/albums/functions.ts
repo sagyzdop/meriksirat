@@ -14,6 +14,7 @@ import {
   RemoveMemberSchema,
   RestoreAlbumSchema,
   RotateEditTokenSchema,
+  SetAlbumPinnedSchema,
   SetCoverPhotoSchema,
   ToggleAlbumShareSchema,
   UpdateAlbumSchema,
@@ -29,6 +30,7 @@ import type {
   UploadSession,
 } from './types'
 import { albumPhotoUrls, albumCoverUrl } from './urls'
+import { defaultExpiry } from '@/lib/pool/expiry'
 
 // ---------------------------------------------------------------------------
 // Helpers (server-only)
@@ -45,7 +47,7 @@ async function loadAlbum(
     .from(album)
     .where(eq(album.id, albumId))
     .get()
-  if (!row) throw new Error('Album not found')
+  if (!row || row.deletedAt) throw new Error('Album not found')
   return row
 }
 
@@ -182,10 +184,10 @@ async function listAlbumsPaginated({
   query,
 }: ListAlbumsPaginatedArgs): Promise<AlbumListPage> {
   const { album, albumMember, user } = await import('@/db/schema')
-  const { and, desc, eq, getTableColumns, inArray, lt, like, or, sql } =
+  const { and, desc, eq, getTableColumns, inArray, isNull, lt, like, or, sql } =
     await import('drizzle-orm')
 
-  const conditions: import('drizzle-orm').SQL[] = []
+  const conditions: import('drizzle-orm').SQL[] = [isNull(album.deletedAt)]
   if (baseWhere) conditions.push(baseWhere)
 
   const search = (query.search ?? '').trim()
@@ -636,7 +638,7 @@ async function buildAlbumCore(
  */
 function decorateAlbumDetail(
   core: Record<string, unknown>,
-  row: Pick<AlbumRow, 'isShared' | 'editShareToken'>,
+  row: Pick<AlbumRow, 'isShared' | 'editShareToken' | 'expiresAt' | 'pinned'>,
   access: import('./types').AlbumAccessLevel,
   currentUser: { id: string } | null
 ): AlbumDetail {
@@ -652,6 +654,43 @@ function decorateAlbumDetail(
     ownership,
     access,
     editShareToken: access !== 'none' ? row.editShareToken : null,
+    expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+    pinned: !!row.pinned,
+    tombstone: null,
+  }
+}
+
+function buildTombstoneDetail(
+  row: AlbumRow,
+  access: import('./types').AlbumAccessLevel
+): AlbumDetail {
+  const visible = !!row.isShared || access !== 'none'
+  return {
+    id: row.id,
+    ownerUserId: row.ownerUserId,
+    title: visible ? row.title : 'Private album',
+    description: '',
+    event: visible ? (row.event ?? '') : '',
+    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
+    driveFolderId: '',
+    coverFileId: null,
+    coverUrl: null,
+    isShared: !!row.isShared,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    ownership: 'co-author',
+    coAuthorCount: 0,
+    authors: [],
+    photos: [],
+    access: 'none',
+    editShareToken: null,
+    folderState: 'ok',
+    expiresAt: null,
+    pinned: false,
+    tombstone: {
+      reason: row.tombstoneReason ?? 'expired',
+      deletedAt: (row.deletedAt ?? row.updatedAt).toISOString(),
+    },
   }
 }
 
@@ -733,6 +772,7 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       description: data.description ?? '',
       event: data.event,
       eventDate: new Date(data.eventDate),
+      expiresAt: defaultExpiry(new Date(data.eventDate)),
       driveFolderId: folder.id,
       editShareToken: newShareToken(),
       isShared: true,
@@ -875,6 +915,7 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
     if (!row) return null
 
     const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
+    if (row.deletedAt) return buildTombstoneDetail(row, access)
     if (!row.isShared && access === 'none') return null
 
     let core = (await getCachedDetailCore(data.albumId)) as Record<
@@ -1068,6 +1109,11 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     if (data.event !== undefined) updates.event = data.event
     if (data.eventDate !== undefined) {
       updates.eventDate = data.eventDate ? new Date(data.eventDate) : null
+      if (data.eventDate && !row.pinned) {
+        updates.expiresAt = defaultExpiry(new Date(data.eventDate))
+        updates.expiryReminder30SentAt = null
+        updates.expiryReminder7SentAt = null
+      }
     }
 
     if (Object.keys(updates).length > 0) {
@@ -1106,23 +1152,41 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
+export const setAlbumPinnedFn = createServerFn({ method: 'POST' })
+  .validator(SetAlbumPinnedSchema)
+  .handler(async ({ data }) => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { album } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { getSessionUser } = await import('./server')
+
+    const currentUser = await getSessionUser(getRequestHeaders())
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new Error('Only admins can pin albums')
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    await loadAlbum(database, data.albumId)
+    await database
+      .update(album)
+      .set({ pinned: data.pinned, updatedAt: new Date() })
+      .where(eq(album.id, data.albumId))
+
+    return { success: true }
+  })
+
 export const deleteAlbumFn = createServerFn({ method: 'POST' })
   .validator(DeleteAlbumSchema)
   .handler(async ({ data }) => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album, user } = await import('@/db/schema')
-    const { eq, sql } = await import('drizzle-orm')
-    const {
-      resolveAlbumAccess,
-      requireAccess,
-      invalidateCachedListing,
-      invalidateCachedDetailCore,
-    } = await import('./server')
+    const { resolveAlbumAccess, requireAccess } = await import('./server')
+    const { removeAlbum } = await import('./expiry')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { deleteDriveFile } = await import('@/lib/google/google-drive')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -1132,22 +1196,7 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
     requireAccess(access, ['owner', 'manager'])
 
     const accessToken = await getGoogleAccessToken()
-    try {
-      await deleteDriveFile(accessToken, row.driveFolderId)
-    } catch (error) {
-      console.warn(
-        'Failed to delete Drive folder, continuing with DB cleanup:',
-        error
-      )
-    }
-    await invalidateCachedListing(row.driveFolderId)
-    await invalidateCachedDetailCore(data.albumId)
-    await database.delete(album).where(eq(album.id, data.albumId))
-
-    await database
-      .update(user)
-      .set({ albumCount: sql`MAX(${user.albumCount} - 1, 0)` })
-      .where(eq(user.id, row.ownerUserId))
+    await removeAlbum(database, row, accessToken)
 
     if (currentUser) {
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')

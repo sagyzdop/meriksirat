@@ -75,7 +75,7 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { album, booking } = await import('@/db/schema')
-    const { and, gte, lte, sql } = await import('drizzle-orm')
+    const { and, gte, isNull, lte, sql } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -84,7 +84,8 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
     const { start, endOfRange } = resolveRange(data.startDate, data.endDate)
     const rangeWhere = and(
       gte(album.createdAt, start),
-      lte(album.createdAt, endOfRange)
+      lte(album.createdAt, endOfRange),
+      isNull(album.deletedAt)
     )
 
     // --- Albums per month (public vs private) -----------------------------
@@ -328,6 +329,7 @@ export const getAdminDashboardAlertsFn = createServerFn({
       driveFolderId: album.driveFolderId,
     })
     .from(album)
+    .where(isNull(album.deletedAt))
     .all()
 
   const problemTitles: string[] = []
@@ -591,7 +593,7 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { album, albumMember } = await import('@/db/schema')
-    const { eq, and, or, inArray, like, asc, desc, sql } =
+    const { eq, and, or, inArray, isNull, like, asc, desc, sql } =
       await import('drizzle-orm')
 
     const headers = getRequestHeaders()
@@ -606,7 +608,7 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
       .from(albumMember)
       .where(eq(albumMember.userId, data.userId))
 
-    const conditions: import('drizzle-orm').SQL[] = []
+    const conditions: import('drizzle-orm').SQL[] = [isNull(album.deletedAt)]
     conditions.push(
       or(eq(album.ownerUserId, data.userId), inArray(album.id, memberAlbums))!
     )
@@ -783,7 +785,7 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db/index')
     const { album, albumMember, user } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
+    const { eq, isNull } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
     await checkAdminPermission(headers, ['admin', 'manager'])
@@ -808,6 +810,7 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
       })
       .from(album)
       .leftJoin(user, eq(album.ownerUserId, user.id))
+      .where(isNull(album.deletedAt))
       .orderBy(album.createdAt)
       .all()
 
