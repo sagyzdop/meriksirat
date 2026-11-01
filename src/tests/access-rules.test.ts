@@ -199,6 +199,7 @@ describe('entry rules', () => {
     expect(nonMemberCanVisit('/favorites')).toBe(true)
     expect(nonMemberCanVisit('/equipment')).toBe(false)
     expect(nonMemberCanVisit('/profileX')).toBe(false)
+    expect(nonMemberCanVisit('/my-albums')).toBe(false)
     expect(nonMemberCanVisit('/admin/users')).toBe(false)
   })
 })

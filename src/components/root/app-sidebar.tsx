@@ -213,7 +213,9 @@ export function AppSidebar({
           ? {
               ...group,
               items: group.items.map((item) =>
-                canUseAlbums || item.url === '/favorites'
+                canUseAlbums ||
+                item.url === '/favorites' ||
+                item.url === '/albums'
                   ? item
                   : {
                       ...item,
