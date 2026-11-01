@@ -36,10 +36,10 @@ import {
   pickDeadlineDeletions,
   planDrainProgress,
   planOptOut,
-  planPledgeChange,
   type DrainFlamekeeper,
   type DrainTransition,
 } from './drain'
+import { planFlamekeeperEdit } from './graduation'
 
 type Database = ReturnType<typeof db>
 
@@ -49,11 +49,12 @@ const DEADLINE_DELETES_PER_RUN = 200
 const REMINDERS_PER_RUN = 2
 const ADVANCES_PER_RUN = 2
 
-interface DrainRow extends DrainFlamekeeper {
+export interface DrainRow extends DrainFlamekeeper {
   userId: string
+  graduationDate: string
 }
 
-const drainColumns = {
+export const drainColumns = {
   userId: flamekeeper.userId,
   state: flamekeeper.state,
   pledgedBytes: flamekeeper.pledgedBytes,
@@ -61,6 +62,7 @@ const drainColumns = {
   drainReason: flamekeeper.drainReason,
   drainingDeadline: flamekeeper.drainingDeadline,
   drainReminderSentAt: flamekeeper.drainReminderSentAt,
+  graduationDate: flamekeeper.graduationDate,
 }
 
 async function loadDrainRow(
@@ -281,7 +283,7 @@ async function advanceDrain(
   if (!row || row.state !== 'draining') return row
   const transition = planDrainProgress(
     row,
-    row.drainReason === 'opt_out' ? await hasPhotosLeft(database, userId) : true
+    row.drainReason !== 'pledge' ? await hasPhotosLeft(database, userId) : true
   )
   if (transition.kind === 'none') return row
   await applyDrainTransition(database, userId, transition, now)
@@ -324,15 +326,21 @@ function accountLink(): string {
   return origin ? `\n\nOpen your account page: ${origin}/profile` : ''
 }
 
-async function sendDrainStartedEmail(
+const DRAIN_WHY: Record<NonNullable<DrainRow['drainReason']>, string> = {
+  opt_out: 'You switched flamekeeping off',
+  pledge: 'You lowered your pledge below what you already hold',
+  graduation:
+    'Your expected graduation date is less than 60 days away and your account is about to move to alumni storage',
+  domain:
+    'Your account is no longer an @nu.edu.kz account, so it cannot keep lending storage',
+}
+
+export async function sendDrainStartedEmail(
   database: Database,
   row: DrainRow
 ): Promise<void> {
   const left = formatGb(drainBytesLeft(row))
-  const why =
-    row.drainReason === 'opt_out'
-      ? 'You switched flamekeeping off'
-      : 'You lowered your pledge below what you already hold'
+  const why = DRAIN_WHY[row.drainReason ?? 'pledge']
   await sendFlamekeeperEmail(
     database,
     row.userId,
@@ -373,12 +381,14 @@ export async function changePledge(
 ): Promise<void> {
   const row = await loadDrainRow(database, userId)
   if (!row) throw new Error('You are not a flamekeeper')
-  const transition = planPledgeChange(row, input.pledgedBytes, now)
+  const hasPhotos = row.usedBytes > 0 && (await hasPhotosLeft(database, userId))
+  const transition = planFlamekeeperEdit(row, input, now, hasPhotos)
   await database
     .update(flamekeeper)
     .set({
       pledgedBytes: input.pledgedBytes,
       graduationDate: input.graduationDate,
+      graduationConfirmedAt: now,
       updatedAt: now,
     })
     .where(eq(flamekeeper.userId, userId))

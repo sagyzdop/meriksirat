@@ -21,6 +21,7 @@ import { EditPledgeDialog } from './edit-pledge-dialog'
 import { StopFlamekeepingDialog } from './stop-flamekeeping-dialog'
 import { getAccessRules } from '@/lib/access/access-rules'
 import {
+  confirmGraduationFn,
   setLeaderboardAnonymousFn,
   startDriveConnectFn,
 } from '@/lib/flamekeeper/functions'
@@ -35,6 +36,17 @@ interface FlamekeeperCardProps {
   connectError?: string | null
   justConnected?: boolean
 }
+
+const DRAIN_MESSAGE = {
+  opt_out:
+    'You stopped flamekeeping, so your photos are moving to other flamekeepers. New uploads no longer go to your Drive.',
+  pledge:
+    'Your pledge is below what you hold, so the excess is moving to other flamekeepers. New uploads no longer go to your Drive.',
+  graduation:
+    'Your graduation is less than 60 days away, so your photos are moving to other flamekeepers before your account shrinks. If the date is wrong, edit it below. New uploads no longer go to your Drive.',
+  domain:
+    'Your account is no longer an @nu.edu.kz account, so your photos are moving to other flamekeepers. New uploads no longer go to your Drive.',
+} as const
 
 const STATE_LABEL = {
   active: 'Active',
@@ -56,6 +68,7 @@ export function FlamekeeperCard({
   const [isReconnecting, setIsReconnecting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [stopOpen, setStopOpen] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
 
   const rules = getAccessRules({
     isMember: user.isMember,
@@ -85,6 +98,21 @@ export function FlamekeeperCard({
       toast.error(
         error instanceof Error ? error.message : 'Could not update leaderboard'
       )
+    }
+  }
+
+  const handleConfirmGraduation = async () => {
+    setIsConfirming(true)
+    try {
+      await confirmGraduationFn({ data: {} })
+      await handleSaved()
+      toast.success('Graduation date confirmed')
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not confirm the date'
+      )
+    } finally {
+      setIsConfirming(false)
     }
   }
 
@@ -146,15 +174,37 @@ export function FlamekeeperCard({
           {flamekeeper.state === 'draining' && (
             <div className="space-y-2">
               <p className="text-sm">
-                {flamekeeper.drainReason === 'opt_out'
-                  ? 'You stopped flamekeeping, so your photos are moving to other flamekeepers. New uploads no longer go to your Drive.'
-                  : 'Your pledge is below what you hold, so the excess is moving to other flamekeepers. New uploads no longer go to your Drive.'}
+                {DRAIN_MESSAGE[flamekeeper.drainReason ?? 'pledge']}
               </p>
               <DrainRelay
                 bytesLeft={flamekeeper.drainBytesLeft}
                 drainingDeadline={flamekeeper.drainingDeadline}
                 onFinished={handleSaved}
               />
+            </div>
+          )}
+          {flamekeeper.graduationConfirmDue && (
+            <div className="space-y-2 rounded bg-muted p-3 text-sm">
+              <p>
+                Is {flamekeeper.graduationDate} still your expected graduation
+                date? Your photos move to other flamekeepers 60 days before it.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleConfirmGraduation}
+                  disabled={isConfirming}
+                >
+                  {isConfirming ? 'Saving...' : 'Yes, it is right'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditOpen(true)}
+                >
+                  Change date
+                </Button>
+              </div>
             </div>
           )}
           {connectError && (
@@ -208,11 +258,12 @@ export function FlamekeeperCard({
             </Label>
           </div>
           <div className="flex flex-wrap gap-2">
-            {flamekeeper.drainReason !== 'opt_out' && (
-              <Button variant="outline" onClick={() => setEditOpen(true)}>
-                Edit pledge
-              </Button>
-            )}
+            {flamekeeper.drainReason !== 'opt_out' &&
+              flamekeeper.drainReason !== 'domain' && (
+                <Button variant="outline" onClick={() => setEditOpen(true)}>
+                  Edit pledge
+                </Button>
+              )}
             {flamekeeper.state !== 'lost' &&
               flamekeeper.drainReason !== 'opt_out' && (
                 <Button variant="ghost" onClick={() => setStopOpen(true)}>

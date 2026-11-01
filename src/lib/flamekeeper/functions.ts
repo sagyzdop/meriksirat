@@ -3,6 +3,7 @@ import { getRequest, getRequestHeaders } from '@tanstack/react-start/server'
 import type { LeaderboardEntry } from '@/lib/pool/leaderboard'
 import {
   AdminFlamekeepersSchema,
+  ConfirmGraduationSchema,
   ConfirmRelaySchema,
   ReleaseRelaySchema,
   SetLeaderboardAnonymousSchema,
@@ -53,11 +54,13 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
     if (!row) return null
     const { countHostedAlbums } = await import('@/lib/pool/server')
     const { drainBytesLeft } = await import('@/lib/pool/drain')
+    const { graduationConfirmDue } = await import('@/lib/pool/graduation')
     return {
       state: row.state,
       pledgedBytes: row.pledgedBytes,
       usedBytes: row.usedBytes,
       graduationDate: row.graduationDate,
+      graduationConfirmDue: graduationConfirmDue(row, new Date()),
       drainingDeadline: row.drainingDeadline,
       drainReason: row.drainReason,
       drainBytesLeft: drainBytesLeft(row),
@@ -191,6 +194,39 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
       graduationDate: data.graduationDate,
     })
 
+    return { success: true }
+  })
+
+export const confirmGraduationFn = createServerFn({ method: 'POST' })
+  .validator(ConfirmGraduationSchema)
+  .handler(async ({ data }) => {
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const session = await resolveSession(getRequestHeaders())
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { flamekeeper } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { isValidGraduationDate } = await import('./rules')
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    const existing = await database
+      .select()
+      .from(flamekeeper)
+      .where(eq(flamekeeper.userId, session.user.id))
+      .get()
+    if (!existing) throw new Error('You are not a flamekeeper')
+
+    const date = data.graduationDate ?? existing.graduationDate
+    if (date !== existing.graduationDate && !isValidGraduationDate(date)) {
+      throw new Error('Expected graduation date must be in the future')
+    }
+    const { changePledge } = await import('@/lib/pool/drain-server')
+    await changePledge(database, session.user.id, {
+      pledgedBytes: existing.pledgedBytes,
+      graduationDate: date,
+    })
     return { success: true }
   })
 

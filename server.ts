@@ -147,6 +147,7 @@ export default {
         maintainPool(env),
         checkFlamekeeperHealth(env),
         drainFlamekeepers(env),
+        graduateFlamekeepers(env),
       ])
     )
   },
@@ -210,6 +211,19 @@ async function drainFlamekeepers(env: Env): Promise<void> {
   } catch (error) {
     console.error(
       'Error in drainFlamekeepers:',
+      error instanceof Error ? error.message : error
+    )
+  }
+}
+
+async function graduateFlamekeepers(env: Env): Promise<void> {
+  try {
+    const { runGraduationMaintenance } =
+      await import('./src/lib/pool/graduation-server')
+    await runGraduationMaintenance(env)
+  } catch (error) {
+    console.error(
+      'Error in graduateFlamekeepers:',
       error instanceof Error ? error.message : error
     )
   }

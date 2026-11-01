@@ -8,6 +8,7 @@ export interface MyFlamekeeper {
   pledgedBytes: number
   usedBytes: number
   graduationDate: string
+  graduationConfirmDue: boolean
   drainingDeadline: Date | null
   drainReason: DrainReason | null
   drainBytesLeft: number
@@ -78,6 +79,10 @@ export const StartDriveConnectSchema = z.discriminatedUnion('mode', [
 export const UpdateFlamekeeperSchema = z.object({
   pledgeGb,
   graduationDate,
+})
+
+export const ConfirmGraduationSchema = z.object({
+  graduationDate: graduationDate.optional(),
 })
 
 export const AdminFlamekeepersSchema = z.object({

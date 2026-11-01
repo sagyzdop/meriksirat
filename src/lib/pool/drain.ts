@@ -1,7 +1,7 @@
 import type { FlamekeeperState } from '@/lib/access/access-rules'
 import { DRAIN_GRACE_MS } from '@/lib/flamekeeper/rules'
 
-export type DrainReason = 'opt_out' | 'pledge'
+export type DrainReason = 'opt_out' | 'pledge' | 'graduation' | 'domain'
 
 const DRAIN_REMINDER_MS = 3 * 24 * 60 * 60 * 1000
 
@@ -26,7 +26,7 @@ export type DrainTransition =
   | { kind: 'none' }
   | { kind: 'refuse'; message: string }
 
-function startDrain(reason: DrainReason, now: Date): DrainTransition {
+export function startDrain(reason: DrainReason, now: Date): DrainTransition {
   return {
     kind: 'drain',
     state: 'draining',

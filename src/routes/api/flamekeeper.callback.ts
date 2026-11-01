@@ -113,6 +113,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
               userId: pending.userId,
               pledgedBytes: pending.pledgedBytes,
               graduationDate: pending.graduationDate,
+              graduationConfirmedAt: now,
               termsAcceptedAt: new Date(pending.termsAcceptedAt),
             })
             .onConflictDoUpdate({
