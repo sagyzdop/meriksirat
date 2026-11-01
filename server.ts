@@ -145,6 +145,7 @@ export default {
         backfillAlbumPhotos(env),
         expireAlbums(env),
         maintainPool(env),
+        checkFlamekeeperHealth(env),
       ])
     )
   },
@@ -171,6 +172,19 @@ async function expireAlbums(env: Env): Promise<void> {
   } catch (error) {
     console.error(
       'Error in expireAlbums:',
+      error instanceof Error ? error.message : error
+    )
+  }
+}
+
+async function checkFlamekeeperHealth(env: Env): Promise<void> {
+  try {
+    const { runFlamekeeperHealth } =
+      await import('./src/lib/pool/health-server')
+    await runFlamekeeperHealth(env)
+  } catch (error) {
+    console.error(
+      'Error in checkFlamekeeperHealth:',
       error instanceof Error ? error.message : error
     )
   }

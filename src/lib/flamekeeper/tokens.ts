@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { db } from '@/db'
 import { flamekeeperGrant } from '@/db/schema'
+import { isInvalidGrantResponse } from '@/lib/pool/health'
 
 type Database = ReturnType<typeof db>
 
@@ -8,9 +9,12 @@ const TOKEN_TTL_MS = 50 * 60 * 1000
 const cache = new Map<string, { token: string; at: number }>()
 
 export class FlamekeeperGrantError extends Error {
-  constructor(message: string) {
+  readonly revoked: boolean
+
+  constructor(message: string, revoked = false) {
     super(message)
     this.name = 'FlamekeeperGrantError'
+    this.revoked = revoked
   }
 }
 
@@ -31,7 +35,7 @@ export async function getFlamekeeperAccessToken(
     .from(flamekeeperGrant)
     .where(eq(flamekeeperGrant.userId, userId))
     .get()
-  if (!grant) throw new FlamekeeperGrantError('No Drive grant')
+  if (!grant) throw new FlamekeeperGrantError('No Drive grant', true)
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -44,8 +48,10 @@ export async function getFlamekeeperAccessToken(
     }),
   })
   if (!response.ok) {
+    const body = await response.text()
     throw new FlamekeeperGrantError(
-      `Failed to refresh Drive grant: ${await response.text()}`
+      `Failed to refresh Drive grant: ${body}`,
+      isInvalidGrantResponse(response.status, body)
     )
   }
   const data = (await response.json()) as { access_token: string }
