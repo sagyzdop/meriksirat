@@ -634,7 +634,6 @@ async function recoverDropped(
       albumId: volume.albumId,
       userId: volume.flamekeeperUserId,
       permissionId: volume.permissionId,
-      writerRevokedAt: volume.writerRevokedAt,
       volumeFolderId: volume.driveFolderId,
       email: user.email,
       title: album.title,
@@ -681,7 +680,6 @@ async function recoverDropped(
           planRecoveryShare({
             driveFolderId: v.volumeFolderId,
             permissionId: v.permissionId,
-            writerRevokedAt: v.writerRevokedAt,
             hasPhotoRows: !!anyRows,
           })
         ) {
@@ -694,7 +692,7 @@ async function recoverDropped(
             )
             await database
               .update(volume)
-              .set({ permissionId, writerRevokedAt: null })
+              .set({ permissionId })
               .where(
                 and(
                   eq(volume.albumId, v.albumId),

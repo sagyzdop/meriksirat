@@ -970,8 +970,8 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album, volume } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
+    const { album, photo, volume } = await import('@/db/schema')
+    const { and, eq } = await import('drizzle-orm')
     const {
       resolveAlbumAccess,
       requireAccess,
@@ -1014,13 +1014,24 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       .set({ driveFolderId: folder.id, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
     const { resetAlbumPhotos } = await import('./photo-index')
+    const { releaseOwnedBytes } = await import('@/lib/pool/server')
+    const heldPhotos = await database
+      .select({
+        id: photo.id,
+        driveFileId: photo.driveFileId,
+        bytes: photo.bytes,
+        flamekeeperUserId: photo.flamekeeperUserId,
+      })
+      .from(photo)
+      .where(and(eq(photo.albumId, data.albumId), eq(photo.state, 'live')))
+      .all()
     await resetAlbumPhotos(database, data.albumId)
+    await releaseOwnedBytes(database, heldPhotos)
     await database
       .update(volume)
       .set({
         driveFolderId: null,
         permissionId: '',
-        writerRevokedAt: null,
         releaseBlockedAt: null,
         releaseBlockedSince: null,
         releaseAlertedAt: null,

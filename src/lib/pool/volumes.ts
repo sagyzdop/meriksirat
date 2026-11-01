@@ -105,11 +105,10 @@ export function albumBlockedAlertText(
 export function planRecoveryShare(volume: {
   driveFolderId: string | null
   permissionId: string
-  writerRevokedAt: Date | null
   hasPhotoRows: boolean
 }): boolean {
   if (!volume.driveFolderId || volume.hasPhotoRows) return false
-  return !volume.permissionId || !!volume.writerRevokedAt
+  return !volume.permissionId
 }
 
 export function volumeParents(volumeFolderId: string | null): string[] {

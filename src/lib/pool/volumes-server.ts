@@ -50,7 +50,6 @@ export async function ensureVolumeFolder(
       .select({
         driveFolderId: volume.driveFolderId,
         permissionId: volume.permissionId,
-        writerRevokedAt: volume.writerRevokedAt,
         releaseBlockedAt: volume.releaseBlockedAt,
       })
       .from(volume)
@@ -58,11 +57,7 @@ export async function ensureVolumeFolder(
       .get()
 
   const existing = await load()
-  if (
-    existing?.driveFolderId &&
-    existing.permissionId &&
-    !existing.writerRevokedAt
-  ) {
+  if (existing?.driveFolderId && existing.permissionId) {
     if (existing.releaseBlockedAt) {
       await database.update(volume).set(clearedRelease).where(key)
     }
@@ -82,7 +77,6 @@ export async function ensureVolumeFolder(
           .set({
             driveFolderId: created.id,
             permissionId: '',
-            writerRevokedAt: null,
             ...clearedRelease,
           })
           .where(and(key, sql`${volume.driveFolderId} IS NULL`))
@@ -108,14 +102,14 @@ export async function ensureVolumeFolder(
         throw new Error('Could not set up your volume, try again')
       }
       folderId = winner.driveFolderId
-      if (winner.permissionId && !winner.writerRevokedAt) return folderId
+      if (winner.permissionId) return folderId
     }
   }
 
   const permissionId = await shareWithWriter(masterToken, folderId, fk.email)
   await database
     .update(volume)
-    .set({ permissionId, writerRevokedAt: null, ...clearedRelease })
+    .set({ permissionId, ...clearedRelease })
     .where(key)
   return folderId
 }
