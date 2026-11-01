@@ -5,6 +5,7 @@ import {
   defaultExpiry,
   expiryBannerDate,
   planExpiry,
+  reminderRecipients,
   tombstoneCopy,
 } from '../lib/pool/expiry'
 import type { ExpiryAlbum } from '../lib/pool/expiry'
@@ -137,5 +138,20 @@ describe('tombstoneCopy', () => {
       }
     }
     expect(tombstoneCopy('expired').description).toBe(fallback)
+  })
+})
+
+describe('reminderRecipients', () => {
+  it('puts the owner first and dedupes chat ids', () => {
+    expect(reminderRecipients('1', ['2', '1', '2', '3'])).toEqual([
+      '1',
+      '2',
+      '3',
+    ])
+  })
+
+  it('drops missing and blank chat ids', () => {
+    expect(reminderRecipients(null, [undefined, '', ' ', '5'])).toEqual(['5'])
+    expect(reminderRecipients(undefined, [])).toEqual([])
   })
 })

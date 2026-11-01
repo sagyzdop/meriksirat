@@ -58,6 +58,20 @@ export function expiryBannerDate(
   return album.expiresAt
 }
 
+export const REMINDER_SUBREQUEST_BUDGET = 40
+
+export function reminderRecipients(
+  ownerChatId: string | null | undefined,
+  memberChatIds: (string | null | undefined)[]
+): string[] {
+  const out = new Set<string>()
+  for (const id of [ownerChatId, ...memberChatIds]) {
+    const trimmed = id?.trim()
+    if (trimmed) out.add(trimmed)
+  }
+  return [...out]
+}
+
 export function tombstoneCopy(reason: TombstoneReason | null): {
   title: string
   description: string

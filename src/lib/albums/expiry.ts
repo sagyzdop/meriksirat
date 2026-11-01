@@ -1,9 +1,13 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { album, favorite, photo, user, volume } from '@/db/schema'
+import { album, albumMember, favorite, photo, user, volume } from '@/db/schema'
 import { DriveNotFoundError, deleteDriveFile } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
-import { planExpiry } from '@/lib/pool/expiry'
+import {
+  REMINDER_SUBREQUEST_BUDGET,
+  planExpiry,
+  reminderRecipients,
+} from '@/lib/pool/expiry'
 import {
   MAX_PHOTO_DELETES_PER_CALL,
   deleteOwnedPhotos,
@@ -182,22 +186,58 @@ export async function runAlbumExpiry(env: {
       { ids: plan.remind7, days: 7, column: 'expiryReminder7SentAt' },
     ] as const
 
-    for (const { ids, days, column } of reminders) {
+    const allIds = [...plan.remind30, ...plan.remind7]
+    const ownerChat = new Map<string, string | null>()
+    const memberChats = new Map<string, (string | null)[]>()
+    for (let i = 0; i < allIds.length; i += ROW_DELETE_CHUNK) {
+      const chunk = allIds.slice(i, i + ROW_DELETE_CHUNK)
+      const owners = await database
+        .select({ albumId: album.id, chatId: user.telegramChatId })
+        .from(album)
+        .innerJoin(user, eq(user.id, album.ownerUserId))
+        .where(inArray(album.id, chunk))
+        .all()
+      for (const o of owners) ownerChat.set(o.albumId, o.chatId)
+      const members = await database
+        .select({ albumId: albumMember.albumId, chatId: user.telegramChatId })
+        .from(albumMember)
+        .innerJoin(user, eq(user.id, albumMember.userId))
+        .where(inArray(albumMember.albumId, chunk))
+        .all()
+      for (const m of members) {
+        const list = memberChats.get(m.albumId) ?? []
+        list.push(m.chatId)
+        memberChats.set(m.albumId, list)
+      }
+    }
+
+    let spent = 0
+    outer: for (const { ids, days, column } of reminders) {
       for (const id of ids) {
         const row = byId.get(id)!
+        const recipients = reminderRecipients(
+          ownerChat.get(id),
+          memberChats.get(id) ?? []
+        )
+        const cost = recipients.length + 1
+        if (spent > 0 && spent + cost > REMINDER_SUBREQUEST_BUDGET) break outer
+        spent += cost
         try {
-          const owner = await database
-            .select({ chatId: user.telegramChatId })
-            .from(user)
-            .where(eq(user.id, row.ownerUserId))
-            .get()
-          if (owner?.chatId) {
-            const link = origin ? `\n${origin}/albums/${id}` : ''
-            await telegram.sendMessage(
-              owner.chatId,
-              `Your album "${row.title}" will be deleted in ${days} days, on ${formatDate(row.expiresAt)}. There is no backup, so download the photos you want to keep.${link}`
-            )
+          const link = origin ? `\n${origin}/albums/${id}` : ''
+          const text = `Your album "${row.title}" will be deleted in ${days} days, on ${formatDate(row.expiresAt)}. There is no backup, so download the photos you want to keep.${link}`
+          let failed = 0
+          for (const chatId of recipients) {
+            try {
+              await telegram.sendMessage(chatId, text)
+            } catch (error) {
+              failed++
+              console.error(
+                `Failed to send ${days}-day reminder for ${id}:`,
+                error
+              )
+            }
           }
+          if (recipients.length > 0 && failed === recipients.length) continue
           await database
             .update(album)
             .set({ [column]: now })
