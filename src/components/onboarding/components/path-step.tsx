@@ -9,13 +9,11 @@ import {
 } from '@/components/ui/card'
 
 interface PathStepProps {
-  showFlamekeeperNotice: boolean
   onChooseMember: () => void
   onChooseFlamekeeper: () => void
 }
 
 export function PathStep({
-  showFlamekeeperNotice,
   onChooseMember,
   onChooseFlamekeeper,
 }: PathStepProps) {
@@ -40,12 +38,6 @@ export function PathStep({
           <Flame className="mr-2 h-4 w-4" />
           Flamekeeper
         </Button>
-        {showFlamekeeperNotice && (
-          <div className="rounded bg-muted p-3 text-center text-sm text-muted-foreground">
-            Flamekeeper signup is coming soon. For now, join as a club member
-            with the club code.
-          </div>
-        )}
       </CardContent>
     </Card>
   )

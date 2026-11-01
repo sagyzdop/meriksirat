@@ -21,12 +21,14 @@ import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AuthenticatedAdminAlbumsRouteImport } from './routes/_authenticated/admin/albums'
 import { Route as AuthenticatedAdminBirthdaysRouteImport } from './routes/_authenticated/admin/birthdays'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
+import { Route as AuthenticatedAdminFlamekeepersRouteImport } from './routes/_authenticated/admin/flamekeepers'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings/index'
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
 import { Route as AuthenticatedEquipmentSplatRouteImport } from './routes/_authenticated/equipment/$'
 import { Route as AuthenticatedMyAlbumsIndexRouteImport } from './routes/_authenticated/my-albums/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiFlamekeeperCallbackRouteImport } from './routes/api/flamekeeper.callback'
 import { Route as ApiImagesSplatRouteImport } from './routes/api/images.$'
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings/index'
 import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/_authenticated/admin/categories/index'
@@ -102,6 +104,12 @@ const AuthenticatedAdminDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminFlamekeepersRoute =
+  AuthenticatedAdminFlamekeepersRouteImport.update({
+    id: '/flamekeepers',
+    path: '/flamekeepers',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedBookingsIndexRoute =
   AuthenticatedBookingsIndexRouteImport.update({
     id: '/bookings/',
@@ -135,6 +143,11 @@ const AuthenticatedMyAlbumsIndexRoute =
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFlamekeeperCallbackRoute = ApiFlamekeeperCallbackRouteImport.update({
+  id: '/api/flamekeeper/callback',
+  path: '/api/flamekeeper/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiImagesSplatRoute = ApiImagesSplatRouteImport.update({
@@ -221,9 +234,11 @@ export interface FileRoutesByFullPath {
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/flamekeepers': typeof AuthenticatedAdminFlamekeepersRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/flamekeeper/callback': typeof ApiFlamekeeperCallbackRoute
   '/api/images/$': typeof ApiImagesSplatRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/equipment/': typeof AuthenticatedEquipmentIndexRoute
@@ -252,9 +267,11 @@ export interface FileRoutesByTo {
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/flamekeepers': typeof AuthenticatedAdminFlamekeepersRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/flamekeeper/callback': typeof ApiFlamekeeperCallbackRoute
   '/api/images/$': typeof ApiImagesSplatRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
   '/equipment': typeof AuthenticatedEquipmentIndexRoute
@@ -285,9 +302,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/_authenticated/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/_authenticated/admin/flamekeepers': typeof AuthenticatedAdminFlamekeepersRoute
   '/_authenticated/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/_authenticated/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/flamekeeper/callback': typeof ApiFlamekeeperCallbackRoute
   '/api/images/$': typeof ApiImagesSplatRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/_authenticated/equipment/': typeof AuthenticatedEquipmentIndexRoute
@@ -318,9 +337,11 @@ export interface FileRouteTypes {
     | '/admin/albums'
     | '/admin/birthdays'
     | '/admin/dashboard'
+    | '/admin/flamekeepers'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
+    | '/api/flamekeeper/callback'
     | '/api/images/$'
     | '/bookings/'
     | '/equipment/'
@@ -349,9 +370,11 @@ export interface FileRouteTypes {
     | '/admin/albums'
     | '/admin/birthdays'
     | '/admin/dashboard'
+    | '/admin/flamekeepers'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
+    | '/api/flamekeeper/callback'
     | '/api/images/$'
     | '/bookings'
     | '/equipment'
@@ -381,9 +404,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/albums'
     | '/_authenticated/admin/birthdays'
     | '/_authenticated/admin/dashboard'
+    | '/_authenticated/admin/flamekeepers'
     | '/_authenticated/bookings/new'
     | '/_authenticated/equipment/$'
     | '/api/auth/$'
+    | '/api/flamekeeper/callback'
     | '/api/images/$'
     | '/_authenticated/bookings/'
     | '/_authenticated/equipment/'
@@ -410,6 +435,7 @@ export interface RootRouteChildren {
   ApiTelegramRoute: typeof ApiTelegramRoute
   AlbumsIndexRoute: typeof AlbumsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiFlamekeeperCallbackRoute: typeof ApiFlamekeeperCallbackRoute
   ApiImagesSplatRoute: typeof ApiImagesSplatRoute
 }
 
@@ -499,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/flamekeepers': {
+      id: '/_authenticated/admin/flamekeepers'
+      path: '/flamekeepers'
+      fullPath: '/admin/flamekeepers'
+      preLoaderRoute: typeof AuthenticatedAdminFlamekeepersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/bookings/': {
       id: '/_authenticated/bookings/'
       path: '/bookings'
@@ -539,6 +572,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/flamekeeper/callback': {
+      id: '/api/flamekeeper/callback'
+      path: '/api/flamekeeper/callback'
+      fullPath: '/api/flamekeeper/callback'
+      preLoaderRoute: typeof ApiFlamekeeperCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/images/$': {
@@ -632,6 +672,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAlbumsRoute: typeof AuthenticatedAdminAlbumsRoute
   AuthenticatedAdminBirthdaysRoute: typeof AuthenticatedAdminBirthdaysRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminFlamekeepersRoute: typeof AuthenticatedAdminFlamekeepersRoute
   AuthenticatedAdminEquipmentNewRoute: typeof AuthenticatedAdminEquipmentNewRoute
   AuthenticatedAdminUsersUserIdRoute: typeof AuthenticatedAdminUsersUserIdRoute
   AuthenticatedAdminBookingsIndexRoute: typeof AuthenticatedAdminBookingsIndexRoute
@@ -647,6 +688,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAlbumsRoute: AuthenticatedAdminAlbumsRoute,
   AuthenticatedAdminBirthdaysRoute: AuthenticatedAdminBirthdaysRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+  AuthenticatedAdminFlamekeepersRoute: AuthenticatedAdminFlamekeepersRoute,
   AuthenticatedAdminEquipmentNewRoute: AuthenticatedAdminEquipmentNewRoute,
   AuthenticatedAdminUsersUserIdRoute: AuthenticatedAdminUsersUserIdRoute,
   AuthenticatedAdminBookingsIndexRoute: AuthenticatedAdminBookingsIndexRoute,
@@ -704,6 +746,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTelegramRoute: ApiTelegramRoute,
   AlbumsIndexRoute: AlbumsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiFlamekeeperCallbackRoute: ApiFlamekeeperCallbackRoute,
   ApiImagesSplatRoute: ApiImagesSplatRoute,
 }
 export const routeTree = rootRouteImport

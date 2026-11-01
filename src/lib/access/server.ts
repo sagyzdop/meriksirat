@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { settings, user } from '@/db/schema'
+import { flamekeeper, settings, user } from '@/db/schema'
 import type { db as createDb } from '@/db'
 import { generateClubCode } from './club-code'
 import { getAccessRules, type AccessRules } from './access-rules'
@@ -44,7 +44,14 @@ export async function loadAccessRules(
     .get()
 
   if (!row) throw new Error('User not found')
-  return getAccessRules(row)
+
+  const fk = await database
+    .select({ state: flamekeeper.state })
+    .from(flamekeeper)
+    .where(eq(flamekeeper.userId, userId))
+    .get()
+
+  return getAccessRules({ ...row, flamekeeperState: fk?.state ?? null })
 }
 
 export async function assertAccess(

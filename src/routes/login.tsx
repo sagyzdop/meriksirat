@@ -7,8 +7,10 @@ export const Route = createFileRoute('/login')({
     const user = await getUserFn()
 
     if (user) {
-      if (user.onboardingComplete) {
+      if (user.onboardingComplete && user.isMember) {
         throw redirect({ to: '/equipment' })
+      } else if (!user.isMember && user.flamekeeperState) {
+        throw redirect({ to: '/profile' })
       } else {
         throw redirect({ to: '/onboarding' })
       }

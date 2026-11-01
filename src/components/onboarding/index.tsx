@@ -17,6 +17,7 @@ import { PathStep } from '@/components/onboarding/components/path-step'
 import { ClubCodeStep } from '@/components/onboarding/components/club-code-step'
 import { ProfileStep } from '@/components/onboarding/components/profile-step'
 import { TelegramStep } from '@/components/onboarding/components/telegram-step'
+import { FlamekeeperStep } from '@/components/onboarding/components/flamekeeper-step'
 import { TosAcceptanceDialog } from '@/components/onboarding/components/tos-acceptance-dialog'
 import {
   AlertDialog,
@@ -42,19 +43,26 @@ const updateOnboardingSchema = z.object({
 
 type OnboardingForm = z.infer<typeof updateOnboardingSchema>
 
-type OnboardingStep = 'path' | 'code' | 'profile' | 'telegram'
+type OnboardingStep = 'path' | 'code' | 'flamekeeper' | 'profile' | 'telegram'
 
 interface PageProps extends React.ComponentProps<'div'> {
   isMember: boolean
+  email: string
+  connectError?: string | null
 }
 
-export function Page({ isMember, className, ...props }: PageProps) {
+export function Page({
+  isMember,
+  email,
+  connectError,
+  className,
+  ...props
+}: PageProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const [step, setStep] = useState<OnboardingStep>(
-    isMember ? 'profile' : 'path'
+    isMember ? 'profile' : connectError ? 'flamekeeper' : 'path'
   )
-  const [showFlamekeeperNotice, setShowFlamekeeperNotice] = useState(false)
   const [codeError, setCodeError] = useState<string | null>(null)
   const [isCheckingCode, setIsCheckingCode] = useState(false)
   const [telegramUrl, setTelegramUrl] = useState<string | null>(null)
@@ -214,9 +222,23 @@ export function Page({ isMember, className, ...props }: PageProps) {
             description="Tell us how you are joining"
           />
           <PathStep
-            showFlamekeeperNotice={showFlamekeeperNotice}
             onChooseMember={() => setStep('code')}
-            onChooseFlamekeeper={() => setShowFlamekeeperNotice(true)}
+            onChooseFlamekeeper={() => setStep('flamekeeper')}
+          />
+        </>
+      ) : step === 'flamekeeper' ? (
+        <>
+          <OnboardingHeader
+            title="Become a flamekeeper"
+            description="Lend part of your NU Drive storage to keep club photos alive"
+          />
+          <FlamekeeperStep
+            email={email}
+            error={connectError ?? null}
+            onBeforeRedirect={() => {
+              completeNavigatingRef.current = true
+            }}
+            onBack={() => setStep('path')}
           />
         </>
       ) : step === 'code' ? (

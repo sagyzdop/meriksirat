@@ -8,7 +8,7 @@ export const Route = createFileRoute('/_authenticated')({
   // beforeLoad/loaders (auth gate + data), but skips React SSR, which was
   // burning 40-90ms of CPU per document load on the free Workers plan.
   ssr: 'data-only',
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const user = await getUserFn()
 
     if (!user) {
@@ -16,7 +16,13 @@ export const Route = createFileRoute('/_authenticated')({
     }
 
     if (!user.onboardingComplete || !user.isMember) {
-      throw redirect({ to: '/onboarding' })
+      if (!user.isMember && user.flamekeeperState) {
+        if (location.pathname !== '/profile') {
+          throw redirect({ to: '/profile' })
+        }
+      } else {
+        throw redirect({ to: '/onboarding' })
+      }
     }
 
     return { user }

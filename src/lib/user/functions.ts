@@ -1,3 +1,4 @@
+import type { SQL } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import {
@@ -44,7 +45,16 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
         .get()
 
       if (freshUser) {
-        return freshUser as UserProfile
+        const { flamekeeper } = await import('@/db/schema')
+        const fk = await database
+          .select({ state: flamekeeper.state })
+          .from(flamekeeper)
+          .where(eq(flamekeeper.userId, freshUser.id))
+          .get()
+        return {
+          ...freshUser,
+          flamekeeperState: fk?.state ?? null,
+        } as UserProfile
       }
     }
 
@@ -67,8 +77,8 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     const { checkAdminPermission } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { user } = await import('@/db/schema')
-    const { like, or, and, count, desc, asc, inArray, sql } =
+    const { user, flamekeeper } = await import('@/db/schema')
+    const { like, or, and, count, desc, asc, inArray, sql, eq } =
       await import('drizzle-orm')
 
     const headers = getRequestHeaders()
@@ -79,7 +89,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     // Build WHERE conditions
-    const conditions = []
+    const conditions: (SQL | undefined)[] = [eq(user.isMember, true)]
 
     if (data.role && data.role.length > 0) {
       conditions.push(inArray(user.role, data.role))
@@ -141,10 +151,12 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
         overdueCount: user.overdueCount,
         albumCount: user.albumCount,
+        flamekeeperState: flamekeeper.state,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
       .from(user)
+      .leftJoin(flamekeeper, eq(flamekeeper.userId, user.id))
       .$dynamic()
 
     // Get total count for pagination

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { FlamekeeperState } from '@/lib/access/access-rules'
 
 // User Profile Types
 export interface UserProfile {
@@ -21,6 +22,7 @@ export interface UserProfile {
   clearanceLevel: number | null
   role: string | null
   isMember: boolean
+  flamekeeperState?: FlamekeeperState | null
   onboardingComplete: boolean | null
   createdAt: Date
   updatedAt: Date
@@ -45,6 +47,7 @@ export interface User {
   firstName: string | null
   lastName: string | null
   albumCount: number | null
+  flamekeeperState?: FlamekeeperState | null
   createdAt: Date
   updatedAt: Date
 }
