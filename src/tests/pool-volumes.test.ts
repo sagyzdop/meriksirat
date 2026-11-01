@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MAX_HEAL_DELETES,
+  RELEASE_FALLBACK_MS,
   RELEASE_RETRY_MS,
+  isReleaseAbandoned,
+  planHealDeletes,
+  releaseAbandonedCutoff,
   planRecoveryShare,
   planVolumeReleases,
   volumeFolderName,
@@ -13,9 +18,8 @@ const now = new Date('2026-11-10T12:00:00Z')
 const vol = (over: Partial<ReleaseVolume>): ReleaseVolume => ({
   albumId: 'a1',
   driveFolderId: 'sub1',
-  permissionId: 'perm1',
-  writerRevokedAt: null,
   releaseBlockedAt: null,
+  releaseBlockedSince: null,
   hasPhotos: false,
   ...over,
 })
@@ -36,26 +40,15 @@ describe('planVolumeReleases', () => {
 
   it('deletes the subfolder of an empty volume', () => {
     const plan = planVolumeReleases([vol({})], now, 10)
-    expect(plan.calls).toEqual([{ step: 'delete_folder', volume: vol({}) }])
+    expect(plan.calls).toEqual([vol({})])
     expect(plan.pending).toEqual([])
   })
 
-  it('revokes the root share of an empty legacy volume', () => {
-    const legacy = vol({ driveFolderId: null })
-    const plan = planVolumeReleases([legacy], now, 10)
-    expect(plan.calls).toEqual([{ step: 'revoke_permission', volume: legacy }])
-  })
-
-  it('drops an empty legacy volume whose access is already gone', () => {
-    const a = vol({ driveFolderId: null, permissionId: '' })
-    const b = vol({
-      albumId: 'a2',
-      driveFolderId: null,
-      writerRevokedAt: now,
-    })
-    const plan = planVolumeReleases([a, b], now, 10)
+  it('drops an empty volume that has no subfolder', () => {
+    const a = vol({ driveFolderId: null })
+    const plan = planVolumeReleases([a], now, 10)
     expect(plan.calls).toEqual([])
-    expect(plan.drops).toEqual([a, b])
+    expect(plan.drops).toEqual([a])
   })
 
   it('waits out the retry window after a blocked release', () => {
@@ -74,11 +67,68 @@ describe('planVolumeReleases', () => {
     expect(planVolumeReleases([old], now, 10).calls).toHaveLength(1)
   })
 
+  it('stops counting a volume blocked for 7 days as pending', () => {
+    const stuck = vol({
+      releaseBlockedAt: new Date(now.getTime() - 1000),
+      releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS),
+    })
+    const young = vol({
+      albumId: 'a2',
+      releaseBlockedAt: new Date(now.getTime() - 1000),
+      releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS + 1),
+    })
+    const plan = planVolumeReleases([stuck, young], now, 10)
+    expect(plan.abandoned).toEqual([stuck])
+    expect(plan.pending).toEqual([young])
+  })
+
+  it('still retries an abandoned volume once its window has passed', () => {
+    const stuck = vol({
+      releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
+      releaseBlockedSince: new Date(now.getTime() - 8 * 24 * 3600 * 1000),
+    })
+    expect(planVolumeReleases([stuck], now, 10).calls).toEqual([stuck])
+  })
+
   it('limits calls and leaves the rest pending', () => {
     const volumes = ['a', 'b', 'c'].map((albumId) => vol({ albumId }))
     const plan = planVolumeReleases(volumes, now, 2)
     expect(plan.calls).toHaveLength(2)
     expect(plan.pending.map((v) => v.albumId)).toEqual(['c'])
+  })
+})
+
+describe('isReleaseAbandoned', () => {
+  it('is true from exactly 7 days after blocking started', () => {
+    const since = (ms: number) => ({
+      releaseBlockedSince: new Date(now.getTime() - ms),
+    })
+    expect(isReleaseAbandoned(since(RELEASE_FALLBACK_MS - 1), now)).toBe(false)
+    expect(isReleaseAbandoned(since(RELEASE_FALLBACK_MS), now)).toBe(true)
+    expect(isReleaseAbandoned({ releaseBlockedSince: null }, now)).toBe(false)
+  })
+
+  it('matches the cutoff used for queries', () => {
+    expect(releaseAbandonedCutoff(now).toISOString()).toBe(
+      '2026-11-03T12:00:00.000Z'
+    )
+  })
+})
+
+describe('planHealDeletes', () => {
+  it('skips files a photo row still needs', () => {
+    expect(planHealDeletes(['f1', 'f2', 'f3'], ['f2'])).toEqual(['f1', 'f3'])
+  })
+
+  it('caps the number of deletes per attempt', () => {
+    const ids = Array.from({ length: 80 }, (_, i) => `f${i}`)
+    expect(planHealDeletes(ids, [])).toHaveLength(MAX_HEAL_DELETES)
+    expect(planHealDeletes(ids, [], 3)).toEqual(['f0', 'f1', 'f2'])
+  })
+
+  it('ignores duplicates and empty listings', () => {
+    expect(planHealDeletes(['f1', 'f1'], [])).toEqual(['f1'])
+    expect(planHealDeletes([], ['f1'])).toEqual([])
   })
 })
 
@@ -101,7 +151,7 @@ describe('planRecoveryShare', () => {
     expect(planRecoveryShare({ ...base, hasPhotoRows: true })).toBe(false)
   })
 
-  it('never shares the root of a legacy volume', () => {
+  it('never shares a volume that has no subfolder', () => {
     expect(planRecoveryShare({ ...base, driveFolderId: null })).toBe(false)
   })
 
@@ -111,11 +161,11 @@ describe('planRecoveryShare', () => {
 })
 
 describe('volumeParents', () => {
-  it('lists the subfolder before the root for a volume with a folder', () => {
-    expect(volumeParents('root', 'sub1')).toEqual(['sub1', 'root'])
+  it('accepts only the subfolder of a volume', () => {
+    expect(volumeParents('sub1')).toEqual(['sub1'])
   })
 
-  it('accepts only the root for a legacy volume', () => {
-    expect(volumeParents('root', null)).toEqual(['root'])
+  it('accepts nothing while a volume has no subfolder', () => {
+    expect(volumeParents(null)).toEqual([])
   })
 })

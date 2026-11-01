@@ -19,9 +19,7 @@ appNotAuthorizedToChild`), so adding a second flamekeeper to an album failed as
 soon as the first one's photos were in it. Sharing a new, empty subfolder always
 works. The same rule means a flamekeeper's access can only be removed, and the
 subfolder deleted, once the volume has no photos left, and the master can
-delete an album folder only after every photo in it is gone. Volumes from
-before this change have no subfolder; their photos stay in the album folder and
-are read, moved and deleted as before.
+delete an album folder only after every photo in it is gone.
 
 One side effect: a flamekeeper can write only to their own subfolder, not to
 other flamekeepers' photos.
@@ -35,3 +33,9 @@ the move. A lost flamekeeper's photos can't be deleted by the app and keep the
 album folder from being deleted: they drop out of the app but stay public in
 Drive until their owner removes them. The master account must stay able to
 create folders, so it has to get back under its own cap.
+
+When a relay leaves the original photo in the source flamekeeper's Drive, the
+volume's subfolder can't be deleted. The app then lists that subfolder with the
+flamekeeper's own token and deletes the files no photo row needs, and after 7
+days of being blocked the volume stops holding up the flamekeeper's drain: the
+row stays for manual cleanup and admins are told once.

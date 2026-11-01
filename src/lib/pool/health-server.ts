@@ -227,7 +227,7 @@ async function auditVolumes(
         )
         .all()
       let missing = rows
-      for (const folderId of volumeParents(v.driveFolderId, v.volumeFolderId)) {
+      for (const folderId of volumeParents(v.volumeFolderId)) {
         if (missing.length === 0) break
         const files = await listDriveFolderFiles(token, folderId, () =>
           step.require(1)

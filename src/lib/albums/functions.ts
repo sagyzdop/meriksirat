@@ -1022,6 +1022,8 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
         permissionId: '',
         writerRevokedAt: null,
         releaseBlockedAt: null,
+        releaseBlockedSince: null,
+        releaseAlertedAt: null,
       })
       .where(eq(volume.albumId, data.albumId))
 

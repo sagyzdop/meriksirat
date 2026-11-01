@@ -176,6 +176,24 @@ export async function listDriveFolderFiles(
   return files
 }
 
+export async function listDriveFolderFileIds(
+  accessToken: string,
+  folderId: string,
+  limit: number
+): Promise<string[]> {
+  const params = new URLSearchParams({
+    q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
+    fields: 'files(id)',
+    pageSize: String(limit),
+  })
+  const response = await driveFetch(
+    accessToken,
+    `${API}/files?${params.toString()}`
+  )
+  const data = (await response.json()) as { files?: { id: string }[] }
+  return (data.files ?? []).map((f) => f.id)
+}
+
 export interface DriveFileWithParents extends DriveFileMeta {
   parents?: string[]
   trashed?: boolean
@@ -356,22 +374,6 @@ export async function shareWithWriter(
   )
   const data = (await response.json()) as { id: string }
   return data.id
-}
-
-export async function deleteDrivePermission(
-  accessToken: string,
-  fileId: string,
-  permissionId: string
-): Promise<void> {
-  try {
-    await driveFetch(
-      accessToken,
-      `${API}/files/${fileId}/permissions/${permissionId}`,
-      { method: 'DELETE' }
-    )
-  } catch (error) {
-    if (!(error instanceof DriveNotFoundError)) throw error
-  }
 }
 
 export interface DriveAbout {

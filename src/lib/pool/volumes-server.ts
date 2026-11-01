@@ -1,22 +1,37 @@
-import { and, asc, eq, sql, type SQL } from 'drizzle-orm'
+import { and, asc, eq, inArray, ne, sql, type SQL } from 'drizzle-orm'
 import { db } from '@/db'
-import { album, photo, uploadReservation, volume } from '@/db/schema'
+import { flamekeeperGrant, photo, uploadReservation, volume } from '@/db/schema'
 import {
   DriveAppNotAuthorizedError,
   DriveNotFoundError,
+  batchDeleteDriveFiles,
   createDriveFolder,
   deleteDriveFile,
-  deleteDrivePermission,
+  listDriveFolderFileIds,
   shareWithWriter,
 } from '@/lib/google/google-drive'
+import { withFlamekeeperToken } from '@/lib/flamekeeper/tokens'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { newId } from '@/lib/albums/ids'
-import { type Budget } from '@/lib/cron/budget'
-import { planVolumeReleases, volumeFolderName } from './volumes'
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
+import {
+  MAX_HEAL_DELETES,
+  planHealDeletes,
+  planVolumeReleases,
+  volumeFolderName,
+} from './volumes'
 
 type Database = ReturnType<typeof db>
 
 export const VOLUME_RELEASES_PER_CALL = 20
+const HEALS_PER_CALL = 3
+const HEAL_COST = 3
+
+export const clearedRelease = {
+  releaseBlockedAt: null,
+  releaseBlockedSince: null,
+  releaseAlertedAt: null,
+}
 
 const volumeKey = (albumId: string, userId: string) =>
   and(eq(volume.albumId, albumId), eq(volume.flamekeeperUserId, userId))
@@ -34,6 +49,7 @@ export async function ensureVolumeFolder(
         driveFolderId: volume.driveFolderId,
         permissionId: volume.permissionId,
         writerRevokedAt: volume.writerRevokedAt,
+        releaseBlockedAt: volume.releaseBlockedAt,
       })
       .from(volume)
       .where(key)
@@ -45,6 +61,9 @@ export async function ensureVolumeFolder(
     existing.permissionId &&
     !existing.writerRevokedAt
   ) {
+    if (existing.releaseBlockedAt) {
+      await database.update(volume).set(clearedRelease).where(key)
+    }
     return existing.driveFolderId
   }
 
@@ -62,7 +81,7 @@ export async function ensureVolumeFolder(
             driveFolderId: created.id,
             permissionId: '',
             writerRevokedAt: null,
-            releaseBlockedAt: null,
+            ...clearedRelease,
           })
           .where(and(key, sql`${volume.driveFolderId} IS NULL`))
       : await database
@@ -94,7 +113,7 @@ export async function ensureVolumeFolder(
   const permissionId = await shareWithWriter(masterToken, folderId, fk.email)
   await database
     .update(volume)
-    .set({ permissionId, writerRevokedAt: null, releaseBlockedAt: null })
+    .set({ permissionId, writerRevokedAt: null, ...clearedRelease })
     .where(key)
   return folderId
 }
@@ -106,7 +125,7 @@ export async function forgetVolumeFolder(
 ): Promise<void> {
   await database
     .update(volume)
-    .set({ driveFolderId: null, permissionId: '', releaseBlockedAt: null })
+    .set({ driveFolderId: null, permissionId: '', ...clearedRelease })
     .where(volumeKey(albumId, userId))
 }
 
@@ -123,6 +142,93 @@ export async function loadVolumeFolderId(
   return row?.driveFolderId ?? null
 }
 
+async function volumeIsIdle(
+  database: Database,
+  albumId: string,
+  userId: string,
+  now: Date
+): Promise<boolean> {
+  const rows = await database
+    .select({ id: photo.id })
+    .from(photo)
+    .where(
+      and(
+        eq(photo.albumId, albumId),
+        eq(photo.flamekeeperUserId, userId),
+        ne(photo.state, 'deleted')
+      )
+    )
+    .limit(1)
+    .get()
+  if (rows) return false
+  const reserved = await database
+    .select({ id: uploadReservation.id })
+    .from(uploadReservation)
+    .where(
+      and(
+        eq(uploadReservation.albumId, albumId),
+        eq(uploadReservation.flamekeeperUserId, userId),
+        sql`${uploadReservation.expiresAt} > ${now.getTime()}`
+      )
+    )
+    .limit(1)
+    .get()
+  return !reserved
+}
+
+async function healBlockedVolume(
+  database: Database,
+  v: { albumId: string; flamekeeperUserId: string; driveFolderId: string },
+  now: Date,
+  budget?: Budget
+): Promise<boolean> {
+  const grant = await database
+    .select({ userId: flamekeeperGrant.userId })
+    .from(flamekeeperGrant)
+    .where(eq(flamekeeperGrant.userId, v.flamekeeperUserId))
+    .get()
+  if (!grant || !takeIfBudgeted(budget, HEAL_COST)) return false
+
+  try {
+    const listed = await withFlamekeeperToken(
+      database,
+      v.flamekeeperUserId,
+      (token) =>
+        listDriveFolderFileIds(token, v.driveFolderId, MAX_HEAL_DELETES),
+      budget
+    )
+    if (listed.length === 0) return true
+    const referenced = await database
+      .select({ driveFileId: photo.driveFileId })
+      .from(photo)
+      .where(
+        and(inArray(photo.driveFileId, listed), ne(photo.state, 'deleted'))
+      )
+      .all()
+    const doomed = planHealDeletes(
+      listed,
+      referenced.map((r) => r.driveFileId)
+    )
+    if (doomed.length === 0) return false
+    if (!(await volumeIsIdle(database, v.albumId, v.flamekeeperUserId, now))) {
+      return false
+    }
+    await withFlamekeeperToken(
+      database,
+      v.flamekeeperUserId,
+      (token) => batchDeleteDriveFiles(token, doomed),
+      budget
+    )
+    return true
+  } catch (error) {
+    console.warn(
+      `Could not clear leftover files of ${v.flamekeeperUserId} in album ${v.albumId}:`,
+      error
+    )
+    return false
+  }
+}
+
 export async function releaseVolumes(
   database: Database,
   scope: SQL | undefined,
@@ -135,14 +241,11 @@ export async function releaseVolumes(
     .select({
       albumId: volume.albumId,
       flamekeeperUserId: volume.flamekeeperUserId,
-      permissionId: volume.permissionId,
       driveFolderId: volume.driveFolderId,
-      writerRevokedAt: volume.writerRevokedAt,
       releaseBlockedAt: volume.releaseBlockedAt,
-      albumFolderId: album.driveFolderId,
+      releaseBlockedSince: volume.releaseBlockedSince,
     })
     .from(volume)
-    .innerJoin(album, eq(album.id, volume.albumId))
     .where(
       and(
         scope,
@@ -170,43 +273,49 @@ export async function releaseVolumes(
   const skipped = plan.calls.length - calls.length
 
   const done = [...plan.drops]
-  if (calls.length > 0) {
-    for (const { step, volume: v } of calls) {
+  let heals = 0
+  for (const v of calls) {
+    const folderId = v.driveFolderId!
+    const remove = () =>
+      withGoogleToken(
+        (masterToken) => deleteDriveFile(masterToken, folderId),
+        options.budget
+      )
+    try {
       try {
-        if (step === 'delete_folder') {
-          await withGoogleToken(
-            (masterToken) => deleteDriveFile(masterToken, v.driveFolderId!),
-            options.budget
-          )
-        } else {
-          await withGoogleToken(
-            (masterToken) =>
-              deleteDrivePermission(
-                masterToken,
-                v.albumFolderId,
-                v.permissionId
-              ),
-            options.budget
-          )
-        }
-        done.push(v)
+        await remove()
       } catch (error) {
-        if (error instanceof DriveNotFoundError) {
-          done.push(v)
-          continue
-        }
-        if (error instanceof DriveAppNotAuthorizedError) {
-          console.warn(
-            `Volume of ${v.flamekeeperUserId} in album ${v.albumId} still holds files in Drive, retrying later`
-          )
-        } else {
-          console.warn(`Failed to release volume in album ${v.albumId}:`, error)
-        }
-        await database
-          .update(volume)
-          .set({ releaseBlockedAt: now })
-          .where(volumeKey(v.albumId, v.flamekeeperUserId))
+        if (!(error instanceof DriveAppNotAuthorizedError)) throw error
+        console.warn(
+          `Volume of ${v.flamekeeperUserId} in album ${v.albumId} still holds files in Drive`
+        )
+        if (heals >= HEALS_PER_CALL) throw error
+        heals++
+        const healed = await healBlockedVolume(
+          database,
+          { ...v, driveFolderId: folderId },
+          now,
+          options.budget
+        )
+        if (!healed || !takeIfBudgeted(options.budget, 1)) throw error
+        await remove()
       }
+      done.push(v)
+    } catch (error) {
+      if (error instanceof DriveNotFoundError) {
+        done.push(v)
+        continue
+      }
+      if (!(error instanceof DriveAppNotAuthorizedError)) {
+        console.warn(`Failed to release volume in album ${v.albumId}:`, error)
+      }
+      await database
+        .update(volume)
+        .set({
+          releaseBlockedAt: now,
+          releaseBlockedSince: sql`COALESCE(${volume.releaseBlockedSince}, ${now.getTime()})`,
+        })
+        .where(volumeKey(v.albumId, v.flamekeeperUserId))
     }
   }
 

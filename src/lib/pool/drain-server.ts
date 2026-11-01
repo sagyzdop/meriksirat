@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import {
   album,
@@ -54,7 +54,11 @@ import {
 } from './drain'
 import { planFlamekeeperEdit } from './graduation'
 import { loadVolumeFolderId, releaseVolumes } from './volumes-server'
-import { volumeParents } from './volumes'
+import {
+  abandonedAlertText,
+  releaseAbandonedCutoff,
+  volumeParents,
+} from './volumes'
 
 type Database = ReturnType<typeof db>
 
@@ -178,7 +182,15 @@ async function finalizeDrained(
   const left = await database
     .select({ albumId: volume.albumId })
     .from(volume)
-    .where(eq(volume.flamekeeperUserId, userId))
+    .where(
+      and(
+        eq(volume.flamekeeperUserId, userId),
+        or(
+          isNull(volume.releaseBlockedSince),
+          gt(volume.releaseBlockedSince, releaseAbandonedCutoff(now))
+        )
+      )
+    )
     .limit(1)
     .get()
   if (left) return false
@@ -509,7 +521,6 @@ export async function confirmRelay(
     getDriveFileMeta(token, input.fileId)
   )
   const destParents = volumeParents(
-    albumRow.driveFolderId,
     await loadVolumeFolderId(database, albumRow.id, destUserId)
   )
   if (copy.trashed || !copy.parents?.some((id) => destParents.includes(id))) {
@@ -788,6 +799,52 @@ async function alertAdminsOfDrains(
   }
 }
 
+async function alertAbandonedVolumes(
+  database: Database,
+  now: Date,
+  botToken: string | undefined,
+  budget?: Budget
+): Promise<void> {
+  const rows = await database
+    .select({
+      albumId: volume.albumId,
+      userId: volume.flamekeeperUserId,
+      title: album.title,
+      name: user.name,
+      email: user.email,
+    })
+    .from(volume)
+    .innerJoin(album, eq(album.id, volume.albumId))
+    .innerJoin(user, eq(user.id, volume.flamekeeperUserId))
+    .where(
+      and(
+        isNull(volume.releaseAlertedAt),
+        lte(volume.releaseBlockedSince, releaseAbandonedCutoff(now))
+      )
+    )
+    .orderBy(asc(volume.releaseBlockedSince))
+    .limit(ADMIN_ALERTS_PER_RUN)
+    .all()
+  for (const row of rows) {
+    const handled = await sendAdminsTelegram(
+      database,
+      botToken,
+      abandonedAlertText(`${row.name} <${row.email}>`, row.title),
+      budget
+    )
+    if (!handled) return
+    await database
+      .update(volume)
+      .set({ releaseAlertedAt: now })
+      .where(
+        and(
+          eq(volume.albumId, row.albumId),
+          eq(volume.flamekeeperUserId, row.userId)
+        )
+      )
+  }
+}
+
 export async function runDrainMaintenance(
   env: {
     meriksirat_d1: D1Database
@@ -798,6 +855,13 @@ export async function runDrainMaintenance(
 ): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
+
+  await alertAbandonedVolumes(
+    database,
+    now,
+    env.TELEGRAM_BOT_TOKEN,
+    budget
+  ).catch((error) => console.error('Abandoned volume alerts failed:', error))
 
   const rows = await database
     .select(drainColumns)

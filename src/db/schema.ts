@@ -592,6 +592,10 @@ export const volume = sqliteTable(
     permissionId: text('permission_id').notNull(),
     driveFolderId: text('drive_folder_id'),
     releaseBlockedAt: integer('release_blocked_at', { mode: 'timestamp_ms' }),
+    releaseBlockedSince: integer('release_blocked_since', {
+      mode: 'timestamp_ms',
+    }),
+    releaseAlertedAt: integer('release_alerted_at', { mode: 'timestamp_ms' }),
     writerRevokedAt: integer('writer_revoked_at', { mode: 'timestamp_ms' }),
     droppedAt: integer('dropped_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })

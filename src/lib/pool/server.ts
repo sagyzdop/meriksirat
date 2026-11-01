@@ -266,7 +266,6 @@ export async function confirmFlamekeeperUpload(
     getDriveFileMeta(token, fileId)
   )
   const parents = volumeParents(
-    albumRow.driveFolderId,
     await loadVolumeFolderId(database, albumRow.id, ownerId)
   )
   if (file.trashed || !file.parents?.some((id) => parents.includes(id))) {
