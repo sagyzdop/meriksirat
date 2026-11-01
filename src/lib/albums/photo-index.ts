@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 import { db } from '@/db'
 import { album, photo } from '@/db/schema'
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
@@ -118,20 +119,25 @@ export async function requestAlbumIndex(
 
 export async function resetAlbumPhotos(
   database: Database,
-  albumId: string
+  albumId: string,
+  before: BatchItem<'sqlite'>[] = []
 ): Promise<void> {
-  await database.delete(photo).where(eq(photo.albumId, albumId))
-  await database
-    .update(album)
-    .set({
-      photoCount: 0,
-      photoBytes: 0,
-      favoriteCount: 0,
-      photosIndexedAt: new Date(),
-      photosIndexSkipped: null,
-      coverFileId: null,
-    })
-    .where(eq(album.id, albumId))
+  const statements = [
+    ...before,
+    database.delete(photo).where(eq(photo.albumId, albumId)),
+    database
+      .update(album)
+      .set({
+        photoCount: 0,
+        photoBytes: 0,
+        favoriteCount: 0,
+        photosIndexedAt: new Date(),
+        photosIndexSkipped: null,
+        coverFileId: null,
+      })
+      .where(eq(album.id, albumId)),
+  ]
+  await database.batch(statements as unknown as [(typeof statements)[0]])
 }
 
 async function readBudget(kv: KVNamespace): Promise<BudgetState | null> {

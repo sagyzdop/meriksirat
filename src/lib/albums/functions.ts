@@ -1014,7 +1014,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       .set({ driveFolderId: folder.id, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
     const { resetAlbumPhotos } = await import('./photo-index')
-    const { releaseOwnedBytes } = await import('@/lib/pool/server')
+    const { releaseOwnedBytesStatements } = await import('@/lib/pool/server')
     const heldPhotos = await database
       .select({
         id: photo.id,
@@ -1025,8 +1025,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       .from(photo)
       .where(and(eq(photo.albumId, data.albumId), eq(photo.state, 'live')))
       .all()
-    await resetAlbumPhotos(database, data.albumId)
-    await releaseOwnedBytes(database, heldPhotos)
+    await resetAlbumPhotos(database, data.albumId, releaseOwnedBytesStatements(database, heldPhotos))
     await database
       .update(volume)
       .set({

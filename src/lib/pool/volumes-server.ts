@@ -17,6 +17,9 @@ import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import {
   MAX_HEAL_DELETES,
   planHealDeletes,
+  tallyHeals,
+  type HealOutcome,
+  type HealTally,
   planVolumeReleases,
   releaseAbandonedCutoff,
   volumeFolderName,
@@ -180,18 +183,26 @@ async function volumeIsIdle(
   return !reserved
 }
 
+export interface HealResult {
+  outcome: HealOutcome
+  worked: boolean
+}
+
 export async function healBlockedVolume(
   database: Database,
   v: { albumId: string; flamekeeperUserId: string; driveFolderId: string },
   now: Date,
   budget?: Budget
-): Promise<boolean> {
+): Promise<HealResult> {
   const grant = await database
     .select({ userId: flamekeeperGrant.userId })
     .from(flamekeeperGrant)
     .where(eq(flamekeeperGrant.userId, v.flamekeeperUserId))
     .get()
-  if (!grant || !takeIfBudgeted(budget, HEAL_COST)) return false
+  if (!grant) return { outcome: 'blocked', worked: false }
+  if (!takeIfBudgeted(budget, HEAL_COST)) {
+    return { outcome: 'incomplete', worked: false }
+  }
 
   try {
     const listed = await withFlamekeeperToken(
@@ -201,7 +212,7 @@ export async function healBlockedVolume(
         listDriveFolderFileIds(token, v.driveFolderId, MAX_HEAL_DELETES),
       budget
     )
-    if (listed.length === 0) return true
+    if (listed.length === 0) return { outcome: 'cleared', worked: false }
     const referenced = await database
       .select({ driveFileId: photo.driveFileId })
       .from(photo)
@@ -213,9 +224,9 @@ export async function healBlockedVolume(
       listed,
       referenced.map((r) => r.driveFileId)
     )
-    if (doomed.length === 0) return false
+    if (doomed.length === 0) return { outcome: 'blocked', worked: false }
     if (!(await volumeIsIdle(database, v.albumId, v.flamekeeperUserId, now))) {
-      return false
+      return { outcome: 'blocked', worked: false }
     }
     await withFlamekeeperToken(
       database,
@@ -223,13 +234,16 @@ export async function healBlockedVolume(
       (token) => batchDeleteDriveFiles(token, doomed),
       budget
     )
-    return true
+    return {
+      outcome: listed.length >= MAX_HEAL_DELETES ? 'incomplete' : 'cleared',
+      worked: true,
+    }
   } catch (error) {
     console.warn(
       `Could not clear leftover files of ${v.flamekeeperUserId} in album ${v.albumId}:`,
       error
     )
-    return false
+    return { outcome: 'blocked', worked: false }
   }
 }
 
@@ -238,7 +252,7 @@ export async function healAlbumVolumes(
   albumId: string,
   now: Date,
   budget?: Budget
-): Promise<{ cleared: number; blocked: number }> {
+): Promise<HealTally> {
   const rows = await database
     .select({
       albumId: volume.albumId,
@@ -250,19 +264,23 @@ export async function healAlbumVolumes(
       and(eq(volume.albumId, albumId), sql`${volume.driveFolderId} IS NOT NULL`)
     )
     .all()
-  let cleared = 0
-  let blocked = Math.max(0, rows.length - ALBUM_HEALS_PER_ATTEMPT)
-  for (const v of rows.slice(0, ALBUM_HEALS_PER_ATTEMPT)) {
+  const outcomes: HealOutcome[] = []
+  let worked = 0
+  for (const v of rows) {
+    if (worked >= ALBUM_HEALS_PER_ATTEMPT) {
+      outcomes.push('incomplete')
+      continue
+    }
     const healed = await healBlockedVolume(
       database,
       { ...v, driveFolderId: v.driveFolderId! },
       now,
       budget
     )
-    if (healed) cleared++
-    else blocked++
+    if (healed.worked) worked++
+    outcomes.push(healed.outcome)
   }
-  return { cleared, blocked }
+  return tallyHeals(outcomes)
 }
 
 export async function releaseVolumes(
@@ -334,7 +352,7 @@ export async function releaseVolumes(
           now,
           options.budget
         )
-        if (!healed || !takeIfBudgeted(options.budget, 1)) throw error
+        if (healed.outcome !== 'cleared' || !takeIfBudgeted(options.budget, 1)) throw error
         await remove()
       }
       done.push(v)

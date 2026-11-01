@@ -19,6 +19,7 @@ import {
   loadOwnedPhotos,
 } from '@/lib/pool/server'
 import type { TombstoneReason } from '@/lib/pool/expiry'
+import type { HealTally } from '@/lib/pool/volumes'
 import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
 
 type Database = ReturnType<typeof db>
@@ -75,14 +76,24 @@ async function removeOwnedPhotos(
   return lost.length === 0
 }
 
+export class AlbumDeletionDeferredError extends Error {
+  constructor() {
+    super(
+      'This album is too large to delete in one go. Some photos were deleted; try again to continue.'
+    )
+    this.name = 'AlbumDeletionDeferredError'
+  }
+}
+
 async function deleteAlbumFolder(
   database: Database,
   row: Pick<AlbumRecord, 'id' | 'driveFolderId'>,
   accessToken: string,
   options: { strictDrive?: boolean; budget?: Budget }
 ): Promise<void> {
-  let blockedVolumes = 0
-  let attempt = 0
+  const { decideAlbumFolder } = await import('@/lib/pool/volumes')
+  let tally: HealTally | null = null
+  let retried = false
   while (true) {
     try {
       await deleteDriveFile(accessToken, row.driveFolderId)
@@ -90,37 +101,43 @@ async function deleteAlbumFolder(
     } catch (error) {
       if (error instanceof DriveNotFoundError) return
       if (error instanceof DriveAppNotAuthorizedError) {
-        if (attempt === 0) {
-          attempt++
+        if (!tally) {
           try {
             const { healAlbumVolumes } =
               await import('@/lib/pool/volumes-server')
-            const healed = await healAlbumVolumes(
+            tally = await healAlbumVolumes(
               database,
               row.id,
               new Date(),
               options.budget
             )
-            blockedVolumes = healed.blocked
-            if (healed.cleared > 0 && takeIfBudgeted(options.budget, 1)) {
-              continue
-            }
           } catch (healError) {
             console.warn(
               `Could not clear volumes of album ${row.id}:`,
               healError
             )
+            tally = { cleared: 0, blocked: 0, incomplete: 1 }
           }
         }
+        const decision = decideAlbumFolder(tally, retried)
+        if (decision === 'defer') throw new AlbumDeletionDeferredError()
+        if (decision === 'retry') {
+          if (!takeIfBudgeted(options.budget, 1)) {
+            throw new AlbumDeletionDeferredError()
+          }
+          retried = true
+          continue
+        }
         console.warn(
-          `Album ${row.id} keeps its Drive folder: it still holds photos the club account cannot delete (${blockedVolumes} volumes could not be cleared)`
+          `Album ${row.id} keeps its Drive folder: it still holds photos the club account cannot delete (${tally.blocked} volumes could not be cleared)`
         )
-        await alertBlockedAlbum(
+        const alerted = await alertBlockedAlbum(
           database,
           row.id,
-          blockedVolumes,
+          tally.blocked,
           options.budget
         )
+        if (!alerted) throw new AlbumDeletionDeferredError()
         return
       }
       if (options.strictDrive) throw error
@@ -138,19 +155,24 @@ async function alertBlockedAlbum(
   albumId: string,
   blocked: number,
   budget?: Budget
-): Promise<void> {
+): Promise<boolean> {
   try {
     const { env } = await import('cloudflare:workers')
-    const { sendAdminsTelegram } = await import('@/lib/pool/server')
+    const { sendAdminsTelegramResult } = await import('@/lib/pool/server')
     const { albumBlockedAlertText } = await import('@/lib/pool/volumes')
-    await sendAdminsTelegram(
+    const result = await sendAdminsTelegramResult(
       database,
       (env as { TELEGRAM_BOT_TOKEN?: string }).TELEGRAM_BOT_TOKEN,
       albumBlockedAlertText(albumId, blocked),
       budget
     )
+    if (result === 'no_admins') {
+      console.warn(`No admin to alert about album ${albumId}`)
+    }
+    return result !== 'over_budget'
   } catch (error) {
     console.warn(`Could not alert admins about album ${albumId}:`, error)
+    return true
   }
 }
 
@@ -269,7 +291,9 @@ export async function runAlbumExpiry(
   if (plan.expire.length > 0) {
     let accessToken: string | null = null
     let removed = 0
-    for (const id of plan.expire) {
+    const { rotateIds } = await import('@/lib/pool/volumes')
+    const turn = Math.floor(now.getTime() / (5 * 60 * 1000))
+    for (const id of rotateIds(plan.expire, turn)) {
       if (removed >= EXPIRES_PER_RUN) break
       try {
         const cost = (await removalCost(database, id)) + (accessToken ? 0 : 1)
@@ -282,6 +306,10 @@ export async function runAlbumExpiry(
           budget,
         })
       } catch (error) {
+        if (error instanceof AlbumDeletionDeferredError) {
+          console.warn(`Expiry of album ${id} deferred to a later run`)
+          continue
+        }
         console.error(`Failed to expire album ${id}:`, error)
       }
     }

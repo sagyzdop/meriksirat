@@ -379,10 +379,10 @@ export async function deleteOwnedPhotos(
   return { deleted, lost, error: failure }
 }
 
-export async function releaseOwnedBytes(
+export function releaseOwnedBytesStatements(
   database: Database,
   photos: OwnedPhoto[]
-): Promise<void> {
+) {
   const totals = new Map<string, number>()
   for (const p of photos) {
     if (!p.flamekeeperUserId) continue
@@ -391,8 +391,7 @@ export async function releaseOwnedBytes(
       (totals.get(p.flamekeeperUserId) ?? 0) + p.bytes
     )
   }
-  if (totals.size === 0) return
-  const statements = [...totals].map(([userId, bytes]) =>
+  return [...totals].map(([userId, bytes]) =>
     database
       .update(flamekeeper)
       .set({
@@ -401,6 +400,14 @@ export async function releaseOwnedBytes(
       })
       .where(eq(flamekeeper.userId, userId))
   )
+}
+
+export async function releaseOwnedBytes(
+  database: Database,
+  photos: OwnedPhoto[]
+): Promise<void> {
+  const statements = releaseOwnedBytesStatements(database, photos)
+  if (statements.length === 0) return
   await database.batch(statements as unknown as [(typeof statements)[0]])
 }
 
@@ -421,26 +428,28 @@ export async function loadOwnedPhotos(
     .all()
 }
 
-export async function sendAdminsTelegram(
+export type AdminSendResult = 'sent' | 'no_admins' | 'over_budget'
+
+export async function sendAdminsTelegramResult(
   database: Database,
   botToken: string | undefined,
   text: string,
   budget?: Budget,
   options: { force?: boolean } = {}
-): Promise<boolean> {
+): Promise<AdminSendResult> {
   if (!botToken) {
     console.warn('TELEGRAM_BOT_TOKEN not configured, skipping admin alert')
-    return true
+    return 'sent'
   }
   const admins = await database
     .select({ chatId: user.telegramChatId })
     .from(user)
     .where(and(eq(user.role, 'admin'), isNotNull(user.telegramChatId)))
     .all()
-  if (admins.length === 0) return false
+  if (admins.length === 0) return 'no_admins'
   if (budget) {
     if (options.force) budget.spend(admins.length)
-    else if (!budget.take(admins.length)) return false
+    else if (!budget.take(admins.length)) return 'over_budget'
   }
   const { TelegramAPI } = await import('@/lib/telegram/api')
   const telegram = new TelegramAPI(botToken)
@@ -451,7 +460,24 @@ export async function sendAdminsTelegram(
       console.error('Failed to send admin alert:', error)
     }
   }
-  return true
+  return 'sent'
+}
+
+export async function sendAdminsTelegram(
+  database: Database,
+  botToken: string | undefined,
+  text: string,
+  budget?: Budget,
+  options: { force?: boolean } = {}
+): Promise<boolean> {
+  const result = await sendAdminsTelegramResult(
+    database,
+    botToken,
+    text,
+    budget,
+    options
+  )
+  return result === 'sent'
 }
 
 export async function runPoolMaintenance(
