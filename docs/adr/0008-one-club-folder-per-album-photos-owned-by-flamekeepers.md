@@ -1,14 +1,30 @@
-# One club folder per album; photos are owned by flamekeepers
+# One club folder per album; photos are owned by flamekeepers in volume subfolders
 
 The university capped every account at 20GB, so the club's master account can no
 longer pay for album photos. Each album is still a single public folder in the
 master account (ADR-0005 holds unchanged), but every photo in it is uploaded
 with a flamekeeper's own `drive.file` token. A photo is owned by whoever uploads
-it, even inside someone else's folder, so it counts against that flamekeeper's
-quota while it inherits the folder's "anyone" reader permission and is served
-from Google's CDN as before (verified by the #savenuimg spike). A **volume** is
-therefore only a database grouping: the photos of one album held by one
-flamekeeper. It is not a Drive folder.
+it, so it counts against that flamekeeper's quota while it inherits the
+folder's "anyone" reader permission and is served from Google's CDN as before
+(verified by the #savenuimg spike).
+
+A **volume** (the photos of one album held by one flamekeeper) is a Drive
+subfolder of the album folder. The master account creates it, empty, named
+`Volume <short id>` with no personal data since album folders are public, and
+shares it with that flamekeeper; the flamekeeper uploads into it. The first
+version shared the album folder itself and kept a volume as only a database
+grouping. That broke: under `drive.file` the master token can't change
+permissions on a folder that holds another account's files (`403
+appNotAuthorizedToChild`), so adding a second flamekeeper to an album failed as
+soon as the first one's photos were in it. Sharing a new, empty subfolder always
+works. The same rule means a flamekeeper's access can only be removed, and the
+subfolder deleted, once the volume has no photos left, and the master can
+delete an album folder only after every photo in it is gone. Volumes from
+before this change have no subfolder; their photos stay in the album folder and
+are read, moved and deleted as before.
+
+One side effect: a flamekeeper can write only to their own subfolder, not to
+other flamekeepers' photos.
 
 Because `drive.file` lets each account see only the files it created, the master
 token can't list or delete flamekeepers' photos. The app keeps a photo table

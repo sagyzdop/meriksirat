@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DRAIN_GRACE_MS } from '@/lib/flamekeeper/rules'
-import {
-  BAN_REASON_MAX,
-  checkBan,
-  pickPendingRevokes,
-  planBanDrain,
-} from '@/lib/pool/ban'
+import { BAN_REASON_MAX, checkBan, planBanDrain } from '@/lib/pool/ban'
 import { planOptOut, type DrainFlamekeeper } from '@/lib/pool/drain'
 
 const GB = 1024 * 1024 * 1024
@@ -138,17 +133,5 @@ describe('planBanDrain', () => {
       drainingDeadline: NOW,
     })
     expect(planOptOut(banned, NOW, true)).toEqual({ kind: 'none' })
-  })
-})
-
-describe('pickPendingRevokes', () => {
-  it('takes unrevoked volumes up to the limit', () => {
-    const volumes = [
-      { id: 1, writerRevokedAt: NOW },
-      { id: 2, writerRevokedAt: null },
-      { id: 3, writerRevokedAt: null },
-      { id: 4, writerRevokedAt: null },
-    ]
-    expect(pickPendingRevokes(volumes, 2).map((v) => v.id)).toEqual([2, 3])
   })
 })

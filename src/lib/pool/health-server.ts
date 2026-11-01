@@ -1,4 +1,14 @@
-import { and, asc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  sql,
+} from 'drizzle-orm'
 import { db } from '@/db'
 import {
   album,
@@ -43,6 +53,7 @@ import {
   volumesAfterCursor,
 } from './health'
 import { notifyAlbumTombstoned, ownerTelegramChat } from './notices'
+import { planRecoveryShare, volumeParents } from './volumes'
 import { sendAdminsTelegram } from './server'
 
 type Database = ReturnType<typeof db>
@@ -183,6 +194,7 @@ async function auditVolumes(
       albumId: volume.albumId,
       title: album.title,
       driveFolderId: album.driveFolderId,
+      volumeFolderId: volume.driveFolderId,
     })
     .from(volume)
     .innerJoin(album, eq(album.id, volume.albumId))
@@ -214,13 +226,18 @@ async function auditVolumes(
           )
         )
         .all()
-      const files = await listDriveFolderFiles(token, v.driveFolderId, () =>
-        step.require(1)
-      )
-      const missing = findMissingPhotos(
-        rows,
-        files.map((f) => f.id)
-      ).slice(0, MAX_MISSING_REMOVED)
+      let missing = rows
+      for (const folderId of volumeParents(v.driveFolderId, v.volumeFolderId)) {
+        if (missing.length === 0) break
+        const files = await listDriveFolderFiles(token, folderId, () =>
+          step.require(1)
+        )
+        missing = findMissingPhotos(
+          missing,
+          files.map((f) => f.id)
+        )
+      }
+      missing = missing.slice(0, MAX_MISSING_REMOVED)
       if (missing.length > 0) {
         const removed = await removeMissingPhotos(
           database,
@@ -544,7 +561,7 @@ async function finalizeLost(
     await invalidateCachedDetailCore(v.albumId)
     await database
       .update(volume)
-      .set({ droppedAt: now, permissionId: '' })
+      .set({ droppedAt: now })
       .where(
         and(eq(volume.albumId, v.albumId), eq(volume.flamekeeperUserId, userId))
       )
@@ -607,6 +624,8 @@ async function recoverDropped(
       albumId: volume.albumId,
       userId: volume.flamekeeperUserId,
       permissionId: volume.permissionId,
+      writerRevokedAt: volume.writerRevokedAt,
+      volumeFolderId: volume.driveFolderId,
       email: user.email,
       title: album.title,
       driveFolderId: album.driveFolderId,
@@ -634,31 +653,51 @@ async function recoverDropped(
   for (const v of rows) {
     try {
       let action = planRecovery(v, now)
-      let permissionId = v.permissionId
 
-      if (action === 'restore' && !permissionId) {
-        if (!budget.take(2)) break
-        try {
-          permissionId = await shareWithWriter(
-            await getGoogleAccessToken(),
-            v.driveFolderId,
-            v.email
-          )
-          await database
-            .update(volume)
-            .set({ permissionId, writerRevokedAt: null })
-            .where(
-              and(
-                eq(volume.albumId, v.albumId),
-                eq(volume.flamekeeperUserId, v.userId)
-              )
+      if (action === 'restore') {
+        const anyRows = await database
+          .select({ id: photo.id })
+          .from(photo)
+          .where(
+            and(
+              eq(photo.albumId, v.albumId),
+              eq(photo.flamekeeperUserId, v.userId),
+              ne(photo.state, 'deleted')
             )
-        } catch (error) {
-          if (!(error instanceof DriveNotFoundError)) {
-            console.warn(`Could not re-share album ${v.albumId}:`, error)
-            continue
+          )
+          .limit(1)
+          .get()
+        if (
+          planRecoveryShare({
+            driveFolderId: v.volumeFolderId,
+            permissionId: v.permissionId,
+            writerRevokedAt: v.writerRevokedAt,
+            hasPhotoRows: !!anyRows,
+          })
+        ) {
+          if (!budget.take(2)) break
+          try {
+            const permissionId = await shareWithWriter(
+              await getGoogleAccessToken(),
+              v.volumeFolderId!,
+              v.email
+            )
+            await database
+              .update(volume)
+              .set({ permissionId, writerRevokedAt: null })
+              .where(
+                and(
+                  eq(volume.albumId, v.albumId),
+                  eq(volume.flamekeeperUserId, v.userId)
+                )
+              )
+          } catch (error) {
+            if (!(error instanceof DriveNotFoundError)) {
+              console.warn(`Could not re-share album ${v.albumId}:`, error)
+              continue
+            }
+            action = 'abandon'
           }
-          action = 'abandon'
         }
       }
 

@@ -10,12 +10,12 @@ import {
   volume,
 } from '@/db/schema'
 import {
+  DriveNotFoundError,
   DriveQuotaExceededError,
   batchDeleteDriveFiles,
   deleteDriveFile,
   getDriveFileMeta,
   mintResumableUpload,
-  shareWithWriter,
 } from '@/lib/google/google-drive'
 import {
   FlamekeeperGrantError,
@@ -36,6 +36,12 @@ import {
   type PoolFlamekeeper,
   type PoolStats,
 } from './placement'
+import {
+  ensureVolumeFolder,
+  forgetVolumeFolder,
+  loadVolumeFolderId,
+} from './volumes-server'
+import { volumeParents } from './volumes'
 
 type Database = ReturnType<typeof db>
 
@@ -131,53 +137,6 @@ export async function markFlamekeeperFull(
     .where(and(eq(flamekeeper.userId, userId), eq(flamekeeper.state, 'active')))
 }
 
-async function ensureVolume(
-  database: Database,
-  masterToken: string,
-  albumRow: { id: string; driveFolderId: string },
-  fk: { userId: string; email: string }
-): Promise<void> {
-  const existing = await database
-    .select({
-      permissionId: volume.permissionId,
-      writerRevokedAt: volume.writerRevokedAt,
-    })
-    .from(volume)
-    .where(
-      and(
-        eq(volume.albumId, albumRow.id),
-        eq(volume.flamekeeperUserId, fk.userId)
-      )
-    )
-    .get()
-  if (existing && !existing.writerRevokedAt && existing.permissionId) return
-  const permissionId = await shareWithWriter(
-    masterToken,
-    albumRow.driveFolderId,
-    fk.email
-  )
-  if (existing) {
-    await database
-      .update(volume)
-      .set({ permissionId, writerRevokedAt: null })
-      .where(
-        and(
-          eq(volume.albumId, albumRow.id),
-          eq(volume.flamekeeperUserId, fk.userId)
-        )
-      )
-    return
-  }
-  await database
-    .insert(volume)
-    .values({
-      albumId: albumRow.id,
-      flamekeeperUserId: fk.userId,
-      permissionId,
-    })
-    .onConflictDoNothing()
-}
-
 export async function startFlamekeeperUpload(
   database: Database,
   masterToken: string,
@@ -216,10 +175,15 @@ export async function startFlamekeeperUpload(
 
     try {
       const token = await getFlamekeeperAccessToken(database, fk.userId)
-      await ensureVolume(database, masterToken, albumRow, fk)
+      const folderId = await ensureVolumeFolder(
+        database,
+        masterToken,
+        albumRow,
+        fk
+      )
       const uploadUrl = await mintResumableUpload(token, {
         name: file.name,
-        folderId: albumRow.driveFolderId,
+        folderId,
         mimeType: file.mimeType,
         size: file.bytes,
         origin: file.origin,
@@ -229,6 +193,12 @@ export async function startFlamekeeperUpload(
       await dropReservation(database, reservationId)
       if (error instanceof DriveQuotaExceededError) {
         await markFlamekeeperFull(database, fk.userId)
+      } else if (error instanceof DriveNotFoundError) {
+        await forgetVolumeFolder(database, albumRow.id, fk.userId)
+        exclude.pop()
+        console.warn(
+          `Volume folder of ${fk.userId} in album ${albumRow.id} is gone, it will be recreated`
+        )
       } else if (error instanceof FlamekeeperGrantError) {
         console.warn(`Skipping flamekeeper ${fk.userId}:`, error.message)
       } else {
@@ -289,7 +259,11 @@ export async function confirmFlamekeeperUpload(
   const ownerId = reservation.flamekeeperUserId
   const token = await getFlamekeeperAccessToken(database, ownerId)
   const file = await getDriveFileMeta(token, fileId)
-  if (file.trashed || !file.parents?.includes(albumRow.driveFolderId)) {
+  const parents = volumeParents(
+    albumRow.driveFolderId,
+    await loadVolumeFolderId(database, albumRow.id, ownerId)
+  )
+  if (file.trashed || !file.parents?.some((id) => parents.includes(id))) {
     throw new Error('Uploaded file not found in the album folder')
   }
 

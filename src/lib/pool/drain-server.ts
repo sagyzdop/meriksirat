@@ -11,7 +11,6 @@ import {
 import {
   DriveNotFoundError,
   deleteDriveFile,
-  deleteDrivePermission,
   getDriveFileMeta,
 } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
@@ -48,11 +47,12 @@ import {
   type DrainTransition,
 } from './drain'
 import { planFlamekeeperEdit } from './graduation'
+import { loadVolumeFolderId, releaseVolumes } from './volumes-server'
+import { volumeParents } from './volumes'
 
 type Database = ReturnType<typeof db>
 
 const RELAY_CANDIDATES = 20
-const VOLUME_REVOKES_PER_CALL = 20
 const DEADLINE_DELETES_PER_RUN = 200
 const REMINDERS_PER_RUN = 2
 const ADVANCES_PER_RUN = 2
@@ -150,67 +150,14 @@ async function releaseEmptyVolumes(
   albumIds?: string[],
   budget?: Budget
 ): Promise<boolean> {
-  const rows = await database
-    .select({
-      albumId: volume.albumId,
-      permissionId: volume.permissionId,
-      writerRevokedAt: volume.writerRevokedAt,
-      driveFolderId: album.driveFolderId,
-      hasPhotos: sql<number>`EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${photo.state} != 'deleted')`,
-    })
-    .from(volume)
-    .innerJoin(album, eq(album.id, volume.albumId))
-    .where(
-      and(
-        eq(volume.flamekeeperUserId, userId),
-        albumIds ? inArray(volume.albumId, albumIds) : undefined
-      )
-    )
-    .limit(VOLUME_REVOKES_PER_CALL + 1)
-    .all()
-
-  const empty = rows
-    .filter((r) => !Number(r.hasPhotos))
-    .slice(0, VOLUME_REVOKES_PER_CALL)
-  if (empty.length === 0) return rows.length <= VOLUME_REVOKES_PER_CALL
-
-  const needsRevoke = empty.filter((r) => !r.writerRevokedAt && r.permissionId)
-  let revokable = needsRevoke
-  if (needsRevoke.length > 0 && budget) {
-    const granted = budget.take(1) ? budget.takeUpTo(needsRevoke.length) : 0
-    revokable = needsRevoke.slice(0, granted)
-  }
-  const skipped = needsRevoke.length - revokable.length
-  const done = empty.filter(
-    (r) => !needsRevoke.includes(r) || revokable.includes(r)
+  return releaseVolumes(
+    database,
+    and(
+      eq(volume.flamekeeperUserId, userId),
+      albumIds ? inArray(volume.albumId, albumIds) : undefined
+    ),
+    { budget }
   )
-
-  if (revokable.length > 0) {
-    const masterToken = await getGoogleAccessToken()
-    for (const r of revokable) {
-      try {
-        await deleteDrivePermission(
-          masterToken,
-          r.driveFolderId,
-          r.permissionId
-        )
-      } catch (error) {
-        console.warn(`Failed to revoke share on album ${r.albumId}:`, error)
-      }
-    }
-  }
-  if (done.length > 0) {
-    await database.delete(volume).where(
-      and(
-        eq(volume.flamekeeperUserId, userId),
-        inArray(
-          volume.albumId,
-          done.map((r) => r.albumId)
-        )
-      )
-    )
-  }
-  return skipped === 0 && rows.length <= VOLUME_REVOKES_PER_CALL
 }
 
 async function finalizeDrained(
@@ -534,7 +481,11 @@ export async function confirmRelay(
 
   const destToken = await getFlamekeeperAccessToken(database, destUserId)
   const copy = await getDriveFileMeta(destToken, input.fileId)
-  if (copy.trashed || !copy.parents?.includes(albumRow.driveFolderId)) {
+  const destParents = volumeParents(
+    albumRow.driveFolderId,
+    await loadVolumeFolderId(database, albumRow.id, destUserId)
+  )
+  if (copy.trashed || !copy.parents?.some((id) => destParents.includes(id))) {
     throw new Error('Moved copy not found in the album folder')
   }
 

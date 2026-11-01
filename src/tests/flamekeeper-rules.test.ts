@@ -32,6 +32,16 @@ describe('pledge', () => {
   })
 })
 
+describe('formatGb for small amounts', () => {
+  it('says less than 0.1 GB instead of 0.0 GB', () => {
+    expect(formatGb(0)).toBe('0 GB')
+    expect(formatGb(1)).toBe('less than 0.1 GB')
+    expect(formatGb(0.04 * GB)).toBe('less than 0.1 GB')
+    expect(formatGb(0.09 * GB)).toBe('less than 0.1 GB')
+    expect(formatGb(0.1 * GB)).toBe('0.1 GB')
+  })
+})
+
 describe('isValidGraduationDate', () => {
   const now = new Date('2026-11-01T00:00:00Z')
 

@@ -970,7 +970,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
+    const { album, volume } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const {
       resolveAlbumAccess,
@@ -1015,6 +1015,15 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       .where(eq(album.id, data.albumId))
     const { resetAlbumPhotos } = await import('./photo-index')
     await resetAlbumPhotos(database, data.albumId)
+    await database
+      .update(volume)
+      .set({
+        driveFolderId: null,
+        permissionId: '',
+        writerRevokedAt: null,
+        releaseBlockedAt: null,
+      })
+      .where(eq(volume.albumId, data.albumId))
 
     return { success: true }
   })

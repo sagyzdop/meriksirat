@@ -55,9 +55,11 @@ If you choose to lend Google Drive storage as a flamekeeper:
 - **Sign-in:** your basic profile and email address only.
 - **Flamekeepers:** with `drive.file`, the Platform can see and manage only
   the files and folders it created in your Drive. It cannot see, read or change
-  any other file in your Drive. It creates album folders, uploads club photos
-  into them, makes those folders viewable by anyone with the link, and moves or
-  deletes them. It also reads how much storage your Drive has free.
+  any other file in your Drive. The club's own account creates a folder for you
+  inside each album folder and shares it with you; the Platform uploads club
+  photos into it and moves or deletes them. Every album folder, and so yours, is
+  viewable by anyone with the link. It also reads how much storage your Drive
+  has free.
 
 The Platform does not use Google user data for advertising, does not sell it,
 and does not use it to train AI or machine-learning models.

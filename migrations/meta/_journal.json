@@ -92,6 +92,13 @@
       "when": 1793555116488,
       "tag": "0027_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1793567108709,
+      "tag": "0028_setup",
+      "breakpoints": true
     }
   ]
 }

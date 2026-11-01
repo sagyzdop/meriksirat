@@ -96,7 +96,7 @@ One image in an album, with a stable ID of its own and a current Drive file ID t
 _Avoid_: Image, file, picture
 
 **Volume**:
-The photos of one album held by one flamekeeper. A database grouping, never a Drive folder.
+The photos of one album held by one flamekeeper, kept in a Drive folder of their own inside the album's folder.
 _Avoid_: Chunk, shard, part
 
 **Favorite**:

@@ -1,7 +1,11 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { album, albumMember, favorite, photo, user, volume } from '@/db/schema'
-import { DriveNotFoundError, deleteDriveFile } from '@/lib/google/google-drive'
+import {
+  DriveAppNotAuthorizedError,
+  DriveNotFoundError,
+  deleteDriveFile,
+} from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
 import { planExpiry, reminderRecipients } from '@/lib/pool/expiry'
 import {
@@ -81,7 +85,11 @@ export async function removeAlbum(
     try {
       await deleteDriveFile(accessToken, row.driveFolderId)
     } catch (error) {
-      if (!(error instanceof DriveNotFoundError)) {
+      if (error instanceof DriveAppNotAuthorizedError) {
+        console.warn(
+          `Album ${row.id} keeps its Drive folder: it still holds photos the club account cannot delete`
+        )
+      } else if (!(error instanceof DriveNotFoundError)) {
         if (options.strictDrive) throw error
         console.warn(
           'Failed to delete Drive folder, continuing with DB cleanup:',

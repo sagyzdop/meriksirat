@@ -1,21 +1,16 @@
-import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { album, booking, bookingItem, session, user, volume } from '@/db/schema'
+import { booking, bookingItem, session, user, volume } from '@/db/schema'
 import { isMasterEmail } from '@/lib/flamekeeper/master'
 import { cancelBookingItems } from '@/lib/booking/booking-items'
-import { deleteDrivePermission } from '@/lib/google/google-drive'
-import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
 import {
   logBookingActivityById,
   logUserBanActivity,
 } from '@/lib/telegram/logging'
 import { formatUserDisplayName } from '@/lib/utils'
-import {
-  takeIfBudgeted,
-  takeUpToIfBudgeted,
-  type Budget,
-} from '@/lib/cron/budget'
-import { checkBan, pickPendingRevokes, planBanDrain } from './ban'
+import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
+import { checkBan, planBanDrain } from './ban'
+import { releaseVolumes } from './volumes-server'
 import {
   applyDrainTransition,
   hasPhotosLeft,
@@ -96,60 +91,11 @@ async function revokeBannedWriterAccess(
   database: Database,
   budget?: Budget
 ): Promise<void> {
-  const rows = await database
-    .select({
-      albumId: volume.albumId,
-      flamekeeperUserId: volume.flamekeeperUserId,
-      permissionId: volume.permissionId,
-      writerRevokedAt: volume.writerRevokedAt,
-      driveFolderId: album.driveFolderId,
-    })
-    .from(volume)
-    .innerJoin(user, eq(user.id, volume.flamekeeperUserId))
-    .innerJoin(album, eq(album.id, volume.albumId))
-    .where(
-      and(
-        isNotNull(user.bannedAt),
-        isNull(volume.writerRevokedAt),
-        ne(volume.permissionId, '')
-      )
-    )
-    .limit(REVOKES_PER_RUN)
-    .all()
-
-  let pending = pickPendingRevokes(rows, REVOKES_PER_RUN)
-  if (pending.length === 0) return
-  if (budget) {
-    pending = takeIfBudgeted(budget, 1)
-      ? pending.slice(0, takeUpToIfBudgeted(budget, pending.length))
-      : []
-    if (pending.length === 0) return
-  }
-  const masterToken = await getGoogleAccessToken()
-  const now = new Date()
-  for (const row of pending) {
-    try {
-      await deleteDrivePermission(
-        masterToken,
-        row.driveFolderId,
-        row.permissionId
-      )
-      await database
-        .update(volume)
-        .set({ writerRevokedAt: now })
-        .where(
-          and(
-            eq(volume.albumId, row.albumId),
-            eq(volume.flamekeeperUserId, row.flamekeeperUserId)
-          )
-        )
-    } catch (error) {
-      console.warn(
-        `Failed to revoke writer access on album ${row.albumId}:`,
-        error
-      )
-    }
-  }
+  await releaseVolumes(
+    database,
+    sql`${volume.flamekeeperUserId} IN (SELECT ${user.id} FROM ${user} WHERE ${user.bannedAt} IS NOT NULL)`,
+    { limit: REVOKES_PER_RUN, budget }
+  )
 }
 
 async function finishBanWork(

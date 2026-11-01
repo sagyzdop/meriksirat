@@ -51,6 +51,24 @@ export class DriveQuotaExceededError extends Error {
   }
 }
 
+export class DriveAppNotAuthorizedError extends Error {
+  constructor(message = 'Drive folder holds files this app may not touch') {
+    super(message)
+    this.name = 'DriveAppNotAuthorizedError'
+  }
+}
+
+export function driveErrorFor(status: number, body: string): Error {
+  if (status === 404) return new DriveNotFoundError()
+  if (status === 403 && body.includes('storageQuotaExceeded')) {
+    return new DriveQuotaExceededError()
+  }
+  if (status === 403 && body.includes('appNotAuthorizedToChild')) {
+    return new DriveAppNotAuthorizedError()
+  }
+  return new Error(`Drive API error (${status}): ${body}`)
+}
+
 async function driveFetch(
   accessToken: string,
   url: string,
@@ -65,14 +83,7 @@ async function driveFetch(
   })
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new DriveNotFoundError()
-    }
-    const body = await response.text()
-    if (response.status === 403 && body.includes('storageQuotaExceeded')) {
-      throw new DriveQuotaExceededError()
-    }
-    throw new Error(`Drive API error (${response.status}): ${body}`)
+    throw driveErrorFor(response.status, await response.text())
   }
 
   return response
@@ -120,6 +131,7 @@ export async function getOrCreateDriveFolder(
 
 /**
  * List the files directly inside a folder, paging through all results.
+ * Subfolders (flamekeeper volumes) are left out.
  */
 export async function listDriveFolderFiles(
   accessToken: string,
@@ -131,7 +143,7 @@ export async function listDriveFolderFiles(
 
   do {
     const params = new URLSearchParams({
-      q: `'${folderId}' in parents and trashed=false`,
+      q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
       fields:
         'nextPageToken, files(id, name, mimeType, size, createdTime, imageMediaMetadata)',
       pageSize: '1000',
@@ -218,7 +230,7 @@ export async function findDriveFileByName(
   parentId: string
 ): Promise<{ id: string; name: string } | null> {
   const params = new URLSearchParams({
-    q: `name = '${name.replaceAll("'", "\\'")}' and '${parentId}' in parents and trashed=false`,
+    q: `name = '${name.replaceAll("'", "\\'")}' and '${parentId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
     fields: 'files(id, name)',
     pageSize: '1',
   })

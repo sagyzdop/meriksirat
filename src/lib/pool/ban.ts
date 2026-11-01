@@ -56,10 +56,3 @@ export function planBanDrain(
       return { kind: 'none' }
   }
 }
-
-export function pickPendingRevokes<T extends { writerRevokedAt: Date | null }>(
-  volumes: T[],
-  limit: number
-): T[] {
-  return volumes.filter((v) => !v.writerRevokedAt).slice(0, limit)
-}

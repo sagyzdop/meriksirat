@@ -20,6 +20,7 @@ export function bytesToGb(bytes: number): number {
 
 export function formatGb(bytes: number): string {
   const gb = bytesToGb(bytes)
+  if (bytes > 0 && gb < 0.1) return 'less than 0.1 GB'
   return `${gb >= 10 || Number.isInteger(gb) ? gb.toFixed(0) : gb.toFixed(1)} GB`
 }
 
