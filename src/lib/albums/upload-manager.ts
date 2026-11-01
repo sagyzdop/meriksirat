@@ -230,7 +230,8 @@ class UploadManager {
     const acceptable = new Set(plan.acceptNames)
 
     for (const file of files) {
-      if (!acceptable.delete(file.name)) continue
+      if (!acceptable.has(file.name)) continue
+      acceptable.delete(file.name)
       const job: UploadJob = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         albumId,

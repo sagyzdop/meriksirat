@@ -1,14 +1,4 @@
-import {
-  and,
-  asc,
-  eq,
-  inArray,
-  isNotNull,
-  isNull,
-  lte,
-  ne,
-  sql,
-} from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import {
   album,
@@ -60,7 +50,8 @@ import {
   volumesAfterCursor,
 } from './health'
 import { notifyAlbumTombstoned, ownerTelegramChat } from './notices'
-import { planRecoveryShare, volumeParents } from './volumes'
+import { planRecoveryShare } from './volumes'
+import { volumeHasPhotoRows } from './volumes-server'
 import { sendAdminsTelegram } from './server'
 
 type Database = ReturnType<typeof db>
@@ -241,17 +232,13 @@ async function auditVolumes(
         lastDone = albumId
         continue
       }
-      let missing = rows
-      for (const folderId of volumeParents(v.volumeFolderId)) {
-        if (missing.length === 0) break
-        const files = await listDriveFolderFiles(token, folderId, () =>
-          step.require(1)
-        )
-        missing = findMissingPhotos(
-          missing,
-          files.map((f) => f.id)
-        )
-      }
+      const files = await listDriveFolderFiles(token, v.volumeFolderId!, () =>
+        step.require(1)
+      )
+      const missing = findMissingPhotos(
+        rows,
+        files.map((f) => f.id)
+      )
       const confirmed: PhotoRef[] = []
       let kept = 0
       const unchecked = Math.max(missing.length - MAX_CONFIRMS_PER_ALBUM, 0)
@@ -698,23 +685,15 @@ async function recoverDropped(
       let action = planRecovery(v, now)
 
       if (action === 'restore') {
-        const anyRows = await database
-          .select({ id: photo.id })
-          .from(photo)
-          .where(
-            and(
-              eq(photo.albumId, v.albumId),
-              eq(photo.flamekeeperUserId, v.userId),
-              ne(photo.state, 'deleted')
-            )
-          )
-          .limit(1)
-          .get()
         if (
           planRecoveryShare({
             driveFolderId: v.volumeFolderId,
             permissionId: v.permissionId,
-            hasPhotoRows: !!anyRows,
+            hasPhotoRows: await volumeHasPhotoRows(
+              database,
+              v.albumId,
+              v.userId
+            ),
           })
         ) {
           if (!budget.take(2)) break

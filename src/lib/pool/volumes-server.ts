@@ -30,8 +30,8 @@ export const ALBUM_HEALS_PER_ATTEMPT = 4
 const HEAL_COST = 3
 
 export const clearedRelease = {
-  releaseBlockedAt: null,
-  releaseBlockedSince: null,
+  releaseLastBlockedAt: null,
+  releaseFirstBlockedAt: null,
   releaseAlertedAt: null,
 }
 
@@ -50,7 +50,7 @@ export async function ensureVolumeFolder(
       .select({
         driveFolderId: volume.driveFolderId,
         permissionId: volume.permissionId,
-        releaseBlockedAt: volume.releaseBlockedAt,
+        releaseLastBlockedAt: volume.releaseLastBlockedAt,
       })
       .from(volume)
       .where(key)
@@ -58,7 +58,7 @@ export async function ensureVolumeFolder(
 
   const existing = await load()
   if (existing?.driveFolderId && existing.permissionId) {
-    if (existing.releaseBlockedAt) {
+    if (existing.releaseLastBlockedAt) {
       await database.update(volume).set(clearedRelease).where(key)
     }
     return existing.driveFolderId
@@ -278,29 +278,25 @@ export async function releaseVolumes(
       albumId: volume.albumId,
       flamekeeperUserId: volume.flamekeeperUserId,
       driveFolderId: volume.driveFolderId,
-      releaseBlockedAt: volume.releaseBlockedAt,
-      releaseBlockedSince: volume.releaseBlockedSince,
+      releaseLastBlockedAt: volume.releaseLastBlockedAt,
+      releaseFirstBlockedAt: volume.releaseFirstBlockedAt,
       releaseAlertedAt: volume.releaseAlertedAt,
     })
     .from(volume)
     .where(
       and(
         scope,
-        sql`NOT (${volume.releaseAlertedAt} IS NOT NULL AND ${volume.releaseBlockedSince} <= ${releaseAbandonedCutoff(now).getTime()})`,
+        sql`NOT (${volume.releaseAlertedAt} IS NOT NULL AND ${volume.releaseFirstBlockedAt} <= ${releaseAbandonedCutoff(now).getTime()})`,
         sql`NOT EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${photo.state} != 'deleted')`,
         sql`NOT EXISTS (SELECT 1 FROM ${uploadReservation} WHERE ${uploadReservation.albumId} = ${volume.albumId} AND ${uploadReservation.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${uploadReservation.expiresAt} > ${now.getTime()})`
       )
     )
-    .orderBy(asc(volume.releaseBlockedAt))
+    .orderBy(asc(volume.releaseLastBlockedAt))
     .limit(limit + 1)
     .all()
   if (rows.length === 0) return true
 
-  const plan = planVolumeReleases(
-    rows.slice(0, limit).map((r) => ({ ...r, hasPhotos: false })),
-    now,
-    limit
-  )
+  const plan = planVolumeReleases(rows.slice(0, limit), now, limit)
   let calls = plan.calls
   if (calls.length > 0 && options.budget) {
     const granted = options.budget.take(1)
@@ -353,8 +349,8 @@ export async function releaseVolumes(
       await database
         .update(volume)
         .set({
-          releaseBlockedAt: now,
-          releaseBlockedSince: sql`COALESCE(${volume.releaseBlockedSince}, ${now.getTime()})`,
+          releaseLastBlockedAt: now,
+          releaseFirstBlockedAt: sql`COALESCE(${volume.releaseFirstBlockedAt}, ${now.getTime()})`,
         })
         .where(volumeKey(v.albumId, v.flamekeeperUserId))
     }

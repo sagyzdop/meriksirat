@@ -591,8 +591,10 @@ export const volume = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     permissionId: text('permission_id').notNull(),
     driveFolderId: text('drive_folder_id'),
-    releaseBlockedAt: integer('release_blocked_at', { mode: 'timestamp_ms' }),
-    releaseBlockedSince: integer('release_blocked_since', {
+    releaseLastBlockedAt: integer('release_blocked_at', {
+      mode: 'timestamp_ms',
+    }),
+    releaseFirstBlockedAt: integer('release_blocked_since', {
       mode: 'timestamp_ms',
     }),
     releaseAlertedAt: integer('release_alerted_at', { mode: 'timestamp_ms' }),

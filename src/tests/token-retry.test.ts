@@ -8,6 +8,8 @@ function source(overrides: Partial<TokenSource> = {}) {
   return {
     getToken: vi.fn(async () => tokens[i++]),
     forget: vi.fn(),
+    hasCached: () => true,
+    canRetry: () => true,
     ...overrides,
   }
 }
@@ -93,7 +95,15 @@ describe('withTokenRetry', () => {
       throw new DriveAuthError()
     })
     await expect(
-      withTokenRetry({ getToken, forget: vi.fn() }, run)
+      withTokenRetry(
+        {
+          getToken,
+          forget: vi.fn(),
+          hasCached: () => true,
+          canRetry: () => true,
+        },
+        run
+      )
     ).rejects.toThrow('invalid_grant')
     expect(run).toHaveBeenCalledTimes(1)
   })

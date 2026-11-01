@@ -44,7 +44,7 @@ import {
   volumeHasPhotoRows,
   loadVolumeFolderId,
 } from './volumes-server'
-import { volumeParents } from './volumes'
+import { isInVolumeFolder } from './volumes'
 
 type Database = ReturnType<typeof db>
 
@@ -272,10 +272,12 @@ export async function confirmFlamekeeperUpload(
   const file = await withFlamekeeperToken(database, ownerId, (token) =>
     getDriveFileMeta(token, fileId)
   )
-  const parents = volumeParents(
-    await loadVolumeFolderId(database, albumRow.id, ownerId)
+  const volumeFolderId = await loadVolumeFolderId(
+    database,
+    albumRow.id,
+    ownerId
   )
-  if (file.trashed || !file.parents?.some((id) => parents.includes(id))) {
+  if (!isInVolumeFolder(file, volumeFolderId)) {
     throw new Error('Uploaded file not found in the album folder')
   }
 

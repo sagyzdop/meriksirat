@@ -57,7 +57,7 @@ import { loadVolumeFolderId, releaseVolumes } from './volumes-server'
 import {
   abandonedAlertText,
   releaseAbandonedCutoff,
-  volumeParents,
+  isInVolumeFolder,
 } from './volumes'
 
 type Database = ReturnType<typeof db>
@@ -186,8 +186,8 @@ async function finalizeDrained(
       and(
         eq(volume.flamekeeperUserId, userId),
         or(
-          isNull(volume.releaseBlockedSince),
-          gt(volume.releaseBlockedSince, releaseAbandonedCutoff(now))
+          isNull(volume.releaseFirstBlockedAt),
+          gt(volume.releaseFirstBlockedAt, releaseAbandonedCutoff(now))
         )
       )
     )
@@ -520,10 +520,12 @@ export async function confirmRelay(
   const copy = await withFlamekeeperToken(database, destUserId, (token) =>
     getDriveFileMeta(token, input.fileId)
   )
-  const destParents = volumeParents(
-    await loadVolumeFolderId(database, albumRow.id, destUserId)
+  const destFolderId = await loadVolumeFolderId(
+    database,
+    albumRow.id,
+    destUserId
   )
-  if (copy.trashed || !copy.parents?.some((id) => destParents.includes(id))) {
+  if (!isInVolumeFolder(copy, destFolderId)) {
     throw new Error('Moved copy not found in the album folder')
   }
 
@@ -819,10 +821,10 @@ async function alertAbandonedVolumes(
     .where(
       and(
         isNull(volume.releaseAlertedAt),
-        lte(volume.releaseBlockedSince, releaseAbandonedCutoff(now))
+        lte(volume.releaseFirstBlockedAt, releaseAbandonedCutoff(now))
       )
     )
-    .orderBy(asc(volume.releaseBlockedSince))
+    .orderBy(asc(volume.releaseFirstBlockedAt))
     .limit(ADMIN_ALERTS_PER_RUN)
     .all()
   for (const row of rows) {

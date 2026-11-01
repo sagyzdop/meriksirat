@@ -10,7 +10,7 @@ import {
   albumBlockedAlertText,
   planVolumeReleases,
   volumeFolderName,
-  volumeParents,
+  isInVolumeFolder,
   type ReleaseVolume,
 } from '@/lib/pool/volumes'
 
@@ -19,9 +19,8 @@ const now = new Date('2026-11-10T12:00:00Z')
 const vol = (over: Partial<ReleaseVolume>): ReleaseVolume => ({
   albumId: 'a1',
   driveFolderId: 'sub1',
-  releaseBlockedAt: null,
-  releaseBlockedSince: null,
-  hasPhotos: false,
+  releaseLastBlockedAt: null,
+  releaseFirstBlockedAt: null,
   ...over,
 })
 
@@ -33,15 +32,15 @@ describe('volumeFolderName', () => {
 
 describe('planVolumeReleases abandoned and alerted', () => {
   const stuck = {
-    releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
-    releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS),
+    releaseLastBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
+    releaseFirstBlockedAt: new Date(now.getTime() - RELEASE_FALLBACK_MS),
   }
 
   it('stops retrying an abandoned volume once its alert was sent', () => {
     const done = vol({ ...stuck, releaseAlertedAt: new Date(now.getTime()) })
     const plan = planVolumeReleases([done], now, 10)
     expect(plan.calls).toEqual([])
-    expect(plan.abandoned).toEqual([done])
+    expect(plan.pending).toEqual([])
   })
 
   it('keeps retrying an abandoned volume whose alert is not sent', () => {
@@ -51,16 +50,11 @@ describe('planVolumeReleases abandoned and alerted', () => {
 
   it('keeps retrying an alerted volume that is not yet abandoned', () => {
     const young = vol({
-      releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
-      releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS + 1),
+      releaseLastBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
+      releaseFirstBlockedAt: new Date(now.getTime() - RELEASE_FALLBACK_MS + 1),
       releaseAlertedAt: now,
     })
     expect(planVolumeReleases([young], now, 10).calls).toHaveLength(1)
-  })
-
-  it('still holds back volumes with photos', () => {
-    const held = vol({ ...stuck, releaseAlertedAt: now, hasPhotos: true })
-    expect(planVolumeReleases([held], now, 10).pending).toEqual([held])
   })
 })
 
@@ -73,13 +67,6 @@ describe('albumBlockedAlertText', () => {
 })
 
 describe('planVolumeReleases', () => {
-  it('keeps volumes that still hold photos', () => {
-    const plan = planVolumeReleases([vol({ hasPhotos: true })], now, 10)
-    expect(plan.calls).toEqual([])
-    expect(plan.drops).toEqual([])
-    expect(plan.pending).toHaveLength(1)
-  })
-
   it('deletes the subfolder of an empty volume', () => {
     const plan = planVolumeReleases([vol({})], now, 10)
     expect(plan.calls).toEqual([vol({})])
@@ -95,7 +82,7 @@ describe('planVolumeReleases', () => {
 
   it('waits out the retry window after a blocked release', () => {
     const recent = vol({
-      releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS + 1000),
+      releaseLastBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS + 1000),
     })
     const plan = planVolumeReleases([recent], now, 10)
     expect(plan.calls).toEqual([])
@@ -104,30 +91,29 @@ describe('planVolumeReleases', () => {
 
   it('retries once the window has passed', () => {
     const old = vol({
-      releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
+      releaseLastBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
     })
     expect(planVolumeReleases([old], now, 10).calls).toHaveLength(1)
   })
 
   it('stops counting a volume blocked for 7 days as pending', () => {
     const stuck = vol({
-      releaseBlockedAt: new Date(now.getTime() - 1000),
-      releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS),
+      releaseLastBlockedAt: new Date(now.getTime() - 1000),
+      releaseFirstBlockedAt: new Date(now.getTime() - RELEASE_FALLBACK_MS),
     })
     const young = vol({
       albumId: 'a2',
-      releaseBlockedAt: new Date(now.getTime() - 1000),
-      releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS + 1),
+      releaseLastBlockedAt: new Date(now.getTime() - 1000),
+      releaseFirstBlockedAt: new Date(now.getTime() - RELEASE_FALLBACK_MS + 1),
     })
     const plan = planVolumeReleases([stuck, young], now, 10)
-    expect(plan.abandoned).toEqual([stuck])
     expect(plan.pending).toEqual([young])
   })
 
   it('still retries an abandoned volume once its window has passed', () => {
     const stuck = vol({
-      releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
-      releaseBlockedSince: new Date(now.getTime() - 8 * 24 * 3600 * 1000),
+      releaseLastBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
+      releaseFirstBlockedAt: new Date(now.getTime() - 8 * 24 * 3600 * 1000),
     })
     expect(planVolumeReleases([stuck], now, 10).calls).toEqual([stuck])
   })
@@ -143,11 +129,11 @@ describe('planVolumeReleases', () => {
 describe('isReleaseAbandoned', () => {
   it('is true from exactly 7 days after blocking started', () => {
     const since = (ms: number) => ({
-      releaseBlockedSince: new Date(now.getTime() - ms),
+      releaseFirstBlockedAt: new Date(now.getTime() - ms),
     })
     expect(isReleaseAbandoned(since(RELEASE_FALLBACK_MS - 1), now)).toBe(false)
     expect(isReleaseAbandoned(since(RELEASE_FALLBACK_MS), now)).toBe(true)
-    expect(isReleaseAbandoned({ releaseBlockedSince: null }, now)).toBe(false)
+    expect(isReleaseAbandoned({ releaseFirstBlockedAt: null }, now)).toBe(false)
   })
 
   it('matches the cutoff used for queries', () => {
@@ -198,12 +184,20 @@ describe('planRecoveryShare', () => {
   })
 })
 
-describe('volumeParents', () => {
-  it('accepts only the subfolder of a volume', () => {
-    expect(volumeParents('sub1')).toEqual(['sub1'])
+describe('isInVolumeFolder', () => {
+  it('accepts a file in the volume subfolder', () => {
+    expect(isInVolumeFolder({ parents: ['x', 'sub1'] }, 'sub1')).toBe(true)
+  })
+
+  it('rejects a trashed file or one elsewhere', () => {
+    expect(isInVolumeFolder({ parents: ['sub1'], trashed: true }, 'sub1')).toBe(
+      false
+    )
+    expect(isInVolumeFolder({ parents: ['other'] }, 'sub1')).toBe(false)
+    expect(isInVolumeFolder({}, 'sub1')).toBe(false)
   })
 
   it('accepts nothing while a volume has no subfolder', () => {
-    expect(volumeParents(null)).toEqual([])
+    expect(isInVolumeFolder({ parents: ['sub1'] }, null)).toBe(false)
   })
 })

@@ -6,17 +6,15 @@ export const MAX_HEAL_DELETES = 50
 export interface ReleaseVolume {
   albumId: string
   driveFolderId: string | null
-  releaseBlockedAt: Date | null
-  releaseBlockedSince: Date | null
+  releaseLastBlockedAt: Date | null
+  releaseFirstBlockedAt: Date | null
   releaseAlertedAt?: Date | null
-  hasPhotos: boolean
 }
 
 export interface ReleasePlan<T extends ReleaseVolume> {
   calls: T[]
   drops: T[]
   pending: T[]
-  abandoned: T[]
 }
 
 export function volumeFolderName(shortId: string): string {
@@ -28,12 +26,12 @@ export function releaseAbandonedCutoff(now: Date): Date {
 }
 
 export function isReleaseAbandoned(
-  volume: { releaseBlockedSince: Date | null },
+  volume: { releaseFirstBlockedAt: Date | null },
   now: Date
 ): boolean {
   return (
-    !!volume.releaseBlockedSince &&
-    volume.releaseBlockedSince.getTime() <=
+    !!volume.releaseFirstBlockedAt &&
+    volume.releaseFirstBlockedAt.getTime() <=
       releaseAbandonedCutoff(now).getTime()
   )
 }
@@ -47,23 +45,14 @@ export function planVolumeReleases<T extends ReleaseVolume>(
     calls: [],
     drops: [],
     pending: [],
-    abandoned: [],
   }
   for (const volume of volumes) {
-    if (volume.hasPhotos) {
-      plan.pending.push(volume)
-      continue
-    }
-    if (volume.releaseAlertedAt && isReleaseAbandoned(volume, now)) {
-      plan.abandoned.push(volume)
-      continue
-    }
+    if (volume.releaseAlertedAt && isReleaseAbandoned(volume, now)) continue
     const waiting =
-      !!volume.releaseBlockedAt &&
-      now.getTime() - volume.releaseBlockedAt.getTime() < RELEASE_RETRY_MS
+      !!volume.releaseLastBlockedAt &&
+      now.getTime() - volume.releaseLastBlockedAt.getTime() < RELEASE_RETRY_MS
     if (waiting) {
-      if (isReleaseAbandoned(volume, now)) plan.abandoned.push(volume)
-      else plan.pending.push(volume)
+      if (!isReleaseAbandoned(volume, now)) plan.pending.push(volume)
       continue
     }
     if (!volume.driveFolderId) {
@@ -111,6 +100,13 @@ export function planRecoveryShare(volume: {
   return !volume.permissionId
 }
 
-export function volumeParents(volumeFolderId: string | null): string[] {
-  return volumeFolderId ? [volumeFolderId] : []
+export function isInVolumeFolder(
+  file: { trashed?: boolean; parents?: string[] },
+  volumeFolderId: string | null
+): boolean {
+  return (
+    !file.trashed &&
+    !!volumeFolderId &&
+    !!file.parents?.includes(volumeFolderId)
+  )
 }
