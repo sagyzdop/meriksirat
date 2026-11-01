@@ -9,7 +9,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 - `npm run lint` — **broken at baseline** (exits 1 on prettier/prettier formatting errors across many files). Do not treat output as actionable; `lint:fix` may rewrite files.
 - `npx tsc --noEmit` — must stay clean (0 errors at baseline).
 - Format touched files with `npx prettier --write` (no semi, single quotes, width 80).
-- `npm run db:generate` — writes a new migration into `migrations/` (the script hardcodes `--name setup`, so every migration is named `setup` and numbered sequentially — don't rename them); then `db:migrate-local` / `db:migrate-remote`.
+- `npm run db:generate` — writes a new migration into `migrations/` (the script hardcodes `--name setup`, so every migration is named `setup` and numbered sequentially — don't rename them; numbers aren't contiguous, 0022 is unused, and `migrations/meta` was baselined at 0027); then `db:migrate-local` / `db:migrate-remote`.
 - `npm run build` then `rg -c "cloudflare:workers" dist/client/assets/` and expect 0 — the client-bundle leak check.
 - `npm run deploy` — build + `wrangler deploy`.
 
