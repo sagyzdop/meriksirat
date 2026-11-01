@@ -519,8 +519,13 @@ export const flamekeeper = sqliteTable(
     graduationConfirmedAt: integer('graduation_confirmed_at', {
       mode: 'timestamp_ms',
     }),
+    graduationPromptSentAt: integer('graduation_prompt_sent_at', {
+      mode: 'timestamp_ms',
+    }),
     drainingDeadline: integer('draining_deadline', { mode: 'timestamp_ms' }),
-    drainReason: text('drain_reason', { enum: ['opt_out', 'pledge'] }),
+    drainReason: text('drain_reason', {
+      enum: ['opt_out', 'pledge', 'graduation', 'domain'],
+    }),
     drainReminderSentAt: integer('drain_reminder_sent_at', {
       mode: 'timestamp_ms',
     }),
