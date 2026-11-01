@@ -14,7 +14,21 @@ const sessionCache = new WeakMap<
 
 async function resolveSessionUncached(headers: Headers) {
   const { auth } = await import('@/lib/auth/auth')
-  return auth.api.getSession({ headers })
+  const result = await auth.api.getSession({ headers })
+  if (!result?.user) return result
+  const { env } = await import('cloudflare:workers')
+  const { db } = await import('@/db')
+  const { user, session } = await import('@/db/schema')
+  const { eq } = await import('drizzle-orm')
+  const database = db(env.meriksirat_d1 as D1Database)
+  const row = await database
+    .select({ bannedAt: user.bannedAt })
+    .from(user)
+    .where(eq(user.id, result.user.id))
+    .get()
+  if (!row?.bannedAt) return result
+  await database.delete(session).where(eq(session.userId, result.user.id))
+  return null
 }
 
 export function resolveSession(headers: Headers) {

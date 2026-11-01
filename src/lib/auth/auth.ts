@@ -45,10 +45,16 @@ export const auth = betterAuth({
       if (!newSession) return
       const database = drizzle(env.meriksirat_d1 as D1Database, { schema })
       const row = await database
-        .select({ status: user.status })
+        .select({ status: user.status, bannedAt: user.bannedAt })
         .from(user)
         .where(eq(user.id, newSession.user.id))
         .get()
+      if (row?.bannedAt) {
+        await database
+          .delete(sessionTable)
+          .where(eq(sessionTable.userId, newSession.user.id))
+        throw ctx.redirect('/login/?error=banned')
+      }
       if (row?.status === 'Inactive') {
         await database
           .delete(sessionTable)

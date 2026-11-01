@@ -257,6 +257,8 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
         graduationDate: flamekeeper.graduationDate,
         drainReason: flamekeeper.drainReason,
         drainingDeadline: flamekeeper.drainingDeadline,
+        bannedAt: user.bannedAt,
+        banReason: user.banReason,
         createdAt: flamekeeper.createdAt,
       })
       .from(flamekeeper)
@@ -286,6 +288,8 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
       graduationDate: row.graduationDate,
       drainingDeadline: row.drainingDeadline,
       drainBytesLeft: drainBytesLeft(row),
+      bannedAt: row.bannedAt,
+      banReason: row.banReason,
       createdAt: row.createdAt,
     }))
   })

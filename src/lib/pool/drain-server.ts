@@ -69,7 +69,7 @@ export const drainColumns = {
   graduationDate: flamekeeper.graduationDate,
 }
 
-async function loadDrainRow(
+export async function loadDrainRow(
   database: Database,
   userId: string
 ): Promise<DrainRow | null> {
@@ -131,7 +131,7 @@ async function loadVolumePhotos(
     .all()
 }
 
-async function hasPhotosLeft(
+export async function hasPhotosLeft(
   database: Database,
   userId: string
 ): Promise<boolean> {
@@ -151,6 +151,7 @@ async function releaseEmptyVolumes(
     .select({
       albumId: volume.albumId,
       permissionId: volume.permissionId,
+      writerRevokedAt: volume.writerRevokedAt,
       driveFolderId: album.driveFolderId,
       hasPhotos: sql<number>`EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId})`,
     })
@@ -171,6 +172,7 @@ async function releaseEmptyVolumes(
   if (empty.length === 0) return rows.length <= VOLUME_REVOKES_PER_CALL
   const masterToken = await getGoogleAccessToken()
   for (const r of empty) {
+    if (r.writerRevokedAt) continue
     try {
       await deleteDrivePermission(masterToken, r.driveFolderId, r.permissionId)
     } catch (error) {
@@ -337,6 +339,7 @@ const DRAIN_WHY: Record<NonNullable<DrainRow['drainReason']>, string> = {
     'Your expected graduation date is less than 60 days away and your account is about to move to alumni storage',
   domain:
     'Your account is no longer an @nu.edu.kz account, so it cannot keep lending storage',
+  ban: 'Your account was banned',
 }
 
 export async function sendDrainStartedEmail(
@@ -739,6 +742,7 @@ export async function runDrainMaintenance(env: {
 
   let reminders = 0
   for (const row of rows) {
+    if (row.drainReason === 'ban') continue
     if (reminders >= REMINDERS_PER_RUN || !drainReminderDue(row, now)) continue
     reminders++
     const left = formatGb(drainBytesLeft(row))

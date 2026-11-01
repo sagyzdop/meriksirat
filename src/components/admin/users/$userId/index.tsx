@@ -18,6 +18,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  BanUserDialog,
+  UnbanUserDialog,
+} from '@/components/shared/ban-user-dialogs'
 import { resetUserViolationCountersFn } from '@/lib/user'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -108,6 +112,8 @@ interface PageProps {
     onboardingComplete: boolean | null
     cancelledInStartWindowCount: number | null
     overdueCount: number | null
+    bannedAt: Date | null
+    banReason: string | null
     createdAt: Date
     updatedAt: Date
   }
@@ -115,6 +121,8 @@ interface PageProps {
   albumsPagination: Pagination
   albumsSearch: AlbumSearch
   albumsIsLoading?: boolean
+  canBan?: boolean
+  viewerId?: string
 }
 
 export function Page({
@@ -123,12 +131,17 @@ export function Page({
   albumsPagination,
   albumsSearch,
   albumsIsLoading = false,
+  canBan = false,
+  viewerId,
 }: PageProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const goBack = useBackNavigation('/admin/users')
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const [showBanDialog, setShowBanDialog] = useState(false)
+  const userName =
+    `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
 
   const hasViolations =
     (user.cancelledInStartWindowCount ?? 0) > 0 || (user.overdueCount ?? 0) > 0
@@ -221,6 +234,27 @@ export function Page({
                 </TableRow>
                 <TableRow>
                   <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
+                    Ban
+                  </TableCell>
+                  <TableCell>
+                    {user.bannedAt ? (
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="destructive" className="w-fit">
+                          Banned {formatDate(user.bannedAt.getTime())}
+                        </Badge>
+                        {user.banReason && (
+                          <span className="text-sm text-muted-foreground">
+                            {user.banReason}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Not banned</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
                     Instagram
                   </TableCell>
                   <TableCell>
@@ -278,6 +312,21 @@ export function Page({
             </Table>
           </div>
         </Section>
+
+        {canBan && (user.bannedAt || user.id !== viewerId) && (
+          <Section
+            title="Ban"
+            description="Banning blocks sign-in, cancels upcoming bookings, removes album folder access and starts moving any photos they hold."
+            spacing="compact"
+          >
+            <Button
+              variant={user.bannedAt ? 'outline' : 'destructive'}
+              onClick={() => setShowBanDialog(true)}
+            >
+              {user.bannedAt ? 'Unban user' : 'Ban user'}
+            </Button>
+          </Section>
+        )}
 
         <Section
           title="Booking Violations"
@@ -358,6 +407,21 @@ export function Page({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {user.bannedAt ? (
+        <UnbanUserDialog
+          userId={user.id}
+          userName={userName}
+          open={showBanDialog}
+          onOpenChange={setShowBanDialog}
+        />
+      ) : (
+        <BanUserDialog
+          userId={user.id}
+          userName={userName}
+          open={showBanDialog}
+          onOpenChange={setShowBanDialog}
+        />
+      )}
     </PageContainer>
   )
 }

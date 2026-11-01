@@ -123,6 +123,15 @@ export const ResetUserViolationCountersSchema = z.object({
   userId: z.string(),
 })
 
+export const BanUserSchema = z.object({
+  userId: z.string(),
+  reason: z.string().trim().min(1, 'Give a reason for the ban').max(500),
+})
+
+export const UnbanUserSchema = z.object({
+  userId: z.string(),
+})
+
 // User Profile Update Schema (for users updating their own profile)
 export const UpdateUserProfileSchema = z.object({
   firstName: z.string().min(1).optional(),

@@ -149,7 +149,10 @@ async function ensureVolume(
   fk: { userId: string; email: string }
 ): Promise<void> {
   const existing = await database
-    .select({ permissionId: volume.permissionId })
+    .select({
+      permissionId: volume.permissionId,
+      writerRevokedAt: volume.writerRevokedAt,
+    })
     .from(volume)
     .where(
       and(
@@ -158,12 +161,24 @@ async function ensureVolume(
       )
     )
     .get()
-  if (existing) return
+  if (existing && !existing.writerRevokedAt) return
   const permissionId = await shareWithWriter(
     masterToken,
     albumRow.driveFolderId,
     fk.email
   )
+  if (existing) {
+    await database
+      .update(volume)
+      .set({ permissionId, writerRevokedAt: null })
+      .where(
+        and(
+          eq(volume.albumId, albumRow.id),
+          eq(volume.flamekeeperUserId, fk.userId)
+        )
+      )
+    return
+  }
   await database
     .insert(volume)
     .values({

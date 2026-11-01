@@ -13,6 +13,7 @@ import {
 } from './server-utils'
 import {
   formatAlbumLog,
+  formatBanLog,
   formatBookingLog,
   visibleLength,
   MAX_CAPTION_LENGTH,
@@ -245,4 +246,26 @@ export async function logReturnPhotoToChannel(input: {
       error: error instanceof Error ? error.message : String(error),
     })
   }
+}
+
+/**
+ * Logs a ban or unban to the club Telegram channel. Never throws.
+ */
+export async function logUserBanActivity(input: {
+  action: 'banned' | 'unbanned'
+  userId: string
+  userName: string
+  actorName: string
+  reason?: string | null
+}): Promise<void> {
+  const origin = appOrigin()
+  await sendChannelText(
+    formatBanLog({
+      action: input.action,
+      userName: input.userName,
+      actorName: input.actorName,
+      reason: input.reason,
+      url: origin ? `${origin}/admin/users/${input.userId}` : undefined,
+    })
+  )
 }
