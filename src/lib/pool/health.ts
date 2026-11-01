@@ -133,6 +133,20 @@ export function findMissingPhotos(
 
 export const MAX_CONFIRMS_PER_ALBUM = 10
 
+export function pickConfirmCandidates(
+  missing: PhotoRef[],
+  limit: number,
+  random: () => number
+): PhotoRef[] {
+  const pool = [...missing]
+  const count = Math.min(limit, pool.length)
+  for (let i = 0; i < count; i++) {
+    const j = i + Math.floor(random() * (pool.length - i))
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  return pool.slice(0, count)
+}
+
 export type FileProbeOutcome = 'exists' | 'trashed' | 'missing' | 'error'
 
 export function confirmMissing(outcome: FileProbeOutcome): 'remove' | 'keep' {

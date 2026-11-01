@@ -42,6 +42,7 @@ import {
   HEALTH_INTERVAL_MS,
   HEALTH_STEP_CAP,
   MAX_CONFIRMS_PER_ALBUM,
+  pickConfirmCandidates,
   LOST_GRACE_MS,
   MISSING_GRACE_MS,
   RESTORE_BATCH,
@@ -255,7 +256,12 @@ async function auditVolumes(
       let kept = 0
       const unchecked = Math.max(missing.length - MAX_CONFIRMS_PER_ALBUM, 0)
       let exhausted = false
-      for (const row of missing.slice(0, MAX_CONFIRMS_PER_ALBUM)) {
+      const candidates = pickConfirmCandidates(
+        missing,
+        MAX_CONFIRMS_PER_ALBUM,
+        Math.random
+      )
+      for (const row of candidates) {
         let outcome: FileProbeOutcome
         try {
           step.require(1)

@@ -13,6 +13,8 @@ import {
   planRecovery,
   isUniqueConstraintError,
   oldEnoughToAudit,
+  pickConfirmCandidates,
+  MAX_CONFIRMS_PER_ALBUM,
   volumesAfterCursor,
   MISSING_GRACE_MS,
   type HealthCandidate,
@@ -269,5 +271,45 @@ describe('confirmMissing', () => {
   })
   it('keeps a row on any other error', () => {
     expect(confirmMissing('error')).toBe('keep')
+  })
+})
+
+describe('pickConfirmCandidates', () => {
+  const refs = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: `p${i}`, driveFileId: `f${i}` }))
+
+  it('returns everything when within the limit', () => {
+    expect(
+      pickConfirmCandidates(refs(3), 10, () => 0.5)
+        .map((p) => p.id)
+        .sort()
+    ).toEqual(['p0', 'p1', 'p2'])
+  })
+
+  it('picks exactly the limit with no duplicates', () => {
+    const picked = pickConfirmCandidates(
+      refs(25),
+      MAX_CONFIRMS_PER_ALBUM,
+      () => 0.3
+    )
+    expect(picked).toHaveLength(MAX_CONFIRMS_PER_ALBUM)
+    expect(new Set(picked.map((p) => p.id)).size).toBe(MAX_CONFIRMS_PER_ALBUM)
+  })
+
+  it('can reach candidates past the first ten', () => {
+    const picked = pickConfirmCandidates(refs(25), 10, () => 0.99)
+    expect(picked.some((p) => Number(p.id.slice(1)) >= 10)).toBe(true)
+  })
+
+  it('draws from the random source', () => {
+    const low = pickConfirmCandidates(refs(25), 10, () => 0)
+    const high = pickConfirmCandidates(refs(25), 10, () => 0.999)
+    expect(low).not.toEqual(high)
+  })
+
+  it('does not mutate the input', () => {
+    const input = refs(25)
+    pickConfirmCandidates(input, 10, () => 0.1)
+    expect(input).toEqual(refs(25))
   })
 })
