@@ -18,6 +18,7 @@ import {
   MAX_HEAL_DELETES,
   planHealDeletes,
   planVolumeReleases,
+  releaseAbandonedCutoff,
   volumeFolderName,
 } from './volumes'
 
@@ -25,6 +26,7 @@ type Database = ReturnType<typeof db>
 
 export const VOLUME_RELEASES_PER_CALL = 20
 const HEALS_PER_CALL = 3
+export const ALBUM_HEALS_PER_ATTEMPT = 4
 const HEAL_COST = 3
 
 export const clearedRelease = {
@@ -184,7 +186,7 @@ async function volumeIsIdle(
   return !reserved
 }
 
-async function healBlockedVolume(
+export async function healBlockedVolume(
   database: Database,
   v: { albumId: string; flamekeeperUserId: string; driveFolderId: string },
   now: Date,
@@ -237,6 +239,38 @@ async function healBlockedVolume(
   }
 }
 
+export async function healAlbumVolumes(
+  database: Database,
+  albumId: string,
+  now: Date,
+  budget?: Budget
+): Promise<{ cleared: number; blocked: number }> {
+  const rows = await database
+    .select({
+      albumId: volume.albumId,
+      flamekeeperUserId: volume.flamekeeperUserId,
+      driveFolderId: volume.driveFolderId,
+    })
+    .from(volume)
+    .where(
+      and(eq(volume.albumId, albumId), sql`${volume.driveFolderId} IS NOT NULL`)
+    )
+    .all()
+  let cleared = 0
+  let blocked = Math.max(0, rows.length - ALBUM_HEALS_PER_ATTEMPT)
+  for (const v of rows.slice(0, ALBUM_HEALS_PER_ATTEMPT)) {
+    const healed = await healBlockedVolume(
+      database,
+      { ...v, driveFolderId: v.driveFolderId! },
+      now,
+      budget
+    )
+    if (healed) cleared++
+    else blocked++
+  }
+  return { cleared, blocked }
+}
+
 export async function releaseVolumes(
   database: Database,
   scope: SQL | undefined,
@@ -252,11 +286,13 @@ export async function releaseVolumes(
       driveFolderId: volume.driveFolderId,
       releaseBlockedAt: volume.releaseBlockedAt,
       releaseBlockedSince: volume.releaseBlockedSince,
+      releaseAlertedAt: volume.releaseAlertedAt,
     })
     .from(volume)
     .where(
       and(
         scope,
+        sql`NOT (${volume.releaseAlertedAt} IS NOT NULL AND ${volume.releaseBlockedSince} <= ${releaseAbandonedCutoff(now).getTime()})`,
         sql`NOT EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${photo.state} != 'deleted')`,
         sql`NOT EXISTS (SELECT 1 FROM ${uploadReservation} WHERE ${uploadReservation.albumId} = ${volume.albumId} AND ${uploadReservation.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${uploadReservation.expiresAt} > ${now.getTime()})`
       )
@@ -284,6 +320,9 @@ export async function releaseVolumes(
   let heals = 0
   for (const v of calls) {
     const folderId = v.driveFolderId!
+    if (!(await volumeIsIdle(database, v.albumId, v.flamekeeperUserId, now))) {
+      continue
+    }
     const remove = () =>
       withGoogleToken(
         (masterToken) => deleteDriveFile(masterToken, folderId),

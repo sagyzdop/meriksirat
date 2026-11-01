@@ -7,6 +7,7 @@ import {
   planHealDeletes,
   releaseAbandonedCutoff,
   planRecoveryShare,
+  albumBlockedAlertText,
   planVolumeReleases,
   volumeFolderName,
   volumeParents,
@@ -27,6 +28,47 @@ const vol = (over: Partial<ReleaseVolume>): ReleaseVolume => ({
 describe('volumeFolderName', () => {
   it('is neutral and carries no personal data', () => {
     expect(volumeFolderName('Ab3dE9')).toBe('Volume Ab3dE9')
+  })
+})
+
+describe('planVolumeReleases abandoned and alerted', () => {
+  const stuck = {
+    releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
+    releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS),
+  }
+
+  it('stops retrying an abandoned volume once its alert was sent', () => {
+    const done = vol({ ...stuck, releaseAlertedAt: new Date(now.getTime()) })
+    const plan = planVolumeReleases([done], now, 10)
+    expect(plan.calls).toEqual([])
+    expect(plan.abandoned).toEqual([done])
+  })
+
+  it('keeps retrying an abandoned volume whose alert is not sent', () => {
+    const plan = planVolumeReleases([vol(stuck)], now, 10)
+    expect(plan.calls).toHaveLength(1)
+  })
+
+  it('keeps retrying an alerted volume that is not yet abandoned', () => {
+    const young = vol({
+      releaseBlockedAt: new Date(now.getTime() - RELEASE_RETRY_MS),
+      releaseBlockedSince: new Date(now.getTime() - RELEASE_FALLBACK_MS + 1),
+      releaseAlertedAt: now,
+    })
+    expect(planVolumeReleases([young], now, 10).calls).toHaveLength(1)
+  })
+
+  it('still holds back volumes with photos', () => {
+    const held = vol({ ...stuck, releaseAlertedAt: now, hasPhotos: true })
+    expect(planVolumeReleases([held], now, 10).pending).toEqual([held])
+  })
+})
+
+describe('albumBlockedAlertText', () => {
+  it('names the album and the count', () => {
+    const text = albumBlockedAlertText('a1', 2)
+    expect(text).toContain('a1')
+    expect(text).toContain('2')
   })
 })
 

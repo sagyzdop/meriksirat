@@ -8,6 +8,7 @@ export interface ReleaseVolume {
   driveFolderId: string | null
   releaseBlockedAt: Date | null
   releaseBlockedSince: Date | null
+  releaseAlertedAt?: Date | null
   hasPhotos: boolean
 }
 
@@ -53,6 +54,10 @@ export function planVolumeReleases<T extends ReleaseVolume>(
       plan.pending.push(volume)
       continue
     }
+    if (volume.releaseAlertedAt && isReleaseAbandoned(volume, now)) {
+      plan.abandoned.push(volume)
+      continue
+    }
     const waiting =
       !!volume.releaseBlockedAt &&
       now.getTime() - volume.releaseBlockedAt.getTime() < RELEASE_RETRY_MS
@@ -88,6 +93,13 @@ export function planHealDeletes(
 
 export function abandonedAlertText(who: string, albumTitle: string): string {
   return `#savenuimg: a volume of ${who} in the album "${albumTitle}" could not be emptied for 7 days. Its Drive subfolder still holds files that need manual cleanup.`
+}
+
+export function albumBlockedAlertText(
+  albumId: string,
+  blocked: number
+): string {
+  return `#savenuimg: album ${albumId} was deleted but ${blocked} of its volume subfolders could not be emptied, so its Drive folder may still hold public files that need manual cleanup.`
 }
 
 export function planRecoveryShare(volume: {

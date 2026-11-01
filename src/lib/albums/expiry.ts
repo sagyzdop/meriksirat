@@ -75,6 +75,85 @@ async function removeOwnedPhotos(
   return lost.length === 0
 }
 
+async function deleteAlbumFolder(
+  database: Database,
+  row: Pick<AlbumRecord, 'id' | 'driveFolderId'>,
+  accessToken: string,
+  options: { strictDrive?: boolean; budget?: Budget }
+): Promise<void> {
+  let blockedVolumes = 0
+  let attempt = 0
+  while (true) {
+    try {
+      await deleteDriveFile(accessToken, row.driveFolderId)
+      return
+    } catch (error) {
+      if (error instanceof DriveNotFoundError) return
+      if (error instanceof DriveAppNotAuthorizedError) {
+        if (attempt === 0) {
+          attempt++
+          try {
+            const { healAlbumVolumes } =
+              await import('@/lib/pool/volumes-server')
+            const healed = await healAlbumVolumes(
+              database,
+              row.id,
+              new Date(),
+              options.budget
+            )
+            blockedVolumes = healed.blocked
+            if (healed.cleared > 0 && takeIfBudgeted(options.budget, 1)) {
+              continue
+            }
+          } catch (healError) {
+            console.warn(
+              `Could not clear volumes of album ${row.id}:`,
+              healError
+            )
+          }
+        }
+        console.warn(
+          `Album ${row.id} keeps its Drive folder: it still holds photos the club account cannot delete (${blockedVolumes} volumes could not be cleared)`
+        )
+        await alertBlockedAlbum(
+          database,
+          row.id,
+          blockedVolumes,
+          options.budget
+        )
+        return
+      }
+      if (options.strictDrive) throw error
+      console.warn(
+        'Failed to delete Drive folder, continuing with DB cleanup:',
+        error
+      )
+      return
+    }
+  }
+}
+
+async function alertBlockedAlbum(
+  database: Database,
+  albumId: string,
+  blocked: number,
+  budget?: Budget
+): Promise<void> {
+  try {
+    const { env } = await import('cloudflare:workers')
+    const { sendAdminsTelegram } = await import('@/lib/pool/server')
+    const { albumBlockedAlertText } = await import('@/lib/pool/volumes')
+    await sendAdminsTelegram(
+      database,
+      (env as { TELEGRAM_BOT_TOKEN?: string }).TELEGRAM_BOT_TOKEN,
+      albumBlockedAlertText(albumId, blocked),
+      budget
+    )
+  } catch (error) {
+    console.warn(`Could not alert admins about album ${albumId}:`, error)
+  }
+}
+
 export async function removeAlbum(
   database: Database,
   row: Pick<AlbumRecord, 'id' | 'driveFolderId' | 'ownerUserId' | 'deletedAt'>,
@@ -95,21 +174,7 @@ export async function removeAlbum(
       `Album ${row.id} keeps its Drive folder: a lost flamekeeper's photos are still in it`
     )
   } else {
-    try {
-      await deleteDriveFile(accessToken, row.driveFolderId)
-    } catch (error) {
-      if (error instanceof DriveAppNotAuthorizedError) {
-        console.warn(
-          `Album ${row.id} keeps its Drive folder: it still holds photos the club account cannot delete`
-        )
-      } else if (!(error instanceof DriveNotFoundError)) {
-        if (options.strictDrive) throw error
-        console.warn(
-          'Failed to delete Drive folder, continuing with DB cleanup:',
-          error
-        )
-      }
-    }
+    await deleteAlbumFolder(database, row, accessToken, options)
   }
   await invalidateCachedListing(row.driveFolderId)
   await invalidateCachedDetailCore(row.id)
