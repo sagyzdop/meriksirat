@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Flame } from 'lucide-react'
 import { toast } from 'sonner'
@@ -22,7 +22,6 @@ import { StopFlamekeepingDialog } from './stop-flamekeeping-dialog'
 import { getAccessRules } from '@/lib/access/access-rules'
 import {
   confirmGraduationFn,
-  setLeaderboardAnonymousFn,
   startDriveConnectFn,
 } from '@/lib/flamekeeper/functions'
 import { FLAMEKEEPER_EMAIL_DOMAIN } from '@/lib/access/access-rules'
@@ -87,17 +86,6 @@ export function FlamekeeperCard({
         error instanceof Error ? error.message : 'Could not reconnect Drive'
       )
       setIsReconnecting(false)
-    }
-  }
-
-  const handleAnonymousChange = async (anonymous: boolean) => {
-    try {
-      await setLeaderboardAnonymousFn({ data: { anonymous } })
-      await handleSaved()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not update leaderboard'
-      )
     }
   }
 
@@ -244,19 +232,6 @@ export function FlamekeeperCard({
               <dd className="font-medium">{flamekeeper.albumsHosted}</dd>
             </div>
           </dl>
-          <div className="flex items-center gap-3">
-            <Switch
-              id="leaderboardAnonymous"
-              checked={flamekeeper.leaderboardAnonymous}
-              onCheckedChange={handleAnonymousChange}
-            />
-            <Label htmlFor="leaderboardAnonymous">
-              Appear as "Anonymous flamekeeper" on the{' '}
-              <Link to="/leaderboard" className="underline">
-                leaderboard
-              </Link>
-            </Label>
-          </div>
           <div className="flex flex-wrap gap-2">
             {flamekeeper.drainReason !== 'opt_out' &&
               flamekeeper.drainReason !== 'domain' && (
