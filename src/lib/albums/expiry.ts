@@ -200,7 +200,7 @@ export async function runAlbumExpiry(
       if (removed >= EXPIRES_PER_RUN) break
       try {
         const cost = (await removalCost(database, id)) + (accessToken ? 0 : 1)
-        if (!takeIfBudgeted(budget, cost)) break
+        if (!takeIfBudgeted(budget, cost)) continue
         accessToken ??= await getGoogleAccessToken()
         removed++
         await removeAlbum(database, byId.get(id)!, accessToken, {

@@ -179,7 +179,11 @@ async function auditVolumes(
   cursor: string | null,
   step: Budget,
   now: Date
-): Promise<{ reports: MissingReport[]; nextCursor: string | null }> {
+): Promise<{
+  reports: MissingReport[]
+  nextCursor: string | null
+  complete: boolean
+}> {
   const volumes = await database
     .select({
       albumId: volume.albumId,
@@ -236,13 +240,13 @@ async function auditVolumes(
       }
     } catch (error) {
       if (error instanceof BudgetExhaustedError) {
-        return { reports, nextCursor: lastDone }
+        return { reports, nextCursor: lastDone, complete: false }
       }
       console.warn(`Health audit failed for album ${albumId}:`, error)
     }
     lastDone = albumId
   }
-  return { reports, nextCursor: null }
+  return { reports, nextCursor: null, complete: true }
 }
 
 /**
@@ -367,7 +371,7 @@ async function checkGrants(
       await database
         .update(flamekeeper)
         .set(
-          audit.nextCursor === null
+          audit.complete
             ? { healthCheckedAt: now, healthCursor: null }
             : {
                 healthCheckedAt: new Date(now.getTime() - HEALTH_INTERVAL_MS),
@@ -698,7 +702,13 @@ async function recoverDropped(
       )
 
       if (action === 'restore' && batch.length > 0) {
-        const revive = v.deletedAt && v.tombstoneReason === 'flamekeeper_lost'
+        const current = await database
+          .select({ deletedAt: album.deletedAt })
+          .from(album)
+          .where(eq(album.id, v.albumId))
+          .get()
+        const revive =
+          !!current?.deletedAt && v.tombstoneReason === 'flamekeeper_lost'
         await adjustUsedBytes(
           database,
           v.userId,
