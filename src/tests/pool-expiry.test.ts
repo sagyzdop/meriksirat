@@ -1,3 +1,5 @@
+import { getTableColumns } from 'drizzle-orm'
+import { album as albumTable } from '@/db/schema'
 import { describe, it, expect } from 'vitest'
 import {
   defaultExpiry,
@@ -121,5 +123,19 @@ describe('tombstoneCopy', () => {
     ] as const
     const copies = new Set(reasons.map((r) => tombstoneCopy(r).description))
     expect(copies.size).toBe(4)
+  })
+
+  it('covers every reason in the schema with its own copy', () => {
+    const fallback = tombstoneCopy(null).description
+    for (const reason of getTableColumns(albumTable).tombstoneReason
+      .enumValues) {
+      const copy = tombstoneCopy(reason)
+      expect(copy.title.length).toBeGreaterThan(0)
+      expect(copy.description.length).toBeGreaterThan(0)
+      if (reason !== 'expired') {
+        expect(copy.description).not.toBe(fallback)
+      }
+    }
+    expect(tombstoneCopy('expired').description).toBe(fallback)
   })
 })
