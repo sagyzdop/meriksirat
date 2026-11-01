@@ -1,3 +1,5 @@
+import { isAlumniEmail } from './signup-domain'
+
 export const STALE_SIGNUP_DAYS = 7
 export const STALE_SIGNUP_MAX_DELETES = 20
 
@@ -5,6 +7,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 
 export interface SignupCandidate {
   id: string
+  email: string
   isMember: boolean
   hasFlamekeeperRecord: boolean
   hasDriveGrant: boolean
@@ -21,6 +24,7 @@ export function selectStaleSignups(
   return users
     .filter(
       (u) =>
+        !isAlumniEmail(u.email) &&
         !u.isMember &&
         !u.hasFlamekeeperRecord &&
         !u.hasDriveGrant &&

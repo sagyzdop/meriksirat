@@ -105,7 +105,8 @@ regulations require it.
 - **Accounts that are not members:** you may delete your account once any
   flamekeeping has stopped and your volumes have been moved off your Drive. If
   you sign up and then do nothing (no club membership, no Drive connection and
-  nothing saved), the account is deleted after 7 days.
+  nothing saved), the account is deleted after 7 days. Accounts with an
+  `@alumni.nu.edu.kz` email are not deleted this way.
 - **Members:** accounts and their records are kept indefinitely, so that there
   is always a record of who was responsible for each piece of equipment (see
   Terms of Service, Section 3.2).

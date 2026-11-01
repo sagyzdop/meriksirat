@@ -1,6 +1,7 @@
-import { and, eq, inArray, lte, sql } from 'drizzle-orm'
+import { and, eq, inArray, lte, notLike, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { account, session, user } from '@/db/schema'
+import { ALUMNI_EMAIL_LIKE } from './signup-domain'
 import {
   STALE_SIGNUP_DAYS,
   STALE_SIGNUP_MAX_DELETES,
@@ -31,6 +32,7 @@ export async function runStaleSignupCleanup(env: {
   const rows = await database
     .select({
       id: user.id,
+      email: user.email,
       isMember: user.isMember,
       hasFlamekeeperRecord: HAS_FLAMEKEEPER,
       hasDriveGrant: HAS_DRIVE_GRANT,
@@ -41,6 +43,7 @@ export async function runStaleSignupCleanup(env: {
     .where(
       and(
         eq(user.isMember, false),
+        notLike(user.email, ALUMNI_EMAIL_LIKE),
         lte(user.createdAt, cutoff),
         sql`NOT ${HAS_FLAMEKEEPER}`,
         sql`NOT ${HAS_DRIVE_GRANT}`,

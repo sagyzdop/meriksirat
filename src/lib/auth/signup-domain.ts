@@ -26,3 +26,9 @@ export function isAllowedSignupEmail(
 ): boolean {
   return signupKind(email) !== 'other'
 }
+
+export function isAlumniEmail(email: string | null | undefined): boolean {
+  return signupKind(email) === 'alumni'
+}
+
+export const ALUMNI_EMAIL_LIKE = `%@${ALUMNI_DOMAIN}`

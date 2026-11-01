@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getAdminUsersFn } from './functions'
-import type { AdminUserFilters } from './types'
+import { getAdminAlumniFn, getAdminUsersFn } from './functions'
+import type { AdminAlumniFilters, AdminUserFilters } from './types'
 
 export const usersQueries = {
   all: ['users'] as const,
@@ -18,5 +18,10 @@ export const usersQueries = {
             totalPages: 0,
           },
         },
+    }),
+  alumniList: (filters: AdminAlumniFilters) =>
+    queryOptions({
+      queryKey: [...usersQueries.all, 'alumni', filters] as const,
+      queryFn: () => getAdminAlumniFn({ data: filters }),
     }),
 }

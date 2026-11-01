@@ -11,6 +11,7 @@ const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000)
 function u(id: string, over: Partial<SignupCandidate> = {}): SignupCandidate {
   return {
     id,
+    email: `${id}@nu.edu.kz`,
     isMember: false,
     hasFlamekeeperRecord: false,
     hasDriveGrant: false,
@@ -55,8 +56,33 @@ describe('selectStaleSignups', () => {
     ).toEqual([])
   })
 
-  it('removes an alumni who did nothing, like any other idle account', () => {
-    expect(selectStaleSignups([u('alumni')], now)).toEqual(['alumni'])
+  it('keeps alumni accounts even when idle', () => {
+    expect(
+      selectStaleSignups([u('a', { email: 'x@alumni.nu.edu.kz' })], now)
+    ).toEqual([])
+    expect(
+      selectStaleSignups([u('b', { email: 'X@Alumni.NU.edu.kz' })], now)
+    ).toEqual([])
+  })
+
+  it('still removes idle nu.edu.kz, legacy and lookalike accounts', () => {
+    expect(
+      selectStaleSignups(
+        [
+          u('nu', { email: 'x@nu.edu.kz' }),
+          u('gmail', { email: 'x@gmail.com' }),
+          u('fake', { email: 'x@evil.alumni.nu.edu.kz' }),
+        ],
+        now
+      ).sort()
+    ).toEqual(['fake', 'gmail', 'nu'])
+  })
+
+  it('does not let alumni fill the batch', () => {
+    const alumni = Array.from({ length: 30 }, (_, i) =>
+      u(`al${i}`, { email: `a${i}@alumni.nu.edu.kz`, createdAt: daysAgo(100) })
+    )
+    expect(selectStaleSignups([...alumni, u('nu')], now)).toEqual(['nu'])
   })
 
   it('caps and takes oldest first', () => {

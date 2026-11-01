@@ -91,6 +91,33 @@ export const AdminUserFiltersSchema = z.object({
 
 export type AdminUserFilters = z.infer<typeof AdminUserFiltersSchema>
 
+export const AlumniSortKeys = [
+  'firstName',
+  'lastName',
+  'email',
+  'createdAt',
+] as const
+
+export const AdminAlumniFiltersSchema = z.object({
+  search: z.string().optional(),
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(50),
+  sortBy: z.enum(AlumniSortKeys).default('firstName'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+})
+
+export type AdminAlumniFilters = z.infer<typeof AdminAlumniFiltersSchema>
+
+export interface AlumniRow {
+  id: string
+  email: string
+  image: string | null
+  firstName: string | null
+  lastName: string | null
+  isMember: boolean
+  createdAt: Date
+}
+
 export const UpdateUserAdminSchema = z.object({
   userId: z.string(),
   role: z.enum(['user', 'manager', 'admin']).optional(),

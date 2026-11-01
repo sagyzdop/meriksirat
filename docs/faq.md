@@ -17,7 +17,8 @@ To book equipment and create albums you must be a club member. Enter the club
 code on your profile (any time) and you'll be asked for your name, date of
 birth, NU ID, major and graduation year, then to link your Telegram account.
 If you sign up and do nothing for 7 days, the account is removed and you can
-sign in again.
+sign in again. This does not apply to `@alumni.nu.edu.kz` accounts, which are
+kept.
 
 People who already had an account keep it, whatever their email. If yours is
 an `@nu.edu.kz` account without Drive connected, your profile asks you to

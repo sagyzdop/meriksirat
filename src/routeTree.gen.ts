@@ -19,6 +19,7 @@ import { Route as AlbumsIndexRouteImport } from './routes/albums/index'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums/$albumId'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AuthenticatedAdminAlbumsRouteImport } from './routes/_authenticated/admin/albums'
+import { Route as AuthenticatedAdminAlumniRouteImport } from './routes/_authenticated/admin/alumni'
 import { Route as AuthenticatedAdminBirthdaysRouteImport } from './routes/_authenticated/admin/birthdays'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
 import { Route as AuthenticatedAdminFlamekeepersRouteImport } from './routes/_authenticated/admin/flamekeepers'
@@ -91,6 +92,12 @@ const AuthenticatedAdminAlbumsRoute =
   AuthenticatedAdminAlbumsRouteImport.update({
     id: '/albums',
     path: '/albums',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAlumniRoute =
+  AuthenticatedAdminAlumniRouteImport.update({
+    id: '/alumni',
+    path: '/alumni',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminBirthdaysRoute =
@@ -239,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
+  '/admin/alumni': typeof AuthenticatedAdminAlumniRoute
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/flamekeepers': typeof AuthenticatedAdminFlamekeepersRoute
@@ -273,6 +281,7 @@ export interface FileRoutesByTo {
   '/api/telegram': typeof ApiTelegramRoute
   '/albums': typeof AlbumsIndexRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
+  '/admin/alumni': typeof AuthenticatedAdminAlumniRoute
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/flamekeepers': typeof AuthenticatedAdminFlamekeepersRoute
@@ -309,6 +318,7 @@ export interface FileRoutesById {
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
   '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRoute
+  '/_authenticated/admin/alumni': typeof AuthenticatedAdminAlumniRoute
   '/_authenticated/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/flamekeepers': typeof AuthenticatedAdminFlamekeepersRoute
@@ -345,6 +355,7 @@ export interface FileRouteTypes {
     | '/api/telegram'
     | '/albums/'
     | '/admin/albums'
+    | '/admin/alumni'
     | '/admin/birthdays'
     | '/admin/dashboard'
     | '/admin/flamekeepers'
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/api/telegram'
     | '/albums'
     | '/admin/albums'
+    | '/admin/alumni'
     | '/admin/birthdays'
     | '/admin/dashboard'
     | '/admin/flamekeepers'
@@ -414,6 +426,7 @@ export interface FileRouteTypes {
     | '/api/telegram'
     | '/albums/'
     | '/_authenticated/admin/albums'
+    | '/_authenticated/admin/alumni'
     | '/_authenticated/admin/birthdays'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/flamekeepers'
@@ -522,6 +535,13 @@ declare module '@tanstack/react-router' {
       path: '/albums'
       fullPath: '/admin/albums'
       preLoaderRoute: typeof AuthenticatedAdminAlbumsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/alumni': {
+      id: '/_authenticated/admin/alumni'
+      path: '/alumni'
+      fullPath: '/admin/alumni'
+      preLoaderRoute: typeof AuthenticatedAdminAlumniRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/birthdays': {
@@ -690,6 +710,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAlbumsRoute: typeof AuthenticatedAdminAlbumsRoute
+  AuthenticatedAdminAlumniRoute: typeof AuthenticatedAdminAlumniRoute
   AuthenticatedAdminBirthdaysRoute: typeof AuthenticatedAdminBirthdaysRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminFlamekeepersRoute: typeof AuthenticatedAdminFlamekeepersRoute
@@ -706,6 +727,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAlbumsRoute: AuthenticatedAdminAlbumsRoute,
+  AuthenticatedAdminAlumniRoute: AuthenticatedAdminAlumniRoute,
   AuthenticatedAdminBirthdaysRoute: AuthenticatedAdminBirthdaysRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminFlamekeepersRoute: AuthenticatedAdminFlamekeepersRoute,

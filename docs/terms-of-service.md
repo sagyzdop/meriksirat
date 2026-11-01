@@ -35,7 +35,8 @@ major, and graduation year.
 
 An account that is not a club member, has no flamekeeper record or Drive
 connection, owns nothing on the Platform and is 7 days old is deleted. You can
-sign in again and start over.
+sign in again and start over. Accounts with an `@alumni.nu.edu.kz` email are
+not deleted this way.
 
 ### 3.2 Account Retention
 

@@ -3,6 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import {
   AdminUserFiltersSchema,
+  AdminAlumniFiltersSchema,
   UpdateUserAdminSchema,
   GetUserByIdSchema,
   UpdateUserProfileSchema,
@@ -190,6 +191,76 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     }
 
     return result
+  })
+
+export const getAdminAlumniFn = createServerFn({ method: 'GET' })
+  .validator(AdminAlumniFiltersSchema)
+  .handler(async ({ data }) => {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { ALUMNI_EMAIL_LIKE } = await import('@/lib/auth/signup-domain')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { like, or, and, count, desc, asc } = await import('drizzle-orm')
+
+    await checkAdminPermission(getRequestHeaders(), ['admin', 'manager'])
+
+    const database = db(env.meriksirat_d1 as D1Database)
+
+    const conditions: (SQL | undefined)[] = [
+      like(user.email, ALUMNI_EMAIL_LIKE),
+    ]
+    if (data.search) {
+      const searchTerm = `%${data.search}%`
+      conditions.push(
+        or(
+          like(user.name, searchTerm),
+          like(user.email, searchTerm),
+          like(user.firstName, searchTerm),
+          like(user.lastName, searchTerm)
+        )
+      )
+    }
+    const where = and(...conditions)
+
+    const sortColumn = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      createdAt: user.createdAt,
+    }[data.sortBy]
+    const orderBy =
+      data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)
+
+    const [totalCountResult, users] = await Promise.all([
+      database.select({ count: count() }).from(user).where(where),
+      database
+        .select({
+          id: user.id,
+          email: user.email,
+          image: user.image,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          isMember: user.isMember,
+          createdAt: user.createdAt,
+        })
+        .from(user)
+        .where(where)
+        .orderBy(orderBy)
+        .limit(data.limit)
+        .offset((data.page - 1) * data.limit),
+    ])
+
+    const totalCount = totalCountResult[0]?.count || 0
+    return {
+      users,
+      pagination: {
+        page: data.page,
+        limit: data.limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / data.limit),
+      },
+    }
   })
 
 /**
