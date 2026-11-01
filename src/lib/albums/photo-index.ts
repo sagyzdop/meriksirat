@@ -169,7 +169,13 @@ export async function runPhotoBackfill(env: {
       requestedAt: album.photosIndexRequestedAt,
     })
     .from(album)
-    .where(and(isNull(album.photosIndexedAt), isNull(album.photosIndexSkipped)))
+    .where(
+      and(
+        isNull(album.photosIndexedAt),
+        isNull(album.photosIndexSkipped),
+        isNull(album.deletedAt)
+      )
+    )
     .all()
   if (rows.length === 0) return
 

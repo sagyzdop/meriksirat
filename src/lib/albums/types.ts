@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
+import type { TombstoneReason } from '@/lib/pool/expiry'
 
 /**
  * Minimum user clearance level required to create a new album. Users below
@@ -64,6 +65,11 @@ export const UpdateAlbumSchema = z.object({
   description: z.string().max(1000).optional(),
   event: z.string().min(1, 'Event is required').max(200).optional(),
   eventDate: z.string().optional(),
+})
+
+export const SetAlbumPinnedSchema = z.object({
+  albumId: z.string(),
+  pinned: z.boolean(),
 })
 
 export const DeleteAlbumSchema = z.object({
@@ -203,6 +209,13 @@ export interface AlbumDetail extends Omit<AlbumSummary, 'coverUrl'> {
    * it is sitting in the bin and can be restored.
    */
   folderState: AlbumFolderState
+  expiresAt: string | null
+  pinned: boolean
+  /**
+   * Set when the album has been deleted; the page then renders the tombstone
+   * for this reason instead of the gallery.
+   */
+  tombstone: { reason: TombstoneReason; deletedAt: string } | null
 }
 
 export interface UploadSession {

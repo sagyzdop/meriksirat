@@ -143,6 +143,7 @@ export default {
         sendBookingReminders(env),
         configureTelegramBot(env),
         backfillAlbumPhotos(env),
+        expireAlbums(env),
       ])
     )
   },
@@ -157,6 +158,18 @@ async function backfillAlbumPhotos(env: Env): Promise<void> {
   } catch (error) {
     console.error(
       'Error in backfillAlbumPhotos:',
+      error instanceof Error ? error.message : error
+    )
+  }
+}
+
+async function expireAlbums(env: Env): Promise<void> {
+  try {
+    const { runAlbumExpiry } = await import('./src/lib/albums/expiry')
+    await runAlbumExpiry(env)
+  } catch (error) {
+    console.error(
+      'Error in expireAlbums:',
       error instanceof Error ? error.message : error
     )
   }

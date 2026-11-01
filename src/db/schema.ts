@@ -356,6 +356,18 @@ export const album = sqliteTable(
     photosIndexSkipped: text('photos_index_skipped', {
       enum: ['trashed', 'missing'],
     }),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
+    pinned: integer('pinned', { mode: 'boolean' }).default(false).notNull(),
+    tombstoneReason: text('tombstone_reason', {
+      enum: ['expired', 'flamekeeper_left', 'flamekeeper_lost', 'no_space'],
+    }),
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
+    expiryReminder30SentAt: integer('expiry_reminder_30_sent_at', {
+      mode: 'timestamp_ms',
+    }),
+    expiryReminder7SentAt: integer('expiry_reminder_7_sent_at', {
+      mode: 'timestamp_ms',
+    }),
     editShareToken: text('edit_share_token').notNull().unique(),
     isShared: integer('is_shared', { mode: 'boolean' }).default(false),
     event: text('event').notNull().default(''),
@@ -371,6 +383,7 @@ export const album = sqliteTable(
   (table) => [
     index('album_ownerUserId_idx').on(table.ownerUserId),
     index('album_isShared_idx').on(table.isShared),
+    index('album_expiresAt_idx').on(table.expiresAt),
   ]
 )
 
