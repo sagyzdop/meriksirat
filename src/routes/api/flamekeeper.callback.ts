@@ -52,7 +52,13 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
           .from(user)
           .where(eq(user.id, session.user.id))
           .get()
-        const failPath = rows?.isMember ? '/profile' : '/onboarding'
+        const existingFk = await database
+          .select({ userId: flamekeeper.userId })
+          .from(flamekeeper)
+          .where(eq(flamekeeper.userId, session.user.id))
+          .get()
+        const failPath =
+          rows?.isMember || existingFk ? '/profile' : '/onboarding'
 
         if (!nonce) return redirectTo(origin, failPath, 'state')
         const key = `flamekeeper-oauth:${nonce}`

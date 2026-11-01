@@ -20,7 +20,11 @@ import {
   dropFlamekeeperGrant,
   getFlamekeeperAccessToken,
 } from '@/lib/flamekeeper/tokens'
-import { formatGb } from '@/lib/flamekeeper/rules'
+import {
+  MIN_PLEDGE_BYTES,
+  MIN_PLEDGE_GB,
+  formatGb,
+} from '@/lib/flamekeeper/rules'
 import type { DrainStatus, RelayHandout } from '@/lib/flamekeeper/types'
 import { dropPhotoRows, removeAlbum } from '@/lib/albums/expiry'
 import { OUT_OF_SPACE_MESSAGE } from './placement'
@@ -381,6 +385,12 @@ export async function changePledge(
 ): Promise<void> {
   const row = await loadDrainRow(database, userId)
   if (!row) throw new Error('You are not a flamekeeper')
+  if (
+    input.pledgedBytes < MIN_PLEDGE_BYTES &&
+    input.pledgedBytes < row.pledgedBytes
+  ) {
+    throw new Error(`Pledge at least ${MIN_PLEDGE_GB} GB`)
+  }
   const hasPhotos = row.usedBytes > 0 && (await hasPhotosLeft(database, userId))
   const transition = planFlamekeeperEdit(row, input, now, hasPhotos)
   await database

@@ -1,6 +1,10 @@
 import { GalleryVerticalEnd } from 'lucide-react'
 import { authClient } from '@/lib/auth/auth-client'
 import { cn } from '@/lib/utils'
+import {
+  SIGNUP_REFUSED_ERROR,
+  SIGNUP_REFUSED_MESSAGE,
+} from '@/lib/auth/signup-domain'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
 import { useSearch } from '@tanstack/react-router'
@@ -14,6 +18,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
       await authClient.signIn.social({
         provider: 'google',
         callbackURL: '/equipment',
+        errorCallbackURL: '/login',
       })
     } catch (error) {
       console.error('Sign in failed:', error)
@@ -31,7 +36,8 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         </a>
         <h1 className="text-xl font-bold">Welcome to MerikSirat</h1>
         <FieldDescription className="text-center">
-          ⚠️ For NU Image members only! Please sign in with your NU account.
+          New accounts need an @nu.edu.kz or @alumni.nu.edu.kz Google account.
+          Existing accounts can keep signing in with theirs.
         </FieldDescription>
       </div>
 
@@ -39,6 +45,11 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         {error === 'account_inactive' && (
           <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
             Your account has been deactivated. Please contact an administrator.
+          </div>
+        )}
+        {error === SIGNUP_REFUSED_ERROR && (
+          <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
+            {SIGNUP_REFUSED_MESSAGE}
           </div>
         )}
         <Field className="grid gap-4">

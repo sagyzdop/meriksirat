@@ -53,6 +53,7 @@ export const user = sqliteTable(
     onboardingComplete: integer('onboarding_complete', {
       mode: 'boolean',
     }).default(false),
+    termsAcceptedAt: integer('terms_accepted_at', { mode: 'timestamp_ms' }),
     // Violation counters (per booking): auto-cancelled for not starting, overdue
     cancelledInStartWindowCount: integer('cancelled_in_start_window_count')
       .default(0)

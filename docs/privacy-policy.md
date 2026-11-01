@@ -21,7 +21,9 @@ Platform or Telegram.
 - Your Google account name, email address, profile picture and Google account
   ID.
 
-### 2.2 During Onboarding (Club Members)
+### 2.2 When You Join the Club (Club Members)
+
+Only people who enter the club code are asked for these.
 
 - First and last name, date of birth, NU ID, major, graduation year and,
   optionally, Instagram username.
@@ -100,12 +102,14 @@ regulations require it.
 
 ## 7. Retention
 
+- **Accounts that are not members:** you may delete your account once any
+  flamekeeping has stopped and your volumes have been moved off your Drive. If
+  you sign up and then do nothing (no club membership, no Drive connection and
+  nothing saved), the account is deleted after 7 days.
 - **Members:** accounts and their records are kept indefinitely, so that there
   is always a record of who was responsible for each piece of equipment (see
   Terms of Service, Section 3.2).
-- **Flamekeeper-only accounts:** you may delete your account once your volumes
-  have been moved off your Drive. Your Drive authorization is deleted at the
-  same time.
+  Your Drive authorization is deleted when the account is.
 - **Album photos:** kept until the album expires (by default two years after
   the event), unless an administrator pins it or it is deleted earlier. After
   deletion, only the album's title and the reason it was deleted remain.

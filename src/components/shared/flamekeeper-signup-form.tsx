@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { startDriveConnectFn } from '@/lib/flamekeeper/functions'
 import {
   FLAMEKEEPER_TERMS_URL,
+  TERMS_URL,
   MIN_PLEDGE_GB,
   isValidGraduationDate,
   isValidPledgeGb,
@@ -48,7 +49,7 @@ export function FlamekeeperSignupForm({
       return
     }
     if (!termsAccepted) {
-      setFormError('Accept the flamekeeper terms to continue.')
+      setFormError('Accept the terms to continue.')
       return
     }
 
@@ -111,6 +112,15 @@ export function FlamekeeperSignupForm({
         />
         <Label htmlFor="fkTerms" className="text-sm font-normal leading-snug">
           I have read and accept the{' '}
+          <a
+            href={TERMS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            terms of service
+          </a>{' '}
+          and the{' '}
           <a
             href={FLAMEKEEPER_TERMS_URL}
             target="_blank"

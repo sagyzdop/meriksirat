@@ -269,7 +269,7 @@ export function FlamekeeperCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Flame className="size-5" />
-          Become a flamekeeper
+          {flamekeeper === null ? 'Connect your Drive' : 'Become a flamekeeper'}
         </CardTitle>
         <CardDescription>
           Lend part of your NU Google Drive storage to keep club albums alive.
@@ -284,15 +284,23 @@ export function FlamekeeperCard({
           </p>
         ) : (
           <>
-            <div className="flex items-center gap-3">
-              <Switch
-                id="becomeFlamekeeper"
-                checked={showSignup}
-                onCheckedChange={setShowSignup}
-              />
-              <Label htmlFor="becomeFlamekeeper">Become a flamekeeper</Label>
-            </div>
-            {showSignup && (
+            {flamekeeper === null ? (
+              <div className="rounded bg-muted p-3 text-sm">
+                Connect your NU Drive and pledge at least 1 GB. Your account
+                works as before until you do, but the club needs your storage to
+                keep photos.
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="becomeFlamekeeper"
+                  checked={showSignup}
+                  onCheckedChange={setShowSignup}
+                />
+                <Label htmlFor="becomeFlamekeeper">Become a flamekeeper</Label>
+              </div>
+            )}
+            {(flamekeeper === null || showSignup) && (
               <FlamekeeperSignupForm error={connectError ?? null} />
             )}
           </>

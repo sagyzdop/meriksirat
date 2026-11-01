@@ -8,8 +8,6 @@ export interface AccessUser {
   flamekeeperState?: FlamekeeperState | null
 }
 
-export type OnboardingPath = 'choose' | 'member' | 'flamekeeper'
-
 export interface AccessRules {
   canBook: boolean
   canCreateAlbum: boolean
@@ -17,7 +15,6 @@ export interface AccessRules {
   canHoldStaffRole: boolean
   canBecomeFlamekeeper: boolean
   canDeleteAccount: boolean
-  onboardingPath: OnboardingPath
 }
 
 export const FLAMEKEEPER_EMAIL_DOMAIN = '@nu.edu.kz'
@@ -39,21 +36,42 @@ export function getAccessRules(user: AccessUser): AccessRules {
   const flamekeeperState = user.flamekeeperState ?? null
   const hasFlamekeeperRecord = flamekeeperState !== null
   const isFlamekeeping = hasFlamekeeperRecord && flamekeeperState !== 'drained'
-  const onboardingPath: OnboardingPath = user.isMember
-    ? 'member'
-    : hasFlamekeeperRecord
-      ? 'flamekeeper'
-      : 'choose'
-
   return {
     canBook: user.isMember,
     canCreateAlbum: user.isMember,
-    canFavorite: user.isMember || hasFlamekeeperRecord,
+    canFavorite: true,
     canHoldStaffRole: user.isMember,
     canBecomeFlamekeeper:
       user.email.trim().toLowerCase().endsWith(FLAMEKEEPER_EMAIL_DOMAIN) &&
       !isFlamekeeping,
-    canDeleteAccount: !user.isMember && flamekeeperState === 'drained',
-    onboardingPath,
+    canDeleteAccount: !user.isMember && !isFlamekeeping,
   }
+}
+
+export interface EntryUser {
+  isMember: boolean
+  onboardingComplete?: boolean | null
+  flamekeeperState?: FlamekeeperState | null
+  termsAcceptedAt?: Date | string | number | null
+}
+
+export function needsOnboarding(user: EntryUser): boolean {
+  if (user.isMember) return !user.onboardingComplete
+  return !user.flamekeeperState && !user.termsAcceptedAt
+}
+
+export type HomePath = '/onboarding' | '/equipment' | '/profile'
+
+export function homePath(user: EntryUser): HomePath {
+  if (needsOnboarding(user)) return '/onboarding'
+  return user.isMember ? '/equipment' : '/profile'
+}
+
+const NON_MEMBER_PATHS = ['/profile', '/favorites']
+
+export function nonMemberCanVisit(pathname: string): boolean {
+  const clean = pathname.replace(/\/+$/, '') || '/'
+  return NON_MEMBER_PATHS.some(
+    (path) => clean === path || clean.startsWith(`${path}/`)
+  )
 }

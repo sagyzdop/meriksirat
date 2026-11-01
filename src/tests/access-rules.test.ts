@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   clubCodeMatches,
   getAccessRules,
+  homePath,
+  needsOnboarding,
+  nonMemberCanVisit,
   type AccessUser,
 } from '../lib/access/access-rules'
 import { generateClubCode } from '../lib/access/club-code'
@@ -21,17 +24,28 @@ describe('getAccessRules', () => {
     expect(rules.canFavorite).toBe(true)
     expect(rules.canHoldStaffRole).toBe(true)
     expect(rules.canDeleteAccount).toBe(false)
-    expect(rules.onboardingPath).toBe('member')
   })
 
-  it('blocks a user who is neither member nor flamekeeper', () => {
-    const rules = getAccessRules(base)
+  it('gives a plain account favorites but no member features', () => {
+    const rules = getAccessRules({ ...base, email: 'jane@alumni.nu.edu.kz' })
     expect(rules.canBook).toBe(false)
     expect(rules.canCreateAlbum).toBe(false)
-    expect(rules.canFavorite).toBe(false)
+    expect(rules.canFavorite).toBe(true)
     expect(rules.canHoldStaffRole).toBe(false)
-    expect(rules.canDeleteAccount).toBe(false)
-    expect(rules.onboardingPath).toBe('choose')
+    expect(rules.canBecomeFlamekeeper).toBe(false)
+    expect(rules.canDeleteAccount).toBe(true)
+  })
+
+  it('stops a non-member deleting while still flamekeeping', () => {
+    for (const state of ['active', 'full', 'draining', 'lost'] as const) {
+      expect(
+        getAccessRules({
+          ...base,
+          email: 'j@nu.edu.kz',
+          flamekeeperState: state,
+        }).canDeleteAccount
+      ).toBe(false)
+    }
   })
 
   it('keeps an active flamekeeper-only user out of member features', () => {
@@ -45,7 +59,6 @@ describe('getAccessRules', () => {
     expect(rules.canFavorite).toBe(true)
     expect(rules.canBecomeFlamekeeper).toBe(false)
     expect(rules.canDeleteAccount).toBe(false)
-    expect(rules.onboardingPath).toBe('flamekeeper')
   })
 
   it('lets a drained flamekeeper-only user delete their account', () => {
@@ -66,7 +79,6 @@ describe('getAccessRules', () => {
       flamekeeperState: 'drained',
     })
     expect(rules.canDeleteAccount).toBe(false)
-    expect(rules.onboardingPath).toBe('member')
   })
 
   it('allows only @nu.edu.kz emails to become flamekeepers', () => {
@@ -100,10 +112,9 @@ describe('getAccessRules across flamekeeper states', () => {
   const states = ['active', 'full', 'draining', 'lost'] as const
 
   it.each(states)(
-    'keeps a %s flamekeeper-only user on the flamekeeper path',
+    'keeps a %s flamekeeper-only user out of member features',
     (state) => {
       const rules = getAccessRules({ ...nu, flamekeeperState: state })
-      expect(rules.onboardingPath).toBe('flamekeeper')
       expect(rules.canBook).toBe(false)
       expect(rules.canCreateAlbum).toBe(false)
       expect(rules.canHoldStaffRole).toBe(false)
@@ -114,14 +125,13 @@ describe('getAccessRules across flamekeeper states', () => {
   )
 
   it.each(states)(
-    'sends a member who is %s flamekeeping through member onboarding',
+    'gives a member who is %s flamekeeping every member feature',
     (state) => {
       const rules = getAccessRules({
         ...nu,
         isMember: true,
         flamekeeperState: state,
       })
-      expect(rules.onboardingPath).toBe('member')
       expect(rules.canBook).toBe(true)
       expect(rules.canBecomeFlamekeeper).toBe(false)
       expect(rules.canDeleteAccount).toBe(false)
@@ -140,6 +150,56 @@ describe('getAccessRules across flamekeeper states', () => {
   it('never offers flamekeeping to a non-NU member', () => {
     const rules = getAccessRules({ ...base, isMember: true })
     expect(rules.canBecomeFlamekeeper).toBe(false)
+  })
+})
+
+describe('entry rules', () => {
+  const nonMember = { isMember: false }
+
+  it('sends a new non-member to signup until they finish it', () => {
+    expect(needsOnboarding(nonMember)).toBe(true)
+    expect(homePath(nonMember)).toBe('/onboarding')
+  })
+
+  it('treats a flamekeeper record or accepted terms as a finished signup', () => {
+    expect(needsOnboarding({ ...nonMember, flamekeeperState: 'active' })).toBe(
+      false
+    )
+    const withTerms = { ...nonMember, termsAcceptedAt: new Date() }
+    expect(needsOnboarding(withTerms)).toBe(false)
+    expect(homePath(withTerms)).toBe('/profile')
+  })
+
+  it('sends a member to the profile step until onboarding is complete', () => {
+    expect(needsOnboarding({ isMember: true, onboardingComplete: false })).toBe(
+      true
+    )
+    expect(needsOnboarding({ isMember: true, onboardingComplete: null })).toBe(
+      true
+    )
+    expect(homePath({ isMember: true, onboardingComplete: true })).toBe(
+      '/equipment'
+    )
+  })
+
+  it('runs the member steps for a non-member who just entered the code', () => {
+    expect(
+      needsOnboarding({
+        isMember: true,
+        onboardingComplete: false,
+        flamekeeperState: 'active',
+        termsAcceptedAt: new Date(),
+      })
+    ).toBe(true)
+  })
+
+  it('limits non-members to their profile and favorites', () => {
+    expect(nonMemberCanVisit('/profile')).toBe(true)
+    expect(nonMemberCanVisit('/profile/')).toBe(true)
+    expect(nonMemberCanVisit('/favorites')).toBe(true)
+    expect(nonMemberCanVisit('/equipment')).toBe(false)
+    expect(nonMemberCanVisit('/profileX')).toBe(false)
+    expect(nonMemberCanVisit('/admin/users')).toBe(false)
   })
 })
 

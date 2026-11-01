@@ -52,6 +52,35 @@ export const submitClubCodeFn = createServerFn({ method: 'POST' })
     return { success: true as const }
   })
 
+export const acceptSignupTermsFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ accepted: z.literal(true) }))
+  .handler(async () => {
+    const headers = getRequestHeaders()
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { signupKind } = await import('@/lib/auth/signup-domain')
+    const session = await resolveSession(headers)
+
+    if (!session?.user) {
+      throw new Error('Unauthorized')
+    }
+
+    if (signupKind(session.user.email) === 'nu') {
+      throw new Error('NU accounts finish signup by connecting Drive')
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    await database
+      .update(user)
+      .set({ termsAcceptedAt: new Date(), updatedAt: new Date() })
+      .where(eq(user.id, session.user.id))
+
+    return { success: true as const }
+  })
+
 export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
   .validator(updateOnboardingSchema)
   .handler(async ({ data }) => {
@@ -71,7 +100,7 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
 
     const { loadAccessRules } = await import('@/lib/access/server')
     const rules = await loadAccessRules(database, session.user.id)
-    if (rules.onboardingPath !== 'member') {
+    if (!rules.canBook) {
       throw new Error('Club membership is required')
     }
 
@@ -110,6 +139,12 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
     }
 
     const database = db(env.meriksirat_d1 as D1Database)
+
+    const { loadAccessRules } = await import('@/lib/access/server')
+    const rules = await loadAccessRules(database, session.user.id)
+    if (!rules.canBook) {
+      throw new Error('Club membership is required')
+    }
 
     if (!data.skipTelegram) {
       const userData = await database
@@ -212,12 +247,12 @@ export const getTelegramUpdateLinkUrlFn = createServerFn({
 })
 
 /**
- * Deletes an account that never finished onboarding. Called when the user
- * confirms leaving the onboarding page — an incomplete account is abandoned
- * data, so it is removed instead of lingering forever.
+ * Deletes an account that never finished signup. Called when the user
+ * confirms leaving the signup page. Only accounts that are not members, have
+ * not accepted the terms and have no flamekeeper record qualify.
  *
- * Sessions, accounts and telegram link tokens cascade via foreign keys; an
- * unfinished account can never have bookings, so nothing else references it.
+ * Sessions, accounts and telegram link tokens cascade via foreign keys; such
+ * an account can never have bookings, so nothing else references it.
  */
 export const deleteOnboardingAccountFn = createServerFn({ method: 'POST' })
   .validator(z.object({ confirm: z.literal(true) }))
@@ -236,15 +271,24 @@ export const deleteOnboardingAccountFn = createServerFn({ method: 'POST' })
 
     // Safety: an onboarded account must never be deleted through this path.
     const database = db(env.meriksirat_d1 as D1Database)
+    const { flamekeeper } = await import('@/db/schema')
     const record = await database
-      .select({ onboardingComplete: user.onboardingComplete })
+      .select({
+        isMember: user.isMember,
+        termsAcceptedAt: user.termsAcceptedAt,
+      })
       .from(user)
       .where(eq(user.id, sessionData.user.id))
       .limit(1)
       .then((rows) => rows[0])
+    const fk = await database
+      .select({ userId: flamekeeper.userId })
+      .from(flamekeeper)
+      .where(eq(flamekeeper.userId, sessionData.user.id))
+      .get()
 
-    if (!record || record.onboardingComplete) {
-      throw new Error('Account is already onboarded')
+    if (!record || record.isMember || record.termsAcceptedAt || fk) {
+      throw new Error('Account has already finished signup')
     }
 
     await database.delete(user).where(eq(user.id, sessionData.user.id))

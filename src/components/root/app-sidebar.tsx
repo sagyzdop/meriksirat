@@ -204,7 +204,7 @@ export function AppSidebar({
             {
               title: 'Albums',
               items: data.navGroups[1].items.filter(
-                (item) => item.url === '/albums'
+                (item) => item.url === '/albums' || item.url === '/favorites'
               ),
             },
           ]

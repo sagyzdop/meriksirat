@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Page } from '@/components/onboarding'
 import { getUserFn } from '@/lib/user'
+import { homePath, needsOnboarding } from '@/lib/access/access-rules'
 import { CONNECT_ERROR_MESSAGES } from '@/lib/flamekeeper/rules'
 
 const searchSchema = z.object({
@@ -20,12 +21,8 @@ export const Route = createFileRoute('/onboarding')({
       throw redirect({ to: '/login' })
     }
 
-    if (user.onboardingComplete && user.isMember) {
-      throw redirect({ to: '/equipment' })
-    }
-
-    if (!user.isMember && user.flamekeeperState) {
-      throw redirect({ to: '/profile' })
+    if (!needsOnboarding(user)) {
+      throw redirect({ to: homePath(user) })
     }
 
     return { isMember: user.isMember, email: user.email }

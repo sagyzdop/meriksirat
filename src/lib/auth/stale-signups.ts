@@ -6,6 +6,8 @@ const DAY_MS = 24 * 60 * 60 * 1000
 export interface SignupCandidate {
   id: string
   isMember: boolean
+  hasFlamekeeperRecord: boolean
+  hasDriveGrant: boolean
   createdAt: Date
   ownsAnything: boolean
 }
@@ -18,7 +20,12 @@ export function selectStaleSignups(
   const cutoff = now.getTime() - STALE_SIGNUP_DAYS * DAY_MS
   return users
     .filter(
-      (u) => !u.isMember && !u.ownsAnything && u.createdAt.getTime() <= cutoff
+      (u) =>
+        !u.isMember &&
+        !u.hasFlamekeeperRecord &&
+        !u.hasDriveGrant &&
+        !u.ownsAnything &&
+        u.createdAt.getTime() <= cutoff
     )
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
     .slice(0, max)

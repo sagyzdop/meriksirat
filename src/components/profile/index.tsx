@@ -6,6 +6,7 @@ import { ProfileContent } from './components/profile-content'
 import { FlamekeeperCard } from './components/flamekeeper-card'
 import { JoinClubCard } from './components/join-club-card'
 import { DeleteAccountCard } from './components/delete-account-card'
+import { getAccessRules } from '@/lib/access/access-rules'
 import type { UserProfile } from '@/lib/user/types'
 import type { MyFlamekeeper } from '@/lib/flamekeeper/types'
 
@@ -34,6 +35,14 @@ export function Page({
     )
   }
 
+  const rules = getAccessRules({
+    isMember: user.isMember,
+    role: (user.role as 'user' | 'manager' | 'admin' | null) ?? null,
+    email: user.email,
+    flamekeeperState: flamekeeper?.state ?? null,
+  })
+  const showFlamekeeperCard = flamekeeper !== null || rules.canBecomeFlamekeeper
+
   const flamekeeperCard = (
     <FlamekeeperCard
       user={user}
@@ -48,22 +57,23 @@ export function Page({
       <PageContainer>
         <PageHeader
           title="Account"
-          description="Your flamekeeper contribution and membership"
+          description="Your account, storage pledge and membership"
         />
         <div className="space-y-8">
           <Section spacing="compact">
             <ProfileHeader user={user} />
           </Section>
-          <Section>{flamekeeperCard}</Section>
+          {showFlamekeeperCard && <Section>{flamekeeperCard}</Section>}
           <Section>
             <h2 className="mb-3 text-lg font-semibold">Join the club</h2>
             <p className="mb-4 text-sm text-muted-foreground">
               Already part of NU Image? Enter the club code to become a member.
+              You will then add your name, NU ID and major and link Telegram.
               Your pledge and photos stay exactly as they are.
             </p>
             <JoinClubCard />
           </Section>
-          {flamekeeper?.state === 'drained' && (
+          {rules.canDeleteAccount && (
             <Section>
               <DeleteAccountCard />
             </Section>
@@ -83,7 +93,7 @@ export function Page({
         <Section spacing="compact">
           <ProfileHeader user={user} />
         </Section>
-        <Section>{flamekeeperCard}</Section>
+        {showFlamekeeperCard && <Section>{flamekeeperCard}</Section>}
         <Section>
           <ProfileContent user={user} />
         </Section>

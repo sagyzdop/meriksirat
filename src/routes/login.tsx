@@ -1,19 +1,14 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Page } from '@/components/auth'
 import { getUserFn } from '@/lib/user'
+import { homePath } from '@/lib/access/access-rules'
 
 export const Route = createFileRoute('/login')({
   beforeLoad: async () => {
     const user = await getUserFn()
 
     if (user) {
-      if (user.onboardingComplete && user.isMember) {
-        throw redirect({ to: '/equipment' })
-      } else if (!user.isMember && user.flamekeeperState) {
-        throw redirect({ to: '/profile' })
-      } else {
-        throw redirect({ to: '/onboarding' })
-      }
+      throw redirect({ to: homePath(user) })
     }
   },
   component: LoginPage,

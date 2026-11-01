@@ -4,9 +4,24 @@
 
 ### How do I create an account?
 
-Sign in with your Google account. You'll be guided through an onboarding
-process where you provide your name, date of birth, NU ID, major, and
-graduation year. You'll also link your Telegram account for notifications.
+New accounts need an `@nu.edu.kz` or `@alumni.nu.edu.kz` Google account. Sign
+in with it and you'll be guided through signup.
+
+- **`@nu.edu.kz`:** accept the terms, pledge at least 1 GB of your NU Drive,
+  give your expected graduation date and connect Drive. Then you land on your
+  profile.
+- **`@alumni.nu.edu.kz`:** accept the terms. There is no Drive step. You get an
+  account that can browse albums and favorite photos.
+
+To book equipment and create albums you must be a club member. Enter the club
+code on your profile (any time) and you'll be asked for your name, date of
+birth, NU ID, major and graduation year, then to link your Telegram account.
+If you sign up and do nothing for 7 days, the account is removed and you can
+sign in again.
+
+People who already had an account keep it, whatever their email. If yours is
+an `@nu.edu.kz` account without Drive connected, your profile asks you to
+connect it.
 
 ### Why do I need to link Telegram?
 
@@ -16,9 +31,11 @@ return equipment with photo verification. See [Telegram Bot](user/telegram-bot.m
 
 ### Can I delete my account?
 
-No. Accounts and activity records are retained permanently for equipment
-accountability purposes. If you need your account deactivated, contact an
-administrator. See [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
+Club members cannot. Their accounts and activity records are retained
+permanently for equipment accountability purposes. If you need your account
+deactivated, contact an administrator. If you are not a club member, you can
+delete your account from your profile once you have stopped flamekeeping and
+your photos have moved. See [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
 
 ## Booking Equipment
 

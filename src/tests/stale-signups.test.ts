@@ -12,6 +12,8 @@ function u(id: string, over: Partial<SignupCandidate> = {}): SignupCandidate {
   return {
     id,
     isMember: false,
+    hasFlamekeeperRecord: false,
+    hasDriveGrant: false,
     createdAt: daysAgo(10),
     ownsAnything: false,
     ...over,
@@ -39,6 +41,22 @@ describe('selectStaleSignups', () => {
         now
       )
     ).toEqual([])
+  })
+
+  it('skips anyone with a flamekeeper record or a Drive grant', () => {
+    expect(
+      selectStaleSignups(
+        [
+          u('f', { hasFlamekeeperRecord: true }),
+          u('g', { hasDriveGrant: true }),
+        ],
+        now
+      )
+    ).toEqual([])
+  })
+
+  it('removes an alumni who did nothing, like any other idle account', () => {
+    expect(selectStaleSignups([u('alumni')], now)).toEqual(['alumni'])
   })
 
   it('caps and takes oldest first', () => {

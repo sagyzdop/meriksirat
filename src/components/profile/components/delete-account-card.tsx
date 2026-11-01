@@ -42,8 +42,9 @@ export function DeleteAccountCard() {
       <CardHeader>
         <CardTitle>Delete account</CardTitle>
         <CardDescription>
-          Your photos have all moved and the app no longer has access to your
-          Drive. You can delete your account for good.
+          You are not a club member and are not flamekeeping, so you can delete
+          your account for good. Any photos you held have moved and the app no
+          longer has access to your Drive.
         </CardDescription>
       </CardHeader>
       <CardContent>

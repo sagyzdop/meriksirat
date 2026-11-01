@@ -366,7 +366,7 @@ export const deleteMyAccountFn = createServerFn({ method: 'POST' }).handler(
     const rules = await loadAccessRules(database, session.user.id)
     if (!rules.canDeleteAccount) {
       throw new Error(
-        'Only flamekeepers who are not club members can delete their account, once their photos have moved.'
+        'Club members keep their account. Other accounts can be deleted once any flamekeeping has stopped and the photos have moved.'
       )
     }
     await database.delete(user).where(eq(user.id, session.user.id))

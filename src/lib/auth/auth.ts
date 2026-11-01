@@ -1,5 +1,9 @@
 import { betterAuth } from 'better-auth'
-import { createAuthMiddleware } from 'better-auth/api'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
+import {
+  SIGNUP_REFUSED_ERROR,
+  isAllowedSignupEmail,
+} from '@/lib/auth/signup-domain'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { drizzle } from 'drizzle-orm/d1'
@@ -24,6 +28,17 @@ export const auth = betterAuth({
     }
   ),
   plugins: [tanstackStartCookies()],
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (newUser) => {
+          if (!isAllowedSignupEmail(newUser.email)) {
+            throw new APIError('FORBIDDEN', { message: SIGNUP_REFUSED_ERROR })
+          }
+        },
+      },
+    },
+  },
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       const newSession = ctx.context.newSession

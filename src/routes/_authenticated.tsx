@@ -1,6 +1,7 @@
 // src/routes/_authenticated.tsx
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { getUserFn } from '@/lib/user'
+import { needsOnboarding, nonMemberCanVisit } from '@/lib/access/access-rules'
 import { AuthenticatedShell } from '@/components/root/authenticated-shell'
 
 export const Route = createFileRoute('/_authenticated')({
@@ -15,14 +16,12 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ to: '/login' })
     }
 
-    if (!user.onboardingComplete || !user.isMember) {
-      if (!user.isMember && user.flamekeeperState) {
-        if (location.pathname !== '/profile') {
-          throw redirect({ to: '/profile' })
-        }
-      } else {
-        throw redirect({ to: '/onboarding' })
-      }
+    if (needsOnboarding(user)) {
+      throw redirect({ to: '/onboarding' })
+    }
+
+    if (!user.isMember && !nonMemberCanVisit(location.pathname)) {
+      throw redirect({ to: '/profile' })
     }
 
     return { user }

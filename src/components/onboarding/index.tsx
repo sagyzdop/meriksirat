@@ -7,17 +7,17 @@ import {
   completeTelegramOnboardingFn,
   getTelegramLinkUrlFn,
   deleteOnboardingAccountFn,
-  submitClubCodeFn,
+  acceptSignupTermsFn,
 } from '@/lib/auth/onboarding'
 import { cn } from '@/lib/utils'
 import { toDateOnlyString } from '@/lib/format'
 import { useRef, useState } from 'react'
 import { OnboardingHeader } from '@/components/onboarding/components/onboarding-header'
-import { PathStep } from '@/components/onboarding/components/path-step'
-import { ClubCodeStep } from '@/components/onboarding/components/club-code-step'
+import { TermsStep } from '@/components/onboarding/components/terms-step'
 import { ProfileStep } from '@/components/onboarding/components/profile-step'
 import { TelegramStep } from '@/components/onboarding/components/telegram-step'
 import { FlamekeeperStep } from '@/components/onboarding/components/flamekeeper-step'
+import { signupKind } from '@/lib/auth/signup-domain'
 import { TosAcceptanceDialog } from '@/components/onboarding/components/tos-acceptance-dialog'
 import {
   AlertDialog,
@@ -43,7 +43,7 @@ const updateOnboardingSchema = z.object({
 
 type OnboardingForm = z.infer<typeof updateOnboardingSchema>
 
-type OnboardingStep = 'path' | 'code' | 'flamekeeper' | 'profile' | 'telegram'
+type OnboardingStep = 'signup' | 'profile' | 'telegram'
 
 interface PageProps extends React.ComponentProps<'div'> {
   isMember: boolean
@@ -61,10 +61,9 @@ export function Page({
   const navigate = useNavigate()
   const router = useRouter()
   const [step, setStep] = useState<OnboardingStep>(
-    isMember ? 'profile' : connectError ? 'flamekeeper' : 'path'
+    isMember ? 'profile' : 'signup'
   )
-  const [codeError, setCodeError] = useState<string | null>(null)
-  const [isCheckingCode, setIsCheckingCode] = useState(false)
+  const [isAcceptingTerms, setIsAcceptingTerms] = useState(false)
   const [telegramUrl, setTelegramUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isCheckingTelegram, setIsCheckingTelegram] = useState(false)
@@ -74,16 +73,18 @@ export function Page({
   )
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // While onboarding is unfinished, leaving the page means discarding an
-  // incomplete account — block navigation and confirm the deletion up front.
-  // The ref is flipped synchronously on successful completion so the
-  // finishing navigation is never blocked.
+  // While signup is unfinished, leaving the page means discarding the new
+  // account, so block navigation and confirm the deletion up front. Members
+  // finishing their profile are never deleted. The ref is flipped
+  // synchronously on completion so the finishing navigation is never blocked.
   const completeNavigatingRef = useRef(false)
   const blocker = useBlocker({
     enableBeforeUnload: true,
     withResolver: true,
     shouldBlockFn: ({ next }) =>
-      !completeNavigatingRef.current && next.fullPath !== '/onboarding',
+      step === 'signup' &&
+      !completeNavigatingRef.current &&
+      next.fullPath !== '/onboarding',
   })
 
   const handleStayOnboarding = () => {
@@ -176,21 +177,18 @@ export function Page({
     }
   }
 
-  const handleClubCode = async (code: string) => {
-    setIsCheckingCode(true)
-    setCodeError(null)
+  const handleAcceptTerms = async () => {
+    setIsAcceptingTerms(true)
+    setError(null)
     try {
-      const result = await submitClubCodeFn({ data: { code } })
-      if (result.success) {
-        setStep('profile')
-      } else {
-        setCodeError('That code is not correct. Check it and try again.')
-      }
+      await acceptSignupTermsFn({ data: { accepted: true } })
+      await router.invalidate()
+      completeNavigatingRef.current = true
+      await navigate({ to: '/profile' })
     } catch (error) {
-      console.error('Club code check failed:', error)
-      setCodeError('Could not check the code. Please try again.')
-    } finally {
-      setIsCheckingCode(false)
+      console.error('Accepting terms failed:', error)
+      setError('Could not create the account. Please try again.')
+      setIsAcceptingTerms(false)
     }
   }
 
@@ -215,47 +213,26 @@ export function Page({
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      {step === 'path' ? (
+      {step === 'signup' ? (
         <>
           <OnboardingHeader
             title="Welcome"
-            description="Tell us how you are joining"
+            description="Create your NU Image account"
           />
-          <PathStep
-            onChooseMember={() => setStep('code')}
-            onChooseFlamekeeper={() => setStep('flamekeeper')}
-          />
-        </>
-      ) : step === 'flamekeeper' ? (
-        <>
-          <OnboardingHeader
-            title="Become a flamekeeper"
-            description="Lend part of your NU Drive storage to keep club photos alive"
-          />
-          <FlamekeeperStep
-            email={email}
-            error={connectError ?? null}
-            onBeforeRedirect={() => {
-              completeNavigatingRef.current = true
-            }}
-            onBack={() => setStep('path')}
-          />
-        </>
-      ) : step === 'code' ? (
-        <>
-          <OnboardingHeader
-            title="Join as a club member"
-            description="Enter the club code to continue"
-          />
-          <ClubCodeStep
-            error={codeError}
-            isSubmitting={isCheckingCode}
-            onSubmit={handleClubCode}
-            onBack={() => {
-              setCodeError(null)
-              setStep('path')
-            }}
-          />
+          {signupKind(email) === 'nu' ? (
+            <FlamekeeperStep
+              error={connectError ?? null}
+              onBeforeRedirect={() => {
+                completeNavigatingRef.current = true
+              }}
+            />
+          ) : (
+            <TermsStep
+              error={error}
+              isSubmitting={isAcceptingTerms}
+              onAccept={handleAcceptTerms}
+            />
+          )}
         </>
       ) : step === 'telegram' ? (
         <>
@@ -294,11 +271,11 @@ export function Page({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Leave onboarding?</AlertDialogTitle>
+            <AlertDialogTitle>Leave signup?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your profile is not complete yet. If you leave now, your new
-              account will be deleted and any information you entered will be
-              lost. This cannot be undone.
+              Your signup is not finished yet. If you leave now, your new
+              account will be deleted and you can sign in again later to start
+              over.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
