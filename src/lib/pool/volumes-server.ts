@@ -142,13 +142,12 @@ export async function loadVolumeFolderId(
   return row?.driveFolderId ?? null
 }
 
-async function volumeIsIdle(
+export async function volumeHasPhotoRows(
   database: Database,
   albumId: string,
-  userId: string,
-  now: Date
+  userId: string
 ): Promise<boolean> {
-  const rows = await database
+  const row = await database
     .select({ id: photo.id })
     .from(photo)
     .where(
@@ -160,7 +159,16 @@ async function volumeIsIdle(
     )
     .limit(1)
     .get()
-  if (rows) return false
+  return !!row
+}
+
+async function volumeIsIdle(
+  database: Database,
+  albumId: string,
+  userId: string,
+  now: Date
+): Promise<boolean> {
+  if (await volumeHasPhotoRows(database, albumId, userId)) return false
   const reserved = await database
     .select({ id: uploadReservation.id })
     .from(uploadReservation)

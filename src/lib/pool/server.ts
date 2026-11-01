@@ -41,6 +41,7 @@ import {
 import {
   ensureVolumeFolder,
   forgetVolumeFolder,
+  volumeHasPhotoRows,
   loadVolumeFolderId,
 } from './volumes-server'
 import { volumeParents } from './volumes'
@@ -196,11 +197,17 @@ export async function startFlamekeeperUpload(
       if (error instanceof DriveQuotaExceededError) {
         await markFlamekeeperFull(database, fk.userId)
       } else if (error instanceof DriveNotFoundError) {
-        await forgetVolumeFolder(database, albumRow.id, fk.userId)
-        exclude.pop()
-        console.warn(
-          `Volume folder of ${fk.userId} in album ${albumRow.id} is gone, it will be recreated`
-        )
+        if (await volumeHasPhotoRows(database, albumRow.id, fk.userId)) {
+          console.warn(
+            `Volume folder of ${fk.userId} in album ${albumRow.id} is gone but the volume still has photos, keeping the folder id and skipping this flamekeeper`
+          )
+        } else {
+          await forgetVolumeFolder(database, albumRow.id, fk.userId)
+          exclude.pop()
+          console.warn(
+            `Volume folder of ${fk.userId} in album ${albumRow.id} is gone, it will be recreated`
+          )
+        }
       } else if (
         error instanceof FlamekeeperGrantError ||
         error instanceof DriveAuthError

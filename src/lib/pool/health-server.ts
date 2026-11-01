@@ -49,6 +49,7 @@ import {
   planEmailSync,
   planHealthBatch,
   planLost,
+  planVolumeAudit,
   planRecovery,
   volumesAfterCursor,
 } from './health'
@@ -226,6 +227,15 @@ async function auditVolumes(
           )
         )
         .all()
+      if (planVolumeAudit(v.volumeFolderId, rows) === 'skip') {
+        if (rows.length > 0) {
+          console.warn(
+            `Health audit skipped album ${albumId} for ${userId}: volume has no folder id but ${rows.length} live photo rows`
+          )
+        }
+        lastDone = albumId
+        continue
+      }
       let missing = rows
       for (const folderId of volumeParents(v.volumeFolderId)) {
         if (missing.length === 0) break

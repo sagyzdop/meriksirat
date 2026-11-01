@@ -131,6 +131,15 @@ export function findMissingPhotos(
   return dbPhotos.filter((p) => !present.has(p.driveFileId))
 }
 
+export function planVolumeAudit(
+  volumeFolderId: string | null,
+  rows: PhotoRef[]
+): 'skip' | 'audit' {
+  if (rows.length === 0) return 'skip'
+  if (!volumeFolderId) return 'skip'
+  return 'audit'
+}
+
 export interface RecoveryAlbum {
   deletedAt: Date | null
   tombstoneReason: string | null

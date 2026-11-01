@@ -8,6 +8,7 @@ import {
   planHealthBatch,
   planEmailSync,
   planLost,
+  planVolumeAudit,
   planRecovery,
   isUniqueConstraintError,
   oldEnoughToAudit,
@@ -241,5 +242,18 @@ describe('oldEnoughToAudit', () => {
   it('spares photos uploaded within the grace period', () => {
     expect(oldEnoughToAudit(ago(MISSING_GRACE_MS - 1), now)).toBe(false)
     expect(oldEnoughToAudit(ago(MISSING_GRACE_MS), now)).toBe(true)
+  })
+})
+
+describe('planVolumeAudit', () => {
+  const rows = [{ id: 'p1', driveFileId: 'f1' }]
+  it('skips a volume with no folder id so photos are never called missing', () => {
+    expect(planVolumeAudit(null, rows)).toBe('skip')
+  })
+  it('audits a volume with a folder id and rows', () => {
+    expect(planVolumeAudit('sub1', rows)).toBe('audit')
+  })
+  it('skips when there are no rows', () => {
+    expect(planVolumeAudit('sub1', [])).toBe('skip')
   })
 })
