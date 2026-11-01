@@ -76,13 +76,50 @@ describe('planBanDrain', () => {
       drainReason: 'pledge',
       drainingDeadline: NOW,
     })
-    expect(planBanDrain(other, true, NOW).kind).toBe('drain')
+    expect(planBanDrain(other, true, NOW)).toMatchObject({
+      kind: 'drain',
+      drainReason: 'ban',
+    })
     const banned = fk({
       state: 'draining',
       drainReason: 'ban',
       drainingDeadline: NOW,
     })
     expect(planBanDrain(banned, true, NOW)).toEqual({ kind: 'none' })
+  })
+
+  it('keeps the deadline of a drain already running for another reason', () => {
+    const deadline = new Date(NOW.getTime() + 2 * 86_400_000)
+    const other = fk({
+      state: 'draining',
+      drainReason: 'opt_out',
+      drainingDeadline: deadline,
+    })
+    expect(planBanDrain(other, true, NOW)).toEqual({
+      kind: 'drain',
+      state: 'draining',
+      drainReason: 'ban',
+      drainingDeadline: deadline,
+    })
+  })
+
+  it('never extends a running drain, even with a later stored deadline', () => {
+    const later = new Date(NOW.getTime() + DRAIN_GRACE_MS * 2)
+    const other = fk({
+      state: 'draining',
+      drainReason: 'pledge',
+      drainingDeadline: later,
+    })
+    expect(planBanDrain(other, true, NOW)).toMatchObject({
+      drainingDeadline: new Date(NOW.getTime() + DRAIN_GRACE_MS),
+    })
+  })
+
+  it('starts a fresh grace period when the running drain has no deadline', () => {
+    const other = fk({ state: 'draining', drainReason: 'domain' })
+    expect(planBanDrain(other, true, NOW)).toMatchObject({
+      drainingDeadline: new Date(NOW.getTime() + DRAIN_GRACE_MS),
+    })
   })
 
   it('leaves lost and drained flamekeepers alone', () => {

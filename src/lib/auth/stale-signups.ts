@@ -13,6 +13,7 @@ export interface SignupCandidate {
   hasDriveGrant: boolean
   createdAt: Date
   ownsAnything: boolean
+  bannedAt: Date | null
 }
 
 export function selectStaleSignups(
@@ -24,6 +25,7 @@ export function selectStaleSignups(
   return users
     .filter(
       (u) =>
+        !u.bannedAt &&
         !isAlumniEmail(u.email) &&
         !u.isMember &&
         !u.hasFlamekeeperRecord &&

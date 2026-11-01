@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte, notLike, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, lte, notLike, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { account, session, user } from '@/db/schema'
 import { ALUMNI_EMAIL_LIKE } from './signup-domain'
@@ -37,12 +37,14 @@ export async function runStaleSignupCleanup(env: {
       hasFlamekeeperRecord: HAS_FLAMEKEEPER,
       hasDriveGrant: HAS_DRIVE_GRANT,
       createdAt: user.createdAt,
+      bannedAt: user.bannedAt,
       ownsAnything: OWNS_ANYTHING,
     })
     .from(user)
     .where(
       and(
         eq(user.isMember, false),
+        isNull(user.bannedAt),
         notLike(user.email, ALUMNI_EMAIL_LIKE),
         lte(user.createdAt, cutoff),
         sql`NOT ${HAS_FLAMEKEEPER}`,

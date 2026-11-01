@@ -17,6 +17,7 @@ function u(id: string, over: Partial<SignupCandidate> = {}): SignupCandidate {
     hasDriveGrant: false,
     createdAt: daysAgo(10),
     ownsAnything: false,
+    bannedAt: null,
     ...over,
   }
 }
@@ -33,6 +34,22 @@ describe('selectStaleSignups', () => {
         now
       ).sort()
     ).toEqual(['exact', 'old'])
+  })
+
+  it('never selects a banned user', () => {
+    expect(
+      selectStaleSignups(
+        [u('banned', { bannedAt: daysAgo(9) }), u('plain')],
+        now
+      )
+    ).toEqual(['plain'])
+  })
+
+  it('banned users do not take batch slots', () => {
+    const banned = Array.from({ length: 5 }, (_, i) =>
+      u(`b${i}`, { bannedAt: daysAgo(20), createdAt: daysAgo(30) })
+    )
+    expect(selectStaleSignups([...banned, u('x')], now, 2)).toEqual(['x'])
   })
 
   it('skips members and users who own anything', () => {

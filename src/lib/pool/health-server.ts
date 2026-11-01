@@ -655,6 +655,7 @@ async function recoverDropped(
     .where(
       and(
         isNotNull(volume.droppedAt),
+        isNull(user.bannedAt),
         inArray(flamekeeper.state, ['active', 'full', 'draining'])
       )
     )

@@ -455,10 +455,10 @@ export async function loadOwnedPhotos(
 }
 
 /**
- * Message every admin who has a Telegram chat. Returns false only when the
- * shared budget cannot cover all of them, so the caller leaves its sent-at
- * flag unset and retries on a later run. Nothing to send to (no bot token or
- * no admin chat) counts as handled. `force` spends the cost even when the
+ * Message every admin who has a Telegram chat. Returns false when no admin
+ * has a chat or the shared budget cannot cover all of them, so the caller
+ * leaves its sent-at flag unset and retries on a later run. No bot token
+ * counts as handled. `force` spends the cost even when the
  * budget is short, for alerts that cannot be re-derived on a later run.
  */
 export async function sendAdminsTelegram(
@@ -477,7 +477,7 @@ export async function sendAdminsTelegram(
     .from(user)
     .where(and(eq(user.role, 'admin'), isNotNull(user.telegramChatId)))
     .all()
-  if (admins.length === 0) return true
+  if (admins.length === 0) return false
   if (budget) {
     if (options.force) budget.spend(admins.length)
     else if (!budget.take(admins.length)) return false

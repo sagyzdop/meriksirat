@@ -28,10 +28,22 @@ export function checkBan(input: {
   return { ok: true, reason }
 }
 
+function keepDeadline(
+  transition: DrainTransition,
+  deadline: Date | null
+): DrainTransition {
+  if (transition.kind !== 'drain' || !deadline) return transition
+  if (deadline.getTime() >= transition.drainingDeadline.getTime()) {
+    return transition
+  }
+  return { ...transition, drainingDeadline: deadline }
+}
+
 /**
  * Banning a flamekeeper starts a full drain with its own reason. A lost or
  * drained flamekeeper keeps the state it is in, and a ban drain already
- * running is left alone.
+ * running is left alone. A drain already running for another reason keeps its
+ * deadline, so a ban never gives anyone more time.
  */
 export function planBanDrain(
   fk: DrainFlamekeeper | null,
@@ -44,9 +56,8 @@ export function planBanDrain(
     case 'full':
       return hasPhotos ? startDrain('ban', now) : { kind: 'drained' }
     case 'draining':
-      return fk.drainReason === 'ban'
-        ? { kind: 'none' }
-        : startDrain('ban', now)
+      if (fk.drainReason === 'ban') return { kind: 'none' }
+      return keepDeadline(startDrain('ban', now), fk.drainingDeadline)
     default:
       return { kind: 'none' }
   }
