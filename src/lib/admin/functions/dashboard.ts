@@ -791,6 +791,7 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
     await checkAdminPermission(headers, ['admin', 'manager'])
 
     const database = db(env.meriksirat_d1 as D1Database)
+    const origin = (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
 
     // D1 caps bound parameters at 100/query, so this export avoids inArray:
     // the owner comes from a join and the member query is intentionally
@@ -861,7 +862,7 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
         eventDate: row.eventDate,
         createdAt: row.createdAt,
         isShared: !!row.isShared,
-        albumUrl: `https://meriksirat.nu.edu.kz/a/${row.id}`,
+        albumUrl: `${origin}/albums/${row.id}`,
         authors,
       }
     })
