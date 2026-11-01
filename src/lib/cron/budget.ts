@@ -24,13 +24,6 @@ function whole(n: number): number {
   return Number.isFinite(n) && n > 0 ? Math.ceil(n) : 0
 }
 
-/**
- * Outside requests (Google, Telegram) one cron run may still make. One
- * object is shared by every step, which spend from it in priority order.
- * `take` is all or nothing, `takeUpTo` grants part of a request, `spend`
- * records a cost already paid and may overdraw (the margin under Workers'
- * limit absorbs it).
- */
 export function createBudget(total: number = RUN_SUBREQUEST_BUDGET): Budget {
   let used = 0
   const budget: Budget = {
@@ -109,11 +102,6 @@ export function takeUpToIfBudgeted(
   return budget ? budget.takeUpTo(n) : n
 }
 
-/**
- * Requests needed to remove an album: the folder delete plus, for each
- * flamekeeper holding photos in it, a token refresh and one batch call per
- * 100 photos.
- */
 export function albumRemovalCost(photosPerOwner: number[]): number {
   let cost = 1
   for (const n of photosPerOwner) {
@@ -122,7 +110,6 @@ export function albumRemovalCost(photosPerOwner: number[]): number {
   return cost
 }
 
-/** Requests for a batch delete of `photos` files with one owner's token. */
 export function batchDeleteCost(photos: number): number {
   return photos > 0 ? 1 + Math.ceil(photos / 100) : 0
 }

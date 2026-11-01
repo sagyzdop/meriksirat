@@ -8,12 +8,6 @@ export type RelayStep =
 
 class RelayQuotaError extends Error {}
 
-/**
- * Move one photo of a draining flamekeeper (ADR-0009): download it with the
- * source token, upload it into the destination's resumable session in the
- * same album folder, then confirm so the server swaps the Drive file ID and
- * deletes the old file. The bytes stay in this browser.
- */
 export async function relayOnePhoto(
   userId?: string,
   signal?: AbortSignal

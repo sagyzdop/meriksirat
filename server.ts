@@ -141,13 +141,6 @@ export default {
   },
 }
 
-/**
- * One cron run. Workers' free plan allows 50 subrequests per invocation, so
- * the steps run one after another and spend from a single budget of outside
- * requests (Google, Telegram), highest priority first: bookings, then the
- * daily flamekeeper health pass, then drains, then reminders and emails.
- * Whatever does not fit waits for the next run; every step is idempotent.
- */
 async function runScheduled(env: Env): Promise<void> {
   const budget = createBudget()
 
@@ -484,9 +477,6 @@ async function updateOverdueBookings(env: Env, budget: Budget): Promise<void> {
       }
     >()
 
-    // A booking is handled whole in one run (its counters and notices fire
-    // once), so the budget is spent per booking: calendar updates, the
-    // channel log and the user's message.
     const byBooking = new Map<number, typeof overdueItems>()
     for (const item of overdueItems) {
       byBooking.set(item.bookingId, [

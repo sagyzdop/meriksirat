@@ -1,33 +1,3 @@
-/**
- * Throwaway spike for #savenuimg (issue #1, Phase 0). Answers four Drive
- * questions with two real @nu.edu.kz accounts (A and B) before any feature
- * code is written. Creates a few tiny test files and deletes them at the end.
- *
- *   Q1  After A transfers a drive.file-created file to B, can B's drive.file
- *       token still read it, change its permissions and delete it?
- *   Q2  Can a browser download a file with A's token (alt=media, CORS) and
- *       upload it straight into B's Drive? (optional: public download with
- *       an API key, for lost flamekeepers)
- *   Q3  Can a drive.file token create a shortcut to a folder another account
- *       owns? (tried with the master token, then with B)
- *   Q4  Does about.get report the per-user cap or the org-wide pool?
- *   Q5  Can A's drive.file token upload into a folder B owns and shared with
- *       A as writer? Is the file owned by A, and can B's token list it?
- *   Q6  Can B create a Google Doc / text file whose links open A's folder?
- *   Q7  Is A's file inside B's public folder public too (CDN, logged out),
- *       and can A's token list its own files there?
- *
- * Usage:
- *   node scripts/spike-savenuimg.mjs
- *   node scripts/spike-savenuimg.mjs --redirect-uri http://localhost/api/auth/callback/google
- *   node scripts/spike-savenuimg.mjs --only q5,q6   # run just some questions
- *   SPIKE_API_KEY=... node scripts/spike-savenuimg.mjs   # also test API-key download
- *
- * Needs GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env, and
- * the redirect URI (default http://localhost:8788/oauth, or --redirect-uri)
- * registered on the OAuth client (the same default one
- * google-mint-token.mjs uses). GOOGLE_MASTER_REFRESH_TOKEN is optional (Q3).
- */
 import { createServer } from 'node:http'
 import { readFileSync, existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'

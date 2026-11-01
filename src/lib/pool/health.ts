@@ -37,12 +37,6 @@ export function canBecomeLost(state: FlamekeeperState): boolean {
   return state === 'active' || state === 'full' || state === 'draining'
 }
 
-/**
- * Pick the flamekeepers to check in this cron run: those not checked for a
- * day, least recently checked first, as many as `budget` requests allow at
- * the least a check needs (a token refresh and one listing). The audit itself
- * stops when the shared budget runs out and carries on from a cursor.
- */
 export function planHealthBatch(
   candidates: HealthCandidate[],
   now: Date,
@@ -75,10 +69,6 @@ export function planHealthBatch(
   return picked
 }
 
-/**
- * Volumes still to audit in this pass: those after the cursor, in album-ID
- * order, so a pass cut short by the budget resumes where it stopped.
- */
 export function volumesAfterCursor(
   albumIds: string[],
   cursor: string | null
@@ -91,10 +81,6 @@ export interface EmailSync {
   email?: string
 }
 
-/**
- * Google's view of the account email wins over the saved one. A missing or
- * malformed value from Google is never trusted.
- */
 export function planEmailSync(
   saved: string,
   reported: string | null | undefined
@@ -117,12 +103,6 @@ export function lostDeadline(lostSince: Date): Date {
   return new Date(lostSince.getTime() + LOST_GRACE_MS)
 }
 
-/**
- * Lost flamekeepers owe one reconnect email (not banned ones, who cannot
- * sign in), and once the 7-day window ends their photos drop out of the app
- * until they reconnect. A reconnect resets the state to active, so those
- * flamekeepers never reach this plan.
- */
 export function planLost(fks: LostFlamekeeper[], now: Date): LostPlan {
   const plan: LostPlan = { notify: [], finalize: [] }
   for (const fk of fks) {
@@ -160,10 +140,6 @@ export interface RecoveryAlbum {
 
 export type RecoveryAction = 'restore' | 'abandon'
 
-/**
- * Dropped photos come back unless their album is gone for another reason or
- * has passed its expiry date, in which case they stay gone for good.
- */
 export function planRecovery(album: RecoveryAlbum, now: Date): RecoveryAction {
   if (album.deletedAt && album.tombstoneReason !== 'flamekeeper_lost') {
     return 'abandon'
@@ -178,7 +154,6 @@ export function planRecovery(album: RecoveryAlbum, now: Date): RecoveryAction {
   return 'restore'
 }
 
-/** Whether a photo is old enough to be judged missing from a Drive listing. */
 export function oldEnoughToAudit(createdAt: Date, now: Date): boolean {
   return now.getTime() - createdAt.getTime() >= MISSING_GRACE_MS
 }

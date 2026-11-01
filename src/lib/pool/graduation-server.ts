@@ -63,13 +63,6 @@ function profileLink(): string {
   return origin ? `\n\nOpen your account page: ${origin}/profile` : ''
 }
 
-/**
- * Cron step: start draining flamekeepers who are 60 days from graduation or
- * whose account is no longer @nu.edu.kz (through the same drain machinery as
- * opt-outs), and send the yearly graduation-date confirmation email. The
- * domain trigger wins over graduation. Both are bounded per run to stay
- * inside the subrequest limit.
- */
 export async function runGraduationMaintenance(
   env: { meriksirat_d1: D1Database },
   budget?: Budget

@@ -39,12 +39,6 @@ function keepDeadline(
   return { ...transition, drainingDeadline: deadline }
 }
 
-/**
- * Banning a flamekeeper starts a full drain with its own reason. A lost or
- * drained flamekeeper keeps the state it is in, and a ban drain already
- * running is left alone. A drain already running for another reason keeps its
- * deadline, so a ban never gives anyone more time.
- */
 export function planBanDrain(
   fk: DrainFlamekeeper | null,
   hasPhotos: boolean,

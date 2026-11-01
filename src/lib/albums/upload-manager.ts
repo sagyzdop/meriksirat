@@ -64,10 +64,6 @@ class TransientUploadError extends Error {
   }
 }
 
-/**
- * The chosen flamekeeper's Drive is full. The server marks them full when
- * the reservation is released, so a retry lands on someone else.
- */
 class QuotaExceededUploadError extends TransientUploadError {
   constructor() {
     super('Storage quota exceeded')

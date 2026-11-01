@@ -109,10 +109,6 @@ export async function getDrainStatus(
   return toStatus(row)
 }
 
-/**
- * Photos of one flamekeeper, found through their volumes so the photo table
- * is only read by its album index.
- */
 async function loadVolumePhotos(
   database: Database,
   userId: string,
@@ -148,10 +144,6 @@ export async function hasPhotosLeft(
   return (await loadVolumePhotos(database, userId, 1)).length > 0
 }
 
-/**
- * Revoke a flamekeeper's writer share on albums where they no longer hold
- * photos, and forget those volumes.
- */
 async function releaseEmptyVolumes(
   database: Database,
   userId: string,
@@ -221,11 +213,6 @@ async function releaseEmptyVolumes(
   return skipped === 0 && rows.length <= VOLUME_REVOKES_PER_CALL
 }
 
-/**
- * Drained: no photos are left with the flamekeeper. The app revokes its
- * folder shares, drops held space and the Drive grant, so it keeps nothing
- * of theirs. Returns false when shares are left for a later call.
- */
 async function finalizeDrained(
   database: Database,
   userId: string,
@@ -399,10 +386,6 @@ export async function sendDrainStartedEmail(
   )
 }
 
-/**
- * Switch flamekeeping off. Photos still held start draining with a 14-day
- * deadline; with nothing held the flamekeeper is drained at once.
- */
 export async function optOutFlamekeeper(
   database: Database,
   userId: string,
@@ -418,10 +401,6 @@ export async function optOutFlamekeeper(
   return toStatus(updated)
 }
 
-/**
- * Store a new pledge and graduation date. A pledge below what is used
- * starts draining the excess; raising it again cancels that drain.
- */
 export async function changePledge(
   database: Database,
   userId: string,
@@ -456,11 +435,6 @@ export async function changePledge(
   }
 }
 
-/**
- * Hand the browser one photo to move: the source flamekeeper's short-lived
- * token to download it and a resumable session for the destination, in the
- * same album folder. The bytes never pass through the Worker (ADR-0009).
- */
 export async function startRelay(
   database: Database,
   sourceUserId: string,
@@ -536,11 +510,6 @@ async function invalidateAlbumDetailIfCached(albumId: string): Promise<void> {
   }
 }
 
-/**
- * The browser finished uploading the copy. The photo keeps its ID (so
- * favorites and gallery position stay) and takes the new Drive file and
- * owner; the old file is deleted with the source token.
- */
 export async function confirmRelay(
   database: Database,
   sourceUserId: string,
@@ -678,22 +647,11 @@ function albumsOf(photos: { albumId: string }[]): number {
   return new Set(photos.map((p) => p.albumId)).size
 }
 
-/**
- * Requests to delete `photos` at the deadline: a batch delete with the
- * owner's token, then for each album that may empty out the master token
- * (once), the folder delete and the owner's notice, plus one spare.
- */
 function deadlineCost(photos: { albumId: string }[]): number {
   if (photos.length === 0) return 0
   return batchDeleteCost(photos.length) + 1 + 3 * albumsOf(photos)
 }
 
-/**
- * Deadline passed: delete what is still with the flamekeeper (all of it for
- * an opt-out, the excess for a lowered pledge), with their own token.
- * Albums left without photos become tombstones. A few albums per run, and
- * only as many photos as the shared budget pays for; the rest waits.
- */
 async function deleteOverdue(
   database: Database,
   row: DrainRow,
@@ -806,11 +764,6 @@ function adminAlertText(
   return `#savenuimg drain deadline in 3 days: ${who} still holds ${left}. Photos left on ${deadline} are deleted. Move them or ask the flamekeeper to.`
 }
 
-/**
- * Tell admins when a drain starts and again in its last 3 days, once each.
- * A drain that finished at once (nothing held) never reaches `draining`, so
- * it never alerts.
- */
 async function alertAdminsOfDrains(
   database: Database,
   rows: DrainRow[],
@@ -848,12 +801,6 @@ async function alertAdminsOfDrains(
   }
 }
 
-/**
- * Cron step: tell admins about drains, finish drains with nothing left, send
- * one reminder in the last days before the deadline, and delete what is
- * still held after it. One overdue flamekeeper is handled per run. Every
- * outside request is paid from the shared budget.
- */
 export async function runDrainMaintenance(
   env: {
     meriksirat_d1: D1Database

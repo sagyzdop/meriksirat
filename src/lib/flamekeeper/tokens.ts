@@ -18,11 +18,6 @@ export class FlamekeeperGrantError extends Error {
   }
 }
 
-/**
- * A short-lived `drive.file` access token for one flamekeeper, refreshed from
- * their stored grant. Throws FlamekeeperGrantError when the grant is missing
- * or Google refuses to refresh it.
- */
 export async function getFlamekeeperAccessToken(
   database: Database,
   userId: string
@@ -63,10 +58,6 @@ export function forgetFlamekeeperAccessToken(userId: string): void {
   cache.delete(userId)
 }
 
-/**
- * Drop a flamekeeper's Drive grant: revoke the refresh token at Google
- * (best effort) and delete the stored row, so the app keeps no access.
- */
 export async function dropFlamekeeperGrant(
   database: Database,
   userId: string

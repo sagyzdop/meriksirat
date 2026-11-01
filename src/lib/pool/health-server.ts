@@ -111,12 +111,6 @@ async function adjustUsedBytes(
     .where(eq(flamekeeper.userId, userId))
 }
 
-/**
- * Photos a successful listing shows are gone from Drive: mark them deleted,
- * recount the album and the flamekeeper's used bytes, and clear the cover if
- * it pointed at one. Only rows still live and still theirs are touched, so a
- * photo moved to another flamekeeper meanwhile is left alone.
- */
 async function removeMissingPhotos(
   database: Database,
   userId: string,
@@ -249,12 +243,6 @@ async function auditVolumes(
   return { reports, nextCursor: null, complete: true }
 }
 
-/**
- * Read the account email Google reports and, if it differs from the saved
- * one, overwrite it; the graduation step then starts the domain drain. A
- * missing email is never trusted. A clash with another account is logged and
- * the row is left as it is.
- */
 async function syncEmail(
   database: Database,
   userId: string,
@@ -288,11 +276,6 @@ async function syncEmail(
   }
 }
 
-/**
- * The daily pass for each flamekeeper, in one go: refresh the token, read
- * Drive `about` once (usage and email), then audit their albums. The audit
- * resumes from a cursor when the shared budget runs out.
- */
 async function checkGrants(
   database: Database,
   now: Date,
@@ -465,13 +448,6 @@ async function sendReconnectEmails(
   }
 }
 
-/**
- * The reconnect window ended: the flamekeeper's live photos become `dropped`
- * (not `deleted`, so a later reconnect can bring them back), their volumes
- * are kept but marked, and albums left with no live photo are tombstoned
- * with a Telegram notice to the owner. A few volumes per run; an owner
- * notice that the shared budget cannot pay for waits for the next run.
- */
 async function finalizeLost(
   database: Database,
   userId: string,
@@ -621,14 +597,6 @@ async function markBatch(
   return rows
 }
 
-/**
- * Bring a reconnected flamekeeper's dropped photos back, a bounded batch per
- * run: re-share the album folder, set the photos live, recount the album and
- * their used bytes, and restore an album tombstoned as `flamekeeper_lost`.
- * Photos of an album that expired or went for another reason stay gone.
- * Nothing the flamekeeper deleted from Drive meanwhile is checked here: the
- * daily health pass removes those.
- */
 async function recoverDropped(
   database: Database,
   now: Date,
@@ -782,12 +750,6 @@ async function recoverDropped(
   }
 }
 
-/**
- * Cron step: one daily health pass per flamekeeper (token, usage, Google
- * email, album audit), mark revoked grants lost, email them once (not when
- * banned), drop their photos when the 7-day reconnect window ends (ADR-0013),
- * and bring dropped photos back for those who reconnected.
- */
 export async function runFlamekeeperHealth(
   env: HealthEnv,
   budget: Budget

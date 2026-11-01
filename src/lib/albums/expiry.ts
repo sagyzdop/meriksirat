@@ -44,12 +44,6 @@ export async function dropPhotoRows(
     .where(eq(album.id, albumId))
 }
 
-/**
- * Delete every flamekeeper-owned photo with its owner's token. Drive refuses
- * to delete a folder that still holds them (`appNotAuthorizedToChild`), so
- * this runs before the folder goes. Returns false when a lost flamekeeper's
- * photos remain, which keeps the folder alive (ADR-0008).
- */
 async function removeOwnedPhotos(
   database: Database,
   albumId: string
@@ -72,13 +66,6 @@ async function removeOwnedPhotos(
   return lost.length === 0
 }
 
-/**
- * The single album removal path. Deletes flamekeepers' photos with their
- * owners' tokens, then the Drive folder, clears caches and drops the owner's
- * album count. With a `tombstone` reason the album row is kept (photo rows
- * removed, totals zeroed) so its URL can explain why it is gone; without one
- * the row is deleted outright.
- */
 export async function removeAlbum(
   database: Database,
   row: Pick<AlbumRecord, 'id' | 'driveFolderId' | 'ownerUserId' | 'deletedAt'>,

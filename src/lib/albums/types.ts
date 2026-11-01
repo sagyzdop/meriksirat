@@ -164,10 +164,6 @@ export interface AlbumPhotoExif {
 
 export interface AlbumPhoto {
   id: string
-  /**
-   * Stable photo id (survives Drive file moves). Null for photos of albums
-   * that are not indexed yet.
-   */
   photoId?: string | null
   name: string
   mimeType: string
@@ -213,10 +209,6 @@ export interface AlbumDetail extends Omit<AlbumSummary, 'coverUrl'> {
   folderState: AlbumFolderState
   expiresAt: string | null
   pinned: boolean
-  /**
-   * Set when the album has been deleted; the page then renders the tombstone
-   * for this reason instead of the gallery.
-   */
   tombstone: { reason: TombstoneReason; deletedAt: string } | null
 }
 

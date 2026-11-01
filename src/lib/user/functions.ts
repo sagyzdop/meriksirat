@@ -503,10 +503,6 @@ export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
-/**
- * Ban a user (admin only). Blocks sign-in, cancels upcoming bookings,
- * revokes album folder access and starts a drain of any photos they hold.
- */
 export const banUserFn = createServerFn({ method: 'POST' })
   .validator(BanUserSchema)
   .handler(async ({ data }) => {
@@ -524,10 +520,6 @@ export const banUserFn = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
-/**
- * Lift a ban (admin only). Sign-in works again; flamekeeping is not
- * restored.
- */
 export const unbanUserFn = createServerFn({ method: 'POST' })
   .validator(UnbanUserSchema)
   .handler(async ({ data }) => {

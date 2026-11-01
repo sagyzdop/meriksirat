@@ -55,12 +55,6 @@ async function loadNames(database: Database, ids: string[]) {
   return new Map(rows.map((r) => [r.id, displayName(r)]))
 }
 
-/**
- * Cancel a few upcoming bookings of banned users. Bookings that are active
- * or overdue are left alone so their return is still tracked. This uses the
- * shared cancel (calendar events, status) and never touches the violation
- * counters.
- */
 async function cancelBannedBookings(
   database: Database,
   budget?: Budget
@@ -97,11 +91,6 @@ async function cancelBannedBookings(
   }
 }
 
-/**
- * Revoke banned users' writer shares on album folders, a few per run to stay
- * inside the subrequest limit. The volume rows stay: they record who owns
- * which photos until those are moved.
- */
 async function revokeBannedWriterAccess(
   database: Database,
   budget?: Budget
@@ -170,10 +159,6 @@ async function finishBanWork(
   await revokeBannedWriterAccess(database, budget)
 }
 
-/**
- * Cron step: keep working through what a ban leaves behind, in small
- * batches.
- */
 export async function runBanMaintenance(
   env: { meriksirat_d1: D1Database },
   budget?: Budget
@@ -181,11 +166,6 @@ export async function runBanMaintenance(
   await finishBanWork(db(env.meriksirat_d1), budget)
 }
 
-/**
- * Ban a user: block sign-in, end their sessions, start a ban drain for any
- * photos they hold, then cancel upcoming bookings and revoke folder access
- * (the first batch now, the rest from the cron step).
- */
 export async function banUser(
   database: Database,
   input: { actorId: string; targetId: string; reason: string }
@@ -238,11 +218,6 @@ export async function banUser(
   }
 }
 
-/**
- * Lift a ban. Sign-in works again; flamekeeping is not restored, so a
- * flamekeeper connects Drive again themselves. A drain already running
- * carries on.
- */
 export async function unbanUser(
   database: Database,
   input: { actorId: string; targetId: string }

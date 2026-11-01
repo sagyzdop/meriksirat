@@ -130,11 +130,6 @@ export interface DrainAdminAlertState {
 
 export type DrainAdminAlert = 'started' | 'reminder' | null
 
-/**
- * Which Telegram message admins still owe for a drain: one when it starts,
- * one in the last 3 days before the deadline. The start message goes first
- * and each is sent once.
- */
 export function drainAdminAlertDue(
   fk: DrainAdminAlertState,
   now: Date

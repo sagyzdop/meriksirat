@@ -22,11 +22,6 @@ export async function ownerTelegramChat(
   return row?.chatId?.trim() || null
 }
 
-/**
- * Tell an album's owner their album was tombstoned because its flamekeeper
- * was lost or left. One request; owners without a Telegram chat are skipped.
- * Never throws.
- */
 export async function notifyAlbumTombstoned(
   database: Database,
   env: NoticeEnv,

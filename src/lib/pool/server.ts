@@ -97,11 +97,6 @@ export async function loadPoolStats(database: Database): Promise<PoolStats> {
   return poolStats(fks, cap)
 }
 
-/**
- * Hold `bytes` of a flamekeeper's pledge for an upload in flight. A single
- * statement, so concurrent uploads can never push used + reserved past the
- * pledge.
- */
 async function reserveUpload(
   database: Database,
   input: { id: string; userId: string; albumId: string; bytes: number },
@@ -136,10 +131,6 @@ export async function markFlamekeeperFull(
     .where(and(eq(flamekeeper.userId, userId), eq(flamekeeper.state, 'active')))
 }
 
-/**
- * Share the album folder with the flamekeeper once, so their token can
- * upload into it. The share is recorded as the album's volume for them.
- */
 async function ensureVolume(
   database: Database,
   masterToken: string,
@@ -187,11 +178,6 @@ async function ensureVolume(
     .onConflictDoNothing()
 }
 
-/**
- * Place an upload on a flamekeeper and mint a resumable session with their
- * token, so the photo is owned by them. Flamekeepers whose Drive reports
- * the quota exceeded are marked full and the next one is tried.
- */
 export async function startFlamekeeperUpload(
   database: Database,
   masterToken: string,
@@ -252,11 +238,6 @@ export async function startFlamekeeperUpload(
   throw new Error(OUT_OF_SPACE_MESSAGE)
 }
 
-/**
- * The browser reports an upload that failed after its session was minted.
- * The held space is released; a quota failure also marks the flamekeeper
- * full so the retry lands elsewhere.
- */
 export async function releaseFlamekeeperUpload(
   database: Database,
   albumId: string,
@@ -278,10 +259,6 @@ export async function releaseFlamekeeperUpload(
   if (quotaExceeded) await markFlamekeeperFull(database, row.flamekeeperUserId)
 }
 
-/**
- * Register a finished upload with its owner: the photo row records the
- * flamekeeper, and their used bytes take over from the reservation.
- */
 export async function confirmFlamekeeperUpload(
   database: Database,
   albumRow: { id: string; driveFolderId: string },
@@ -351,13 +328,6 @@ export interface OwnedPhoto {
   flamekeeperUserId: string | null
 }
 
-/**
- * Delete flamekeeper-owned photos with each owner's token, in Drive batches.
- * Returns the photos that were deleted (or already gone), those left behind
- * by a lost flamekeeper (whose files the app can no longer touch), and the
- * first other failure. Photos that failed for any other reason are in
- * neither list, so callers keep them in the app.
- */
 export async function deleteOwnedPhotos(
   database: Database,
   photos: OwnedPhoto[]
@@ -454,13 +424,6 @@ export async function loadOwnedPhotos(
     .all()
 }
 
-/**
- * Message every admin who has a Telegram chat. Returns false when no admin
- * has a chat or the shared budget cannot cover all of them, so the caller
- * leaves its sent-at flag unset and retries on a later run. No bot token
- * counts as handled. `force` spends the cost even when the
- * budget is short, for alerts that cannot be re-derived on a later run.
- */
 export async function sendAdminsTelegram(
   database: Database,
   botToken: string | undefined,
@@ -494,11 +457,6 @@ export async function sendAdminsTelegram(
   return true
 }
 
-/**
- * Cron step: drop stale reservations, return full flamekeepers to active once
- * space frees (from the usage the daily health pass last read), and alert
- * admins when the pool runs low.
- */
 export async function runPoolMaintenance(
   env: {
     meriksirat_d1: D1Database

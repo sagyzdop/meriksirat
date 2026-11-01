@@ -23,11 +23,6 @@ export function graduationDrainDue(graduationDate: string, now: Date): boolean {
   return !Number.isNaN(start.getTime()) && now.getTime() >= start.getTime()
 }
 
-/**
- * Graduation trigger. Starts a full drain 60 days before the graduation
- * date; a lowered-pledge drain is widened to a full one. Moving the date out
- * of the window cancels a graduation drain.
- */
 export function planGraduation(
   fk: DrainFlamekeeper,
   graduationDate: string,
@@ -53,10 +48,6 @@ export function planGraduation(
   }
 }
 
-/**
- * Domain trigger. A flamekeeper whose account email is no longer
- * `@nu.edu.kz` (for example after the move to alumni) drains immediately.
- */
 export function planDomainChange(
   fk: DrainFlamekeeper,
   email: string,
@@ -78,11 +69,6 @@ export function planDomainChange(
   }
 }
 
-/**
- * Editing the pledge and graduation date together: a graduation drain wins
- * over a pledge drain, and cancelling a graduation drain still honours a
- * pledge that sits below what is held.
- */
 export function planFlamekeeperEdit(
   fk: DrainFlamekeeper,
   input: { pledgedBytes: number; graduationDate: string },
@@ -114,7 +100,6 @@ export function graduationConfirmDueAt(fk: GraduationConfirmState): Date {
   return new Date(last.getTime() + GRADUATION_CONFIRM_DAYS * DAY_MS)
 }
 
-/** The yearly prompt shown on the account page. */
 export function graduationConfirmDue(
   fk: GraduationConfirmState,
   now: Date
@@ -123,7 +108,6 @@ export function graduationConfirmDue(
   return now.getTime() >= graduationConfirmDueAt(fk).getTime()
 }
 
-/** One reminder email per confirmation cycle. */
 export function graduationPromptEmailDue(
   fk: GraduationConfirmState,
   now: Date

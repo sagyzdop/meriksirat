@@ -248,9 +248,6 @@ export async function logReturnPhotoToChannel(input: {
   }
 }
 
-/**
- * Logs a ban or unban to the club Telegram channel. Never throws.
- */
 export async function logUserBanActivity(input: {
   action: 'banned' | 'unbanned'
   userId: string

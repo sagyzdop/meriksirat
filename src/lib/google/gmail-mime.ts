@@ -1,7 +1,6 @@
 const CRLF = '\r\n'
 const BOUNDARY = 'nu-image-alt-boundary'
 const MAX_BASE64_LINE = 76
-// 45 bytes encode to 60 base64 chars; "=?UTF-8?B?" + 60 + "?=" stays within 75.
 const ENCODED_WORD_CHUNK_BYTES = 45
 
 const utf8 = new TextEncoder()
@@ -32,7 +31,6 @@ function base64Body(text: string): string {
   return lines.join(CRLF)
 }
 
-/** RFC 2047 encoded-word(s) for non-ASCII subjects; printable ASCII is left as-is. */
 export function encodeSubject(subject: string): string {
   const clean = stripLineBreaks(subject)
   if (/^[\x20-\x7e]*$/.test(clean)) return clean
@@ -40,7 +38,6 @@ export function encodeSubject(subject: string): string {
   const chunks: string[] = []
   let current = ''
   let currentBytes = 0
-  // Iterating a string yields code points, so a chunk never splits a UTF-8 sequence.
   for (const char of clean) {
     const size = utf8.encode(char).length
     if (currentBytes + size > ENCODED_WORD_CHUNK_BYTES) {
@@ -58,7 +55,6 @@ export function encodeSubject(subject: string): string {
     .join(`${CRLF} `)
 }
 
-/** Builds an RFC 2822 message. Plain text only, or multipart/alternative when html is given. */
 export function buildMimeMessage({
   to,
   subject,
@@ -99,7 +95,6 @@ export function buildMimeMessage({
   ].join(CRLF)
 }
 
-/** The `raw` field expected by the Gmail API: base64url of the full message. */
 export function buildGmailRaw(content: EmailContent): string {
   return toBase64(utf8.encode(buildMimeMessage(content)))
     .replace(/\+/g, '-')

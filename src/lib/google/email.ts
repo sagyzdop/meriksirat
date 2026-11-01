@@ -4,10 +4,6 @@ import { buildGmailRaw, type EmailContent } from './gmail-mime'
 const GMAIL_SEND_URL =
   'https://gmail.googleapis.com/gmail/v1/users/me/messages/send'
 
-/**
- * Sends mail as the master account (nu_image) via the Gmail API.
- * Never throws: failures are logged and reported as `false`.
- */
 export async function sendEmail(input: EmailContent): Promise<boolean> {
   try {
     const accessToken = await getGoogleAccessToken()

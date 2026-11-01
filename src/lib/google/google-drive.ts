@@ -319,10 +319,6 @@ export async function mintResumableUpload(
   return location
 }
 
-/**
- * Share a folder with one account as writer, without Google's notification
- * email. Returns the permission ID so the share can be revoked later.
- */
 export async function shareWithWriter(
   accessToken: string,
   fileId: string,
@@ -341,10 +337,6 @@ export async function shareWithWriter(
   return data.id
 }
 
-/**
- * Revoke one permission on a file (e.g. a flamekeeper's writer share on an
- * album folder). A permission that is already gone counts as revoked.
- */
 export async function deleteDrivePermission(
   accessToken: string,
   fileId: string,
@@ -366,12 +358,6 @@ export interface DriveAbout {
   usageInDrive: number | null
 }
 
-/**
- * One `about.get` for a flamekeeper: the account email and the bytes its
- * Drive files take up. `about.get` reports the org-wide limit, so only
- * `usageInDrive` is meaningful per account. Either value is null when Google
- * leaves it out (`user` may not come back under the `drive.file` scope).
- */
 export async function getDriveAbout(accessToken: string): Promise<DriveAbout> {
   const response = await driveFetch(
     accessToken,
@@ -388,10 +374,6 @@ export async function getDriveAbout(accessToken: string): Promise<DriveAbout> {
   }
 }
 
-/**
- * Delete files in batches of 100 (one subrequest each). Files that are
- * already gone count as deleted. Returns the IDs Drive refused to delete.
- */
 export async function batchDeleteDriveFiles(
   accessToken: string,
   fileIds: string[]

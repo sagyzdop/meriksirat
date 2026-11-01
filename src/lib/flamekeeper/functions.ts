@@ -14,10 +14,6 @@ import {
   type RelayHandout,
 } from './types'
 
-/**
- * The flamekeeper whose photos a relay moves: the caller themselves, or any
- * flamekeeper when an admin or manager runs it from the dashboard.
- */
 async function resolveRelaySource(userId: string | undefined) {
   const { resolveSession } = await import('@/lib/auth/resolve-session')
   const headers = getRequestHeaders()
