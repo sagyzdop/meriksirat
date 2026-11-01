@@ -137,6 +137,10 @@ _Avoid_: Album state, drive status
 A user who unlocked membership with the club code; only members can book equipment and create albums. Permanent.
 _Avoid_: Club user, regular user
 
+**Alumnus**:
+A user with an `@alumni.nu.edu.kz` account. Can favorite photos and enter the club code, but can't be a flamekeeper.
+_Avoid_: Graduate, when the account rather than the member status is meant
+
 **Club code**:
 The single, rotatable code a user enters to become a member.
 _Avoid_: Invite code, password

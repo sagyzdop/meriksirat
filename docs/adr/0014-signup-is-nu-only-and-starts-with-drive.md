@@ -6,9 +6,10 @@ must be `@nu.edu.kz` or `@alumni.nu.edu.kz`; every other domain is refused befor
 a user row is created. An `@nu.edu.kz` account pledges at least 1 GB and connects
 Drive to finish signup. An alumni account has about 500 MB, so it skips Drive and
 gets a plain account that can favorite photos. Anyone can enter the club code at
-any time to become a member, which adds the profile and Telegram steps. An account
-that isn't a member, has no Drive connected and owns nothing is deleted after 7
-days.
+any time to become a member, which adds the profile and Telegram steps. An `@nu.edu.kz`
+account that isn't a member, has no Drive connected and owns nothing is deleted
+after 7 days; alumni accounts are never deleted this way, because they can't
+connect Drive and admins list them on their own tab.
 
 The check runs only when an account is created, not at each sign-in. Google's
 hosted-domain restriction was rejected because it applies to every sign-in and
