@@ -233,6 +233,25 @@ export async function getDriveFolderState(
   return data.trashed ? 'trashed' : 'ok'
 }
 
+export type DriveFileProbe = 'exists' | 'trashed' | 'missing'
+
+export async function probeDriveFile(
+  accessToken: string,
+  fileId: string
+): Promise<DriveFileProbe> {
+  try {
+    const response = await driveFetch(
+      accessToken,
+      `${API}/files/${encodeURIComponent(fileId)}?fields=id,trashed`
+    )
+    const data = (await response.json()) as { trashed?: boolean }
+    return data.trashed ? 'trashed' : 'exists'
+  } catch (error) {
+    if (error instanceof DriveNotFoundError) return 'missing'
+    throw error
+  }
+}
+
 /**
  * Move a trashed file or folder out of the bin so it is usable again.
  */

@@ -29,6 +29,7 @@ import {
   DriveNotFoundError,
   getDriveAbout,
   listDriveFolderFiles,
+  probeDriveFile,
   shareWithWriter,
 } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
@@ -40,11 +41,15 @@ import {
 import {
   HEALTH_INTERVAL_MS,
   HEALTH_STEP_CAP,
+  MAX_CONFIRMS_PER_ALBUM,
   LOST_GRACE_MS,
   MISSING_GRACE_MS,
   RESTORE_BATCH,
   canBecomeLost,
+  confirmMissing,
   findMissingPhotos,
+  type FileProbeOutcome,
+  type PhotoRef,
   isUniqueConstraintError,
   planEmailSync,
   planHealthBatch,
@@ -69,7 +74,6 @@ const RETRY_AFTER_TRANSIENT_MS = 60 * 60 * 1000
 const MAX_EMAILS_PER_RUN = 3
 const MAX_FINALIZE_VOLUMES_PER_RUN = 10
 const MAX_MISSING_LISTED = 10
-const MAX_MISSING_REMOVED = 1000
 const RECOVERIES_PER_RUN = 2
 const IN_CHUNK = 90
 
@@ -247,18 +251,42 @@ async function auditVolumes(
           files.map((f) => f.id)
         )
       }
-      missing = missing.slice(0, MAX_MISSING_REMOVED)
-      if (missing.length > 0) {
+      const confirmed: PhotoRef[] = []
+      let kept = 0
+      const unchecked = Math.max(missing.length - MAX_CONFIRMS_PER_ALBUM, 0)
+      let exhausted = false
+      for (const row of missing.slice(0, MAX_CONFIRMS_PER_ALBUM)) {
+        let outcome: FileProbeOutcome
+        try {
+          step.require(1)
+          outcome = await probeDriveFile(token, row.driveFileId)
+        } catch (error) {
+          if (error instanceof BudgetExhaustedError) {
+            exhausted = true
+            break
+          }
+          outcome = 'error'
+        }
+        if (confirmMissing(outcome) === 'remove') confirmed.push(row)
+        else kept++
+      }
+      if (kept > 0 || unchecked > 0) {
+        console.warn(
+          `Health audit kept ${kept} photo rows of album ${albumId} for ${userId} that are absent from the folder listing but not confirmed gone${unchecked > 0 ? `; ${unchecked} not checked this run` : ''}`
+        )
+      }
+      if (confirmed.length > 0) {
         const removed = await removeMissingPhotos(
           database,
           userId,
           { id: albumId, driveFolderId: v.driveFolderId },
-          missing
+          confirmed
         )
         if (removed > 0) {
           reports.push({ email, albumTitle: v.title, count: removed })
         }
       }
+      if (exhausted) throw new BudgetExhaustedError()
     } catch (error) {
       if (error instanceof BudgetExhaustedError) {
         return { reports, nextCursor: lastDone, complete: false }

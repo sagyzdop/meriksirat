@@ -131,6 +131,14 @@ export function findMissingPhotos(
   return dbPhotos.filter((p) => !present.has(p.driveFileId))
 }
 
+export const MAX_CONFIRMS_PER_ALBUM = 10
+
+export type FileProbeOutcome = 'exists' | 'trashed' | 'missing' | 'error'
+
+export function confirmMissing(outcome: FileProbeOutcome): 'remove' | 'keep' {
+  return outcome === 'missing' || outcome === 'trashed' ? 'remove' : 'keep'
+}
+
 export function planVolumeAudit(
   volumeFolderId: string | null,
   rows: PhotoRef[]

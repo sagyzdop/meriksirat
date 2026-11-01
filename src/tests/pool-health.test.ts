@@ -3,6 +3,7 @@ import {
   HEALTH_INTERVAL_MS,
   LOST_GRACE_MS,
   canBecomeLost,
+  confirmMissing,
   findMissingPhotos,
   isInvalidGrantResponse,
   planHealthBatch,
@@ -255,5 +256,18 @@ describe('planVolumeAudit', () => {
   })
   it('skips when there are no rows', () => {
     expect(planVolumeAudit('sub1', [])).toBe('skip')
+  })
+})
+
+describe('confirmMissing', () => {
+  it('removes a row whose file is gone or trashed', () => {
+    expect(confirmMissing('missing')).toBe('remove')
+    expect(confirmMissing('trashed')).toBe('remove')
+  })
+  it('keeps a row whose file still exists, e.g. moved out of the folder', () => {
+    expect(confirmMissing('exists')).toBe('keep')
+  })
+  it('keeps a row on any other error', () => {
+    expect(confirmMissing('error')).toBe('keep')
   })
 })
