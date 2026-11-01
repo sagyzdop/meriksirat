@@ -45,6 +45,7 @@ const DRAIN_MESSAGE = {
     'Your graduation is less than 60 days away, so your photos are moving to other flamekeepers before your account shrinks. If the date is wrong, edit it below. New uploads no longer go to your Drive.',
   domain:
     'Your account is no longer an @nu.edu.kz account, so your photos are moving to other flamekeepers. New uploads no longer go to your Drive.',
+  ban: 'Your account was banned, so your photos are moving to other flamekeepers. New uploads no longer go to your Drive.',
 } as const
 
 const STATE_LABEL = {

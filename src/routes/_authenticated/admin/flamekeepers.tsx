@@ -25,6 +25,7 @@ export const Route = createFileRoute('/_authenticated/admin/flamekeepers')({
 
 function RouteComponent() {
   const { search } = Route.useSearch()
+  const { user } = Route.useRouteContext()
   const { data, isFetching } = useQuery(
     flamekeeperQueries.adminList(search ? { search } : {})
   )
@@ -37,6 +38,8 @@ function RouteComponent() {
       flamekeepers={data ?? []}
       search={search}
       isLoading={isRouterPending || isFetching}
+      canBan={user.role === 'admin'}
+      viewerId={user.id}
     />
   )
 }

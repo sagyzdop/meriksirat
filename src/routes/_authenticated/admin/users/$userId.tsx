@@ -62,6 +62,7 @@ export const Route = createFileRoute('/_authenticated/admin/users/$userId')({
 
 function RouteComponent() {
   const { user } = Route.useLoaderData()
+  const { user: viewer } = Route.useRouteContext()
   const search = Route.useSearch()
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
@@ -76,6 +77,8 @@ function RouteComponent() {
       {isRouterPending && <LoadingOverlay />}
       <Page
         user={user}
+        canBan={viewer.role === 'admin'}
+        viewerId={viewer.id}
         albums={albumsResponse?.albums ?? []}
         albumsPagination={
           albumsResponse?.pagination ?? {

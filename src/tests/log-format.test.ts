@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatAlbumLog,
+  formatBanLog,
   formatBookingLog,
   visibleLength,
   type BookingLogData,
@@ -267,5 +268,31 @@ describe('formatAlbumLog', () => {
 describe('visibleLength', () => {
   it('counts text after Telegram parses the HTML', () => {
     expect(visibleLength('<s>a&amp;b</s> <a href="x">Link</a>')).toBe(8)
+  })
+})
+
+describe('formatBanLog', () => {
+  it('shows who banned whom and why, escaping text', () => {
+    const text = formatBanLog({
+      action: 'banned',
+      userName: 'Ann <b>',
+      actorName: 'Admin',
+      reason: 'deleted photos',
+      url: 'https://x.test/admin/users/1',
+    })
+    expect(text).toContain('🚫 User banned by Admin')
+    expect(text).toContain('Ann &lt;b&gt;')
+    expect(text).toContain('Reason: deleted photos')
+    expect(text).toContain('Link')
+  })
+
+  it('labels an unban without a reason line', () => {
+    const text = formatBanLog({
+      action: 'unbanned',
+      userName: 'Ann',
+      actorName: 'Admin',
+    })
+    expect(text).toContain('✅ User unbanned by Admin')
+    expect(text).not.toContain('Reason')
   })
 })

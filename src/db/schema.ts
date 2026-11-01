@@ -54,6 +54,9 @@ export const user = sqliteTable(
       mode: 'boolean',
     }).default(false),
     termsAcceptedAt: integer('terms_accepted_at', { mode: 'timestamp_ms' }),
+    bannedAt: integer('banned_at', { mode: 'timestamp_ms' }),
+    banReason: text('ban_reason'),
+    bannedBy: text('banned_by'),
     // Violation counters (per booking): auto-cancelled for not starting, overdue
     cancelledInStartWindowCount: integer('cancelled_in_start_window_count')
       .default(0)
@@ -525,7 +528,7 @@ export const flamekeeper = sqliteTable(
     }),
     drainingDeadline: integer('draining_deadline', { mode: 'timestamp_ms' }),
     drainReason: text('drain_reason', {
-      enum: ['opt_out', 'pledge', 'graduation', 'domain'],
+      enum: ['opt_out', 'pledge', 'graduation', 'domain', 'ban'],
     }),
     drainReminderSentAt: integer('drain_reminder_sent_at', {
       mode: 'timestamp_ms',
@@ -577,6 +580,7 @@ export const volume = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     permissionId: text('permission_id').notNull(),
+    writerRevokedAt: integer('writer_revoked_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),

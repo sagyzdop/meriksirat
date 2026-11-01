@@ -8,6 +8,8 @@ import {
   UpdateUserProfileSchema,
   BulkUpdateUserClearanceSchema,
   ResetUserViolationCountersSchema,
+  BanUserSchema,
+  UnbanUserSchema,
   type UserProfile,
 } from './types'
 
@@ -384,6 +386,8 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
         overdueCount: user.overdueCount,
         albumCount: user.albumCount,
+        bannedAt: user.bannedAt,
+        banReason: user.banReason,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
@@ -425,6 +429,47 @@ export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })
       throw new Error('User not found')
     }
 
+    return { success: true }
+  })
+
+/**
+ * Ban a user (admin only). Blocks sign-in, cancels upcoming bookings,
+ * revokes album folder access and starts a drain of any photos they hold.
+ */
+export const banUserFn = createServerFn({ method: 'POST' })
+  .validator(BanUserSchema)
+  .handler(async ({ data }) => {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { banUser } = await import('@/lib/pool/ban-server')
+
+    const actor = await checkAdminPermission(getRequestHeaders(), ['admin'])
+    await banUser(db(env.meriksirat_d1 as D1Database), {
+      actorId: actor.id,
+      targetId: data.userId,
+      reason: data.reason,
+    })
+    return { success: true }
+  })
+
+/**
+ * Lift a ban (admin only). Sign-in works again; flamekeeping is not
+ * restored.
+ */
+export const unbanUserFn = createServerFn({ method: 'POST' })
+  .validator(UnbanUserSchema)
+  .handler(async ({ data }) => {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { unbanUser } = await import('@/lib/pool/ban-server')
+
+    const actor = await checkAdminPermission(getRequestHeaders(), ['admin'])
+    await unbanUser(db(env.meriksirat_d1 as D1Database), {
+      actorId: actor.id,
+      targetId: data.userId,
+    })
     return { success: true }
   })
 

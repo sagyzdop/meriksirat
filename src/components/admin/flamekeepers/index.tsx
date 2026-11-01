@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import {
+  BanUserDialog,
+  UnbanUserDialog,
+} from '@/components/shared/ban-user-dialogs'
 import { DrainRelay } from '@/components/shared/drain-relay'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,6 +35,8 @@ interface PageProps {
   flamekeepers: AdminFlamekeeperRow[]
   search?: string
   isLoading?: boolean
+  canBan?: boolean
+  viewerId?: string
 }
 
 const STATE_VARIANT = {
@@ -41,12 +47,22 @@ const STATE_VARIANT = {
   drained: 'secondary',
 } as const
 
-export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
+export function Page({
+  flamekeepers,
+  search,
+  isLoading = false,
+  canBan = false,
+  viewerId,
+}: PageProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [relayUserId, setRelayUserId] = useState<string | null>(null)
   const relayRow = flamekeepers.find((row) => row.userId === relayUserId)
+  const [banUserId, setBanUserId] = useState<string | null>(null)
+  const [unbanUserId, setUnbanUserId] = useState<string | null>(null)
+  const banRow = flamekeepers.find((row) => row.userId === banUserId)
+  const unbanRow = flamekeepers.find((row) => row.userId === unbanUserId)
 
   const handleRelayFinished = async () => {
     await queryClient.invalidateQueries({ queryKey: ['flamekeepers'] })
@@ -82,13 +98,14 @@ export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
                 <TableHead>Used</TableHead>
                 <TableHead>Graduation</TableHead>
                 <TableHead>Draining</TableHead>
+                {canBan && <TableHead />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {flamekeepers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={canBan ? 7 : 6}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No flamekeepers found.
@@ -109,6 +126,14 @@ export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
                             {row.name}
                             {row.isMember && (
                               <Badge variant="secondary">Member</Badge>
+                            )}
+                            {row.bannedAt && (
+                              <Badge
+                                variant="destructive"
+                                title={row.banReason ?? undefined}
+                              >
+                                Banned
+                              </Badge>
                             )}
                           </span>
                           <span className="text-sm text-muted-foreground">
@@ -147,6 +172,29 @@ export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
                         </div>
                       )}
                     </TableCell>
+                    {canBan && (
+                      <TableCell className="text-right">
+                        {row.bannedAt ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setUnbanUserId(row.userId)}
+                          >
+                            Unban
+                          </Button>
+                        ) : (
+                          row.userId !== viewerId && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setBanUserId(row.userId)}
+                            >
+                              Ban
+                            </Button>
+                          )
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -176,6 +224,22 @@ export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
           )}
         </DialogContent>
       </Dialog>
+      {banRow && (
+        <BanUserDialog
+          userId={banRow.userId}
+          userName={banRow.name}
+          open
+          onOpenChange={(open) => !open && setBanUserId(null)}
+        />
+      )}
+      {unbanRow && (
+        <UnbanUserDialog
+          userId={unbanRow.userId}
+          userName={unbanRow.name}
+          open
+          onOpenChange={(open) => !open && setUnbanUserId(null)}
+        />
+      )}
     </PageContainer>
   )
 }

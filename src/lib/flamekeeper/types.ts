@@ -28,6 +28,8 @@ export interface AdminFlamekeeperRow {
   graduationDate: string
   drainingDeadline: Date | null
   drainBytesLeft: number
+  bannedAt: Date | null
+  banReason: string | null
   createdAt: Date
 }
 

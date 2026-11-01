@@ -47,6 +47,12 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
             Your account has been deactivated. Please contact an administrator.
           </div>
         )}
+        {error === 'banned' && (
+          <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
+            This account has been banned from MerikSirat. Contact an
+            administrator if you think this is a mistake.
+          </div>
+        )}
         {error === SIGNUP_REFUSED_ERROR && (
           <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
             {SIGNUP_REFUSED_MESSAGE}

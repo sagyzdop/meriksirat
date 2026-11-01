@@ -149,6 +149,7 @@ export default {
         drainFlamekeepers(env),
         cleanupStaleSignups(env),
         graduateFlamekeepers(env),
+        finishBans(env),
       ])
     )
   },
@@ -230,6 +231,18 @@ async function drainFlamekeepers(env: Env): Promise<void> {
   }
 }
 
+async function finishBans(env: Env): Promise<void> {
+  try {
+    const { runBanMaintenance } = await import('./src/lib/pool/ban-server')
+    await runBanMaintenance(env)
+  } catch (error) {
+    console.error(
+      'Error in finishBans:',
+      error instanceof Error ? error.message : error
+    )
+  }
+}
+
 async function graduateFlamekeepers(env: Env): Promise<void> {
   try {
     const { runGraduationMaintenance } =
@@ -296,6 +309,7 @@ async function cancelUnstartedBookings(env: Env): Promise<void> {
         and(
           eq(booking.status, 'booked'),
           isNull(booking.startedAt),
+          isNull(user.bannedAt),
           lte(booking.startTime, cancelBefore)
         )
       )

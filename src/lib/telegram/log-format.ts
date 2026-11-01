@@ -309,6 +309,26 @@ export function formatAlbumLog(data: AlbumLogData): string {
   ])
 }
 
+export interface BanLogData {
+  action: 'banned' | 'unbanned'
+  userName: string
+  actorName: string
+  reason?: string | null
+  url?: string
+}
+
+export function formatBanLog(data: BanLogData): string {
+  const label = data.action === 'banned' ? '🚫 User banned' : '✅ User unbanned'
+  return joinSections([
+    [`${label} by ${escapeHtml(data.actorName)}`],
+    [
+      `👤 ${escapeHtml(data.userName)}`,
+      ...(data.reason ? [`Reason: ${escapeHtml(clip(data.reason))}`] : []),
+      ...linkLine(data.url),
+    ],
+  ])
+}
+
 /**
  * Length Telegram counts for a caption: visible text after HTML parsing.
  */

@@ -1,7 +1,7 @@
 import type { FlamekeeperState } from '@/lib/access/access-rules'
 import { DRAIN_GRACE_MS } from '@/lib/flamekeeper/rules'
 
-export type DrainReason = 'opt_out' | 'pledge' | 'graduation' | 'domain'
+export type DrainReason = 'opt_out' | 'pledge' | 'graduation' | 'domain' | 'ban'
 
 const DRAIN_REMINDER_MS = 3 * 24 * 60 * 60 * 1000
 
@@ -52,7 +52,9 @@ export function planOptOut(
         message: 'Reconnect Drive first so your photos can be moved',
       }
     case 'draining':
-      if (fk.drainReason === 'opt_out') return { kind: 'none' }
+      if (fk.drainReason === 'opt_out' || fk.drainReason === 'ban') {
+        return { kind: 'none' }
+      }
   }
   if (!hasPhotos) return { kind: 'drained' }
   return startDrain('opt_out', now)
