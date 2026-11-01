@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useRouter } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Flame } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,7 +18,10 @@ import { Switch } from '@/components/ui/switch'
 import { FlamekeeperSignupForm } from '@/components/shared/flamekeeper-signup-form'
 import { EditPledgeDialog } from './edit-pledge-dialog'
 import { getAccessRules } from '@/lib/access/access-rules'
-import { startDriveConnectFn } from '@/lib/flamekeeper/functions'
+import {
+  setLeaderboardAnonymousFn,
+  startDriveConnectFn,
+} from '@/lib/flamekeeper/functions'
 import { FLAMEKEEPER_EMAIL_DOMAIN } from '@/lib/access/access-rules'
 import { formatGb } from '@/lib/flamekeeper/rules'
 import type { MyFlamekeeper } from '@/lib/flamekeeper/types'
@@ -68,6 +71,17 @@ export function FlamekeeperCard({
         error instanceof Error ? error.message : 'Could not reconnect Drive'
       )
       setIsReconnecting(false)
+    }
+  }
+
+  const handleAnonymousChange = async (anonymous: boolean) => {
+    try {
+      await setLeaderboardAnonymousFn({ data: { anonymous } })
+      await handleSaved()
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not update leaderboard'
+      )
     }
   }
 
@@ -163,6 +177,19 @@ export function FlamekeeperCard({
               <dd className="font-medium">{flamekeeper.albumsHosted}</dd>
             </div>
           </dl>
+          <div className="flex items-center gap-3">
+            <Switch
+              id="leaderboardAnonymous"
+              checked={flamekeeper.leaderboardAnonymous}
+              onCheckedChange={handleAnonymousChange}
+            />
+            <Label htmlFor="leaderboardAnonymous">
+              Appear as "Anonymous flamekeeper" on the{' '}
+              <Link to="/leaderboard" className="underline">
+                leaderboard
+              </Link>
+            </Label>
+          </div>
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             Edit pledge
           </Button>

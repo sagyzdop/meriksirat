@@ -1,7 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest, getRequestHeaders } from '@tanstack/react-start/server'
+import type { LeaderboardEntry } from '@/lib/pool/leaderboard'
 import {
   AdminFlamekeepersSchema,
+  SetLeaderboardAnonymousSchema,
   StartDriveConnectSchema,
   UpdateFlamekeeperSchema,
   type AdminFlamekeeperRow,
@@ -35,6 +37,7 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
       graduationDate: row.graduationDate,
       drainingDeadline: row.drainingDeadline,
       lostSince: row.lostSince,
+      leaderboardAnonymous: row.leaderboardAnonymous,
       albumsHosted: await countHostedAlbums(database, session.user.id),
     }
   }
@@ -242,4 +245,41 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
       graduationDate: row.graduationDate,
       createdAt: row.createdAt,
     }))
+  })
+
+export const getLeaderboardFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<LeaderboardEntry[]> => {
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { loadLeaderboard } = await import('@/lib/pool/server')
+    return loadLeaderboard(db(env.meriksirat_d1 as D1Database))
+  }
+)
+
+export const setLeaderboardAnonymousFn = createServerFn({ method: 'POST' })
+  .validator(SetLeaderboardAnonymousSchema)
+  .handler(async ({ data }) => {
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const session = await resolveSession(getRequestHeaders())
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { flamekeeper } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    const existing = await database
+      .select({ userId: flamekeeper.userId })
+      .from(flamekeeper)
+      .where(eq(flamekeeper.userId, session.user.id))
+      .get()
+    if (!existing) throw new Error('You are not a flamekeeper')
+
+    await database
+      .update(flamekeeper)
+      .set({ leaderboardAnonymous: data.anonymous, updatedAt: new Date() })
+      .where(eq(flamekeeper.userId, session.user.id))
+
+    return { success: true }
   })

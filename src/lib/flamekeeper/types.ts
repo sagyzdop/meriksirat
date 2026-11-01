@@ -10,6 +10,7 @@ export interface MyFlamekeeper {
   drainingDeadline: Date | null
   lostSince: Date | null
   albumsHosted: number
+  leaderboardAnonymous: boolean
 }
 
 export interface AdminFlamekeeperRow {
@@ -56,3 +57,7 @@ export const AdminFlamekeepersSchema = z.object({
 })
 
 export type StartDriveConnectInput = z.infer<typeof StartDriveConnectSchema>
+
+export const SetLeaderboardAnonymousSchema = z.object({
+  anonymous: z.boolean(),
+})

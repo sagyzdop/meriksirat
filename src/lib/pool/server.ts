@@ -1,4 +1,14 @@
-import { and, eq, inArray, isNotNull, lt, or, isNull, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  lt,
+  or,
+  isNull,
+  sql,
+} from 'drizzle-orm'
 import { db } from '@/db'
 import {
   album,
@@ -36,6 +46,12 @@ import {
   type PoolFlamekeeper,
   type PoolStats,
 } from './placement'
+import {
+  LEADERBOARD_LIMIT,
+  LEADERBOARD_STATES,
+  buildLeaderboard,
+  type LeaderboardEntry,
+} from './leaderboard'
 
 type Database = ReturnType<typeof db>
 
@@ -574,4 +590,36 @@ export async function countHostedAlbums(
     .where(and(eq(volume.flamekeeperUserId, userId), isNull(album.deletedAt)))
     .get()
   return Number(row?.count ?? 0)
+}
+
+export async function loadLeaderboard(
+  database: Database
+): Promise<LeaderboardEntry[]> {
+  const rows = await database
+    .select({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      name: user.name,
+      image: user.image,
+      state: flamekeeper.state,
+      pledgedBytes: flamekeeper.pledgedBytes,
+      usedBytes: flamekeeper.usedBytes,
+      anonymous: flamekeeper.leaderboardAnonymous,
+    })
+    .from(flamekeeper)
+    .innerJoin(user, eq(user.id, flamekeeper.userId))
+    .where(inArray(flamekeeper.state, [...LEADERBOARD_STATES]))
+    .orderBy(desc(flamekeeper.usedBytes))
+    .limit(LEADERBOARD_LIMIT * 2)
+
+  return buildLeaderboard(
+    rows.map((r) => ({
+      name: [r.firstName, r.lastName].filter(Boolean).join(' ') || r.name,
+      image: r.image,
+      state: r.state,
+      pledgedBytes: r.pledgedBytes,
+      usedBytes: r.usedBytes,
+      anonymous: r.anonymous,
+    }))
+  )
 }
