@@ -1,6 +1,6 @@
 import { and, asc, eq, sql, type SQL } from 'drizzle-orm'
 import { db } from '@/db'
-import { album, photo, volume } from '@/db/schema'
+import { album, photo, uploadReservation, volume } from '@/db/schema'
 import {
   DriveAppNotAuthorizedError,
   DriveNotFoundError,
@@ -146,7 +146,8 @@ export async function releaseVolumes(
     .where(
       and(
         scope,
-        sql`NOT EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${photo.state} != 'deleted')`
+        sql`NOT EXISTS (SELECT 1 FROM ${photo} WHERE ${photo.albumId} = ${volume.albumId} AND ${photo.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${photo.state} != 'deleted')`,
+        sql`NOT EXISTS (SELECT 1 FROM ${uploadReservation} WHERE ${uploadReservation.albumId} = ${volume.albumId} AND ${uploadReservation.flamekeeperUserId} = ${volume.flamekeeperUserId} AND ${uploadReservation.expiresAt} > ${now.getTime()})`
       )
     )
     .orderBy(asc(volume.releaseBlockedAt))

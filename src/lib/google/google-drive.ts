@@ -131,7 +131,6 @@ export async function getOrCreateDriveFolder(
 
 /**
  * List the files directly inside a folder, paging through all results.
- * Subfolders (flamekeeper volumes) are left out.
  */
 export async function listDriveFolderFiles(
   accessToken: string,
