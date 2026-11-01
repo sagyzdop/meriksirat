@@ -18,6 +18,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { FavoriteButton } from '@/components/shared/favorite-button'
 import { cn } from '@/lib/utils'
 import { downloadPhotoFile } from '@/lib/albums/download'
 import type { PhotoLightboxProps } from './types'
@@ -35,6 +36,7 @@ export function PhotoLightbox({
   coverFileId = null,
   onSetCover,
   onDeletePhoto,
+  favorites,
 }: PhotoLightboxProps) {
   const photo = photos[index]
   const [chromeVisible, setChromeVisible] = React.useState(true)
@@ -204,6 +206,14 @@ export function PhotoLightbox({
             >
               <Trash2 className="size-6" />
             </Button>
+          )}
+          {favorites && (
+            <FavoriteButton
+              favorited={favorites.isFavorite(photo)}
+              onToggle={() => favorites.toggle(photo)}
+              className="text-white hover:bg-white/10 hover:text-white"
+              iconClassName="size-6"
+            />
           )}
           <Button
             variant="ghost"

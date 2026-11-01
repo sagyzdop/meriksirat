@@ -1,4 +1,5 @@
 import type { AlbumPhoto } from '@/lib/albums'
+import type { FavoritesControl } from '@/lib/favorites/use-album-favorites'
 
 export interface PhotoLightboxProps {
   photos: AlbumPhoto[]
@@ -9,4 +10,5 @@ export interface PhotoLightboxProps {
   coverFileId?: string | null
   onSetCover?: (photo: AlbumPhoto) => void
   onDeletePhoto?: (photo: AlbumPhoto) => void
+  favorites?: FavoritesControl
 }

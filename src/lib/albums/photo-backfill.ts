@@ -45,6 +45,7 @@ export interface PhotoRowValues {
 }
 
 export interface PhotoRowLike {
+  id?: string
   driveFileId: string
   name: string
   bytes: number
@@ -218,6 +219,7 @@ export function photoRowToAlbumPhoto(row: PhotoRowLike): AlbumPhoto {
   }
   return {
     id: row.driveFileId,
+    photoId: row.id ?? null,
     name: row.name,
     mimeType: row.mimeType,
     size: row.bytes,

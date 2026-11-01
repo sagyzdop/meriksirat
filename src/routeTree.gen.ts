@@ -25,6 +25,7 @@ import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
 import { Route as AuthenticatedEquipmentSplatRouteImport } from './routes/_authenticated/equipment/$'
+import { Route as AuthenticatedFavoritesIndexRouteImport } from './routes/_authenticated/favorites/index'
 import { Route as AuthenticatedMyAlbumsIndexRouteImport } from './routes/_authenticated/my-albums/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiImagesSplatRouteImport } from './routes/api/images.$'
@@ -124,6 +125,12 @@ const AuthenticatedEquipmentSplatRoute =
   AuthenticatedEquipmentSplatRouteImport.update({
     id: '/equipment/$',
     path: '/equipment/$',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedFavoritesIndexRoute =
+  AuthenticatedFavoritesIndexRouteImport.update({
+    id: '/favorites/',
+    path: '/favorites/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedMyAlbumsIndexRoute =
@@ -227,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/api/images/$': typeof ApiImagesSplatRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/equipment/': typeof AuthenticatedEquipmentIndexRoute
+  '/favorites/': typeof AuthenticatedFavoritesIndexRoute
   '/my-albums/': typeof AuthenticatedMyAlbumsIndexRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
@@ -258,6 +266,7 @@ export interface FileRoutesByTo {
   '/api/images/$': typeof ApiImagesSplatRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
   '/equipment': typeof AuthenticatedEquipmentIndexRoute
+  '/favorites': typeof AuthenticatedFavoritesIndexRoute
   '/my-albums': typeof AuthenticatedMyAlbumsIndexRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
@@ -291,6 +300,7 @@ export interface FileRoutesById {
   '/api/images/$': typeof ApiImagesSplatRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
   '/_authenticated/equipment/': typeof AuthenticatedEquipmentIndexRoute
+  '/_authenticated/favorites/': typeof AuthenticatedFavoritesIndexRoute
   '/_authenticated/my-albums/': typeof AuthenticatedMyAlbumsIndexRoute
   '/_authenticated/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/api/images/$'
     | '/bookings/'
     | '/equipment/'
+    | '/favorites/'
     | '/my-albums/'
     | '/admin/equipment/new'
     | '/admin/users/$userId'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/api/images/$'
     | '/bookings'
     | '/equipment'
+    | '/favorites'
     | '/my-albums'
     | '/admin/equipment/new'
     | '/admin/users/$userId'
@@ -387,6 +399,7 @@ export interface FileRouteTypes {
     | '/api/images/$'
     | '/_authenticated/bookings/'
     | '/_authenticated/equipment/'
+    | '/_authenticated/favorites/'
     | '/_authenticated/my-albums/'
     | '/_authenticated/admin/equipment/new'
     | '/_authenticated/admin/users/$userId'
@@ -525,6 +538,13 @@ declare module '@tanstack/react-router' {
       path: '/equipment/$'
       fullPath: '/equipment/$'
       preLoaderRoute: typeof AuthenticatedEquipmentSplatRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/favorites/': {
+      id: '/_authenticated/favorites/'
+      path: '/favorites'
+      fullPath: '/favorites/'
+      preLoaderRoute: typeof AuthenticatedFavoritesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/my-albums/': {
@@ -672,6 +692,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
   AuthenticatedBookingsIndexRoute: typeof AuthenticatedBookingsIndexRoute
   AuthenticatedEquipmentIndexRoute: typeof AuthenticatedEquipmentIndexRoute
+  AuthenticatedFavoritesIndexRoute: typeof AuthenticatedFavoritesIndexRoute
   AuthenticatedMyAlbumsIndexRoute: typeof AuthenticatedMyAlbumsIndexRoute
   AuthenticatedBookingsBookingIdEditRoute: typeof AuthenticatedBookingsBookingIdEditRoute
   AuthenticatedBookingsBookingIdIndexRoute: typeof AuthenticatedBookingsBookingIdIndexRoute
@@ -684,6 +705,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,
   AuthenticatedBookingsIndexRoute: AuthenticatedBookingsIndexRoute,
   AuthenticatedEquipmentIndexRoute: AuthenticatedEquipmentIndexRoute,
+  AuthenticatedFavoritesIndexRoute: AuthenticatedFavoritesIndexRoute,
   AuthenticatedMyAlbumsIndexRoute: AuthenticatedMyAlbumsIndexRoute,
   AuthenticatedBookingsBookingIdEditRoute:
     AuthenticatedBookingsBookingIdEditRoute,

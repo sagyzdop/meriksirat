@@ -71,6 +71,9 @@ function getPageName(pathname: string): string {
     case 'my-albums':
       return 'My Albums'
 
+    case 'favorites':
+      return 'My Favorites'
+
     case 'dashboard':
       return 'Dashboard'
 

@@ -7,7 +7,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
+import { cn } from '@/lib/utils'
 import type { AlbumPhoto } from '@/lib/albums'
+import { FavoriteButton } from '@/components/shared/favorite-button'
+import type { FavoritesControl } from '@/lib/favorites/use-album-favorites'
 import { PhotoImage } from './photo-image'
 import { PhotoLightbox } from './photo-lightbox'
 
@@ -17,6 +20,7 @@ interface PhotoGridProps {
   coverFileId?: string | null
   onSetCover?: (photo: AlbumPhoto) => void
   onDeletePhoto?: (photo: AlbumPhoto) => void
+  favorites?: FavoritesControl
 }
 
 export function PhotoGrid({
@@ -25,6 +29,7 @@ export function PhotoGrid({
   coverFileId = null,
   onSetCover,
   onDeletePhoto,
+  favorites,
 }: PhotoGridProps) {
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
 
@@ -74,6 +79,18 @@ export function PhotoGrid({
               alt={photo.name}
               className="transition-transform duration-300 group-hover:scale-105"
             />
+            {favorites && (
+              <FavoriteButton
+                favorited={favorites.isFavorite(photo)}
+                onToggle={() => favorites.toggle(photo)}
+                className={cn(
+                  'absolute top-1 right-1 size-8 rounded-full bg-black/40 text-white hover:bg-black/60 hover:text-white',
+                  !favorites.isFavorite(photo) &&
+                    'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-sm:opacity-100'
+                )}
+                iconClassName="size-4"
+              />
+            )}
           </div>
         ))}
       </div>
@@ -88,6 +105,7 @@ export function PhotoGrid({
           coverFileId={coverFileId}
           onSetCover={onSetCover}
           onDeletePhoto={onDeletePhoto}
+          favorites={favorites}
         />
       )}
     </>

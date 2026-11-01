@@ -25,6 +25,8 @@ import {
   setCoverPhotoFn,
 } from '@/lib/albums'
 import type { AlbumPhoto } from '@/lib/albums'
+import { getAccessRules } from '@/lib/access/access-rules'
+import { useAlbumFavorites } from '@/lib/favorites/use-album-favorites'
 import { useUploads, revealUploadDetails } from '@/lib/albums/upload-manager'
 import { driveFolderUrl } from '@/lib/albums/urls'
 import { formatUtcDate } from '@/lib/format'
@@ -49,6 +51,14 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
   const { data: session } = authClient.useSession()
 
   const { data: album, isLoading } = useQuery(albumQueries.detail(albumId))
+  const canFavorite = authUser
+    ? getAccessRules({
+        isMember: authUser.isMember,
+        role: (authUser.role as 'user' | 'manager' | 'admin' | null) ?? null,
+        email: authUser.email,
+      }).canFavorite
+    : false
+  const favorites = useAlbumFavorites(albumId, canFavorite)
 
   const invalidate = React.useCallback(() => {
     queryClient.invalidateQueries({
@@ -285,6 +295,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         coverFileId={album.coverFileId}
         onSetCover={canManage ? handleSetCover : undefined}
         onDeletePhoto={canManage ? handleDeletePhoto : undefined}
+        favorites={favorites}
       />
 
       {activeUploads.length > 0 && (

@@ -155,6 +155,11 @@ export interface AlbumPhotoExif {
 
 export interface AlbumPhoto {
   id: string
+  /**
+   * Stable photo id (survives Drive file moves). Null for photos of albums
+   * that are not indexed yet.
+   */
+  photoId?: string | null
   name: string
   mimeType: string
   size: number | null

@@ -123,6 +123,7 @@ export async function resetAlbumPhotos(
     .set({
       photoCount: 0,
       photoBytes: 0,
+      favoriteCount: 0,
       photosIndexedAt: new Date(),
       photosIndexSkipped: null,
       coverFileId: null,

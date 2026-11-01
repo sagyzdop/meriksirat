@@ -9,6 +9,7 @@ import {
   Calendar,
   Images,
   FolderOpen,
+  Heart,
   Cake,
   FileText,
 } from 'lucide-react'
@@ -60,6 +61,11 @@ const data = {
           title: 'My Albums',
           url: '/my-albums',
           icon: FolderOpen,
+        },
+        {
+          title: 'My Favorites',
+          url: '/favorites',
+          icon: Heart,
         },
       ],
     },
@@ -194,7 +200,7 @@ export function AppSidebar({
           ? {
               ...group,
               items: group.items.map((item) =>
-                canUseAlbums
+                canUseAlbums || item.url === '/favorites'
                   ? item
                   : {
                       ...item,

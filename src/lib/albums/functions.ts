@@ -1427,14 +1427,18 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     const accessToken = await getGoogleAccessToken()
     await deleteDriveFile(accessToken, data.fileId)
     if (registered) {
-      await database.delete(photo).where(eq(photo.id, registered.id))
-      await database
-        .update(album)
-        .set({
-          photoCount: sql`MAX(${album.photoCount} - 1, 0)`,
-          photoBytes: sql`MAX(${album.photoBytes} - ${registered.bytes}, 0)`,
-        })
-        .where(eq(album.id, row.id))
+      const { favorite } = await import('@/db/schema')
+      await database.batch([
+        database
+          .update(album)
+          .set({
+            photoCount: sql`MAX(${album.photoCount} - 1, 0)`,
+            photoBytes: sql`MAX(${album.photoBytes} - ${registered.bytes}, 0)`,
+            favoriteCount: sql`MAX(${album.favoriteCount} - (SELECT COUNT(*) FROM ${favorite} WHERE ${favorite.photoId} = ${registered.id}), 0)`,
+          })
+          .where(eq(album.id, row.id)),
+        database.delete(photo).where(eq(photo.id, registered.id)),
+      ])
     }
     await invalidateCachedListing(row.driveFolderId)
 

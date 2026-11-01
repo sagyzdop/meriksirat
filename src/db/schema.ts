@@ -5,6 +5,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  primaryKey,
 } from 'drizzle-orm/sqlite-core'
 
 export const user = sqliteTable(
@@ -347,6 +348,7 @@ export const album = sqliteTable(
     coverFileId: text('cover_file_id'),
     photoCount: integer('photo_count').default(0).notNull(),
     photoBytes: integer('photo_bytes').default(0).notNull(),
+    favoriteCount: integer('favorite_count').default(0).notNull(),
     photosIndexedAt: integer('photos_indexed_at', { mode: 'timestamp_ms' }),
     photosIndexRequestedAt: integer('photos_index_requested_at', {
       mode: 'timestamp_ms',
@@ -420,6 +422,25 @@ export const photo = sqliteTable(
   (table) => [
     index('photo_albumId_idx').on(table.albumId),
     uniqueIndex('photo_driveFileId_idx').on(table.driveFileId),
+  ]
+)
+
+export const favorite = sqliteTable(
+  'favorite',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => photo.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.photoId] }),
+    index('favorite_photoId_idx').on(table.photoId),
   ]
 )
 
