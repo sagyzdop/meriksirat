@@ -1,0 +1,10 @@
+{
+  "d1_databases": [
+    {
+      "binding": "meriksirat_d1",
+      "database_name": "meriksirat-preview",
+      "database_id": "f8c2bfb6-20ca-4c9f-8d61-f947beb783b7",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

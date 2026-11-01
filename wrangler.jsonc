@@ -95,6 +95,80 @@
    */
   "placement": { "mode": "smart" },
   /**
+   * Workers Previews
+   * Previews never inherit production settings and get no Cron Triggers. These
+   * resources are separate from production so a Preview can't touch real data.
+   * Telegram secrets are left unset on purpose so a Preview can't message anyone.
+   * https://developers.cloudflare.com/workers/previews/
+   */
+  "previews": {
+    "vars": {
+      "BETTER_AUTH_URL": "https://dev-meriksirat.sagyzdop-cloudflare.workers.dev",
+      "DEV": "true",
+    },
+    "d1_databases": [
+      {
+        "binding": "meriksirat_d1",
+        "database_name": "meriksirat-preview",
+        "database_id": "f8c2bfb6-20ca-4c9f-8d61-f947beb783b7",
+      },
+    ],
+    "kv_namespaces": [
+      {
+        "binding": "meriksirat_kv",
+        "id": "e2b80b385a4c4ff6a314e5f3be40c39f",
+      },
+    ],
+    "r2_buckets": [
+      {
+        "binding": "meriksirat_r2",
+        "bucket_name": "meriksirat-preview",
+      },
+    ],
+    "ratelimits": [
+        {
+          "name": "rl_telegram_webhook",
+          "namespace_id": "2001",
+          "simple": { "limit": 30, "period": 60 },
+        },
+        {
+          "name": "rl_images",
+          "namespace_id": "2002",
+          "simple": { "limit": 300, "period": 60 },
+        },
+        {
+          "name": "rl_public_albums",
+          "namespace_id": "2003",
+          "simple": { "limit": 120, "period": 60 },
+        },
+        {
+          "name": "rl_album_detail",
+          "namespace_id": "2004",
+          "simple": { "limit": 60, "period": 60 },
+        },
+        {
+          "name": "rl_refresh_album",
+          "namespace_id": "2005",
+          "simple": { "limit": 10, "period": 60 },
+        },
+        {
+          "name": "rl_create_upload_session",
+          "namespace_id": "2006",
+          "simple": { "limit": 20, "period": 60 },
+        },
+        {
+          "name": "rl_create_booking",
+          "namespace_id": "2007",
+          "simple": { "limit": 10, "period": 60 },
+        },
+        {
+          "name": "rl_add_booking_items",
+          "namespace_id": "2008",
+          "simple": { "limit": 10, "period": 60 },
+        },
+    ],
+  },
+  /**
    * Bindings
    * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
    * databases, object storage, AI inference, real-time communication and more.
