@@ -144,6 +144,7 @@ export default {
         configureTelegramBot(env),
         backfillAlbumPhotos(env),
         expireAlbums(env),
+        maintainPool(env),
       ])
     )
   },
@@ -170,6 +171,18 @@ async function expireAlbums(env: Env): Promise<void> {
   } catch (error) {
     console.error(
       'Error in expireAlbums:',
+      error instanceof Error ? error.message : error
+    )
+  }
+}
+
+async function maintainPool(env: Env): Promise<void> {
+  try {
+    const { runPoolMaintenance } = await import('./src/lib/pool/server')
+    await runPoolMaintenance(env)
+  } catch (error) {
+    console.error(
+      'Error in maintainPool:',
       error instanceof Error ? error.message : error
     )
   }

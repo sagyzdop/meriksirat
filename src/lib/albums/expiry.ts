@@ -1,20 +1,77 @@
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { album, photo, user } from '@/db/schema'
+import { album, favorite, photo, user, volume } from '@/db/schema'
 import { DriveNotFoundError, deleteDriveFile } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
 import { planExpiry } from '@/lib/pool/expiry'
+import {
+  MAX_PHOTO_DELETES_PER_CALL,
+  deleteOwnedPhotos,
+  loadOwnedPhotos,
+} from '@/lib/pool/server'
 import type { TombstoneReason } from '@/lib/pool/expiry'
 import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
 
 type Database = ReturnType<typeof db>
 type AlbumRecord = typeof album.$inferSelect
 
+const ROW_DELETE_CHUNK = 90
+
+async function dropPhotoRows(
+  database: Database,
+  albumId: string,
+  ids: string[]
+): Promise<void> {
+  if (ids.length === 0) return
+  for (let i = 0; i < ids.length; i += ROW_DELETE_CHUNK) {
+    await database
+      .delete(photo)
+      .where(inArray(photo.id, ids.slice(i, i + ROW_DELETE_CHUNK)))
+  }
+  await database
+    .update(album)
+    .set({
+      photoCount: sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId})`,
+      photoBytes: sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId})`,
+      favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} INNER JOIN ${photo} ON ${photo.id} = ${favorite.photoId} WHERE ${photo.albumId} = ${albumId})`,
+    })
+    .where(eq(album.id, albumId))
+}
+
 /**
- * The single album removal path. Deletes the Drive folder, clears caches and
- * drops the owner's album count. With a `tombstone` reason the album row is
- * kept (photo rows removed, totals zeroed) so its URL can explain why it is
- * gone; without one the row is deleted outright.
+ * Delete every flamekeeper-owned photo with its owner's token. Drive refuses
+ * to delete a folder that still holds them (`appNotAuthorizedToChild`), so
+ * this runs before the folder goes. Returns false when a lost flamekeeper's
+ * photos remain, which keeps the folder alive (ADR-0008).
+ */
+async function removeOwnedPhotos(
+  database: Database,
+  albumId: string
+): Promise<boolean> {
+  const owned = await loadOwnedPhotos(database, albumId)
+  if (owned.length === 0) return true
+  const batch = owned.slice(0, MAX_PHOTO_DELETES_PER_CALL)
+  const { deleted, lost, error } = await deleteOwnedPhotos(database, batch)
+  await dropPhotoRows(
+    database,
+    albumId,
+    [...deleted, ...lost].map((p) => p.id)
+  )
+  if (error) throw error
+  if (owned.length > batch.length) {
+    throw new Error(
+      'This album is too large to delete in one go. Some photos were deleted; try again to continue.'
+    )
+  }
+  return lost.length === 0
+}
+
+/**
+ * The single album removal path. Deletes flamekeepers' photos with their
+ * owners' tokens, then the Drive folder, clears caches and drops the owner's
+ * album count. With a `tombstone` reason the album row is kept (photo rows
+ * removed, totals zeroed) so its URL can explain why it is gone; without one
+ * the row is deleted outright.
  */
 export async function removeAlbum(
   database: Database,
@@ -22,15 +79,22 @@ export async function removeAlbum(
   accessToken: string,
   options: { tombstone?: TombstoneReason; strictDrive?: boolean } = {}
 ): Promise<void> {
-  try {
-    await deleteDriveFile(accessToken, row.driveFolderId)
-  } catch (error) {
-    if (!(error instanceof DriveNotFoundError)) {
-      if (options.strictDrive) throw error
-      console.warn(
-        'Failed to delete Drive folder, continuing with DB cleanup:',
-        error
-      )
+  const folderDeletable = await removeOwnedPhotos(database, row.id)
+  if (!folderDeletable) {
+    console.warn(
+      `Album ${row.id} keeps its Drive folder: a lost flamekeeper's photos are still in it`
+    )
+  } else {
+    try {
+      await deleteDriveFile(accessToken, row.driveFolderId)
+    } catch (error) {
+      if (!(error instanceof DriveNotFoundError)) {
+        if (options.strictDrive) throw error
+        console.warn(
+          'Failed to delete Drive folder, continuing with DB cleanup:',
+          error
+        )
+      }
     }
   }
   await invalidateCachedListing(row.driveFolderId)
@@ -38,6 +102,7 @@ export async function removeAlbum(
 
   if (options.tombstone) {
     await database.delete(photo).where(eq(photo.albumId, row.id))
+    await database.delete(volume).where(eq(volume.albumId, row.id))
     await database
       .update(album)
       .set({

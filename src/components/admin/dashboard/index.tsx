@@ -11,6 +11,8 @@ import { MostActiveUsersTable } from './components/most-active-users-table'
 import { ViolationsTable } from './components/violations-table'
 import { ClubCodeCard } from './components/club-code-card'
 import { FreeSpacePanel } from './components/free-space-panel'
+import { PoolCard } from './components/pool-card'
+import type { PoolOverview } from '@/lib/admin/functions/pool'
 import type { FreeSpaceSuggestion } from '@/lib/admin/functions/free-space'
 import { SettingsTab, SettingsTabSkeleton } from './components/settings-tab'
 import { effectiveDashboardRange } from '@/lib/admin/dashboard-queries'
@@ -43,6 +45,8 @@ interface PageProps {
   clubCode?: string
   freeSpace?: FreeSpaceSuggestion[]
   freeSpaceLoading: boolean
+  pool?: PoolOverview
+  poolLoading: boolean
   canBroadcast: boolean
 }
 
@@ -63,6 +67,8 @@ export function Page({
   clubCode,
   freeSpace,
   freeSpaceLoading,
+  pool,
+  poolLoading,
   canBroadcast,
 }: PageProps) {
   const navigate = useNavigate()
@@ -162,6 +168,11 @@ export function Page({
           </TabsContent>
 
           <TabsContent value="albums" className="space-y-4">
+            <PoolCard
+              pool={pool}
+              isLoading={poolLoading}
+              canEditCap={canBroadcast}
+            />
             {freeSpace ? (
               <FreeSpacePanel
                 suggestions={freeSpace}

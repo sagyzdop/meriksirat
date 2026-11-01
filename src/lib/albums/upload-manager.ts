@@ -1,5 +1,9 @@
 import { useSyncExternalStore } from 'react'
-import { confirmPhotoUploadFn, createUploadSessionFn } from './functions'
+import {
+  confirmPhotoUploadFn,
+  createUploadSessionFn,
+  releaseUploadFn,
+} from './functions'
 import {
   deleteUploadFiles,
   getUploadFiles,
@@ -57,6 +61,17 @@ class TransientUploadError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'TransientUploadError'
+  }
+}
+
+/**
+ * The chosen flamekeeper's Drive is full. The server marks them full when
+ * the reservation is released, so a retry lands on someone else.
+ */
+class QuotaExceededUploadError extends TransientUploadError {
+  constructor() {
+    super('Storage quota exceeded')
+    this.name = 'QuotaExceededUploadError'
   }
 }
 
@@ -352,16 +367,29 @@ class UploadManager {
     const attempt = (job.attempts ?? 0) + 1
     this.patch(job.id, { status: 'uploading', progress: 0 })
     try {
-      const { uploadUrl } = await createUploadSessionFn({
+      const { uploadUrl, reservationId } = await createUploadSessionFn({
         data: {
           albumId: job.albumId,
           fileName: job.name,
           mimeType: job.mimeType,
+          size: job.size,
         },
       })
 
-      const fileId = await this.putFile(job.id, uploadUrl)
-      if (fileId) await this.confirmUpload(job.albumId, fileId)
+      let fileId: string | null
+      try {
+        fileId = await this.putFile(job.id, uploadUrl)
+      } catch (error) {
+        void releaseUploadFn({
+          data: {
+            albumId: job.albumId,
+            reservationId,
+            quotaExceeded: error instanceof QuotaExceededUploadError,
+          },
+        }).catch(() => {})
+        throw error
+      }
+      if (fileId) await this.confirmUpload(job.albumId, fileId, reservationId)
       this.patch(job.id, {
         status: 'done',
         progress: 100,
@@ -417,10 +445,14 @@ class UploadManager {
     }
   }
 
-  private async confirmUpload(albumId: string, fileId: string): Promise<void> {
+  private async confirmUpload(
+    albumId: string,
+    fileId: string,
+    reservationId: string
+  ): Promise<void> {
     for (let attempt = 1; ; attempt++) {
       try {
-        await confirmPhotoUploadFn({ data: { albumId, fileId } })
+        await confirmPhotoUploadFn({ data: { albumId, fileId, reservationId } })
         return
       } catch (error) {
         if (attempt >= 3) throw new TransientUploadError(String(error))
@@ -456,6 +488,11 @@ class UploadManager {
           } catch {
             resolve(null)
           }
+        } else if (
+          xhr.status === 403 &&
+          xhr.responseText.includes('storageQuotaExceeded')
+        ) {
+          reject(new QuotaExceededUploadError())
         } else if (
           xhr.status === 408 ||
           xhr.status === 429 ||

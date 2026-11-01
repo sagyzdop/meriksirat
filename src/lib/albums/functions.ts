@@ -11,6 +11,7 @@ import {
   GetAlbumSchema,
   RecreateAlbumSchema,
   RefreshAlbumSchema,
+  ReleaseUploadSchema,
   RemoveMemberSchema,
   RestoreAlbumSchema,
   RotateEditTokenSchema,
@@ -485,7 +486,7 @@ async function listAlbumPhotos(
     }
   }
 
-  const photos = files
+  const photos: AlbumPhoto[] = files
     .filter((f) => f.mimeType?.startsWith('image/'))
     .map((f) => {
       const capturedAt =
@@ -534,11 +535,33 @@ async function listAlbumPhotos(
         ...(exif && { exif }),
       }
     })
-    .sort((a, b) => {
-      if (a.capturedAt < b.capturedAt) return -1
-      if (a.capturedAt > b.capturedAt) return 1
-      return 0
-    })
+
+  if (folderState !== 'missing') {
+    const { photo } = await import('@/db/schema')
+    const { and, eq, isNotNull } = await import('drizzle-orm')
+    const { photoRowToAlbumPhoto } = await import('./photo-backfill')
+    const seen = new Set(photos.map((p) => p.id))
+    const owned = await database
+      .select()
+      .from(photo)
+      .where(
+        and(
+          eq(photo.albumId, row.id),
+          eq(photo.state, 'live'),
+          isNotNull(photo.flamekeeperUserId)
+        )
+      )
+      .all()
+    for (const r of owned) {
+      if (!seen.has(r.driveFileId)) photos.push(photoRowToAlbumPhoto(r))
+    }
+  }
+
+  photos.sort((a, b) => {
+    if (a.capturedAt < b.capturedAt) return -1
+    if (a.capturedAt > b.capturedAt) return 1
+    return 0
+  })
 
   return { photos, folderState }
 }
@@ -1347,11 +1370,14 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
+    const { photo } = await import('@/db/schema')
+    const { and, eq } = await import('drizzle-orm')
     const { resolveAlbumAccess, requireAccess } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { mintResumableUpload, findDriveFileByName, getDriveFolderState } =
+    const { findDriveFileByName, getDriveFolderState } =
       await import('@/lib/google/google-drive')
+    const { startFlamekeeperUpload } = await import('@/lib/pool/server')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -1379,37 +1405,40 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       )
     }
 
-    // Reject exact-name duplicates inside the album folder.
-    const existing = await findDriveFileByName(
-      accessToken,
-      data.fileName,
-      row.driveFolderId
-    )
-    if (existing) {
-      try {
-        const { registerDriveFileById } = await import('./photo-index')
-        await registerDriveFileById(database, accessToken, row, existing.id)
-      } catch (error) {
-        console.warn('Failed to register existing upload:', error)
-      }
+    // Reject exact-name duplicates. Flamekeepers' photos are invisible to the
+    // master token, so the photo table is the source of truth; unindexed
+    // albums still hold master-owned files that only Drive knows about.
+    const duplicate = await database
+      .select({ id: photo.id })
+      .from(photo)
+      .where(and(eq(photo.albumId, row.id), eq(photo.name, data.fileName)))
+      .get()
+    if (duplicate) {
       throw new Error(`Photo "${data.fileName}" already exists in this album`)
     }
+    if (!row.photosIndexedAt) {
+      const existing = await findDriveFileByName(
+        accessToken,
+        data.fileName,
+        row.driveFolderId
+      )
+      if (existing) {
+        try {
+          const { registerDriveFileById } = await import('./photo-index')
+          await registerDriveFileById(database, accessToken, row, existing.id)
+        } catch (error) {
+          console.warn('Failed to register existing upload:', error)
+        }
+        throw new Error(`Photo "${data.fileName}" already exists in this album`)
+      }
+    }
 
-    const uploadUrl = await mintResumableUpload(accessToken, {
+    return startFlamekeeperUpload(database, accessToken, row, {
       name: data.fileName,
-      folderId: row.driveFolderId,
       mimeType: data.mimeType,
+      bytes: data.size,
       origin: headers.get('origin') ?? undefined,
     })
-
-    // NOTE: We intentionally do NOT invalidate the listing cache here.
-    // The upload hasn't landed in Drive yet (the client is about to PUT
-    // to the resumable URL), so the cache would just be repopulated with
-    // the same stale data.  The 5-minute TTL handles expiry, and any
-    // subsequent mutation (delete, refresh) will invalidate explicitly.
-    // This avoids burning a KV delete per photo upload.
-
-    return { uploadUrl }
   })
 
 export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
@@ -1419,9 +1448,6 @@ export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
     const { resolveAlbumAccess, requireAccess } = await import('./server')
-    const { getGoogleAccessToken } =
-      await import('@/lib/google/google-calendar-auth')
-    const { registerDriveFileById } = await import('./photo-index')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -1430,6 +1456,20 @@ export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
     const { access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
+    if (data.reservationId) {
+      const { confirmFlamekeeperUpload } = await import('@/lib/pool/server')
+      const registered = await confirmFlamekeeperUpload(
+        database,
+        row,
+        data.reservationId,
+        data.fileId
+      )
+      return { registered }
+    }
+
+    const { getGoogleAccessToken } =
+      await import('@/lib/google/google-calendar-auth')
+    const { registerDriveFileById } = await import('./photo-index')
     const registered = await registerDriveFileById(
       database,
       await getGoogleAccessToken(),
@@ -1437,6 +1477,29 @@ export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
       data.fileId
     )
     return { registered }
+  })
+
+export const releaseUploadFn = createServerFn({ method: 'POST' })
+  .validator(ReleaseUploadSchema)
+  .handler(async ({ data }) => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { resolveAlbumAccess, requireAccess } = await import('./server')
+    const { releaseFlamekeeperUpload } = await import('@/lib/pool/server')
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    const row = await loadAlbum(database, data.albumId)
+    const { access } = await resolveAlbumAccess(getRequestHeaders(), row)
+    requireAccess(access, ['owner', 'editor', 'manager'])
+
+    await releaseFlamekeeperUpload(
+      database,
+      row.id,
+      data.reservationId,
+      data.quotaExceeded
+    )
+    return { success: true }
   })
 
 export const deletePhotoFn = createServerFn({ method: 'POST' })
@@ -1465,7 +1528,12 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     requireAccess(access, ['owner', 'editor', 'manager'])
 
     const registered = await database
-      .select({ id: photo.id, bytes: photo.bytes })
+      .select({
+        id: photo.id,
+        driveFileId: photo.driveFileId,
+        bytes: photo.bytes,
+        flamekeeperUserId: photo.flamekeeperUserId,
+      })
       .from(photo)
       .where(and(eq(photo.driveFileId, data.fileId), eq(photo.albumId, row.id)))
       .get()
@@ -1473,8 +1541,13 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
       throw new Error('Photo not found in this album')
     }
 
-    const accessToken = await getGoogleAccessToken()
-    await deleteDriveFile(accessToken, data.fileId)
+    if (registered?.flamekeeperUserId) {
+      const { deleteOwnedPhotos } = await import('@/lib/pool/server')
+      const { error } = await deleteOwnedPhotos(database, [registered])
+      if (error) throw error
+    } else {
+      await deleteDriveFile(await getGoogleAccessToken(), data.fileId)
+    }
     if (registered) {
       const { favorite } = await import('@/db/schema')
       await database.batch([

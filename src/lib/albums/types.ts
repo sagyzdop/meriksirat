@@ -98,6 +98,13 @@ export const DeletePhotoSchema = z.object({
 export const ConfirmPhotoUploadSchema = z.object({
   albumId: z.string(),
   fileId: z.string().min(1).max(200),
+  reservationId: z.string().min(1).max(64).optional(),
+})
+
+export const ReleaseUploadSchema = z.object({
+  albumId: z.string(),
+  reservationId: z.string().min(1).max(64),
+  quotaExceeded: z.boolean(),
 })
 
 export const SetCoverPhotoSchema = z.object({
@@ -114,6 +121,11 @@ export const CreateUploadSessionSchema = z.object({
   albumId: z.string(),
   fileName: z.string().min(1).max(255),
   mimeType: z.string().min(1).max(100),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(5 * 1024 * 1024 * 1024),
 })
 
 export const RefreshAlbumSchema = z.object({
@@ -220,4 +232,5 @@ export interface AlbumDetail extends Omit<AlbumSummary, 'coverUrl'> {
 
 export interface UploadSession {
   uploadUrl: string
+  reservationId: string
 }

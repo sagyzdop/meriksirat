@@ -30,6 +30,7 @@ import {
   getDeletionSuggestionsFn,
   type FreeSpaceSuggestion,
 } from './functions/free-space'
+import { getPoolOverviewFn, type PoolOverview } from './functions/pool'
 import { getSettingsFn, type SettingsData } from './functions/settings'
 
 /**
@@ -135,6 +136,11 @@ export const adminDashboardQueries = {
       queryKey: [...adminDashboardQueries.all, 'free-space'],
       queryFn: async (): Promise<FreeSpaceSuggestion[]> =>
         getDeletionSuggestionsFn(),
+    }),
+  pool: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'pool'],
+      queryFn: async (): Promise<PoolOverview> => getPoolOverviewFn(),
     }),
   clubCode: () =>
     queryOptions({

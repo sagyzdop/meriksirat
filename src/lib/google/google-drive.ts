@@ -1,7 +1,8 @@
 /**
  * Minimal Google Drive REST client used by the album feature.
- * All calls are authenticated with the master OAuth access token and are
- * performed server-side. The only call that involves the browser directly is
+ * Calls take the access token of whoever owns the files: the master account
+ * for album folders, a flamekeeper for the photos they hold (ADR-0008).
+ * All calls are performed server-side. The only call that involves the browser directly is
  * the resumable upload session: the server mints an upload URL and the
  * browser PUTs the file bytes straight to Google (never through a Worker).
  * Reference: https://developers.google.com/drive/api/reference/rest/v3
@@ -43,6 +44,13 @@ export class DriveNotFoundError extends Error {
   }
 }
 
+export class DriveQuotaExceededError extends Error {
+  constructor(message = 'Drive storage quota exceeded') {
+    super(message)
+    this.name = 'DriveQuotaExceededError'
+  }
+}
+
 async function driveFetch(
   accessToken: string,
   url: string,
@@ -61,6 +69,9 @@ async function driveFetch(
       throw new DriveNotFoundError()
     }
     const body = await response.text()
+    if (response.status === 403 && body.includes('storageQuotaExceeded')) {
+      throw new DriveQuotaExceededError()
+    }
     throw new Error(`Drive API error (${response.status}): ${body}`)
   }
 
@@ -272,7 +283,13 @@ export async function setAnyoneReader(
  */
 export async function mintResumableUpload(
   accessToken: string,
-  opts: { name: string; folderId: string; mimeType: string; origin?: string }
+  opts: {
+    name: string
+    folderId: string
+    mimeType: string
+    size?: number
+    origin?: string
+  }
 ): Promise<string> {
   const response = await driveFetch(
     accessToken,
@@ -282,6 +299,7 @@ export async function mintResumableUpload(
       headers: {
         'Content-Type': 'application/json',
         'X-Upload-Content-Type': opts.mimeType,
+        ...(opts.size ? { 'X-Upload-Content-Length': String(opts.size) } : {}),
         ...(opts.origin ? { Origin: opts.origin } : {}),
       },
       body: JSON.stringify({
@@ -297,4 +315,77 @@ export async function mintResumableUpload(
     throw new Error('Drive did not return an upload URL')
   }
   return location
+}
+
+/**
+ * Share a folder with one account as writer, without Google's notification
+ * email. Returns the permission ID so the share can be revoked later.
+ */
+export async function shareWithWriter(
+  accessToken: string,
+  fileId: string,
+  emailAddress: string
+): Promise<string> {
+  const response = await driveFetch(
+    accessToken,
+    `${API}/files/${fileId}/permissions?sendNotificationEmail=false&fields=id`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'user', role: 'writer', emailAddress }),
+    }
+  )
+  const data = (await response.json()) as { id: string }
+  return data.id
+}
+
+/**
+ * Bytes this account's Drive files take up. `about.get` reports the org-wide
+ * limit, so only `usageInDrive` is meaningful per account.
+ */
+export async function getDriveUsageInDrive(
+  accessToken: string
+): Promise<number> {
+  const response = await driveFetch(
+    accessToken,
+    `${API}/about?fields=storageQuota(usageInDrive)`
+  )
+  const data = (await response.json()) as {
+    storageQuota?: { usageInDrive?: string }
+  }
+  return Number(data.storageQuota?.usageInDrive ?? 0)
+}
+
+/**
+ * Delete files in batches of 100 (one subrequest each). Files that are
+ * already gone count as deleted. Returns the IDs Drive refused to delete.
+ */
+export async function batchDeleteDriveFiles(
+  accessToken: string,
+  fileIds: string[]
+): Promise<string[]> {
+  const { DRIVE_BATCH_LIMIT, buildBatchDeleteBody, parseBatchStatuses } =
+    await import('./drive-batch')
+  const failed: string[] = []
+  for (let i = 0; i < fileIds.length; i += DRIVE_BATCH_LIMIT) {
+    const ids = fileIds.slice(i, i + DRIVE_BATCH_LIMIT)
+    const boundary = `batch_${crypto.randomUUID()}`
+    const response = await driveFetch(
+      accessToken,
+      'https://www.googleapis.com/batch/drive/v3',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/mixed; boundary=${boundary}` },
+        body: buildBatchDeleteBody(ids, boundary),
+      }
+    )
+    const statuses = parseBatchStatuses(await response.text(), ids)
+    for (const id of ids) {
+      const status = statuses.get(id)
+      if (status === undefined || (status >= 300 && status !== 404)) {
+        failed.push(id)
+      }
+    }
+  }
+  return failed
 }

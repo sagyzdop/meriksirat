@@ -425,6 +425,7 @@ export const photo = sqliteTable(
     height: integer('height'),
     capturedAt: integer('captured_at', { mode: 'timestamp_ms' }),
     exif: text('exif'),
+    flamekeeperUserId: text('flamekeeper_user_id'),
     state: text('state', { enum: ['live', 'moving', 'deleted'] })
       .default('live')
       .notNull(),
@@ -505,6 +506,10 @@ export const flamekeeper = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     pledgedBytes: integer('pledged_bytes').notNull(),
     usedBytes: integer('used_bytes').default(0).notNull(),
+    driveUsageBytes: integer('drive_usage_bytes').default(0).notNull(),
+    driveUsageCheckedAt: integer('drive_usage_checked_at', {
+      mode: 'timestamp_ms',
+    }),
     state: text('state', {
       enum: ['active', 'full', 'draining', 'lost', 'drained'],
     })
@@ -549,6 +554,49 @@ export const flamekeeperGrant = sqliteTable('flamekeeper_grant', {
     .notNull(),
 })
 
+export const volume = sqliteTable(
+  'volume',
+  {
+    albumId: text('album_id')
+      .notNull()
+      .references(() => album.id, { onDelete: 'cascade' }),
+    flamekeeperUserId: text('flamekeeper_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    permissionId: text('permission_id').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.albumId, table.flamekeeperUserId] }),
+    index('volume_flamekeeperUserId_idx').on(table.flamekeeperUserId),
+  ]
+)
+
+export const uploadReservation = sqliteTable(
+  'upload_reservation',
+  {
+    id: text('id').primaryKey(),
+    flamekeeperUserId: text('flamekeeper_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    albumId: text('album_id')
+      .notNull()
+      .references(() => album.id, { onDelete: 'cascade' }),
+    bytes: integer('bytes').notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    index('upload_reservation_flamekeeperUserId_idx').on(
+      table.flamekeeperUserId
+    ),
+  ]
+)
+
 export const settings = sqliteTable('settings', {
   id: text('id').primaryKey().default('global'),
 
@@ -556,6 +604,11 @@ export const settings = sqliteTable('settings', {
   globalBookingNote: text('global_booking_note').default(''),
 
   clubCode: text('club_code'),
+
+  flamekeeperCapBytes: integer('flamekeeper_cap_bytes')
+    .default(21474836480)
+    .notNull(),
+  poolLowAlertedAt: integer('pool_low_alerted_at', { mode: 'timestamp_ms' }),
 
   // Dedicated Google Calendar for member birthdays (overrides the default)
   birthdaysCalendarId: text('birthdays_calendar_id'),

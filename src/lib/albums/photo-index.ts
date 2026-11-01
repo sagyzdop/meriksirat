@@ -37,12 +37,14 @@ export async function registerDrivePhotos(
   database: Database,
   albumId: string,
   files: DriveFileLike[],
-  markIndexed: boolean
+  markIndexed: boolean,
+  flamekeeperUserId: string | null = null
 ): Promise<number> {
   const now = new Date()
-  const values = files.map((f) =>
-    driveFileToPhotoValues(f, albumId, newId(16), now)
-  )
+  const values = files.map((f) => ({
+    ...driveFileToPhotoValues(f, albumId, newId(16), now),
+    flamekeeperUserId,
+  }))
   const inserted: { bytes: number }[] = []
 
   if (values.length > 0) {

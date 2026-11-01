@@ -27,6 +27,7 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
       .get()
 
     if (!row) return null
+    const { countHostedAlbums } = await import('@/lib/pool/server')
     return {
       state: row.state,
       pledgedBytes: row.pledgedBytes,
@@ -34,7 +35,7 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
       graduationDate: row.graduationDate,
       drainingDeadline: row.drainingDeadline,
       lostSince: row.lostSince,
-      albumsHosted: 0,
+      albumsHosted: await countHostedAlbums(database, session.user.id),
     }
   }
 )

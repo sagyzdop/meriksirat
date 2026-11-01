@@ -149,6 +149,11 @@ function RouteComponent() {
     enabled: search.tab === 'albums' && adminUser?.role === 'admin',
   })
 
+  const { data: pool, isFetching: isPoolFetching } = useQuery({
+    ...adminDashboardQueries.pool(),
+    enabled: search.tab === 'albums',
+  })
+
   const handleTabChange = (tab: DashboardTab) => {
     navigate({ to: '.', search: { ...search, tab } as never })
   }
@@ -194,6 +199,8 @@ function RouteComponent() {
       clubCode={clubCode}
       freeSpace={adminUser?.role === 'admin' ? (freeSpace ?? []) : undefined}
       freeSpaceLoading={isFreeSpaceFetching && !freeSpace}
+      pool={pool}
+      poolLoading={isPoolFetching && !pool}
       canBroadcast={adminUser?.role === 'admin'}
     />
   )
