@@ -6,3 +6,5 @@ staying inside one org keeps verification simple. Personal Gmail (15GB shared
 with the person's own mail and photos) and `alumni.nu.edu.kz` (about 500MB) are
 excluded. The rule stands even though NU may cut the per-account quota further.
 Club membership itself stays open to any Google account, as it is today.
+
+Membership is no longer open to any Google account; see ADR-0014.

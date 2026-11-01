@@ -127,10 +127,6 @@ _Avoid_: Editor, collaborator, member
 An admin or manager, who may act on any album.
 _Avoid_: Admin, when the album context is meant
 
-**Shared album**:
-An album reachable through its public view link. Sharing controls app visibility only, never Drive permissions.
-_Avoid_: Public album, private album
-
 **Folder state**:
 The health of an album's Drive folder: `ok`, `trashed` (in the Drive bin), or `missing` (permanently gone).
 _Avoid_: Album state, drive status
@@ -150,7 +146,7 @@ An `@nu.edu.kz` user who lends part of their Google Drive storage to hold volume
 _Avoid_: Donor, contributor, host
 
 **Pledge**:
-The maximum GB a flamekeeper lets the app use. A cap on what the app uses, not space set aside in Google.
+The maximum GB a flamekeeper lets the app use, at least 1 GB. A cap on what the app uses, not space set aside in Google.
 _Avoid_: Allocation, quota
 
 **Pool**:
@@ -166,8 +162,12 @@ Moving one photo through a browser: downloaded with the source flamekeeper's tok
 _Avoid_: Transfer, copy
 
 **Lost flamekeeper**:
-A flamekeeper whose Drive access can no longer be refreshed; their photos drop out of the app unless they reconnect within 7 days.
+A flamekeeper whose Drive access can no longer be refreshed; their photos drop out of the app after 7 days and return if they reconnect, however late.
 _Avoid_: Revoked, disconnected
+
+**Banned user**:
+A user an admin has shut out for abusing the platform. They can no longer sign in, can't sign up again with that Google account, and any photos they hold are drained.
+_Avoid_: Blocked, suspended
 
 ### Notifications
 

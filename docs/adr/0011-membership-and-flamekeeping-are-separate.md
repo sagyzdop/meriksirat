@@ -10,3 +10,5 @@ flamekeeper-only users sign up for it directly. A flamekeeper can later become a
 member by entering the code. Membership is permanent: members can't delete their
 own account and admins can't delete users. Flamekeeper-only users may opt out and
 delete their account once their volumes have drained.
+
+Signup no longer offers a choice of path; see ADR-0014.
