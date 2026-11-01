@@ -195,6 +195,7 @@ export async function startFlamekeeperUpload(
       bytes: file.bytes,
       capBytes: cap,
       exclude,
+      masterEmail: process.env.GOOGLE_MASTER_EMAIL,
     })
     if (placement.kind === 'no_space') break
     const fk = fks.find((f) => f.userId === placement.userId)!

@@ -53,10 +53,12 @@ export interface EntryUser {
   onboardingComplete?: boolean | null
   flamekeeperState?: FlamekeeperState | null
   termsAcceptedAt?: Date | string | number | null
+  isMaster?: boolean
 }
 
 export function needsOnboarding(user: EntryUser): boolean {
   if (user.isMember) return !user.onboardingComplete
+  if (user.isMaster) return false
   return !user.flamekeeperState && !user.termsAcceptedAt
 }
 

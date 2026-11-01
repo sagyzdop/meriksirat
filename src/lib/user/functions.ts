@@ -26,6 +26,12 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
       return null
     }
 
+    const { isMasterEmail } = await import('@/lib/flamekeeper/master')
+    const isMaster = isMasterEmail(
+      session.user.email,
+      process.env.GOOGLE_MASTER_EMAIL
+    )
+
     const sessionUser = session.user as typeof session.user & {
       onboardingComplete?: boolean | null
       isMember?: boolean | null
@@ -57,6 +63,7 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
         return {
           ...freshUser,
           flamekeeperState: fk?.state ?? null,
+          isMaster,
         } as UserProfile
       }
     }
@@ -64,7 +71,7 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
     // session.user from better-auth contains the user table data.
     // We return it directly to avoid a redundant database hit on every page load.
     // The session is kept fresh by better-auth.
-    return session.user as UserProfile
+    return { ...session.user, isMaster } as UserProfile
   }
 )
 

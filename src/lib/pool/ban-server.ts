@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm'
 import { db } from '@/db'
 import { album, booking, bookingItem, session, user, volume } from '@/db/schema'
+import { isMasterEmail } from '@/lib/flamekeeper/master'
 import { cancelBookingItems } from '@/lib/booking/booking-items'
 import { deleteDrivePermission } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
@@ -174,11 +175,16 @@ export async function banUser(
   if (!check.ok) throw new Error(check.message)
 
   const target = await database
-    .select({ id: user.id, bannedAt: user.bannedAt })
+    .select({ id: user.id, email: user.email, bannedAt: user.bannedAt })
     .from(user)
     .where(eq(user.id, input.targetId))
     .get()
   if (!target) throw new Error('User not found')
+  if (isMasterEmail(target.email, process.env.GOOGLE_MASTER_EMAIL)) {
+    throw new Error(
+      'The club account owns every album folder and cannot be banned.'
+    )
+  }
   if (target.bannedAt) throw new Error('User is already banned')
 
   const now = new Date()

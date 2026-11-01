@@ -1,4 +1,5 @@
 import type { FlamekeeperState } from '@/lib/access/access-rules'
+import { isMasterEmail } from '@/lib/flamekeeper/master'
 
 const GB = 1024 * 1024 * 1024
 
@@ -10,6 +11,7 @@ export const OUT_OF_SPACE_MESSAGE =
 
 export interface PoolFlamekeeper {
   userId: string
+  email?: string
   state: FlamekeeperState
   pledgedBytes: number
   usedBytes: number
@@ -35,12 +37,18 @@ export function usableBytes(fk: PoolFlamekeeper, capBytes: number): number {
 
 export function placeUpload(
   fks: PoolFlamekeeper[],
-  opts: { bytes: number; capBytes: number; exclude?: string[] }
+  opts: {
+    bytes: number
+    capBytes: number
+    exclude?: string[]
+    masterEmail?: string | null
+  }
 ): Placement {
   const exclude = new Set(opts.exclude ?? [])
   let best: { userId: string; usable: number } | null = null
   for (const fk of fks) {
     if (fk.state !== 'active' || exclude.has(fk.userId)) continue
+    if (isMasterEmail(fk.email, opts.masterEmail)) continue
     const usable = usableBytes(fk, opts.capBytes)
     if (usable < opts.bytes) continue
     if (

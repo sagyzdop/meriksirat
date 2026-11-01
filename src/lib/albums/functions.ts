@@ -1384,24 +1384,11 @@ export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
     const { access } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
-    if (data.reservationId) {
-      const { confirmFlamekeeperUpload } = await import('@/lib/pool/server')
-      const registered = await confirmFlamekeeperUpload(
-        database,
-        row,
-        data.reservationId,
-        data.fileId
-      )
-      return { registered }
-    }
-
-    const { getGoogleAccessToken } =
-      await import('@/lib/google/google-calendar-auth')
-    const { registerDriveFileById } = await import('./photo-index')
-    const registered = await registerDriveFileById(
+    const { confirmFlamekeeperUpload } = await import('@/lib/pool/server')
+    const registered = await confirmFlamekeeperUpload(
       database,
-      await getGoogleAccessToken(),
       row,
+      data.reservationId,
       data.fileId
     )
     return { registered }

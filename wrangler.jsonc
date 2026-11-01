@@ -94,6 +94,9 @@
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
    */
   "placement": { "mode": "smart" },
+  "vars": {
+    "GOOGLE_MASTER_EMAIL": "nu_image@nu.edu.kz",
+  },
   /**
    * Workers Previews
    * Previews never inherit production settings and get no Cron Triggers. These
@@ -105,6 +108,7 @@
     "vars": {
       "BETTER_AUTH_URL": "https://dev-meriksirat.sagyzdop-cloudflare.workers.dev",
       "DEV": "true",
+      "GOOGLE_MASTER_EMAIL": "nu_image@nu.edu.kz",
     },
     "d1_databases": [
       {

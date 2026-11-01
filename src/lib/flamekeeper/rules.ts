@@ -100,7 +100,7 @@ export function buildDriveAuthUrl(params: {
 }
 
 export type ConnectErrorCode =
-  'denied' | 'state' | 'session' | 'account' | 'scope' | 'token'
+  'denied' | 'state' | 'session' | 'account' | 'scope' | 'token' | 'master'
 
 export const CONNECT_ERROR_MESSAGES: Record<ConnectErrorCode, string> = {
   denied: 'Google access was not granted. You can try again.',
@@ -110,4 +110,6 @@ export const CONNECT_ERROR_MESSAGES: Record<ConnectErrorCode, string> = {
     'Connect Drive with the same @nu.edu.kz Google account you signed in with.',
   scope: 'The Drive permission was not granted. Please allow file access.',
   token: 'Google did not return a usable authorization. Please try again.',
+  master:
+    'The club account owns the album folders and cannot be a flamekeeper.',
 }

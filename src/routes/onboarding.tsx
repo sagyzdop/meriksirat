@@ -7,7 +7,7 @@ import { CONNECT_ERROR_MESSAGES } from '@/lib/flamekeeper/rules'
 
 const searchSchema = z.object({
   fk_error: z
-    .enum(['denied', 'state', 'session', 'account', 'scope', 'token'])
+    .enum(['denied', 'state', 'session', 'account', 'scope', 'token', 'master'])
     .optional()
     .catch(undefined),
 })

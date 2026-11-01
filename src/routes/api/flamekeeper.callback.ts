@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { flamekeeper, flamekeeperGrant, user } from '@/db/schema'
+import { isMasterEmail } from '@/lib/flamekeeper/master'
 import { resolveSession } from '@/lib/auth/resolve-session'
 import {
   decodeIdTokenPayload,
@@ -100,6 +101,13 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         const identity = tokens.id_token
           ? decodeIdTokenPayload(tokens.id_token)
           : null
+        const masterEmail = process.env.GOOGLE_MASTER_EMAIL
+        if (
+          isMasterEmail(session.user.email, masterEmail) ||
+          isMasterEmail(identity?.email, masterEmail)
+        ) {
+          return redirectTo(origin, failPath, 'master')
+        }
         if (
           !identity?.email_verified ||
           !driveAccountMatches(identity.email, session.user.email)

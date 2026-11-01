@@ -10,7 +10,7 @@ import { LoadingOverlay } from '@/components/shared/loading-overlay'
 const searchSchema = z.object({
   flamekeeper: z.literal('connected').optional().catch(undefined),
   fk_error: z
-    .enum(['denied', 'state', 'session', 'account', 'scope', 'token'])
+    .enum(['denied', 'state', 'session', 'account', 'scope', 'token', 'master'])
     .optional()
     .catch(undefined),
 })

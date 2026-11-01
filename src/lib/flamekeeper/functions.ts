@@ -84,6 +84,12 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
       isValidPledgeGb,
     } = await import('./rules')
 
+    const { isMasterEmail, MASTER_FLAMEKEEPER_MESSAGE } =
+      await import('./master')
+    if (isMasterEmail(session.user.email, process.env.GOOGLE_MASTER_EMAIL)) {
+      throw new Error(MASTER_FLAMEKEEPER_MESSAGE)
+    }
+
     const database = db(env.meriksirat_d1 as D1Database)
     const clientId = process.env.GOOGLE_CLIENT_ID
     if (!clientId) throw new Error('GOOGLE_CLIENT_ID not set')

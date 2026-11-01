@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { db } from '@/db'
-import { flamekeeperGrant } from '@/db/schema'
+import { flamekeeperGrant, user } from '@/db/schema'
+import { isMasterEmail } from './master'
 import { isInvalidGrantResponse } from '@/lib/pool/health'
 
 type Database = ReturnType<typeof db>
@@ -63,25 +64,35 @@ export async function dropFlamekeeperGrant(
   userId: string
 ): Promise<void> {
   const grant = await database
-    .select({ refreshToken: flamekeeperGrant.refreshToken })
+    .select({
+      refreshToken: flamekeeperGrant.refreshToken,
+      email: user.email,
+    })
     .from(flamekeeperGrant)
+    .leftJoin(user, eq(user.id, flamekeeperGrant.userId))
     .where(eq(flamekeeperGrant.userId, userId))
     .get()
   forgetFlamekeeperAccessToken(userId)
   if (!grant) return
-  try {
-    const response = await fetch('https://oauth2.googleapis.com/revoke', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ token: grant.refreshToken }),
-    })
-    if (!response.ok && response.status !== 400) {
-      console.warn(
-        `Failed to revoke Drive grant for ${userId}: ${response.status}`
-      )
+  if (isMasterEmail(grant.email, process.env.GOOGLE_MASTER_EMAIL)) {
+    console.warn(
+      `Not revoking Drive grant for ${userId}: it belongs to the master account`
+    )
+  } else {
+    try {
+      const response = await fetch('https://oauth2.googleapis.com/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token: grant.refreshToken }),
+      })
+      if (!response.ok && response.status !== 400) {
+        console.warn(
+          `Failed to revoke Drive grant for ${userId}: ${response.status}`
+        )
+      }
+    } catch (error) {
+      console.warn(`Failed to revoke Drive grant for ${userId}:`, error)
     }
-  } catch (error) {
-    console.warn(`Failed to revoke Drive grant for ${userId}:`, error)
   }
   await database
     .delete(flamekeeperGrant)

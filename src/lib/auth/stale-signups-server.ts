@@ -24,10 +24,12 @@ const HAS_DRIVE_GRANT = sql<number>`EXISTS (SELECT 1 FROM flamekeeper_grant WHER
 
 export async function runStaleSignupCleanup(env: {
   meriksirat_d1: D1Database
+  GOOGLE_MASTER_EMAIL?: string
 }): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
   const cutoff = new Date(now.getTime() - STALE_SIGNUP_DAYS * DAY_MS)
+  const masterEmail = (env.GOOGLE_MASTER_EMAIL ?? '').trim().toLowerCase()
 
   const rows = await database
     .select({
@@ -46,6 +48,9 @@ export async function runStaleSignupCleanup(env: {
         eq(user.isMember, false),
         isNull(user.bannedAt),
         notLike(user.email, ALUMNI_EMAIL_LIKE),
+        masterEmail
+          ? sql`lower(trim(${user.email})) != ${masterEmail}`
+          : undefined,
         lte(user.createdAt, cutoff),
         sql`NOT ${HAS_FLAMEKEEPER}`,
         sql`NOT ${HAS_DRIVE_GRANT}`,
