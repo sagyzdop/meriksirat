@@ -95,6 +95,54 @@ describe('getAccessRules', () => {
   })
 })
 
+describe('getAccessRules across flamekeeper states', () => {
+  const nu: AccessUser = { ...base, email: 'jane@nu.edu.kz' }
+  const states = ['active', 'full', 'draining', 'lost'] as const
+
+  it.each(states)(
+    'keeps a %s flamekeeper-only user on the flamekeeper path',
+    (state) => {
+      const rules = getAccessRules({ ...nu, flamekeeperState: state })
+      expect(rules.onboardingPath).toBe('flamekeeper')
+      expect(rules.canBook).toBe(false)
+      expect(rules.canCreateAlbum).toBe(false)
+      expect(rules.canHoldStaffRole).toBe(false)
+      expect(rules.canFavorite).toBe(true)
+      expect(rules.canBecomeFlamekeeper).toBe(false)
+      expect(rules.canDeleteAccount).toBe(false)
+    }
+  )
+
+  it.each(states)(
+    'sends a member who is %s flamekeeping through member onboarding',
+    (state) => {
+      const rules = getAccessRules({
+        ...nu,
+        isMember: true,
+        flamekeeperState: state,
+      })
+      expect(rules.onboardingPath).toBe('member')
+      expect(rules.canBook).toBe(true)
+      expect(rules.canBecomeFlamekeeper).toBe(false)
+      expect(rules.canDeleteAccount).toBe(false)
+    }
+  )
+
+  it('lets a drained member sign up as a flamekeeper again', () => {
+    const rules = getAccessRules({
+      ...nu,
+      isMember: true,
+      flamekeeperState: 'drained',
+    })
+    expect(rules.canBecomeFlamekeeper).toBe(true)
+  })
+
+  it('never offers flamekeeping to a non-NU member', () => {
+    const rules = getAccessRules({ ...base, isMember: true })
+    expect(rules.canBecomeFlamekeeper).toBe(false)
+  })
+})
+
 describe('clubCodeMatches', () => {
   it('ignores case and surrounding whitespace', () => {
     expect(clubCodeMatches('  k7qm-4txd ', 'K7QM-4TXD')).toBe(true)

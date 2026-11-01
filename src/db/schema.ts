@@ -497,6 +497,58 @@ export const categoryRelations = relations(category, ({ many }) => ({
   equipment: many(equipment),
 }))
 
+export const flamekeeper = sqliteTable(
+  'flamekeeper',
+  {
+    userId: text('user_id')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    pledgedBytes: integer('pledged_bytes').notNull(),
+    usedBytes: integer('used_bytes').default(0).notNull(),
+    state: text('state', {
+      enum: ['active', 'full', 'draining', 'lost', 'drained'],
+    })
+      .default('active')
+      .notNull(),
+    graduationDate: text('graduation_date').notNull(),
+    graduationConfirmedAt: integer('graduation_confirmed_at', {
+      mode: 'timestamp_ms',
+    }),
+    drainingDeadline: integer('draining_deadline', { mode: 'timestamp_ms' }),
+    lostSince: integer('lost_since', { mode: 'timestamp_ms' }),
+    leaderboardAnonymous: integer('leaderboard_anonymous', { mode: 'boolean' })
+      .default(false)
+      .notNull(),
+    termsAcceptedAt: integer('terms_accepted_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index('flamekeeper_state_idx').on(table.state)]
+)
+
+export const flamekeeperGrant = sqliteTable('flamekeeper_grant', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  refreshToken: text('refresh_token').notNull(),
+  scopes: text('scopes').notNull(),
+  lastRefreshAt: integer('last_refresh_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+})
+
 export const settings = sqliteTable('settings', {
   id: text('id').primaryKey().default('global'),
 

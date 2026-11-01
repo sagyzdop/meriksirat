@@ -14,7 +14,7 @@ interface ClubCodeStepProps {
   error: string | null
   isSubmitting: boolean
   onSubmit: (code: string) => void
-  onBack: () => void
+  onBack?: () => void
 }
 
 export function ClubCodeStep({
@@ -66,15 +66,17 @@ export function ClubCodeStep({
           >
             {isSubmitting ? 'Checking...' : 'Continue'}
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            onClick={onBack}
-            disabled={isSubmitting}
-          >
-            Back
-          </Button>
+          {onBack && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={onBack}
+              disabled={isSubmitting}
+            >
+              Back
+            </Button>
+          )}
         </form>
       </CardContent>
     </Card>

@@ -143,6 +143,7 @@ export function AppSidebar({
     lastName?: string | null
     role?: string | null
     clearanceLevel?: number | null
+    isMember?: boolean
   }
   onLogout?: () => void
 }) {
@@ -193,9 +194,21 @@ export function AppSidebar({
   const canUseEquipment =
     (userData?.clearanceLevel ?? 0) >= EQUIPMENT_MIN_CLEARANCE
 
+  const isMember = userData?.isMember ?? true
+
   const navGroups = React.useMemo(
     () =>
-      data.navGroups.map((group) =>
+      (isMember
+        ? data.navGroups
+        : [
+            {
+              title: 'Albums',
+              items: data.navGroups[1].items.filter(
+                (item) => item.url === '/albums'
+              ),
+            },
+          ]
+      ).map((group) =>
         group.title === 'Albums'
           ? {
               ...group,
@@ -226,7 +239,7 @@ export function AppSidebar({
               }
             : group
       ),
-    [canUseAlbums, canUseEquipment]
+    [canUseAlbums, canUseEquipment, isMember]
   )
 
   return (

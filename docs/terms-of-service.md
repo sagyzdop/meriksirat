@@ -1,7 +1,7 @@
 # Terms of Service
 
 **Effective Date:** August 17, 2026
-**Last Updated:** August 17, 2026
+**Last Updated:** November 1, 2026
 
 These Terms of Service ("Terms") govern your use of the Meriksirat equipment
 booking and management platform ("Platform") operated for NU Image
@@ -194,7 +194,31 @@ of the modified Terms.
 If any provision of these Terms is found to be unenforceable, the remaining
 provisions shall remain in full force and effect.
 
-## 14. Contact
+## 14. Flamekeepers
+
+These terms apply in addition to the rest of this document if you become a
+flamekeeper (#savenuimg) by lending part of your `@nu.edu.kz` Google Drive
+storage to the Platform. You must accept them before connecting your Drive.
+
+- **Ownership.** Photos the Platform stores in your Drive are owned by you in
+  Google's terms, and count against your Google storage up to your pledge. The
+  Organization keeps its license to use them as described in Section 4.2.
+- **No editing or deleting.** You must not edit, rename, move or delete the
+  files the Platform stores in your Drive. The Platform manages them for you.
+- **Deletion.** The Platform may delete the photos it stored in your Drive when
+  an album expires, when you opt out, when you graduate or your account leaves
+  the `@nu.edu.kz` domain, or when moving your photos to other flamekeepers
+  does not finish in time.
+- **Revoking access.** If you revoke the Platform's access to your Drive, your
+  photos drop out of the Platform, but they remain public in your Drive until
+  you delete them yourself, because the album folders they sit in are public.
+- **Pledge.** Your pledge is the most storage the Platform may use. You can
+  change it at any time; lowering it below what is already used moves the
+  excess to other flamekeepers.
+- **Permission scope.** The Platform asks only for access to files it creates
+  (`drive.file`) and cannot read the rest of your Drive.
+
+## 15. Contact
 
 For questions about these Terms, contact the Organization administrators
 through the Platform or via Telegram.

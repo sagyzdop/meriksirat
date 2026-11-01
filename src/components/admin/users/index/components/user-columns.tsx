@@ -10,6 +10,7 @@ import {
 
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { Badge } from '@/components/ui/badge'
 import { User } from '@/lib/user/types'
 
 export type UserField = 'role' | 'clearanceLevel' | 'status'
@@ -101,7 +102,12 @@ export const createUserColumns = ({
             className="size-8"
           />
           <div className="flex flex-col">
-            <span className="font-medium">{displayName}</span>
+            <span className="flex items-center gap-2 font-medium">
+              {displayName}
+              {user.flamekeeperState && (
+                <Badge variant="secondary">Flamekeeper</Badge>
+              )}
+            </span>
             {user.email && (
               <span className="text-sm text-muted-foreground">
                 {user.email}

@@ -2,6 +2,7 @@ import { createUserColumns, UserField } from './components/user-columns'
 import { UserDataTable } from './components/user-data-table'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
+import { UserTabs } from '@/components/admin/users/components/user-tabs'
 import { ExportUsersDialog } from '@/components/shared/export-users-dialog'
 import { updateUserAdminFn } from '@/lib/user'
 import { useQueryClient } from '@tanstack/react-query'
@@ -94,6 +95,7 @@ export function Page({
         description={description}
         actions={<ExportUsersDialog filters={filters as ExportUsersFilters} />}
       />
+      <UserTabs active="members" />
       <UserDataTable
         data={users}
         columns={columns}
