@@ -9,22 +9,12 @@ async function requireFavoriter(headers: Headers) {
   if (!sessionUser) throw new Error('Sign in to favorite photos')
   const { env } = await import('cloudflare:workers')
   const { db } = await import('@/db')
-  const { user } = await import('@/db/schema')
-  const { eq } = await import('drizzle-orm')
-  const { getAccessRules } = await import('@/lib/access/access-rules')
+  const { loadAccessRules } = await import('@/lib/access/server')
   const database = db(env.meriksirat_d1 as D1Database)
-  const row = await database
-    .select({ isMember: user.isMember, email: user.email, role: user.role })
-    .from(user)
-    .where(eq(user.id, sessionUser.id))
-    .get()
-  if (!row) throw new Error('Sign in to favorite photos')
-  const rules = getAccessRules({
-    isMember: row.isMember,
-    email: row.email,
-    role: row.role ?? null,
-    flamekeeperState: null,
-  })
+  const rules = await loadAccessRules(database, sessionUser.id).catch(
+    () => null
+  )
+  if (!rules) throw new Error('Sign in to favorite photos')
   if (!rules.canFavorite) throw new Error('You cannot favorite photos')
   return { database, sessionUser }
 }
