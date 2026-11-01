@@ -114,10 +114,10 @@ shared Google Drive account. You can upload photos directly from your browser.
 
 ### Who can see my albums?
 
-Albums are public by default. You can toggle visibility, but the Google Drive
-folder stays publicly accessible (photos load from Google's CDN). The
-visibility toggle only controls whether the album appears in the app's public
-gallery.
+Everyone. Every album is public and listed in the public gallery, and its
+Google Drive folder is open to anyone with the link (photos load from Google's
+CDN). There is no private option, so only upload photos you are happy to have
+public.
 
 ### How do I upload photos?
 

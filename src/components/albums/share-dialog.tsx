@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Check, Copy, Link2, RefreshCw } from 'lucide-react'
+import { Check, Copy, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,13 +20,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import {
-  albumShareText,
-  rotateEditTokenFn,
-  toggleAlbumShareFn,
-} from '@/lib/albums'
+import { albumShareText, rotateEditTokenFn } from '@/lib/albums'
 import type { AlbumDetail } from '@/lib/albums'
 
 interface ShareDialogProps {
@@ -42,7 +37,6 @@ export function ShareDialog({
   album,
   onChanged,
 }: ShareDialogProps) {
-  const [toggling, setToggling] = React.useState(false)
   const [copied, setCopied] = React.useState<'view' | 'edit' | null>(null)
   const [rotating, setRotating] = React.useState(false)
   const [rotateOpen, setRotateOpen] = React.useState(false)
@@ -61,21 +55,6 @@ export function ShareDialog({
   const editUrl = `${origin}/albums/${album.id}?edit=${editToken}`
 
   const canRotate = album.access === 'owner' || album.access === 'manager'
-
-  const handleToggleShare = async (shared: boolean) => {
-    setToggling(true)
-    try {
-      await toggleAlbumShareFn({ data: { albumId: album.id, shared } })
-      toast.success(shared ? 'Album is now public' : 'Album is now private')
-      onChanged()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update sharing'
-      )
-    } finally {
-      setToggling(false)
-    }
-  }
 
   const handleRotate = async () => {
     setRotating(true)
@@ -127,33 +106,12 @@ export function ShareDialog({
           <DialogHeader>
             <DialogTitle>Share album</DialogTitle>
             <DialogDescription>
-              The Drive folder is always public. Turning off the view link hides
-              the album from the app&apos;s public view; the edit link adds a
-              logged-in user as a co-author.
+              Every album is public. Anyone with the view link can open it; the
+              edit link adds a logged-in user as a co-author.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5">
-            <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Link2 className="size-4" />
-                  Public view link
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {album.isShared
-                    ? 'Anyone with the link can view the album.'
-                    : 'The link is disabled in the app; you and co-authors can still open it.'}
-                </p>
-              </div>
-              <Switch
-                checked={album.isShared}
-                disabled={toggling}
-                onCheckedChange={handleToggleShare}
-                aria-label="Toggle public view link"
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="view-url">View link</Label>
               <div className="flex gap-2">
@@ -162,7 +120,6 @@ export function ShareDialog({
                   type="button"
                   variant="outline"
                   size="icon"
-                  disabled={!album.isShared}
                   onClick={() =>
                     copy(
                       albumShareText(album, origin),
@@ -176,17 +133,10 @@ export function ShareDialog({
                   {copied === 'view' ? <Check /> : <Copy />}
                 </Button>
               </div>
-              {album.isShared ? (
-                <p className="text-xs text-muted-foreground">
-                  Copies a ready-to-paste Telegram message with the album name,
-                  description, and author Telegram handles.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Turn on the view link to let anyone open this album in the
-                  app.
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Copies a ready-to-paste Telegram message with the album name,
+                description, and author Telegram handles.
+              </p>
             </div>
 
             <div className="space-y-2">

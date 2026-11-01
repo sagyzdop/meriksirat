@@ -233,19 +233,6 @@ describe('formatAlbumLog', () => {
     )
   })
 
-  it('matches the unshared layout', () => {
-    expect(formatAlbumLog({ ...album, action: 'unshared' })).toBe(
-      [
-        '🔐 Album unshared by Aida Nurlanova (@aida_n)',
-        '',
-        '🖼 Autumn Fest',
-        '',
-        albumLink,
-        '#x7Kp2QaZ9m',
-      ].join('\n')
-    )
-  })
-
   it('names the editor who joined', () => {
     expect(formatAlbumLog({ ...album, action: 'member_added' })).toContain(
       '➕ Editor joined: Aida Nurlanova (@aida_n)'

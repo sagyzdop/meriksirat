@@ -39,7 +39,6 @@ export function PublicAlbumsIndex({ user }: PublicAlbumsIndexProps) {
   const filters: AlbumListFilters = {
     search: search.search,
     ownership: [],
-    visibility: [],
   }
 
   const handleFiltersChange = (next: Partial<AlbumListFilters>) => {
@@ -54,7 +53,6 @@ export function PublicAlbumsIndex({ user }: PublicAlbumsIndexProps) {
         filters={filters}
         onFiltersChange={handleFiltersChange}
         showOwnership={false}
-        showVisibility={false}
       />
 
       {albums.length === 0 ? (
@@ -67,7 +65,7 @@ export function PublicAlbumsIndex({ user }: PublicAlbumsIndexProps) {
             <EmptyDescription>
               {search.search
                 ? 'No public albums match your search.'
-                : 'Publicly shared albums will appear here once members create them.'}
+                : 'Albums will appear here once members create them.'}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

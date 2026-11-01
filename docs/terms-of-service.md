@@ -89,8 +89,9 @@ acknowledge that:
   Google's terms of service.
 - The Organization is not responsible for the security, availability, or
   integrity of content stored on third-party infrastructure.
-- Content uploaded to shared album folders may be accessible to other
-  authorized users of the Platform.
+- Albums and their photos are public. Content uploaded to album folders is
+  visible to anyone with the link and is listed in the Platform's public
+  gallery.
 
 ## 5. Equipment Booking and Usage
 

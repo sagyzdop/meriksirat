@@ -11,23 +11,19 @@ export const ALBUM_CREATE_MIN_CLEARANCE = 3
 export const AlbumOwnershipFilterSchema = z.enum(['owner', 'co-author'])
 export type AlbumOwnershipFilter = z.infer<typeof AlbumOwnershipFilterSchema>
 
-export const AlbumVisibilityFilterSchema = z.enum(['public', 'private'])
-export type AlbumVisibilityFilter = z.infer<typeof AlbumVisibilityFilterSchema>
-
 /**
  * User-facing list filters (mirrored into the URL search params). Ownership
- * and visibility are multi-select arrays; an empty array means "no filter".
+ * is a multi-select array; an empty array means "no filter".
  */
 export const AlbumListFiltersSchema = z.object({
   search: z.string().trim().max(200).optional().default(''),
   ownership: stringArrayParam(AlbumOwnershipFilterSchema).default([]),
-  visibility: stringArrayParam(AlbumVisibilityFilterSchema).default([]),
 })
 export type AlbumListFilters = z.infer<typeof AlbumListFiltersSchema>
 
 /**
- * Search-only filters for the public albums page, where ownership and
- * visibility do not apply.
+ * Search-only filters for the public albums page, where ownership
+ * does not apply.
  */
 export const AlbumSearchSchema = z.object({
   search: z.string().trim().max(200).optional().default(''),
@@ -74,11 +70,6 @@ export const SetAlbumPinnedSchema = z.object({
 
 export const DeleteAlbumSchema = z.object({
   albumId: z.string(),
-})
-
-export const ToggleAlbumShareSchema = z.object({
-  albumId: z.string(),
-  shared: z.boolean(),
 })
 
 export const ClaimEditAccessSchema = z.object({
@@ -202,7 +193,6 @@ export interface AlbumSummary {
   driveFolderId: string
   coverFileId: string | null
   coverUrl: string | null
-  isShared: boolean
   createdAt: string
   updatedAt: string
   ownership: 'owner' | 'co-author'

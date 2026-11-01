@@ -258,7 +258,7 @@ export async function deleteDriveFile(
  * Grant read access to anyone with the link. This makes every file inside the
  * folder directly viewable through the Google CDN without authentication.
  * Album folders always have this permission: it is set at creation and never
- * revoked — `is_shared` only controls whether the link works in the app.
+ * revoked.
  */
 export async function setAnyoneReader(
   accessToken: string,

@@ -11,7 +11,6 @@ import type {
   AlbumListPage,
   AlbumOwnershipFilter,
   AlbumSummary,
-  AlbumVisibilityFilter,
 } from './types'
 
 export function albumsEmptyResponse(): AlbumSummary[] {
@@ -25,7 +24,6 @@ function emptyPage(): AlbumListPage {
 export interface AlbumListQueryInput {
   search?: string
   ownership?: AlbumOwnershipFilter[]
-  visibility?: AlbumVisibilityFilter[]
 }
 
 export function normalizeFilters(
@@ -34,7 +32,6 @@ export function normalizeFilters(
   return {
     search: filters.search ?? '',
     ownership: filters.ownership ?? [],
-    visibility: filters.visibility ?? [],
   }
 }
 

@@ -88,29 +88,24 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       isNull(album.deletedAt)
     )
 
-    // --- Albums per month (public vs private) -----------------------------
+    // --- Albums per month -------------------------------------------------
     const albumRows = await database
-      .select({ createdAt: album.createdAt, isShared: album.isShared })
+      .select({ createdAt: album.createdAt })
       .from(album)
       .where(rangeWhere)
       .all()
 
-    const byMonth = new Map<string, { public: number; private: number }>()
+    const byMonth = new Map<string, number>()
     for (const key of monthKeysBetween(start, endOfRange)) {
-      byMonth.set(key, { public: 0, private: 0 })
+      byMonth.set(key, 0)
     }
     for (const row of albumRows) {
-      const bucket = byMonth.get(monthKey(row.createdAt)) ?? {
-        public: 0,
-        private: 0,
-      }
-      if (row.isShared) bucket.public += 1
-      else bucket.private += 1
-      byMonth.set(monthKey(row.createdAt), bucket)
+      const key = monthKey(row.createdAt)
+      byMonth.set(key, (byMonth.get(key) ?? 0) + 1)
     }
-    const albumsPerMonth = [...byMonth.entries()].map(([month, value]) => ({
+    const albumsPerMonth = [...byMonth.entries()].map(([month, count]) => ({
       month,
-      ...value,
+      count,
     }))
 
     // --- Booking statistics by status (scoped to bookings starting in range)
@@ -618,25 +613,6 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
       conditions.push(like(album.title, `%${search}%`))
     }
 
-    const visibility = data.visibility ?? []
-    if (visibility.length === 1) {
-      conditions.push(
-        visibility[0] === 'public'
-          ? eq(album.isShared, true)
-          : eq(album.isShared, false)
-      )
-    } else if (visibility.length > 1) {
-      conditions.push(
-        or(
-          ...visibility.map((v) =>
-            v === 'public'
-              ? eq(album.isShared, true)
-              : eq(album.isShared, false)
-          )
-        )!
-      )
-    }
-
     const whereClause = and(...conditions)
     const offset = (data.page - 1) * data.limit
     const coAuthorCountExpr = sql<number>`count(${albumMember.id})`
@@ -644,11 +620,9 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
     const orderBy =
       data.sortBy === 'title'
         ? dir(album.title)
-        : data.sortBy === 'isShared'
-          ? dir(album.isShared)
-          : data.sortBy === 'coAuthorCount'
-            ? dir(coAuthorCountExpr)
-            : dir(album.createdAt)
+        : data.sortBy === 'coAuthorCount'
+          ? dir(coAuthorCountExpr)
+          : dir(album.createdAt)
 
     const [countRows, pageRows] = await Promise.all([
       database
@@ -662,7 +636,6 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
         .select({
           id: album.id,
           title: album.title,
-          isShared: album.isShared,
           createdAt: album.createdAt,
           coverFileId: album.coverFileId,
           coAuthorCount: coAuthorCountExpr,
@@ -680,7 +653,6 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
     const albums: AdminUserAlbum[] = pageRows.map((row) => ({
       id: row.id,
       title: row.title,
-      isShared: !!row.isShared,
       createdAt: row.createdAt.toISOString(),
       coAuthorCount: Number(row.coAuthorCount),
       coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,
@@ -804,7 +776,6 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
         event: album.event,
         eventDate: album.eventDate,
         createdAt: album.createdAt,
-        isShared: album.isShared,
         ownerName: user.name,
         ownerEmail: user.email,
         ownerTelegramUsername: user.telegramUsername,
@@ -861,7 +832,6 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
         event: row.event,
         eventDate: row.eventDate,
         createdAt: row.createdAt,
-        isShared: !!row.isShared,
         albumUrl: `${origin}/albums/${row.id}`,
         authors,
       }

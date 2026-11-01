@@ -335,9 +335,9 @@ export const bookingItemRelations = relations(bookingItem, ({ one }) => ({
 
 // Photo Albums (Google Drive-backed gallery)
 // Albums are stored in a shared master Google Drive account. The view link
-// (`/albums/<id>`) exposes the Drive folder via the "anyone" reader permission
-// when `isShared` is true. The edit link carries `editShareToken`; a logged-in
-// user who presents it becomes an `albumMember` (co-author / editor).
+// (`/albums/<id>`) is public and every album is listed; its Drive folder has the
+// "anyone" reader permission. The edit link carries `editShareToken`; a
+// logged-in user who presents it becomes an `albumMember` (co-author / editor).
 
 export const album = sqliteTable(
   'album',
@@ -373,7 +373,9 @@ export const album = sqliteTable(
       mode: 'timestamp_ms',
     }),
     editShareToken: text('edit_share_token').notNull().unique(),
-    isShared: integer('is_shared', { mode: 'boolean' }).default(false),
+    publicNoticePendingAt: integer('public_notice_pending_at', {
+      mode: 'timestamp_ms',
+    }),
     event: text('event').notNull().default(''),
     eventDate: integer('event_date', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
@@ -386,7 +388,6 @@ export const album = sqliteTable(
   },
   (table) => [
     index('album_ownerUserId_idx').on(table.ownerUserId),
-    index('album_isShared_idx').on(table.isShared),
     index('album_expiresAt_idx').on(table.expiresAt),
   ]
 )

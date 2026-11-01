@@ -34,8 +34,6 @@ const ALBUM_ACTIONS = {
   created: '🆕 Album created',
   updated: '✏️ Album edited',
   deleted: '🗑 Album deleted',
-  shared: '🔓 Album shared',
-  unshared: '🔐 Album unshared',
   photo_deleted: '🗑 Photo deleted',
   member_added: '➕ Editor joined',
   member_removed: '➖ Editor removed',

@@ -1,24 +1,19 @@
 import { Link } from '@tanstack/react-router'
-import { Images, Link2, Lock, Users } from 'lucide-react'
+import { Images, Users } from 'lucide-react'
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import type { AlbumSummary } from '@/lib/albums'
 import { PhotoImage } from './photo-image'
 
 interface AlbumCardProps {
   album: AlbumSummary
-  /**
-   * Show the Public/Private badge overlay. Only visible to logged-in users.
-   */
-  showPrivacy?: boolean
 }
 
-export function AlbumCard({ album, showPrivacy = false }: AlbumCardProps) {
+export function AlbumCard({ album }: AlbumCardProps) {
   const primaryAuthor = album.authors[0]?.name
   const coAuthorCount = Math.max(album.authors.length - 1, 0)
   const authorsLabel = primaryAuthor
@@ -45,24 +40,6 @@ export function AlbumCard({ album, showPrivacy = false }: AlbumCardProps) {
           <div className="bg-muted flex h-full w-full items-center justify-center">
             <Images className="text-muted-foreground/50 size-10" />
           </div>
-        )}
-        {showPrivacy && (
-          <Badge
-            variant={album.isShared ? 'default' : 'secondary'}
-            className="absolute left-3 top-3 gap-1"
-          >
-            {album.isShared ? (
-              <>
-                <Link2 className="size-3" />
-                Public
-              </>
-            ) : (
-              <>
-                <Lock className="size-3" />
-                Private
-              </>
-            )}
-          </Badge>
         )}
       </div>
 

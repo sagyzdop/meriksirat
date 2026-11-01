@@ -5,8 +5,6 @@ import {
   CalendarClock,
   FolderOpen,
   Images,
-  Link2,
-  Lock,
   Pin,
   PinOff,
   Share2,
@@ -204,7 +202,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
     })
     navigate({
       to: '/my-albums',
-      search: { search: '', ownership: [], visibility: [] },
+      search: { search: '', ownership: [] },
     })
   }
 
@@ -255,10 +253,8 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
             </EmptyMedia>
             <EmptyTitle>{copy.title}</EmptyTitle>
             <EmptyDescription>
-              {album.title !== 'Private album' && (
-                <strong>{album.title}</strong>
-              )}
-              {album.title !== 'Private album' && <br />}
+              <strong>{album.title}</strong>
+              <br />
               {copy.description} Deleted on{' '}
               {formatUtcDate(album.tombstone.deletedAt)}.
             </EmptyDescription>
@@ -345,17 +341,6 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
       )}
 
       <div className="-mt-2 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-        {album.isShared ? (
-          <Badge variant="outline" className="gap-1">
-            <Link2 className="size-3" />
-            Public
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="gap-1">
-            <Lock className="size-3" />
-            Private
-          </Badge>
-        )}
         <span className="flex items-center gap-1.5">
           <Users className="size-4" />
           {album.authors.map((a) => a.name).join(', ')}

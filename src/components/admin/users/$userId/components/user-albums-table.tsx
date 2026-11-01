@@ -8,7 +8,6 @@ import {
 import { useNavigate } from '@tanstack/react-router'
 
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -21,7 +20,6 @@ import { Images } from 'lucide-react'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
-import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
 import { useScopedServerTableSorting } from '@/components/shared/data-table/use-scoped-server-table-sorting'
 import { PhotoImage } from '@/components/albums/photo-image'
 import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
@@ -35,10 +33,9 @@ interface Pagination {
 
 export interface AlbumSearch {
   albumSearch?: string
-  albumVisibility?: ('public' | 'private')[]
   albumPage: number
   albumLimit: number
-  albumSortBy: 'title' | 'isShared' | 'createdAt' | 'coAuthorCount'
+  albumSortBy: 'title' | 'createdAt' | 'coAuthorCount'
   albumSortOrder: 'asc' | 'desc'
 }
 
@@ -47,20 +44,14 @@ interface UserAlbumsTableProps {
   pagination: Pagination
   filters: {
     search?: string
-    visibility?: ('public' | 'private')[]
     page: number
     limit: number
-    sortBy: 'title' | 'isShared' | 'createdAt' | 'coAuthorCount'
+    sortBy: 'title' | 'createdAt' | 'coAuthorCount'
     sortOrder: 'asc' | 'desc'
   }
   search: AlbumSearch
   isLoading?: boolean
 }
-
-const visibilityOptions = [
-  { value: 'public', label: 'Public' },
-  { value: 'private', label: 'Private' },
-]
 
 const formatCreatedAt = (value: string) => {
   const date = new Date(value)
@@ -110,25 +101,6 @@ export function UserAlbumsTable({
             <span className="font-medium">{row.original.title}</span>
           </div>
         ),
-      },
-      {
-        accessorKey: 'isShared',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Visibility" />
-        ),
-        cell: ({ row }) =>
-          row.original.isShared ? (
-            <Badge
-              variant="outline"
-              className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-            >
-              Public
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground">
-              Private
-            </Badge>
-          ),
       },
       {
         accessorKey: 'coAuthorCount',
@@ -186,23 +158,6 @@ export function UserAlbumsTable({
     [search, navigate]
   )
 
-  const handleVisibilityChange = React.useCallback(
-    (values: string[] | undefined) => {
-      navigate({
-        to: '.',
-        search: {
-          ...search,
-          albumVisibility:
-            values && values.length > 0
-              ? (values as ('public' | 'private')[])
-              : undefined,
-          albumPage: 1,
-        } as never,
-      })
-    },
-    [search, navigate]
-  )
-
   const handlePageChange = React.useCallback(
     (page: number) => {
       navigate({
@@ -231,12 +186,6 @@ export function UserAlbumsTable({
           value={filters.search || ''}
           onChange={(event) => handleSearchChange(event.target.value)}
           className="h-8 w-full sm:w-[280px]"
-        />
-        <DataTableFacetedFilter
-          title="Visibility"
-          options={visibilityOptions}
-          selectedValues={filters.visibility ?? []}
-          onSelectionChange={handleVisibilityChange}
         />
       </div>
       <div className="relative rounded-md border overflow-x-auto">

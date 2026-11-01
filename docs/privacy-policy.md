@@ -80,8 +80,8 @@ including the Limited Use requirements.**
 ## 5. What Is Public
 
 - **Album photos are public.** Every album's Drive folders are viewable by
-  anyone with the link, whether or not the album is shared in the Platform.
-  Do not upload photos you would not want to be public.
+  anyone with the link, and every album is listed in the Platform's public
+  gallery. Do not upload photos you would not want to be public.
 - The leaderboard shows flamekeepers' names and contributed storage, unless a
   flamekeeper chooses to appear anonymously.
 - Album activity and booking events are posted to the club's Telegram audit

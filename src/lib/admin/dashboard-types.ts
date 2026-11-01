@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { stringArrayParam } from '@/lib/search-params'
 
 // ---------------------------------------------------------------------------
 // Dashboard data range
@@ -32,8 +31,7 @@ export interface BookingStats {
 export interface AlbumsPerMonthPoint {
   /** `YYYY-MM` key. */
   month: string
-  public: number
-  private: number
+  count: number
 }
 
 export interface AlbumStorageStats {
@@ -157,11 +155,10 @@ export interface PaginatedViolationsResponse {
 export const AdminUserAlbumsFiltersSchema = z.object({
   userId: z.string(),
   search: z.string().optional(),
-  visibility: stringArrayParam(z.enum(['public', 'private'])),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(10),
   sortBy: z
-    .enum(['title', 'isShared', 'createdAt', 'coAuthorCount'])
+    .enum(['title', 'createdAt', 'coAuthorCount'])
     .optional()
     .default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
@@ -173,7 +170,6 @@ export type AdminUserAlbumsFilters = z.infer<
 export interface AdminUserAlbum {
   id: string
   title: string
-  isShared: boolean
   createdAt: string
   coAuthorCount: number
   coverUrl: string | null
@@ -282,7 +278,6 @@ export interface AdminAlbumExport {
   event: string
   eventDate: Date | string | null
   createdAt: Date | string
-  isShared: boolean
   albumUrl: string
   authors: {
     name: string

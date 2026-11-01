@@ -17,7 +17,6 @@ import {
   RotateEditTokenSchema,
   SetAlbumPinnedSchema,
   SetCoverPhotoSchema,
-  ToggleAlbumShareSchema,
   UpdateAlbumSchema,
 } from './types'
 import type {
@@ -144,7 +143,6 @@ function toAlbumSummary(
     driveFolderId: row.driveFolderId,
     coverFileId: row.coverFileId,
     coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,
-    isShared: !!row.isShared,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     ownership:
@@ -158,7 +156,7 @@ function toAlbumSummary(
 interface ListAlbumsPaginatedArgs {
   database: ReturnType<(typeof import('@/db'))['db']>
   /**
-   * Scoping predicate (access, isShared, etc.).
+   * Scoping predicate.
    */
   baseWhere?: import('drizzle-orm').SQL
   /**
@@ -174,7 +172,7 @@ interface ListAlbumsPaginatedArgs {
 
 /**
  * Run a paginated album list query applying filters (search over title and
- * description, ownership, visibility) and keyset pagination.
+ * description, ownership) and keyset pagination.
  */
 async function listAlbumsPaginated({
   database,
@@ -198,22 +196,6 @@ async function listAlbumsPaginated({
       or(
         like(sql`lower(${album.title})`, pattern),
         like(sql`lower(${album.description})`, pattern)
-      )!
-    )
-  }
-
-  // Visibility is multi-select: both values selected (or none) means no
-  // filter, otherwise match the shared flag.
-  if (query.visibility?.length === 1) {
-    if (query.visibility[0] === 'public')
-      conditions.push(eq(album.isShared, true))
-    else conditions.push(eq(album.isShared, false))
-  } else if ((query.visibility?.length ?? 0) > 1) {
-    conditions.push(
-      or(
-        ...query.visibility.map((v) =>
-          v === 'public' ? eq(album.isShared, true) : eq(album.isShared, false)
-        )
       )!
     )
   }
@@ -645,7 +627,6 @@ async function buildAlbumCore(
     driveFolderId: row.driveFolderId,
     coverFileId,
     coverUrl: coverFileId ? albumCoverUrl(coverFileId) : null,
-    isShared: !!row.isShared,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     coAuthorCount: members.length,
@@ -661,7 +642,7 @@ async function buildAlbumCore(
  */
 function decorateAlbumDetail(
   core: Record<string, unknown>,
-  row: Pick<AlbumRow, 'isShared' | 'editShareToken' | 'expiresAt' | 'pinned'>,
+  row: Pick<AlbumRow, 'editShareToken' | 'expiresAt' | 'pinned'>,
   access: import('./types').AlbumAccessLevel,
   currentUser: { id: string } | null
 ): AlbumDetail {
@@ -672,8 +653,6 @@ function decorateAlbumDetail(
       AlbumDetail,
       'ownership' | 'access' | 'editShareToken'
     >),
-    // Always fresh: controls whether guest links resolve.
-    isShared: !!row.isShared,
     ownership,
     access,
     editShareToken: access !== 'none' ? row.editShareToken : null,
@@ -683,22 +662,17 @@ function decorateAlbumDetail(
   }
 }
 
-function buildTombstoneDetail(
-  row: AlbumRow,
-  access: import('./types').AlbumAccessLevel
-): AlbumDetail {
-  const visible = !!row.isShared || access !== 'none'
+function buildTombstoneDetail(row: AlbumRow): AlbumDetail {
   return {
     id: row.id,
     ownerUserId: row.ownerUserId,
-    title: visible ? row.title : 'Private album',
+    title: row.title,
     description: '',
-    event: visible ? (row.event ?? '') : '',
+    event: row.event ?? '',
     eventDate: row.eventDate ? row.eventDate.toISOString() : null,
     driveFolderId: '',
     coverFileId: null,
     coverUrl: null,
-    isShared: !!row.isShared,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     ownership: 'co-author',
@@ -798,7 +772,6 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       expiresAt: defaultExpiry(new Date(data.eventDate)),
       driveFolderId: folder.id,
       editShareToken: newShareToken(),
-      isShared: true,
       photosIndexedAt: new Date(),
     })
 
@@ -833,15 +806,13 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
     const { rateLimit } = await import('@/lib/ratelimit')
 
     const headers = getRequestHeaders()
 
     // Public albums are listed without authentication — anyone with the link
-    // can browse the shared gallery. Only `is_shared` albums appear here, so
-    // the ownership filter does not apply. Rate-limited per IP to stop a
+    // can browse the gallery. Every album is listed, so the ownership filter
+    // does not apply. Rate-limited per IP to stop a
     // scripted client from hammering D1 reads.
     const limit = await rateLimit(headers, 'rl_public_albums')
     if (!limit.allowed) {
@@ -861,7 +832,6 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
 
     const page = await listAlbumsPaginated({
       database,
-      baseWhere: eq(album.isShared, true),
       ownershipWhere: () => undefined,
       ownershipOverride: 'co-author',
       query: data,
@@ -938,8 +908,7 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
     if (!row) return null
 
     const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-    if (row.deletedAt) return buildTombstoneDetail(row, access)
-    if (!row.isShared && access === 'none') return null
+    if (row.deletedAt) return buildTombstoneDetail(row)
 
     let core = (await getCachedDetailCore(data.albumId)) as Record<
       string,
@@ -1231,53 +1200,6 @@ export const deleteAlbumFn = createServerFn({ method: 'POST' })
     }
 
     return { success: true }
-  })
-
-export const toggleAlbumShareFn = createServerFn({ method: 'POST' })
-  .validator(ToggleAlbumShareSchema)
-  .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedDetailCore } =
-      await import('./server')
-    const { getGoogleAccessToken } =
-      await import('@/lib/google/google-calendar-auth')
-    const { setAnyoneReader } = await import('@/lib/google/google-drive')
-
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
-
-    // `is_shared` only controls whether the album link works in the app.
-    // The Drive folder always stays public (anyone reader), so photos keep
-    // loading from Google's CDN regardless.
-    if (data.shared) {
-      const accessToken = await getGoogleAccessToken()
-      await setAnyoneReader(accessToken, row.driveFolderId)
-    }
-
-    await database
-      .update(album)
-      .set({ isShared: data.shared, updatedAt: new Date() })
-      .where(eq(album.id, data.albumId))
-    await invalidateCachedDetailCore(data.albumId)
-
-    if (currentUser) {
-      const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
-      await logAlbumActivityByUser(currentUser.id, {
-        albumId: data.albumId,
-        albumTitle: row.title,
-        action: data.shared ? 'shared' : 'unshared',
-      })
-    }
-
-    return { success: true, isShared: data.shared }
   })
 
 export const claimEditAccessFn = createServerFn({ method: 'POST' })

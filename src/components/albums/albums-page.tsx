@@ -37,9 +37,7 @@ interface AlbumsPageProps {
   hasNextPage: boolean
   isFetchingNextPage: boolean
   fetchNextPage: () => void
-  showPrivacy?: boolean
   showOwnershipFilter?: boolean
-  showVisibilityFilter?: boolean
   canCreate?: boolean
   onCreated: () => void
   headerActions?: React.ReactNode
@@ -53,9 +51,7 @@ export function AlbumsPage({
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
-  showPrivacy = true,
   showOwnershipFilter = true,
-  showVisibilityFilter = true,
   canCreate = true,
   onCreated,
   headerActions,
@@ -126,7 +122,6 @@ export function AlbumsPage({
         filters={filters}
         onFiltersChange={onFiltersChange}
         showOwnership={showOwnershipFilter}
-        showVisibility={showVisibilityFilter}
       />
 
       {albums.length === 0 ? (
@@ -141,9 +136,7 @@ export function AlbumsPage({
             <EmptyDescription>
               {mode === 'manage'
                 ? 'All albums across the club appear here.'
-                : !filters.search &&
-                    filters.ownership.length === 0 &&
-                    filters.visibility.length === 0
+                : !filters.search && filters.ownership.length === 0
                   ? 'Create your first album to start sharing photos.'
                   : 'No albums match your search and filters.'}
             </EmptyDescription>
@@ -152,7 +145,6 @@ export function AlbumsPage({
       ) : (
         <InfiniteAlbumGroupedList
           albums={albums}
-          showPrivacy={showPrivacy}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}

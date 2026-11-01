@@ -4,26 +4,17 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
-import type {
-  AlbumListFilters,
-  AlbumOwnershipFilter,
-  AlbumVisibilityFilter,
-} from '@/lib/albums'
+import type { AlbumListFilters, AlbumOwnershipFilter } from '@/lib/albums'
 
 const ownershipOptions = [
   { value: 'owner', label: 'Owned by me' },
   { value: 'co-author', label: 'Shared with me' },
-]
-const visibilityOptions = [
-  { value: 'public', label: 'Public' },
-  { value: 'private', label: 'Private' },
 ]
 
 interface AlbumToolbarProps {
   filters: AlbumListFilters
   onFiltersChange: (next: Partial<AlbumListFilters>) => void
   showOwnership?: boolean
-  showVisibility?: boolean
 }
 
 /**
@@ -34,7 +25,6 @@ export function AlbumToolbar({
   filters,
   onFiltersChange,
   showOwnership = true,
-  showVisibility = true,
 }: AlbumToolbarProps) {
   const [localSearch, setLocalSearch] = React.useState(filters.search)
   const debouncedSearch = useDebounce(localSearch, 300)
@@ -54,14 +44,9 @@ export function AlbumToolbar({
   // Multi-select semantics: the faceted filter toggles individual values and
   // an empty array (or undefined) means no filter.
   const ownershipSelected = filters.ownership ?? []
-  const visibilitySelected = filters.visibility ?? []
-  const isFiltered =
-    !!filters.search ||
-    (filters.ownership?.length ?? 0) > 0 ||
-    (filters.visibility?.length ?? 0) > 0
+  const isFiltered = !!filters.search || (filters.ownership?.length ?? 0) > 0
 
-  const reset = () =>
-    onFiltersChange({ search: '', ownership: [], visibility: [] })
+  const reset = () => onFiltersChange({ search: '', ownership: [] })
 
   return (
     <div className="-mt-2 mb-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -80,18 +65,6 @@ export function AlbumToolbar({
             onSelectionChange={(values) =>
               onFiltersChange({
                 ownership: (values ?? []) as AlbumOwnershipFilter[],
-              })
-            }
-          />
-        )}
-        {showVisibility && (
-          <DataTableFacetedFilter
-            title="Visibility"
-            options={visibilityOptions}
-            selectedValues={visibilitySelected}
-            onSelectionChange={(values) =>
-              onFiltersChange({
-                visibility: (values ?? []) as AlbumVisibilityFilter[],
               })
             }
           />

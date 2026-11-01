@@ -51,7 +51,6 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { album, favorite, photo } = await import('@/db/schema')
     const { and, eq, sql } = await import('drizzle-orm')
-    const { resolveAlbumAccess } = await import('@/lib/albums/server')
 
     const headers = getRequestHeaders()
     const { database, sessionUser } = await requireFavoriter(headers)
@@ -62,10 +61,6 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
       .where(eq(album.id, data.albumId))
       .get()
     if (!albumRow) throw new Error('Album not found')
-    const { access } = await resolveAlbumAccess(headers, albumRow)
-    if (!albumRow.isShared && access === 'none') {
-      throw new Error('Album not found')
-    }
 
     const findPhoto = () =>
       database
@@ -137,21 +132,12 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
 export const listMyFavoritesFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<FavoritePhoto[]> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { album, albumMember, favorite, photo } = await import('@/db/schema')
-    const { and, desc, eq, or, sql } = await import('drizzle-orm')
+    const { album, favorite, photo } = await import('@/db/schema')
+    const { and, desc, eq } = await import('drizzle-orm')
     const { photoRowToAlbumPhoto } = await import('@/lib/albums/photo-backfill')
-    const { isManagerRole } = await import('@/lib/albums/server')
 
     const { database, sessionUser } =
       await requireFavoriter(getRequestHeaders())
-
-    const visible = isManagerRole(sessionUser)
-      ? undefined
-      : or(
-          eq(album.isShared, true),
-          eq(album.ownerUserId, sessionUser.id),
-          sql`EXISTS (SELECT 1 FROM ${albumMember} WHERE ${albumMember.albumId} = ${album.id} AND ${albumMember.userId} = ${sessionUser.id})`
-        )
 
     const rows = await database
       .select({
@@ -163,13 +149,7 @@ export const listMyFavoritesFn = createServerFn({ method: 'GET' }).handler(
       .from(favorite)
       .innerJoin(photo, eq(photo.id, favorite.photoId))
       .innerJoin(album, eq(album.id, photo.albumId))
-      .where(
-        and(
-          eq(favorite.userId, sessionUser.id),
-          eq(photo.state, 'live'),
-          visible
-        )
-      )
+      .where(and(eq(favorite.userId, sessionUser.id), eq(photo.state, 'live')))
       .orderBy(desc(favorite.createdAt))
       .limit(1000)
       .all()

@@ -373,7 +373,6 @@ export function Page({
             pagination={albumsPagination}
             filters={{
               search: albumsSearch.albumSearch,
-              visibility: albumsSearch.albumVisibility,
               page: albumsSearch.albumPage,
               limit: albumsSearch.albumLimit,
               sortBy: albumsSearch.albumSortBy,
