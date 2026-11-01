@@ -17,7 +17,7 @@ type AlbumRecord = typeof album.$inferSelect
 
 const ROW_DELETE_CHUNK = 90
 
-async function dropPhotoRows(
+export async function dropPhotoRows(
   database: Database,
   albumId: string,
   ids: string[]

@@ -62,3 +62,37 @@ export async function getFlamekeeperAccessToken(
 export function forgetFlamekeeperAccessToken(userId: string): void {
   cache.delete(userId)
 }
+
+/**
+ * Drop a flamekeeper's Drive grant: revoke the refresh token at Google
+ * (best effort) and delete the stored row, so the app keeps no access.
+ */
+export async function dropFlamekeeperGrant(
+  database: Database,
+  userId: string
+): Promise<void> {
+  const grant = await database
+    .select({ refreshToken: flamekeeperGrant.refreshToken })
+    .from(flamekeeperGrant)
+    .where(eq(flamekeeperGrant.userId, userId))
+    .get()
+  forgetFlamekeeperAccessToken(userId)
+  if (!grant) return
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token: grant.refreshToken }),
+    })
+    if (!response.ok && response.status !== 400) {
+      console.warn(
+        `Failed to revoke Drive grant for ${userId}: ${response.status}`
+      )
+    }
+  } catch (error) {
+    console.warn(`Failed to revoke Drive grant for ${userId}:`, error)
+  }
+  await database
+    .delete(flamekeeperGrant)
+    .where(eq(flamekeeperGrant.userId, userId))
+}

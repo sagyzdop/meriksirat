@@ -199,9 +199,10 @@ export async function startFlamekeeperUpload(
   database: Database,
   masterToken: string,
   albumRow: { id: string; driveFolderId: string },
-  file: { name: string; mimeType: string; bytes: number; origin?: string }
+  file: { name: string; mimeType: string; bytes: number; origin?: string },
+  opts: { exclude?: string[] } = {}
 ): Promise<{ uploadUrl: string; reservationId: string }> {
-  const exclude: string[] = []
+  const exclude: string[] = [...(opts.exclude ?? [])]
   const cap = await loadCapBytes(database)
 
   for (let attempt = 0; attempt < MAX_PLACEMENT_TRIES; attempt++) {
@@ -414,7 +415,7 @@ export async function deleteOwnedPhotos(
   return { deleted, lost, error: failure }
 }
 
-async function releaseOwnedBytes(
+export async function releaseOwnedBytes(
   database: Database,
   photos: OwnedPhoto[]
 ): Promise<void> {

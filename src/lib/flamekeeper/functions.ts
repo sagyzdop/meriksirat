@@ -3,12 +3,34 @@ import { getRequest, getRequestHeaders } from '@tanstack/react-start/server'
 import type { LeaderboardEntry } from '@/lib/pool/leaderboard'
 import {
   AdminFlamekeepersSchema,
+  ConfirmRelaySchema,
+  ReleaseRelaySchema,
   SetLeaderboardAnonymousSchema,
   StartDriveConnectSchema,
+  StartRelaySchema,
   UpdateFlamekeeperSchema,
   type AdminFlamekeeperRow,
+  type DrainStatus,
   type MyFlamekeeper,
+  type RelayHandout,
 } from './types'
+
+/**
+ * The flamekeeper whose photos a relay moves: the caller themselves, or any
+ * flamekeeper when an admin or manager runs it from the dashboard.
+ */
+async function resolveRelaySource(userId: string | undefined) {
+  const { resolveSession } = await import('@/lib/auth/resolve-session')
+  const headers = getRequestHeaders()
+  const session = await resolveSession(headers)
+  if (!session?.user) throw new Error('Unauthorized')
+  if (userId && userId !== session.user.id) {
+    const { checkAdminPermission } = await import('@/lib/admin/server')
+    await checkAdminPermission(headers, ['admin', 'manager'])
+    return userId
+  }
+  return session.user.id
+}
 
 export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<MyFlamekeeper | null> => {
@@ -30,12 +52,15 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
 
     if (!row) return null
     const { countHostedAlbums } = await import('@/lib/pool/server')
+    const { drainBytesLeft } = await import('@/lib/pool/drain')
     return {
       state: row.state,
       pledgedBytes: row.pledgedBytes,
       usedBytes: row.usedBytes,
       graduationDate: row.graduationDate,
       drainingDeadline: row.drainingDeadline,
+      drainReason: row.drainReason,
+      drainBytesLeft: drainBytesLeft(row),
       lostSince: row.lostSince,
       leaderboardAnonymous: row.leaderboardAnonymous,
       albumsHosted: await countHostedAlbums(database, session.user.id),
@@ -137,13 +162,8 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { flamekeeper } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const {
-      DRAIN_GRACE_MS,
-      gbToBytes,
-      isValidGraduationDate,
-      isValidPledgeGb,
-      pledgeLowerThanUsed,
-    } = await import('./rules')
+    const { gbToBytes, isValidGraduationDate, isValidPledgeGb } =
+      await import('./rules')
 
     if (!isValidPledgeGb(data.pledgeGb)) throw new Error('Invalid pledge')
 
@@ -165,26 +185,11 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
       throw new Error('Expected graduation date must be in the future')
     }
 
-    const pledgedBytes = gbToBytes(data.pledgeGb)
-    const set: Partial<typeof flamekeeper.$inferInsert> = {
-      pledgedBytes,
+    const { changePledge } = await import('@/lib/pool/drain-server')
+    await changePledge(database, session.user.id, {
+      pledgedBytes: gbToBytes(data.pledgeGb),
       graduationDate: data.graduationDate,
-      updatedAt: new Date(),
-    }
-
-    if (pledgeLowerThanUsed(pledgedBytes, existing.usedBytes)) {
-      if (existing.state === 'active' || existing.state === 'full') {
-        set.state = 'draining'
-        set.drainingDeadline = new Date(Date.now() + DRAIN_GRACE_MS)
-      }
-    } else if (existing.state === 'full' && pledgedBytes > existing.usedBytes) {
-      set.state = 'active'
-    }
-
-    await database
-      .update(flamekeeper)
-      .set(set)
-      .where(eq(flamekeeper.userId, session.user.id))
+    })
 
     return { success: true }
   })
@@ -200,6 +205,7 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
     const { flamekeeper, user } = await import('@/db/schema')
     const { eq, like, or, desc } = await import('drizzle-orm')
 
+    const { drainBytesLeft } = await import('@/lib/pool/drain')
     const database = db(env.meriksirat_d1 as D1Database)
     const term = data.search ? `%${data.search}%` : null
 
@@ -216,6 +222,8 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
         pledgedBytes: flamekeeper.pledgedBytes,
         usedBytes: flamekeeper.usedBytes,
         graduationDate: flamekeeper.graduationDate,
+        drainReason: flamekeeper.drainReason,
+        drainingDeadline: flamekeeper.drainingDeadline,
         createdAt: flamekeeper.createdAt,
       })
       .from(flamekeeper)
@@ -243,6 +251,8 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
       pledgedBytes: row.pledgedBytes,
       usedBytes: row.usedBytes,
       graduationDate: row.graduationDate,
+      drainingDeadline: row.drainingDeadline,
+      drainBytesLeft: drainBytesLeft(row),
       createdAt: row.createdAt,
     }))
   })
@@ -283,3 +293,87 @@ export const setLeaderboardAnonymousFn = createServerFn({ method: 'POST' })
 
     return { success: true }
   })
+
+export const optOutFlamekeeperFn = createServerFn({ method: 'POST' }).handler(
+  async (): Promise<DrainStatus> => {
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const session = await resolveSession(getRequestHeaders())
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { optOutFlamekeeper } = await import('@/lib/pool/drain-server')
+    return optOutFlamekeeper(
+      db(env.meriksirat_d1 as D1Database),
+      session.user.id
+    )
+  }
+)
+
+export const startRelayFn = createServerFn({ method: 'POST' })
+  .validator(StartRelaySchema)
+  .handler(async ({ data }): Promise<RelayHandout> => {
+    const sourceUserId = await resolveRelaySource(data.userId)
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { startRelay } = await import('@/lib/pool/drain-server')
+    return startRelay(
+      db(env.meriksirat_d1 as D1Database),
+      sourceUserId,
+      getRequestHeaders().get('origin') ?? new URL(getRequest().url).origin
+    )
+  })
+
+export const confirmRelayFn = createServerFn({ method: 'POST' })
+  .validator(ConfirmRelaySchema)
+  .handler(async ({ data }): Promise<DrainStatus> => {
+    const sourceUserId = await resolveRelaySource(data.userId)
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { confirmRelay } = await import('@/lib/pool/drain-server')
+    return confirmRelay(db(env.meriksirat_d1 as D1Database), sourceUserId, {
+      photoId: data.photoId,
+      reservationId: data.reservationId,
+      fileId: data.fileId,
+    })
+  })
+
+export const releaseRelayFn = createServerFn({ method: 'POST' })
+  .validator(ReleaseRelaySchema)
+  .handler(async ({ data }) => {
+    await resolveRelaySource(data.userId)
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { releaseFlamekeeperUpload } = await import('@/lib/pool/server')
+    await releaseFlamekeeperUpload(
+      db(env.meriksirat_d1 as D1Database),
+      data.albumId,
+      data.reservationId,
+      data.quotaExceeded
+    )
+    return { success: true }
+  })
+
+export const deleteMyAccountFn = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const session = await resolveSession(getRequestHeaders())
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { loadAccessRules } = await import('@/lib/access/server')
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    const rules = await loadAccessRules(database, session.user.id)
+    if (!rules.canDeleteAccount) {
+      throw new Error(
+        'Only flamekeepers who are not club members can delete their account, once their photos have moved.'
+      )
+    }
+    await database.delete(user).where(eq(user.id, session.user.id))
+    return { success: true }
+  }
+)

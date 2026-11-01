@@ -146,6 +146,7 @@ export default {
         expireAlbums(env),
         maintainPool(env),
         checkFlamekeeperHealth(env),
+        drainFlamekeepers(env),
       ])
     )
   },
@@ -197,6 +198,18 @@ async function maintainPool(env: Env): Promise<void> {
   } catch (error) {
     console.error(
       'Error in maintainPool:',
+      error instanceof Error ? error.message : error
+    )
+  }
+}
+
+async function drainFlamekeepers(env: Env): Promise<void> {
+  try {
+    const { runDrainMaintenance } = await import('./src/lib/pool/drain-server')
+    await runDrainMaintenance(env)
+  } catch (error) {
+    console.error(
+      'Error in drainFlamekeepers:',
       error instanceof Error ? error.message : error
     )
   }

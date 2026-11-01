@@ -520,6 +520,10 @@ export const flamekeeper = sqliteTable(
       mode: 'timestamp_ms',
     }),
     drainingDeadline: integer('draining_deadline', { mode: 'timestamp_ms' }),
+    drainReason: text('drain_reason', { enum: ['opt_out', 'pledge'] }),
+    drainReminderSentAt: integer('drain_reminder_sent_at', {
+      mode: 'timestamp_ms',
+    }),
     lostSince: integer('lost_since', { mode: 'timestamp_ms' }),
     lostNotifiedAt: integer('lost_notified_at', { mode: 'timestamp_ms' }),
     lostFinalizedAt: integer('lost_finalized_at', { mode: 'timestamp_ms' }),

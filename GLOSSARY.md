@@ -161,6 +161,10 @@ _Avoid_: Storage, capacity
 A flamekeeper state in which their photos are being moved to other flamekeepers, through the browser, before they leave or graduate.
 _Avoid_: Evacuating, migrating
 
+**Relay**:
+Moving one photo through a browser: downloaded with the source flamekeeper's token and uploaded into the same album folder for the destination, keeping the photo's ID (ADR-0009).
+_Avoid_: Transfer, copy
+
 **Lost flamekeeper**:
 A flamekeeper whose Drive access can no longer be refreshed; their photos drop out of the app unless they reconnect within 7 days.
 _Avoid_: Revoked, disconnected

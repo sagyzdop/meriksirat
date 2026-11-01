@@ -1,4 +1,15 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { DrainRelay } from '@/components/shared/drain-relay'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { UserTabs } from '@/components/admin/users/components/user-tabs'
@@ -32,6 +43,15 @@ const STATE_VARIANT = {
 
 export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
   const navigate = useNavigate()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const [relayUserId, setRelayUserId] = useState<string | null>(null)
+  const relayRow = flamekeepers.find((row) => row.userId === relayUserId)
+
+  const handleRelayFinished = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['flamekeepers'] })
+    await router.invalidate()
+  }
 
   return (
     <PageContainer>
@@ -61,13 +81,14 @@ export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
                 <TableHead>Pledged</TableHead>
                 <TableHead>Used</TableHead>
                 <TableHead>Graduation</TableHead>
+                <TableHead>Draining</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {flamekeepers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No flamekeepers found.
@@ -110,6 +131,22 @@ export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
                     <TableCell className="tabular-nums">
                       {row.graduationDate}
                     </TableCell>
+                    <TableCell>
+                      {row.state === 'draining' && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm tabular-nums text-muted-foreground">
+                            {formatGb(row.drainBytesLeft)} left
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRelayUserId(row.userId)}
+                          >
+                            Move photos
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -117,6 +154,28 @@ export function Page({ flamekeepers, search, isLoading = false }: PageProps) {
           </Table>
         </div>
       </div>
+      <Dialog
+        open={!!relayRow}
+        onOpenChange={(open) => !open && setRelayUserId(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move {relayRow?.name}'s photos</DialogTitle>
+            <DialogDescription>
+              Photos move through this browser to other flamekeepers. Keep the
+              dialog open until it finishes.
+            </DialogDescription>
+          </DialogHeader>
+          {relayRow && (
+            <DrainRelay
+              userId={relayRow.userId}
+              bytesLeft={relayRow.drainBytesLeft}
+              drainingDeadline={relayRow.drainingDeadline}
+              onFinished={handleRelayFinished}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   )
 }

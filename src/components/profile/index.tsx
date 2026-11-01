@@ -5,6 +5,7 @@ import { ProfileHeader } from './components/profile-header'
 import { ProfileContent } from './components/profile-content'
 import { FlamekeeperCard } from './components/flamekeeper-card'
 import { JoinClubCard } from './components/join-club-card'
+import { DeleteAccountCard } from './components/delete-account-card'
 import type { UserProfile } from '@/lib/user/types'
 import type { MyFlamekeeper } from '@/lib/flamekeeper/types'
 
@@ -62,6 +63,11 @@ export function Page({
             </p>
             <JoinClubCard />
           </Section>
+          {flamekeeper?.state === 'drained' && (
+            <Section>
+              <DeleteAccountCard />
+            </Section>
+          )}
         </div>
       </PageContainer>
     )

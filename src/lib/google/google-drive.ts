@@ -340,6 +340,26 @@ export async function shareWithWriter(
 }
 
 /**
+ * Revoke one permission on a file (e.g. a flamekeeper's writer share on an
+ * album folder). A permission that is already gone counts as revoked.
+ */
+export async function deleteDrivePermission(
+  accessToken: string,
+  fileId: string,
+  permissionId: string
+): Promise<void> {
+  try {
+    await driveFetch(
+      accessToken,
+      `${API}/files/${fileId}/permissions/${permissionId}`,
+      { method: 'DELETE' }
+    )
+  } catch (error) {
+    if (!(error instanceof DriveNotFoundError)) throw error
+  }
+}
+
+/**
  * Bytes this account's Drive files take up. `about.get` reports the org-wide
  * limit, so only `usageInDrive` is meaningful per account.
  */

@@ -16,7 +16,9 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import { FlamekeeperSignupForm } from '@/components/shared/flamekeeper-signup-form'
+import { DrainRelay } from '@/components/shared/drain-relay'
 import { EditPledgeDialog } from './edit-pledge-dialog'
+import { StopFlamekeepingDialog } from './stop-flamekeeping-dialog'
 import { getAccessRules } from '@/lib/access/access-rules'
 import {
   setLeaderboardAnonymousFn,
@@ -53,6 +55,7 @@ export function FlamekeeperCard({
   const [showSignup, setShowSignup] = useState(Boolean(connectError))
   const [isReconnecting, setIsReconnecting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [stopOpen, setStopOpen] = useState(false)
 
   const rules = getAccessRules({
     isMember: user.isMember,
@@ -140,6 +143,20 @@ export function FlamekeeperCard({
               </Button>
             </div>
           )}
+          {flamekeeper.state === 'draining' && (
+            <div className="space-y-2">
+              <p className="text-sm">
+                {flamekeeper.drainReason === 'opt_out'
+                  ? 'You stopped flamekeeping, so your photos are moving to other flamekeepers. New uploads no longer go to your Drive.'
+                  : 'Your pledge is below what you hold, so the excess is moving to other flamekeepers. New uploads no longer go to your Drive.'}
+              </p>
+              <DrainRelay
+                bytesLeft={flamekeeper.drainBytesLeft}
+                drainingDeadline={flamekeeper.drainingDeadline}
+                onFinished={handleSaved}
+              />
+            </div>
+          )}
           {connectError && (
             <div className="rounded bg-red-50 p-3 text-sm text-red-600">
               {connectError}
@@ -190,9 +207,25 @@ export function FlamekeeperCard({
               </Link>
             </Label>
           </div>
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            Edit pledge
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {flamekeeper.drainReason !== 'opt_out' && (
+              <Button variant="outline" onClick={() => setEditOpen(true)}>
+                Edit pledge
+              </Button>
+            )}
+            {flamekeeper.state !== 'lost' &&
+              flamekeeper.drainReason !== 'opt_out' && (
+                <Button variant="ghost" onClick={() => setStopOpen(true)}>
+                  Stop flamekeeping
+                </Button>
+              )}
+          </div>
+          <StopFlamekeepingDialog
+            open={stopOpen}
+            onOpenChange={setStopOpen}
+            usedBytes={flamekeeper.usedBytes}
+            onStopped={handleSaved}
+          />
           <EditPledgeDialog
             key={`${flamekeeper.pledgedBytes}-${flamekeeper.graduationDate}`}
             open={editOpen}
