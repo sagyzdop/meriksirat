@@ -12,6 +12,7 @@ import { DataTableColumnHeader } from '@/components/shared/data-table/data-table
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { Badge } from '@/components/ui/badge'
 import { User } from '@/lib/user/types'
+import { fullName } from '@/lib/utils'
 
 export type UserField = 'role' | 'clearanceLevel' | 'status'
 
@@ -85,14 +86,13 @@ export const createUserColumns = ({
   },
   {
     id: 'firstName', // Use id instead of accessorKey to match backend sortBy
-    accessorFn: (row) => `${row.firstName || ''} ${row.lastName || ''}`.trim(),
+    accessorFn: (row) => fullName(row),
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Name" />
     ),
     cell: ({ row }) => {
       const user = row.original
-      const displayName =
-        `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'No name'
+      const displayName = fullName(user) || 'No name'
 
       return (
         <div className="flex items-center gap-3">

@@ -10,8 +10,9 @@ import { Spinner } from '@/components/ui/spinner'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { Table, TableBody } from '@/components/ui/table'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
+import { DetailRow } from '@/components/shared/detail-row'
 
 export function Page() {
   const { _splat: equipmentId } = useParams({ strict: false })
@@ -82,52 +83,33 @@ export function Page() {
               <Table>
                 <TableBody>
                   {equipment.description && (
-                    <TableRow>
-                      <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                        Description
-                      </TableCell>
-                      <TableCell className="whitespace-normal break-words">
-                        {equipment.description}
-                      </TableCell>
-                    </TableRow>
+                    <DetailRow
+                      label="Description"
+                      valueClassName="whitespace-normal break-words"
+                    >
+                      {equipment.description}
+                    </DetailRow>
                   )}
                   {equipment.category && (
-                    <TableRow>
-                      <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                        Category
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {equipment.category.name}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+                    <DetailRow label="Category">
+                      <Badge variant="outline">{equipment.category.name}</Badge>
+                    </DetailRow>
                   )}
-                  <TableRow>
-                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                      Clearance Level
-                    </TableCell>
-                    <TableCell>
-                      {equipment.requiredClearanceLevel ? (
-                        <Badge
-                          variant="outline"
-                          className="font-mono text-amber-700"
-                        >
-                          Level {equipment.requiredClearanceLevel}
-                        </Badge>
-                      ) : (
-                        'None'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                      Availability
-                    </TableCell>
-                    <TableCell>
-                      <EquipmentAvailabilityBadge equipment={equipment} />
-                    </TableCell>
-                  </TableRow>
+                  <DetailRow label="Clearance Level">
+                    {equipment.requiredClearanceLevel ? (
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-amber-700"
+                      >
+                        Level {equipment.requiredClearanceLevel}
+                      </Badge>
+                    ) : (
+                      'None'
+                    )}
+                  </DetailRow>
+                  <DetailRow label="Availability">
+                    <EquipmentAvailabilityBadge equipment={equipment} />
+                  </DetailRow>
                 </TableBody>
               </Table>
             </div>

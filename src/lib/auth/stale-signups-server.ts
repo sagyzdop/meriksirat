@@ -3,12 +3,10 @@ import { db } from '@/db'
 import { account, session, user } from '@/db/schema'
 import { ALUMNI_EMAIL_LIKE } from './signup-domain'
 import {
-  STALE_SIGNUP_DAYS,
   STALE_SIGNUP_MAX_DELETES,
   selectStaleSignups,
+  staleCutoff,
 } from './stale-signups'
-
-const DAY_MS = 24 * 60 * 60 * 1000
 
 const OWNS_ANYTHING = sql<number>`(
   EXISTS (SELECT 1 FROM booking WHERE booking.user_id = ${user.id})
@@ -28,7 +26,7 @@ export async function runStaleSignupCleanup(env: {
 }): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
-  const cutoff = new Date(now.getTime() - STALE_SIGNUP_DAYS * DAY_MS)
+  const cutoff = staleCutoff(now)
   const masterEmail = (env.GOOGLE_MASTER_EMAIL ?? '').trim().toLowerCase()
 
   const rows = await database

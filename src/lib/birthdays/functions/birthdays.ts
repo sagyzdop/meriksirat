@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type { db } from '@/db'
+import { toDateOnlyString } from '@/lib/format'
 import { BIRTHDAYS_CALENDAR_ID, BIRTHDAY_STATUSES } from '../constants'
 import type { BirthdaySyncResult, BirthdayUser } from '../types'
 import { BirthdayListFiltersSchema, type BirthdayListResult } from '../types'
@@ -26,14 +27,6 @@ export function parseBirthday(value: string | null | undefined): {
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
-
-function toISODate(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-}
 
 /**
  * Reconciles the dedicated Google Calendar with D1 so it holds exactly one
@@ -175,7 +168,12 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    const from = startOfDay(new Date())
+    const today = new Date()
+    const from = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    )
 
     const conditions = []
     conditions.push(inArray(user.status, [...BIRTHDAY_STATUSES]))
@@ -241,7 +239,7 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
         wantsCongratulation: member.wantsBirthdayCongratulation ?? true,
         birthday: member.birthday ?? '',
         monthDay: `${pad(parsed.month)}-${pad(parsed.day)}`,
-        occurrence: toISODate(occurrence),
+        occurrence: toDateOnlyString(occurrence),
         turningAge:
           parsed.year !== null ? occurrence.getFullYear() - parsed.year : null,
       })
@@ -288,10 +286,6 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
     }
   })
 
-/**
- * Manual reconcile trigger for admins. Wraps the plain reconcile so the D1
- * binding stays server-side.
- */
 export const syncBirthdaysToCalendarFn = createServerFn({
   method: 'POST',
 }).handler(async (): Promise<BirthdaySyncResult> => {

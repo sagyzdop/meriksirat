@@ -1,6 +1,17 @@
 import { z } from 'zod'
 import type { FlamekeeperState } from '@/lib/access/access-rules'
 
+export const USER_STATUSES = [
+  'Active',
+  'Inactive',
+  'On Probation',
+  'Board',
+  'Ex-Board',
+  'Roommate',
+  'Ex-Roommate',
+  'Graduated',
+] as const
+
 // User Profile Types
 export interface UserProfile {
   id: string
@@ -36,16 +47,7 @@ export interface User {
   image: string | null
   role: 'user' | 'manager' | 'admin' | null
   clearanceLevel: number | null
-  status:
-    | 'Active'
-    | 'Inactive'
-    | 'On Probation'
-    | 'Board'
-    | 'Ex-Board'
-    | 'Roommate'
-    | 'Ex-Roommate'
-    | 'Graduated'
-    | null
+  status: (typeof USER_STATUSES)[number] | null
   firstName: string | null
   lastName: string | null
   albumCount: number | null
@@ -57,20 +59,7 @@ export interface User {
 // Admin User Management Schemas
 export const AdminUserFiltersSchema = z.object({
   role: z.array(z.enum(['user', 'manager', 'admin'])).optional(),
-  status: z
-    .array(
-      z.enum([
-        'Active',
-        'Inactive',
-        'On Probation',
-        'Board',
-        'Ex-Board',
-        'Roommate',
-        'Ex-Roommate',
-        'Graduated',
-      ])
-    )
-    .optional(),
+  status: z.array(z.enum(USER_STATUSES)).optional(),
   clearanceLevel: z.array(z.coerce.number()).optional(),
   search: z.string().optional(),
   page: z.coerce.number().default(1),
@@ -123,18 +112,7 @@ export const UpdateUserAdminSchema = z.object({
   userId: z.string(),
   role: z.enum(['user', 'manager', 'admin']).optional(),
   clearanceLevel: z.number().min(1).optional(),
-  status: z
-    .enum([
-      'Active',
-      'Inactive',
-      'On Probation',
-      'Board',
-      'Ex-Board',
-      'Roommate',
-      'Ex-Roommate',
-      'Graduated',
-    ])
-    .optional(),
+  status: z.enum(USER_STATUSES).optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
 })
