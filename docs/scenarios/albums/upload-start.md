@@ -1,0 +1,57 @@
+# Start uploading photos
+
+> **Question:** What happens between choosing photos and the browser getting a Drive upload address for each one?
+>
+> **Answer:** The owner, co-authors and admins or managers choose image files or drop them on the upload box. The browser drops duplicates by name, saves the rest in a persistent queue, and works on 2 files at a time. For each file it asks the Worker for an upload session. The Worker checks the album folder is usable and the name is not taken, then picks a flamekeeper to host the file (see upload-pick-flamekeeper.md) and returns a one-time Google upload address with a reservation id. A file may be up to 5 GB.
+>
+> **Notes:**
+> - The Upload photos button is disabled unless the folder state is ok, with hover texts "Restore the album folder from the Drive bin before uploading" and "Recreate the album folder before uploading".
+> - The queue survives a page refresh: jobs go to localStorage and the files to IndexedDB. A job that was uploading is restarted from 0 after a refresh. A job whose file cannot be found fails with "File is no longer available — choose it again".
+> - Finished jobs disappear after 1 hour (done or cancelled) or 7 days (failed).
+> - Names are compared exactly. The same name in the same album is refused by the browser and again by the Worker.
+> - A rate limit named rl_create_upload_session is declared in the project settings, but createUploadSessionFn does not use it.
+> - What the browser does next is in upload-send-and-confirm.md.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant M as Owner, co-author or admin
+    participant B as Browser
+    participant W as Worker
+    participant D as D1
+    participant G as Master Drive
+    M->>B: Choose photos or drop them on the upload box
+    alt No image files in the selection
+        B->>M: Toast "Please choose image files"
+    else Some images
+        B->>B: Skip names already in the album,<br/>in the queue or twice in the batch
+        opt Duplicates skipped
+            B->>M: Toast "N duplicates skipped — already in the album"
+        end
+        B->>B: Save jobs and files in the browser, start 2 at a time
+    end
+    B->>W: createUploadSessionFn(albumId, fileName, mimeType, size)
+    W->>D: Load album and the caller's role
+    alt Album missing, deleted or caller has no role
+        W-->>B: Error Album not found or Insufficient permissions
+    else Allowed
+        W->>G: Master token: folder state
+        alt Folder in the bin
+            W-->>B: Error The album folder is in the Google Drive bin.<br/>Restore it before uploading.
+        else Folder deleted
+            W-->>B: Error The album folder was deleted from Google Drive.<br/>Use "Recreate folder" to fix it.
+        else Folder ok
+            W->>D: Is there a live photo with this name in the album
+            alt Name already used
+                W-->>B: Error Photo "name" already exists in this album
+            else Name free
+                opt Legacy album, not indexed
+                    W->>G: Master token: find a file with this name in the folder
+                    W->>D: If found, record it as a photo, then refuse as a duplicate
+                end
+                W->>W: startFlamekeeperUpload, see upload-pick-flamekeeper.md
+                W-->>B: uploadUrl and reservationId
+            end
+        end
+    end
+```
