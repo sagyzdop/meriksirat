@@ -58,19 +58,11 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
   .validator(AddBookingItemsSchema)
   .handler(async ({ data }) => {
     const { userContext } = await import('@/lib/auth/context')
-    const { booking, bookingItem, equipment, user } =
-      await import('@/db/schema')
-    const { eq, inArray } = await import('drizzle-orm')
+    const { booking, bookingItem, user } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
-    const { toCalendarDateTime, CLUB_TIMEZONE } =
-      await import('@/lib/google/google-caledar')
-    const {
-      createCalendarEventRaw,
-      checkMultipleCalendarsFreeBusyRaw,
-      deleteCalendarEventRaw,
-    } = await import('@/lib/google/google-calendar-client')
-    const { getEquipmentCalendarId, retry } = await import('../server')
-    const { formatBookingDetailsPlain } = await import('../details')
+    const { loadBookableEquipment, assertNoConflicts, createItemsWithEvents } =
+      await import('../create-items')
     const { formatUserDisplayName } = await import('@/lib/utils')
 
     const { session, database, headers } =
@@ -134,175 +126,32 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       throw new Error('Selected equipment is already part of this booking')
     }
 
-    const equipmentCalendarIds = await Promise.all(
-      equipmentIds.map(async (equipmentId) => ({
-        equipmentId,
-        calendarId: await getEquipmentCalendarId(equipmentId),
-      }))
-    )
-
-    const missingCalendar = equipmentCalendarIds.find(
-      (item) => !item.calendarId
-    )
-    if (missingCalendar) {
-      throw new Error(
-        `No calendar configured for equipment ${missingCalendar.equipmentId}`
-      )
-    }
-
-    const resolvedCalendars = equipmentCalendarIds.map((item) => ({
-      equipmentId: item.equipmentId,
-      calendarId: item.calendarId as string,
-    }))
-
-    const calendarIds = resolvedCalendars.map((item) => item.calendarId)
-
-    const equipmentData = await database
-      .select({ id: equipment.id, modelName: equipment.modelName })
-      .from(equipment)
-      .where(inArray(equipment.id, equipmentIds))
-
-    const equipmentNameMap = new Map(
-      equipmentData.map((item) => [item.id, item.modelName])
-    )
+    const items = await loadBookableEquipment(database, equipmentIds)
 
     const startTime = new Date(bookingRow.startTime).toISOString()
     const endTime = new Date(bookingRow.endTime).toISOString()
 
-    const freeBusyResult = await checkMultipleCalendarsFreeBusyRaw({
-      equipmentCalendarIds: calendarIds,
-      timeMin: startTime,
-      timeMax: endTime,
-    })
-
-    const conflicts = resolvedCalendars
-      .map(({ equipmentId, calendarId }) => {
-        const busy = freeBusyResult[calendarId]?.busy || []
-        return busy.length > 0 ? { equipmentId, conflict: busy[0] } : null
-      })
-      .filter(
-        (
-          item
-        ): item is {
-          equipmentId: number
-          conflict: { start: string; end: string }
-        } => Boolean(item)
-      )
-
-    if (conflicts.length > 0) {
-      const conflictNames = conflicts
-        .map(
-          ({ equipmentId }) =>
-            equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`
-        )
-        .join(', ')
-      const err: Error & { conflicts?: typeof conflicts } = new Error(
-        `Requested time conflicts with existing booking(s) for ${conflictNames}`
-      )
-      err.conflicts = conflicts
-      throw err
-    }
-
-    const notes = bookingRow.userEventDetails
+    const nameById = new Map(items.map((item) => [item.equipmentId, item.name]))
+    await assertNoConflicts(
+      items,
+      startTime,
+      endTime,
+      (conflicts) =>
+        `Requested time conflicts with existing booking(s) for ${conflicts
+          .map(({ equipmentId }) => nameById.get(equipmentId))
+          .join(', ')}`
+    )
 
     const now = Date.now()
-    const createdItems: Array<{
-      bookingItemId: number
-      calendarId: string
-      eventId: string
-    }> = []
-
-    try {
-      for (const { equipmentId, calendarId } of resolvedCalendars) {
-        const equipmentName =
-          equipmentNameMap.get(equipmentId) || `Equipment ${equipmentId}`
-        const description = formatBookingDetailsPlain({
-          bookingId: data.bookingId,
-          userDisplayName,
-          equipmentNames: [equipmentName],
-          startTime,
-          endTime,
-          status: 'booked',
-          notes,
-        })
-
-        const event = {
-          summary: `${equipmentName} - Booking`,
-          description,
-          start: {
-            dateTime: toCalendarDateTime(startTime),
-            timeZone: CLUB_TIMEZONE,
-          },
-          end: {
-            dateTime: toCalendarDateTime(endTime),
-            timeZone: CLUB_TIMEZONE,
-          },
-        }
-
-        const createdEvent = await retry(
-          () =>
-            createCalendarEventRaw({
-              equipmentCalendarId: calendarId,
-              event,
-            }),
-          3,
-          400
-        )
-
-        const gCalEventId = createdEvent?.eventId
-        if (!gCalEventId) {
-          throw new Error('Calendar API responded without event id')
-        }
-
-        const itemInsert = await database
-          .insert(bookingItem)
-          .values({
-            bookingId: data.bookingId,
-            equipmentId,
-            status: 'booked',
-            googleCalendarEventId: gCalEventId,
-            createdAt: new Date(now),
-            updatedAt: new Date(now),
-          })
-          .returning({ id: bookingItem.id })
-
-        const bookingItemId = itemInsert[0]?.id
-        if (!bookingItemId) {
-          throw new Error('Failed to create booking item record')
-        }
-
-        createdItems.push({ bookingItemId, calendarId, eventId: gCalEventId })
-      }
-    } catch (err) {
-      // Rollback: delete created events and items
-      for (const record of createdItems) {
-        try {
-          await deleteCalendarEventRaw({
-            equipmentCalendarId: record.calendarId,
-            eventId: record.eventId,
-          })
-        } catch (deleteError) {
-          console.error(
-            'Failed to delete calendar event during rollback:',
-            deleteError
-          )
-        }
-
-        try {
-          await database
-            .delete(bookingItem)
-            .where(eq(bookingItem.id, record.bookingItemId))
-        } catch (dbDelErr) {
-          console.error(
-            'Rollback delete failed for booking item',
-            record.bookingItemId,
-            dbDelErr
-          )
-        }
-      }
-
-      throw err
-    }
+    const added = await createItemsWithEvents(database, {
+      bookingId: data.bookingId,
+      items,
+      startTime,
+      endTime,
+      ownerName: userDisplayName,
+      notes: bookingRow.userEventDetails,
+      now,
+    })
 
     await database
       .update(booking)
@@ -311,15 +160,13 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
 
     try {
       await logBookingActivityById(data.bookingId, 'items_added', {
-        addedItems: equipmentIds.map(
-          (id) => equipmentNameMap.get(id) || `Equipment ${id}`
-        ),
+        addedItems: items.map((item) => item.name),
       })
     } catch (logError) {
       console.error('Failed to log booking update:', logError)
     }
 
-    return { success: true, added: createdItems.length }
+    return { success: true, added }
   })
 
 export const cancelBookingItemFn = createServerFn({ method: 'POST' })
