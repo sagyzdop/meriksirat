@@ -16,33 +16,22 @@ import {
 } from './types'
 import type {
   AlbumAccessLevel,
-  AlbumAuthor,
   AlbumDetail,
-  AlbumFolderState,
   AlbumListPage,
-  AlbumListQuery,
-  AlbumPhoto,
-  AlbumSummary,
   UploadSession,
 } from './types'
-import { albumPhotoUrls, albumCoverUrl } from './urls'
 import { defaultExpiry } from '@/lib/pool/expiry'
 
-// ---------------------------------------------------------------------------
-// Helpers (server-only)
-// ---------------------------------------------------------------------------
+type Database = ReturnType<(typeof import('@/db'))['db']>
 
-async function loadAlbum(
-  database: ReturnType<(typeof import('@/db'))['db']>,
-  albumId: string
-) {
+async function loadAlbumOrNull(database: Database, albumId: string) {
   const { album } = await import('@/db/schema')
   const { eq } = await import('drizzle-orm')
-  const row = await database
-    .select()
-    .from(album)
-    .where(eq(album.id, albumId))
-    .get()
+  return database.select().from(album).where(eq(album.id, albumId)).get()
+}
+
+async function loadAlbum(database: Database, albumId: string) {
+  const row = await loadAlbumOrNull(database, albumId)
   if (!row || row.deletedAt) throw new Error('Album not found')
   return row
 }
@@ -59,641 +48,6 @@ async function albumContext(albumId: string, allowed: AlbumAccessLevel[]) {
   requireAccess(access, allowed)
   return { database, headers, row, user, access }
 }
-
-async function loadAlbumOrNull(
-  database: ReturnType<(typeof import('@/db'))['db']>,
-  albumId: string
-) {
-  const { album } = await import('@/db/schema')
-  const { eq } = await import('drizzle-orm')
-  return database.select().from(album).where(eq(album.id, albumId)).get()
-}
-
-type AlbumRowWithAuthors =
-  (typeof import('@/db/schema'))['album']['$inferSelect'] & {
-    owner: {
-      id: string
-      name: string
-      telegramUsername: string | null
-    } | null
-    members: {
-      user: {
-        id: string
-        name: string
-        telegramUsername: string | null
-      } | null
-    }[]
-  }
-
-/**
- * Keyset pagination over the `(createdAt desc, id desc)` ordering. The cursor
- * is an opaque, URL-safe token encoding the last row's position.
- */
-function encodeAlbumCursor(createdAtMs: number, id: string): string {
-  const raw = `${createdAtMs}:${id}`
-  return typeof btoa === 'function'
-    ? btoa(raw)
-    : Buffer.from(raw, 'utf-8').toString('base64')
-}
-
-function decodeAlbumCursor(
-  cursor: string | null | undefined
-): { createdAtMs: number; id: string } | null {
-  if (!cursor) return null
-  try {
-    const raw =
-      typeof atob === 'function'
-        ? atob(cursor)
-        : Buffer.from(cursor, 'base64').toString('utf-8')
-    const sep = raw.indexOf(':')
-    const createdAtMs = Number(raw.slice(0, sep))
-    const id = raw.slice(sep + 1)
-    if (!Number.isFinite(createdAtMs) || !id) return null
-    return { createdAtMs, id }
-  } catch {
-    return null
-  }
-}
-
-function toAlbumSummary(
-  row: AlbumRowWithAuthors,
-  me: string | null,
-  ownershipOverride?: 'owner' | 'co-author'
-): AlbumSummary {
-  const authors: AlbumAuthor[] = [
-    ...(row.owner
-      ? [
-          {
-            id: row.owner.id,
-            name: row.owner.name,
-            telegramUsername: row.owner.telegramUsername,
-          },
-        ]
-      : []),
-    ...(row.members ?? [])
-      .map((m) =>
-        m.user
-          ? {
-              id: m.user.id,
-              name: m.user.name,
-              telegramUsername: m.user.telegramUsername,
-            }
-          : null
-      )
-      .filter((a): a is AlbumAuthor => !!a),
-  ]
-  return {
-    id: row.id,
-    ownerUserId: row.ownerUserId,
-    title: row.title,
-    description: row.description ?? '',
-    event: row.event ?? '',
-    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
-    driveFolderId: row.driveFolderId,
-    coverFileId: row.coverFileId,
-    coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    ownership:
-      ownershipOverride ??
-      (me && row.ownerUserId === me ? 'owner' : 'co-author'),
-    coAuthorCount: (row.members ?? []).length,
-    authors,
-  }
-}
-
-interface ListAlbumsPaginatedArgs {
-  database: ReturnType<(typeof import('@/db'))['db']>
-  /**
-   * Scoping predicate.
-   */
-  baseWhere?: import('drizzle-orm').SQL
-  /**
-   * Ownership filter predicate for a given ownership value.
-   */
-  ownershipWhere?: (
-    ownership: 'owner' | 'co-author'
-  ) => import('drizzle-orm').SQL | undefined
-  me?: string | null
-  ownershipOverride?: 'owner' | 'co-author'
-  query: AlbumListQuery
-}
-
-/**
- * Run a paginated album list query applying filters (search over title and
- * description, ownership) and keyset pagination.
- */
-async function listAlbumsPaginated({
-  database,
-  baseWhere,
-  ownershipWhere,
-  me = null,
-  ownershipOverride,
-  query,
-}: ListAlbumsPaginatedArgs): Promise<AlbumListPage> {
-  const { album, albumMember, user } = await import('@/db/schema')
-  const { chunk } = await import('./photo-backfill')
-  const { and, desc, eq, getTableColumns, inArray, isNull, lt, like, or, sql } =
-    await import('drizzle-orm')
-
-  const conditions: import('drizzle-orm').SQL[] = [isNull(album.deletedAt)]
-  if (baseWhere) conditions.push(baseWhere)
-
-  const search = (query.search ?? '').trim()
-  if (search) {
-    const pattern = `%${search.toLowerCase()}%`
-    conditions.push(
-      or(
-        like(sql`lower(${album.title})`, pattern),
-        like(sql`lower(${album.description})`, pattern)
-      )!
-    )
-  }
-
-  // Ownership is multi-select too: each selected value contributes its
-  // predicate and they are OR-ed together.
-  if (query.ownership?.length && ownershipWhere) {
-    const own = query.ownership
-      .map((o) => ownershipWhere(o))
-      .filter((c): c is NonNullable<typeof c> => !!c)
-    if (own.length === 1) conditions.push(own[0])
-    else if (own.length > 1) conditions.push(or(...own)!)
-  }
-
-  const decoded = decodeAlbumCursor(query.cursor)
-  if (decoded) {
-    conditions.push(
-      or(
-        lt(album.createdAt, new Date(decoded.createdAtMs)),
-        and(
-          eq(album.createdAt, new Date(decoded.createdAtMs)),
-          lt(album.id, decoded.id)
-        )!
-      )!
-    )
-  }
-
-  const where = conditions.length ? and(...conditions) : undefined
-  const limit = query.limit ?? 24
-
-  // Flat select: album + owner join (avoids Drizzle relational query engine)
-  const albumCols = getTableColumns(album)
-  const albumRows = await database
-    .select({
-      ...albumCols,
-      ownerId: user.id,
-      ownerName: user.name,
-      ownerTelegramUsername: user.telegramUsername,
-    })
-    .from(album)
-    .leftJoin(user, eq(album.ownerUserId, user.id))
-    .where(where)
-    .orderBy(desc(album.createdAt), desc(album.id))
-    .limit(limit + 1)
-    .all()
-
-  // Fetch members + user info for the fetched album IDs. A page can carry
-  // limit + 1 (up to 101) ids and D1 caps bound parameters at 100/query,
-  // so the ids are sent in chunks of 100.
-  const albumIds = albumRows.map((r) => r.id)
-  const memberRows = (
-    await Promise.all(
-      chunk(albumIds, 100).map((idPart) =>
-        database
-          .select({
-            albumId: albumMember.albumId,
-            userId: user.id,
-            userName: user.name,
-            userTelegramUsername: user.telegramUsername,
-          })
-          .from(albumMember)
-          .innerJoin(user, eq(albumMember.userId, user.id))
-          .where(inArray(albumMember.albumId, idPart))
-          .all()
-      )
-    )
-  ).flat()
-
-  // Group members by albumId
-  const membersByAlbum = new Map<string, typeof memberRows>()
-  for (const m of memberRows) {
-    const list = membersByAlbum.get(m.albumId) || []
-    list.push(m)
-    membersByAlbum.set(m.albumId, list)
-  }
-
-  // Assemble nested structure matching AlbumRowWithAuthors
-  const rows = albumRows.map((r) => ({
-    ...r,
-    owner: r.ownerId
-      ? {
-          id: r.ownerId,
-          name: r.ownerName,
-          telegramUsername: r.ownerTelegramUsername,
-        }
-      : null,
-    members: (membersByAlbum.get(r.id) || []).map((m) => ({
-      user: m.userId
-        ? {
-            id: m.userId,
-            name: m.userName,
-            telegramUsername: m.userTelegramUsername,
-          }
-        : null,
-    })),
-  }))
-
-  const hasMore = rows.length > limit
-  const pageRows = hasMore ? rows.slice(0, limit) : rows
-  const last = pageRows[pageRows.length - 1]
-
-  return {
-    albums: pageRows.map((row) =>
-      toAlbumSummary(row as AlbumRowWithAuthors, me, ownershipOverride)
-    ),
-    nextCursor:
-      hasMore && last
-        ? encodeAlbumCursor(last.createdAt.getTime(), last.id)
-        : null,
-  }
-}
-
-async function listAlbumsForCurrentUser(
-  database: ReturnType<(typeof import('@/db'))['db']>,
-  data: AlbumListQuery
-): Promise<AlbumListPage> {
-  const { getRequestHeaders } = await import('@tanstack/react-start/server')
-  const { album, albumMember } = await import('@/db/schema')
-  const { eq, and, ne, inArray, or } = await import('drizzle-orm')
-  const { getSessionUser } = await import('./server')
-
-  const headers = getRequestHeaders()
-  const currentUser = await getSessionUser(headers)
-  if (!currentUser) return { albums: [], nextCursor: null }
-  const me = currentUser.id
-
-  // D1 caps bound parameters at 100/query, so membership is expressed as a
-  // subquery rather than an in-memory id list.
-  const memberAlbums = database
-    .select({ albumId: albumMember.albumId })
-    .from(albumMember)
-    .where(eq(albumMember.userId, me))
-
-  const baseWhere = or(
-    eq(album.ownerUserId, me),
-    inArray(album.id, memberAlbums)
-  )
-
-  const ownershipWhere = (ownership: 'owner' | 'co-author') =>
-    ownership === 'owner'
-      ? eq(album.ownerUserId, me)
-      : and(ne(album.ownerUserId, me), inArray(album.id, memberAlbums))
-
-  return listAlbumsPaginated({
-    database,
-    baseWhere,
-    ownershipWhere,
-    me,
-    query: data,
-  })
-}
-
-/**
- * Normalize a Drive capture timestamp to an ISO string.
- *
- * Drive's `imageMediaMetadata.time` is the EXIF capture time in the format
- * `YYYY:MM:DD HH:MM:SS` (camera-local, no timezone), which `new Date()` can't
- * parse. ISO timestamps (e.g. `createdTime`) parse directly.
- */
-function normalizeCapturedAt(value: string | undefined): string {
-  if (!value) return ''
-  const parsed = new Date(value)
-  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString()
-  const match = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(
-    value
-  )
-  if (!match) return ''
-  const [, y, mo, d, h, mi, s] = match
-  const exifParsed = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}Z`)
-  return Number.isNaN(exifParsed.getTime()) ? '' : exifParsed.toISOString()
-}
-
-async function listIndexedAlbumPhotos(
-  database: ReturnType<(typeof import('@/db'))['db']>,
-  row: AlbumRow
-): Promise<{
-  photos: AlbumPhoto[]
-  folderState: AlbumFolderState
-}> {
-  const { getCachedListing, setCachedListing } = await import('./server')
-  const { getGoogleAccessToken } =
-    await import('@/lib/google/google-calendar-auth')
-  const { getDriveFolderState } = await import('@/lib/google/google-drive')
-  const { photo } = await import('@/db/schema')
-  const { and, eq } = await import('drizzle-orm')
-  const { photoRowToAlbumPhoto, sortPhotosByCapture } =
-    await import('./photo-backfill')
-
-  let folderState: AlbumFolderState
-  const cached = await getCachedListing(row.driveFolderId)
-  if (cached) {
-    folderState = cached.folderState
-  } else {
-    folderState = await getDriveFolderState(
-      await getGoogleAccessToken(),
-      row.driveFolderId
-    )
-    await setCachedListing(row.driveFolderId, [], folderState)
-  }
-
-  if (folderState === 'missing') return { photos: [], folderState }
-
-  const rows = await database
-    .select()
-    .from(photo)
-    .where(and(eq(photo.albumId, row.id), eq(photo.state, 'live')))
-    .all()
-  return {
-    photos: sortPhotosByCapture(rows.map(photoRowToAlbumPhoto)),
-    folderState,
-  }
-}
-
-async function listAlbumPhotos(
-  database: ReturnType<(typeof import('@/db'))['db']>,
-  row: AlbumRow
-): Promise<{
-  photos: AlbumPhoto[]
-  folderState: AlbumFolderState
-}> {
-  const driveFolderId = row.driveFolderId
-  if (row.photosIndexedAt) return listIndexedAlbumPhotos(database, row)
-  const { requestAlbumIndex } = await import('./photo-index')
-  await requestAlbumIndex(database, row.id)
-
-  const { getCachedListing, setCachedListing } = await import('./server')
-  const { getGoogleAccessToken } =
-    await import('@/lib/google/google-calendar-auth')
-  const { listDriveFolderFiles, getDriveFolderState, DriveNotFoundError } =
-    await import('@/lib/google/google-drive')
-
-  const cached = await getCachedListing(driveFolderId)
-
-  let files: import('@/lib/google/google-drive').DriveFileMeta[]
-  let folderState: AlbumFolderState
-
-  if (cached) {
-    files = cached.files
-    folderState = cached.folderState
-  } else {
-    try {
-      const accessToken = await getGoogleAccessToken()
-      const [state, listed] = await Promise.all([
-        getDriveFolderState(accessToken, driveFolderId),
-        listDriveFolderFiles(accessToken, driveFolderId),
-      ])
-      folderState = state
-      files = listed
-      await setCachedListing(driveFolderId, files, folderState)
-    } catch (error) {
-      if (error instanceof DriveNotFoundError) {
-        // The folder was permanently deleted directly in Google Drive.
-        // Photos are gone.
-        folderState = 'missing'
-        files = []
-        await setCachedListing(driveFolderId, files, folderState)
-      } else {
-        throw error
-      }
-    }
-  }
-
-  const photos: AlbumPhoto[] = files
-    .filter((f) => f.mimeType?.startsWith('image/'))
-    .map((f) => {
-      const capturedAt =
-        normalizeCapturedAt(f.imageMediaMetadata?.time) || f.createdTime || ''
-      const { url, thumbnailUrl } = albumPhotoUrls(f.id)
-      const exif = f.imageMediaMetadata
-        ? {
-            ...(f.imageMediaMetadata.cameraMake && {
-              cameraMake: f.imageMediaMetadata.cameraMake,
-            }),
-            ...(f.imageMediaMetadata.cameraModel && {
-              cameraModel: f.imageMediaMetadata.cameraModel,
-            }),
-            ...(f.imageMediaMetadata.exposureTime && {
-              exposureTime: f.imageMediaMetadata.exposureTime,
-            }),
-            ...(f.imageMediaMetadata.aperture != null && {
-              aperture: f.imageMediaMetadata.aperture,
-            }),
-            ...(f.imageMediaMetadata.focalLength != null && {
-              focalLength: f.imageMediaMetadata.focalLength,
-            }),
-            ...(f.imageMediaMetadata.isoSpeed != null && {
-              isoSpeed: f.imageMediaMetadata.isoSpeed,
-            }),
-            ...(f.imageMediaMetadata.width != null && {
-              width: f.imageMediaMetadata.width,
-            }),
-            ...(f.imageMediaMetadata.height != null && {
-              height: f.imageMediaMetadata.height,
-            }),
-            ...(f.imageMediaMetadata.whiteBalance && {
-              whiteBalance: f.imageMediaMetadata.whiteBalance,
-            }),
-          }
-        : undefined
-      return {
-        id: f.id,
-        name: f.name,
-        mimeType: f.mimeType,
-        size: f.size ? Number(f.size) : null,
-        capturedAt,
-        createdAt: f.createdTime ?? '',
-        url,
-        thumbnailUrl,
-        ...(exif && { exif }),
-      }
-    })
-
-  if (folderState !== 'missing') {
-    const { photo } = await import('@/db/schema')
-    const { and, eq, isNotNull } = await import('drizzle-orm')
-    const { photoRowToAlbumPhoto } = await import('./photo-backfill')
-    const seen = new Set(photos.map((p) => p.id))
-    const owned = await database
-      .select()
-      .from(photo)
-      .where(
-        and(
-          eq(photo.albumId, row.id),
-          eq(photo.state, 'live'),
-          isNotNull(photo.flamekeeperUserId)
-        )
-      )
-      .all()
-    for (const r of owned) {
-      if (!seen.has(r.driveFileId)) photos.push(photoRowToAlbumPhoto(r))
-    }
-  }
-
-  photos.sort((a, b) => {
-    if (a.capturedAt < b.capturedAt) return -1
-    if (a.capturedAt > b.capturedAt) return 1
-    return 0
-  })
-
-  return { photos, folderState }
-}
-
-/**
- * Pick a default cover: the first photo ever uploaded to the folder (earliest
- * Drive creation time). Returns null when there are no photos.
- */
-function defaultCoverFileId(photos: AlbumPhoto[]): string | null {
-  let earliest: AlbumPhoto | null = null
-  for (const photo of photos) {
-    const createdAt = photo.createdAt
-    if (!createdAt) continue
-    if (!earliest || createdAt < (earliest.createdAt ?? 0)) earliest = photo
-  }
-  return earliest?.id ?? null
-}
-
-type AlbumRow = NonNullable<Awaited<ReturnType<typeof loadAlbumOrNull>>>
-
-/**
- * Build the viewer-independent core of an album detail payload: the album
- * row fields, Drive photos and author list. Per-viewer decoration (ownership,
- * access, edit share token) is applied separately in `decorateAlbumDetail`.
- */
-async function buildAlbumCore(
-  database: ReturnType<(typeof import('@/db'))['db']>,
-  row: AlbumRow
-): Promise<Record<string, unknown>> {
-  const { eq } = await import('drizzle-orm')
-  const { album, albumMember, user } = await import('@/db/schema')
-
-  const [listing, owner, members] = await Promise.all([
-    listAlbumPhotos(database, row),
-    database
-      .select({ name: user.name, telegramUsername: user.telegramUsername })
-      .from(user)
-      .where(eq(user.id, row.ownerUserId))
-      .get(),
-    database
-      .select({
-        userId: albumMember.userId,
-        name: user.name,
-        telegramUsername: user.telegramUsername,
-      })
-      .from(albumMember)
-      .innerJoin(user, eq(albumMember.userId, user.id))
-      .where(eq(albumMember.albumId, row.id))
-      .all(),
-  ])
-
-  // No cover set yet: default to the first uploaded photo.
-  const coverFileId = row.coverFileId ?? defaultCoverFileId(listing.photos)
-  if (row.coverFileId !== coverFileId && coverFileId) {
-    await database
-      .update(album)
-      .set({ coverFileId, updatedAt: new Date() })
-      .where(eq(album.id, row.id))
-  }
-
-  const authors: AlbumAuthor[] = [
-    {
-      id: row.ownerUserId,
-      name: owner?.name ?? 'Unknown',
-      telegramUsername: owner?.telegramUsername ?? null,
-    },
-    ...members.map((m) => ({
-      id: m.userId,
-      name: m.name,
-      telegramUsername: m.telegramUsername,
-    })),
-  ]
-
-  return {
-    id: row.id,
-    ownerUserId: row.ownerUserId,
-    title: row.title,
-    description: row.description ?? '',
-    event: row.event ?? '',
-    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
-    driveFolderId: row.driveFolderId,
-    coverFileId,
-    coverUrl: coverFileId ? albumCoverUrl(coverFileId) : null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    coAuthorCount: members.length,
-    authors,
-    photos: listing.photos,
-    folderState: listing.folderState,
-  }
-}
-
-/**
- * Merge the cached viewer-independent core with fields that are always derived
- * from a freshly loaded album row and session — never from the cache.
- */
-function decorateAlbumDetail(
-  core: Record<string, unknown>,
-  row: Pick<AlbumRow, 'editShareToken' | 'expiresAt' | 'pinned'>,
-  access: import('./types').AlbumAccessLevel,
-  currentUser: { id: string } | null
-): AlbumDetail {
-  const ownership =
-    currentUser && core.ownerUserId === currentUser.id ? 'owner' : 'co-author'
-  return {
-    ...(core as unknown as Omit<
-      AlbumDetail,
-      'ownership' | 'access' | 'editShareToken'
-    >),
-    ownership,
-    access,
-    editShareToken: access !== 'none' ? row.editShareToken : null,
-    expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
-    pinned: !!row.pinned,
-    tombstone: null,
-  }
-}
-
-function buildTombstoneDetail(row: AlbumRow): AlbumDetail {
-  return {
-    id: row.id,
-    ownerUserId: row.ownerUserId,
-    title: row.title,
-    description: '',
-    event: row.event ?? '',
-    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
-    driveFolderId: '',
-    coverFileId: null,
-    coverUrl: null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    ownership: 'co-author',
-    coAuthorCount: 0,
-    authors: [],
-    photos: [],
-    access: 'none',
-    editShareToken: null,
-    folderState: 'ok',
-    expiresAt: null,
-    pinned: false,
-    tombstone: {
-      reason: row.tombstoneReason ?? 'expired',
-      deletedAt: (row.deletedAt ?? row.updatedAt).toISOString(),
-    },
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Server functions
-// ---------------------------------------------------------------------------
 
 /**
  * Resolve the Albums/{year}/{month} folder chain, creating any missing level.
@@ -793,11 +147,36 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
 export const getMyAlbumsFn = createServerFn({ method: 'GET' })
   .validator(AlbumListQuerySchema)
   .handler(async ({ data }): Promise<AlbumListPage> => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
+    const { album, albumMember } = await import('@/db/schema')
+    const { and, eq, inArray, ne, or } = await import('drizzle-orm')
+    const { getSessionUser } = await import('./server')
+    const { listAlbumsPaginated } = await import('./list')
 
+    const currentUser = await getSessionUser(getRequestHeaders())
+    if (!currentUser) return { albums: [], nextCursor: null }
+    const me = currentUser.id
     const database = db(env.meriksirat_d1 as D1Database)
-    return listAlbumsForCurrentUser(database, data)
+
+    // D1 caps bound parameters at 100/query, so membership is expressed as a
+    // subquery rather than an in-memory id list.
+    const memberAlbums = database
+      .select({ albumId: albumMember.albumId })
+      .from(albumMember)
+      .where(eq(albumMember.userId, me))
+
+    return listAlbumsPaginated({
+      database,
+      baseWhere: or(eq(album.ownerUserId, me), inArray(album.id, memberAlbums)),
+      ownershipWhere: (ownership) =>
+        ownership === 'owner'
+          ? eq(album.ownerUserId, me)
+          : and(ne(album.ownerUserId, me), inArray(album.id, memberAlbums)),
+      me,
+      query: data,
+    })
   })
 
 export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
@@ -827,6 +206,7 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
     // page cache when possible (memo layer + KV; see server.ts).
     const { getCachedPublicPage, setCachedPublicPage } =
       await import('./server')
+    const { listAlbumsPaginated } = await import('./list')
     const cachedPage = (await getCachedPublicPage(data)) as AlbumListPage | null
     if (cachedPage) return cachedPage
 
@@ -849,6 +229,7 @@ export const getAllAlbumsFn = createServerFn({ method: 'GET' })
     const { album } = await import('@/db/schema')
     const { eq, ne } = await import('drizzle-orm')
     const { getSessionUser } = await import('./server')
+    const { listAlbumsPaginated } = await import('./list')
 
     const headers = getRequestHeaders()
     const currentUser = await getSessionUser(headers)
@@ -892,6 +273,8 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
       setCachedDetailCore,
       resolveAlbumAccess,
     } = await import('./server')
+    const { buildAlbumCore, buildTombstoneDetail, decorateAlbumDetail } =
+      await import('./detail')
     if (!(await getSessionUser(headers))) {
       const { rateLimit } = await import('@/lib/ratelimit')
       const limit = await rateLimit(headers, 'rl_album_detail')
@@ -925,24 +308,20 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
 export const refreshAlbumFn = createServerFn({ method: 'POST' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<AlbumDetail | null> => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const {
-      resolveAlbumAccess,
       invalidateCachedListing,
       invalidateCachedDetailCore,
       setCachedDetailCore,
     } = await import('./server')
+    const { buildAlbumCore, decorateAlbumDetail } = await import('./detail')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-    if (!['owner', 'editor', 'manager'].includes(access)) {
-      throw new Error('Insufficient permissions')
-    }
+    const {
+      database,
+      headers,
+      row,
+      user: currentUser,
+      access,
+    } = await albumContext(data.albumId, ['owner', 'editor', 'manager'])
 
     // Refreshing invalidates the listing cache and re-fetches the folder from
     // the Drive API, so cap how often a user can trigger it.
@@ -1407,16 +786,13 @@ export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
 export const releaseUploadFn = createServerFn({ method: 'POST' })
   .validator(ReleaseUploadSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
     const { releaseFlamekeeperUpload } = await import('@/lib/pool/server')
 
-    const database = db(env.meriksirat_d1 as D1Database)
-    const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(getRequestHeaders(), row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const { database, row } = await albumContext(data.albumId, [
+      'owner',
+      'editor',
+      'manager',
+    ])
 
     await releaseFlamekeeperUpload(
       database,
