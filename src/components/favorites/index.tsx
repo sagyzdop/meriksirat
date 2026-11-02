@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { PhotoGrid } from '@/components/albums/photo-grid'
 import { favoriteQueries, setFavoriteFn } from '@/lib/favorites'
 import type { FavoritesControl } from '@/lib/favorites/use-album-favorites'
+import { errorMessage } from '@/lib/utils'
 
 export function Page() {
   const queryClient = useQueryClient()
@@ -29,9 +30,7 @@ export function Page() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: favoriteQueries.all }),
     onError: (error) =>
-      toast.error(
-        error instanceof Error ? error.message : 'Could not update favorite'
-      ),
+      toast.error(errorMessage(error, 'Could not update favorite')),
   })
 
   const albumByPhoto = React.useMemo(

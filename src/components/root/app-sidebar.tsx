@@ -41,6 +41,7 @@ const data = {
           title: 'Equipment Booking',
           url: '/equipment',
           icon: Camera,
+          requires: 'equipment' as 'albums' | 'equipment' | undefined,
         },
         {
           title: 'My Bookings',
@@ -61,6 +62,7 @@ const data = {
           title: 'My Albums',
           url: '/my-albums',
           icon: FolderOpen,
+          requires: 'albums' as 'albums' | 'equipment' | undefined,
         },
         {
           title: 'My Favorites',
@@ -134,7 +136,7 @@ export function AppSidebar({
   onLogout,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
-  user?: {
+  user: {
     id: string
     name: string | null
     email: string
@@ -143,7 +145,7 @@ export function AppSidebar({
     lastName?: string | null
     role?: string | null
     clearanceLevel?: number | null
-    isMember?: boolean
+    isMember: boolean
   }
   onLogout?: () => void
 }) {
@@ -165,84 +167,54 @@ export function AppSidebar({
     return unsubscribe
   }, [isMobile, router, setOpenMobile])
 
-  const displayUser = userData
-    ? {
-        name:
-          [userData.firstName, userData.lastName].filter(Boolean).join(' ') ||
-          userData.email,
-        email: userData.email,
-        avatar:
-          userData.image || session?.user?.image || '/avatars/default.jpg',
-      }
-    : {
-        name: 'Loading...',
-        email: '',
-        avatar: '/avatars/default.jpg',
-      }
+  const displayUser = {
+    name:
+      [userData.firstName, userData.lastName].filter(Boolean).join(' ') ||
+      userData.email,
+    email: userData.email,
+    avatar: userData.image || session?.user?.image || '/avatars/default.jpg',
+  }
 
-  // Check if user has admin privileges
   const hasAdminAccess =
-    userData?.role === 'admin' || userData?.role === 'manager'
+    userData.role === 'admin' || userData.role === 'manager'
 
-  // Album creation is gated at ALBUM_CREATE_MIN_CLEARANCE; users below that
-  // level see the Albums section in the sidebar as inactive with an explanation.
   const canUseAlbums =
-    (userData?.clearanceLevel ?? 0) >= ALBUM_CREATE_MIN_CLEARANCE
+    (userData.clearanceLevel ?? 0) >= ALBUM_CREATE_MIN_CLEARANCE
 
-  // Equipment booking is gated at EQUIPMENT_MIN_CLEARANCE, shown as inactive
-  // for users below that level, matching the Albums treatment.
   const canUseEquipment =
-    (userData?.clearanceLevel ?? 0) >= EQUIPMENT_MIN_CLEARANCE
+    (userData.clearanceLevel ?? 0) >= EQUIPMENT_MIN_CLEARANCE
 
-  const isMember = userData?.isMember ?? true
+  const isMember = userData.isMember
 
-  const navGroups = React.useMemo(
-    () =>
-      (isMember
-        ? data.navGroups
-        : [
-            {
-              title: 'Albums',
-              items: data.navGroups[1].items.filter(
-                (item) => item.url === '/albums' || item.url === '/favorites'
-              ),
-            },
-          ]
-      ).map((group) =>
-        group.title === 'Albums'
-          ? {
-              ...group,
-              items: group.items.map((item) =>
-                canUseAlbums ||
-                item.url === '/favorites' ||
-                item.url === '/albums'
-                  ? item
-                  : {
-                      ...item,
-                      disabled: true,
-                      disabledReason: `Album creation and management require clearance level ${ALBUM_CREATE_MIN_CLEARANCE}. Contact an admin to request access.`,
-                    }
-              ),
+  const navGroups = React.useMemo(() => {
+    const allowed = { albums: canUseAlbums, equipment: canUseEquipment }
+    const disabledReason = {
+      albums: `Album creation and management require clearance level ${ALBUM_CREATE_MIN_CLEARANCE}. Contact an admin to request access.`,
+      equipment: `Equipment booking requires clearance level ${EQUIPMENT_MIN_CLEARANCE} or higher. Contact an admin to request access.`,
+    }
+    const groups = isMember
+      ? data.navGroups
+      : [
+          {
+            title: 'Albums',
+            items: data.navGroups[1].items.filter(
+              (item) => item.url === '/albums' || item.url === '/favorites'
+            ),
+          },
+        ]
+    return groups.map((group) => ({
+      ...group,
+      items: group.items.map(({ requires, ...item }) =>
+        !requires || allowed[requires]
+          ? item
+          : {
+              ...item,
+              disabled: true,
+              disabledReason: disabledReason[requires],
             }
-          : group.title === 'Bookings'
-            ? {
-                ...group,
-                items: group.items.map((item) =>
-                  item.title === 'Equipment Booking'
-                    ? canUseEquipment
-                      ? item
-                      : {
-                          ...item,
-                          disabled: true,
-                          disabledReason: `Equipment booking requires clearance level ${EQUIPMENT_MIN_CLEARANCE} or higher. Contact an admin to request access.`,
-                        }
-                    : item
-                ),
-              }
-            : group
       ),
-    [canUseAlbums, canUseEquipment, isMember]
-  )
+    }))
+  }, [canUseAlbums, canUseEquipment, isMember])
 
   return (
     <Sidebar

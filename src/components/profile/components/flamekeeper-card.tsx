@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Flame } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -65,10 +66,10 @@ export function FlamekeeperCard({
   const router = useRouter()
   const queryClient = useQueryClient()
   const [showSignup, setShowSignup] = useState(Boolean(connectError))
-  const [isReconnecting, setIsReconnecting] = useState(false)
+  const { pending: isReconnecting, run: runReconnect } = useAsyncAction()
   const [editOpen, setEditOpen] = useState(false)
   const [stopOpen, setStopOpen] = useState(false)
-  const [isConfirming, setIsConfirming] = useState(false)
+  const { pending: isConfirming, run: runConfirm } = useAsyncAction()
 
   const rules = getAccessRules({
     isMember: user.isMember,
@@ -77,33 +78,24 @@ export function FlamekeeperCard({
     flamekeeperState: flamekeeper?.state ?? null,
   })
 
-  const handleReconnect = async () => {
-    setIsReconnecting(true)
-    try {
-      const { url } = await startDriveConnectFn({ data: { mode: 'reconnect' } })
-      window.location.assign(url)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not reconnect Drive'
-      )
-      setIsReconnecting(false)
-    }
-  }
+  const handleReconnect = () =>
+    runReconnect(
+      async () => {
+        const { url } = await startDriveConnectFn({
+          data: { mode: 'reconnect' },
+        })
+        window.location.assign(url)
+      },
+      'Could not reconnect Drive',
+      { keepPendingOnSuccess: true }
+    )
 
-  const handleConfirmGraduation = async () => {
-    setIsConfirming(true)
-    try {
+  const handleConfirmGraduation = () =>
+    runConfirm(async () => {
       await confirmGraduationFn({ data: {} })
       await handleSaved()
       toast.success('Graduation date confirmed')
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not confirm the date'
-      )
-    } finally {
-      setIsConfirming(false)
-    }
-  }
+    }, 'Could not confirm the date')
 
   const handleSaved = async () => {
     await queryClient.invalidateQueries({ queryKey: ['flamekeepers'] })

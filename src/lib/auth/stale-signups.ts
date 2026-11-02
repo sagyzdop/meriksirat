@@ -5,6 +5,10 @@ export const STALE_SIGNUP_MAX_DELETES = 20
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+export function staleCutoff(now: Date): Date {
+  return new Date(now.getTime() - STALE_SIGNUP_DAYS * DAY_MS)
+}
+
 export interface SignupCandidate {
   id: string
   email: string
@@ -21,7 +25,7 @@ export function selectStaleSignups(
   now: Date,
   max: number = STALE_SIGNUP_MAX_DELETES
 ): string[] {
-  const cutoff = now.getTime() - STALE_SIGNUP_DAYS * DAY_MS
+  const cutoff = staleCutoff(now).getTime()
   return users
     .filter(
       (u) =>

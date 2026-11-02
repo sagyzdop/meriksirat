@@ -30,7 +30,7 @@ import { createUserColumns } from './user-columns'
 import { X, Shield } from 'lucide-react'
 import { BulkEditClearanceDialog } from '@/components/shared/bulk-edit-clearance-dialog'
 
-import { bulkUpdateUserClearanceFn } from '@/lib/user/functions'
+import { bulkUpdateUserClearanceFn } from '@/lib/user/admin-functions'
 import { User } from '@/lib/user/types'
 import type { PaginationMeta } from '@/lib/pagination'
 

@@ -151,9 +151,9 @@ export function Page({
     goBack()
   }
 
-  const handleSearchChange = (value: string) => {
+  const setSearch = (patch: Partial<Filters>) => {
     navigate({
-      search: (prev) => ({ ...prev, searchQuery: value || undefined }),
+      search: (prev) => ({ ...prev, ...patch }),
       replace: true,
     })
   }
@@ -161,34 +161,6 @@ export function Page({
   const handleCategorySelect = (categoryId?: number) => {
     navigate({
       search: (prev) => ({ ...prev, categoryId, searchQuery: undefined }),
-    })
-  }
-
-  const handleAvailabilityDateChange = (value?: string) => {
-    navigate({
-      search: (prev) => ({ ...prev, availabilityDate: value }),
-      replace: true,
-    })
-  }
-
-  const handleAvailabilityStartTimeChange = (value?: string) => {
-    navigate({
-      search: (prev) => ({ ...prev, availabilityStartTime: value }),
-      replace: true,
-    })
-  }
-
-  const handleAvailabilityEndTimeChange = (value?: string) => {
-    navigate({
-      search: (prev) => ({ ...prev, availabilityEndTime: value }),
-      replace: true,
-    })
-  }
-
-  const handleAvailabilityOnlyChange = (value: boolean) => {
-    navigate({
-      search: (prev) => ({ ...prev, availabilityOnly: value || undefined }),
-      replace: true,
     })
   }
 
@@ -211,12 +183,20 @@ export function Page({
       availabilityLoading={availability.isChecking}
       onBookSelected={handleBookSelected}
       onAddModeBack={handleAddModeBack}
-      onSearchChange={handleSearchChange}
+      onSearchChange={(value) => setSearch({ searchQuery: value || undefined })}
       onCategorySelect={handleCategorySelect}
-      onAvailabilityDateChange={handleAvailabilityDateChange}
-      onAvailabilityStartTimeChange={handleAvailabilityStartTimeChange}
-      onAvailabilityEndTimeChange={handleAvailabilityEndTimeChange}
-      onAvailabilityOnlyChange={handleAvailabilityOnlyChange}
+      onAvailabilityDateChange={(value) =>
+        setSearch({ availabilityDate: value })
+      }
+      onAvailabilityStartTimeChange={(value) =>
+        setSearch({ availabilityStartTime: value })
+      }
+      onAvailabilityEndTimeChange={(value) =>
+        setSearch({ availabilityEndTime: value })
+      }
+      onAvailabilityOnlyChange={(value) =>
+        setSearch({ availabilityOnly: value || undefined })
+      }
       defaultStartTime={defaultWindow.startTime}
       defaultEndTime={defaultWindow.endTime}
       operatingHoursStart={operatingHoursStart}

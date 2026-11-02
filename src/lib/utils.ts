@@ -20,6 +20,13 @@ type UserIdentity = {
   email?: string | null
 }
 
+export function fullName(user: {
+  firstName?: string | null
+  lastName?: string | null
+}): string {
+  return `${user.firstName || ''} ${user.lastName || ''}`.trim()
+}
+
 export function formatUserDisplayName(user: UserIdentity): string {
   const fullName = [user.firstName, user.lastName]
     .filter(Boolean)

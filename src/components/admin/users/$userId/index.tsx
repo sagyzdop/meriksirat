@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { Table, TableBody } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,6 +32,8 @@ import {
 } from './components/user-albums-table'
 import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
 import type { PaginationMeta } from '@/lib/pagination'
+import { DetailRow } from '@/components/shared/detail-row'
+import { fullName } from '@/lib/utils'
 
 const formatDate = (value: string | number | null | undefined) => {
   if (!value) return '—'
@@ -132,30 +135,21 @@ export function Page({
   const queryClient = useQueryClient()
   const goBack = useBackNavigation('/admin/users')
   const [showResetDialog, setShowResetDialog] = useState(false)
-  const [isResetting, setIsResetting] = useState(false)
+  const { pending: isResetting, run } = useAsyncAction()
   const [showBanDialog, setShowBanDialog] = useState(false)
-  const userName =
-    `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
+  const userName = fullName(user) || user.email
 
   const hasViolations =
     (user.cancelledInStartWindowCount ?? 0) > 0 || (user.overdueCount ?? 0) > 0
 
-  const handleResetCounters = async () => {
-    setIsResetting(true)
-    try {
+  const handleResetCounters = () =>
+    run(async () => {
       await resetUserViolationCountersFn({ data: { userId: user.id } })
       toast.success('Violation counters reset')
       await queryClient.invalidateQueries()
       router.invalidate()
       setShowResetDialog(false)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to reset counters'
-      )
-    } finally {
-      setIsResetting(false)
-    }
-  }
+    }, 'Failed to reset counters')
 
   return (
     <PageContainer>
@@ -165,143 +159,81 @@ export function Page({
           <div className="relative rounded-md border overflow-x-auto">
             <Table>
               <TableBody>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Name
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <UserAvatar
-                        image={user.image}
-                        name={
-                          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                          user.email ||
-                          'User'
-                        }
-                        className="size-8"
-                      />
-                      <span>
-                        {`${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                          '—'}
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Email
-                  </TableCell>
-                  <TableCell className="break-all">{user.email}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Role
-                  </TableCell>
-                  <TableCell>
-                    <RoleBadge role={user.role} />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Clearance Level
-                  </TableCell>
-                  <TableCell>
-                    {user.clearanceLevel ? (
-                      <Badge
-                        variant="outline"
-                        className="font-mono text-amber-700"
-                      >
-                        Level {user.clearanceLevel}
+                <DetailRow label="Name">
+                  <div className="flex items-center gap-3">
+                    <UserAvatar
+                      image={user.image}
+                      name={fullName(user) || user.email || 'User'}
+                      className="size-8"
+                    />
+                    <span>{fullName(user) || '—'}</span>
+                  </div>
+                </DetailRow>
+                <DetailRow label="Email" valueClassName="break-all">
+                  {user.email}
+                </DetailRow>
+                <DetailRow label="Role">
+                  <RoleBadge role={user.role} />
+                </DetailRow>
+                <DetailRow label="Clearance Level">
+                  {user.clearanceLevel ? (
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-amber-700"
+                    >
+                      Level {user.clearanceLevel}
+                    </Badge>
+                  ) : (
+                    '—'
+                  )}
+                </DetailRow>
+                <DetailRow label="Status">
+                  <StatusBadge status={user.status} />
+                </DetailRow>
+                <DetailRow label="Ban">
+                  {user.bannedAt ? (
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="destructive" className="w-fit">
+                        Banned {formatDate(user.bannedAt.getTime())}
                       </Badge>
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Status
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={user.status} />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Ban
-                  </TableCell>
-                  <TableCell>
-                    {user.bannedAt ? (
-                      <div className="flex flex-col gap-1">
-                        <Badge variant="destructive" className="w-fit">
-                          Banned {formatDate(user.bannedAt.getTime())}
-                        </Badge>
-                        {user.banReason && (
-                          <span className="text-sm text-muted-foreground">
-                            {user.banReason}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Not banned</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Instagram
-                  </TableCell>
-                  <TableCell>
-                    {user.instagramUsername ? (
-                      <a
-                        href={`https://instagram.com/${user.instagramUsername.replace(/^@/, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        @{user.instagramUsername}
-                      </a>
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    NU ID
-                  </TableCell>
-                  <TableCell>{user.nuId ?? '—'}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Birthday
-                  </TableCell>
-                  <TableCell>{formatDate(user.birthday)}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Major
-                  </TableCell>
-                  <TableCell>{user.major || '—'}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Graduation Year
-                  </TableCell>
-                  <TableCell>{user.graduationYear ?? '—'}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Member Since
-                  </TableCell>
-                  <TableCell>{formatDate(user.createdAt.getTime())}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    User ID
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">{user.id}</TableCell>
-                </TableRow>
+                      {user.banReason && (
+                        <span className="text-sm text-muted-foreground">
+                          {user.banReason}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Not banned</span>
+                  )}
+                </DetailRow>
+                <DetailRow label="Instagram">
+                  {user.instagramUsername ? (
+                    <a
+                      href={`https://instagram.com/${user.instagramUsername.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      @{user.instagramUsername}
+                    </a>
+                  ) : (
+                    '—'
+                  )}
+                </DetailRow>
+                <DetailRow label="NU ID">{user.nuId ?? '—'}</DetailRow>
+                <DetailRow label="Birthday">
+                  {formatDate(user.birthday)}
+                </DetailRow>
+                <DetailRow label="Major">{user.major || '—'}</DetailRow>
+                <DetailRow label="Graduation Year">
+                  {user.graduationYear ?? '—'}
+                </DetailRow>
+                <DetailRow label="Member Since">
+                  {formatDate(user.createdAt.getTime())}
+                </DetailRow>
+                <DetailRow label="User ID" valueClassName="whitespace-nowrap">
+                  {user.id}
+                </DetailRow>
               </TableBody>
             </Table>
           </div>
@@ -330,18 +262,12 @@ export function Page({
           <div className="relative rounded-md border overflow-x-auto">
             <Table>
               <TableBody>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Auto-cancelled bookings
-                  </TableCell>
-                  <TableCell>{user.cancelledInStartWindowCount ?? 0}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="pl-3 w-2/5 font-medium text-muted-foreground">
-                    Overdue returns
-                  </TableCell>
-                  <TableCell>{user.overdueCount ?? 0}</TableCell>
-                </TableRow>
+                <DetailRow label="Auto-cancelled bookings">
+                  {user.cancelledInStartWindowCount ?? 0}
+                </DetailRow>
+                <DetailRow label="Overdue returns">
+                  {user.overdueCount ?? 0}
+                </DetailRow>
               </TableBody>
             </Table>
           </div>

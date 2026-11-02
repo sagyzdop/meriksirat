@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { banUserFn, unbanUserFn } from '@/lib/user'
 import { BAN_REASON_MAX } from '@/lib/pool/ban'
 
@@ -40,22 +41,16 @@ export function BanUserDialog({
 }: DialogProps) {
   const refresh = useRefreshAfter()
   const [reason, setReason] = useState('')
-  const [isBanning, setIsBanning] = useState(false)
+  const { pending: isBanning, run } = useAsyncAction()
 
-  const handleBan = async () => {
-    setIsBanning(true)
-    try {
+  const handleBan = () =>
+    run(async () => {
       await banUserFn({ data: { userId, reason } })
       toast.success(`${userName} was banned`)
       setReason('')
       onOpenChange(false)
       await refresh()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to ban user')
-    } finally {
-      setIsBanning(false)
-    }
-  }
+    }, 'Failed to ban user')
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -101,23 +96,15 @@ export function UnbanUserDialog({
   onOpenChange,
 }: DialogProps) {
   const refresh = useRefreshAfter()
-  const [isUnbanning, setIsUnbanning] = useState(false)
+  const { pending: isUnbanning, run } = useAsyncAction()
 
-  const handleUnban = async () => {
-    setIsUnbanning(true)
-    try {
+  const handleUnban = () =>
+    run(async () => {
       await unbanUserFn({ data: { userId } })
       toast.success(`${userName} was unbanned`)
       onOpenChange(false)
       await refresh()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to unban user'
-      )
-    } finally {
-      setIsUnbanning(false)
-    }
-  }
+    }, 'Failed to unban user')
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
