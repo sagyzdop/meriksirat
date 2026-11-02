@@ -1,28 +1,23 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 
 export const getClubCodeFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<string> => {
-    const { checkAdminPermission } = await import('../server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('../server')
     const { getClubCode } = await import('@/lib/access/server')
 
-    await checkAdminPermission(getRequestHeaders(), ['admin'])
+    const { database } = await adminContext(['admin'])
 
-    return getClubCode(db(env.meriksirat_d1 as D1Database))
+    return getClubCode(database)
   }
 )
 
 export const rotateClubCodeFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<string> => {
-    const { checkAdminPermission } = await import('../server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('../server')
     const { rotateClubCode } = await import('@/lib/access/server')
 
-    await checkAdminPermission(getRequestHeaders(), ['admin'])
+    const { database } = await adminContext(['admin'])
 
-    return rotateClubCode(db(env.meriksirat_d1 as D1Database))
+    return rotateClubCode(database)
   }
 )

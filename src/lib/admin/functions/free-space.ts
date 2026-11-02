@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
 export interface FreeSpaceSuggestion {
@@ -14,23 +13,19 @@ export interface FreeSpaceSuggestion {
 export const getDeletionSuggestionsFn = createServerFn({
   method: 'GET',
 }).handler(async (): Promise<FreeSpaceSuggestion[]> => {
-  const { checkAdminPermission } = await import('../server')
-  const { env } = await import('cloudflare:workers')
-  const { db } = await import('@/db')
+  const { adminContext } = await import('../server')
   const { listDeletionSuggestions } = await import('@/lib/albums/early-expiry')
 
-  await checkAdminPermission(getRequestHeaders(), ['admin'])
-  return listDeletionSuggestions(db(env.meriksirat_d1 as D1Database))
+  const { database } = await adminContext(['admin'])
+  return listDeletionSuggestions(database)
 })
 
 export const expireAlbumNowFn = createServerFn({ method: 'POST' })
   .validator(z.object({ albumId: z.string().min(1) }))
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('../server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('../server')
     const { expireAlbumEarly } = await import('@/lib/albums/early-expiry')
 
-    await checkAdminPermission(getRequestHeaders(), ['admin'])
-    return expireAlbumEarly(db(env.meriksirat_d1 as D1Database), data.albumId)
+    const { database } = await adminContext(['admin'])
+    return expireAlbumEarly(database, data.albumId)
   })

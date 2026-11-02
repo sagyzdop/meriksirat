@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import {
   CreateCategorySchema,
   UpdateCategorySchema,
@@ -15,16 +14,11 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
   .validator(CreateCategorySchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('./server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('./server')
     const { category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Check if category name already exists
     const existingCategory = await database
@@ -57,16 +51,11 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
   .validator(UpdateCategorySchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('./server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('./server')
     const { category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Check if category exists
     const existingCategory = await database
@@ -112,16 +101,11 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
   .validator(DeleteCategorySchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('./server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('./server')
     const { category, equipment } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Check if category exists
     const categoryToDelete = await database
@@ -179,16 +163,11 @@ export const getCategoriesWithCountFn = createServerFn({
   method: 'GET',
 }).handler(async () => {
   // Import server-only code inside handler
-  const { checkAdminPermission } = await import('./server')
-  const { env } = await import('cloudflare:workers')
-  const { db } = await import('@/db')
+  const { adminContext } = await import('./server')
   const { category, equipment } = await import('@/db/schema')
   const { eq, sql } = await import('drizzle-orm')
 
-  const headers = getRequestHeaders()
-  await checkAdminPermission(headers, ['admin', 'manager'])
-
-  const database = db(env.meriksirat_d1 as D1Database)
+  const { database } = await adminContext(['admin', 'manager'])
 
   const categories = await database
     .select({
@@ -220,16 +199,11 @@ export const updateCategorySortOrderFn = createServerFn({ method: 'POST' })
   .validator(UpdateCategorySortOrderSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('./server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('./server')
     const { category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Update each category's sort order
     for (const update of data.categoryUpdates) {

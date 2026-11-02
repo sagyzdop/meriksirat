@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { user } from '@/db/schema'
@@ -89,4 +90,14 @@ export async function checkAdminPermission(
   }
 
   return userData
+}
+
+export async function adminContext(requiredRoles: ('admin' | 'manager')[]) {
+  const headers = getRequestHeaders()
+  const admin = await checkAdminPermission(headers, requiredRoles)
+  return {
+    admin,
+    headers,
+    database: db(env.meriksirat_d1 as D1Database),
+  }
 }

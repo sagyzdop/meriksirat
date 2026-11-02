@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
 /**
@@ -29,16 +28,11 @@ export interface SettingsData {
  */
 export const getSettingsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const { checkAdminPermission } = await import('../server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('../server')
     const { settings } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Try to get existing settings
     let settingsData = await database
@@ -74,16 +68,11 @@ export const getSettingsFn = createServerFn({ method: 'GET' }).handler(
 export const updateSettingsFn = createServerFn({ method: 'POST' })
   .validator(UpdateSettingsSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('../server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('../server')
     const { settings } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Validate operating hours if both are provided
     if (

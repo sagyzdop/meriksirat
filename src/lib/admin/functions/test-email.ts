@@ -1,13 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 
 export const sendTestEmailFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<{ sentTo: string }> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { adminContext } = await import('@/lib/admin/server')
     const { sendEmail } = await import('@/lib/google/email')
 
-    const headers = getRequestHeaders()
-    const admin = await checkAdminPermission(headers, ['admin'])
+    const { admin } = await adminContext(['admin'])
 
     const sentAt = new Date().toISOString()
     const sent = await sendEmail({

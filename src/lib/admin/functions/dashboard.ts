@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import { albumCoverUrl } from '@/lib/albums/urls'
 import {
   AdminDashboardRangeSchema,
@@ -71,16 +70,12 @@ function resolveRange(
 export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
   .validator(AdminDashboardRangeSchema)
   .handler(async ({ data }): Promise<AdminDashboardStats> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { adminContext } = await import('@/lib/admin/server')
     const { album, booking } = await import('@/db/schema')
     const { and, gte, isNull, lte, sql } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
+    const { database } = await adminContext(['admin', 'manager'])
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const { start, endOfRange } = resolveRange(data.startDate, data.endDate)
     const rangeWhere = and(
       gte(album.createdAt, start),
@@ -217,16 +212,12 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
 export const getAdminDashboardAlertsFn = createServerFn({
   method: 'GET',
 }).handler(async (): Promise<DashboardAlert[]> => {
-  const { checkAdminPermission } = await import('@/lib/admin/server')
-  const { env } = await import('cloudflare:workers')
-  const { db } = await import('@/db/index')
+  const { adminContext } = await import('@/lib/admin/server')
   const { booking, user, album } = await import('@/db/schema')
   const { eq, and, gte, lte, gt, or, isNull } = await import('drizzle-orm')
 
-  const headers = getRequestHeaders()
-  await checkAdminPermission(headers, ['admin', 'manager'])
+  const { database } = await adminContext(['admin', 'manager'])
 
-  const database = db(env.meriksirat_d1 as D1Database)
   const now = new Date()
   const in15Minutes = new Date(now.getTime() + 15 * 60 * 1000)
 
@@ -364,17 +355,13 @@ export const getAdminDashboardAlertsFn = createServerFn({
 export const getAdminMostActiveUsersFn = createServerFn({ method: 'GET' })
   .validator(MostActiveUsersFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedMostActiveUsersResponse> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user, album, albumMember } = await import('@/db/schema')
     const { eq, and, gte, lte, or, like, asc, desc, sql, aliasedTable } =
       await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
+    const { database } = await adminContext(['admin', 'manager'])
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const { start, endOfRange } = resolveRange(data.startDate, data.endDate)
 
     const memberAlbum = aliasedTable(album, 'member_album')
@@ -478,16 +465,11 @@ export const getAdminMostActiveUsersFn = createServerFn({ method: 'GET' })
 export const getViolationsFn = createServerFn({ method: 'GET' })
   .validator(ViolationsFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedViolationsResponse> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { and, or, gt, like, asc, desc, count } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     const conditions: import('drizzle-orm').SQL[] = [
       or(gt(user.cancelledInStartWindowCount, 0), gt(user.overdueCount, 0))!,
@@ -584,17 +566,12 @@ export const getViolationsFn = createServerFn({ method: 'GET' })
 export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
   .validator(AdminUserAlbumsFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedAdminUserAlbumsResponse> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { adminContext } = await import('@/lib/admin/server')
     const { album, albumMember } = await import('@/db/schema')
     const { eq, and, or, inArray, isNull, like, asc, desc, sql } =
       await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // D1 caps bound parameters at 100/query, so membership is expressed as a
     // subquery rather than an in-memory id list.
@@ -678,16 +655,11 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
 export const exportUsersFn = createServerFn({ method: 'GET' })
   .validator(ExportUsersFiltersSchema)
   .handler(async ({ data }): Promise<AdminUserExport[]> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { and, or, like, inArray } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     const conditions: import('drizzle-orm').SQL[] = []
     if (data.role?.length) {
@@ -753,16 +725,13 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
 
 export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<AdminAlbumExport[]> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { adminContext } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
     const { album, albumMember, user } = await import('@/db/schema')
     const { eq, isNull } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
+    const { database } = await adminContext(['admin', 'manager'])
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const origin = (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
 
     // D1 caps bound parameters at 100/query, so this export avoids inArray:
@@ -846,19 +815,15 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
 export const broadcastTelegramMessageFn = createServerFn({ method: 'POST' })
   .validator(BroadcastMessageSchema)
   .handler(async ({ data }): Promise<BroadcastResult> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { adminContext } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
     const { user } = await import('@/db/schema')
     const { desc } = await import('drizzle-orm')
     const { TelegramAPI } = await import('@/lib/telegram/api')
     const { formatUserDisplayName } = await import('@/lib/utils')
 
-    const headers = getRequestHeaders()
     // Broadcasts reach every user with a linked chat, so only admins may send.
-    await checkAdminPermission(headers, ['admin'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin'])
 
     const allUsers = await database
       .select({
