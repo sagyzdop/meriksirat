@@ -19,7 +19,7 @@ const EXTEND_BOOKING_MINUTES = 30
  *   already in the past, the booking stays overdue until enough extensions are
  *   added to push the end time past now.
  */
-export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
+export const extendBookingFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
     const { userContext } = await import('@/lib/auth/context')

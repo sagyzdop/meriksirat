@@ -19,7 +19,7 @@ import {
   getClubLocalParts,
   minutesToTime,
 } from '@/lib/booking'
-import { extendBookingByThirtyMinutesFn } from '@/lib/booking'
+import { extendBookingFn } from '@/lib/booking'
 
 interface ExtendBookingButtonProps {
   bookingId: number
@@ -77,7 +77,7 @@ export function ExtendBookingButton({
   const handleExtend = async () => {
     setIsExtending(true)
     try {
-      const result = await extendBookingByThirtyMinutesFn({
+      const result = await extendBookingFn({
         data: { bookingId },
       })
       toast.success(

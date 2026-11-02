@@ -1,6 +1,5 @@
 import type { BookingStatus } from '@/lib/booking/types'
-import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import * as schema from '@/db/schema'
+import type { db } from '@/db'
 
 /**
  * Derive a parent booking's status from the statuses of its items.
@@ -40,7 +39,7 @@ export function deriveParentBookingStatus(
  * Returns the newly derived status.
  */
 export async function recomputeBookingStatus(
-  database: DrizzleD1Database<typeof schema>,
+  database: ReturnType<typeof db>,
   bookingId: number
 ): Promise<BookingStatus> {
   const { bookingItem, booking } = await import('@/db/schema')
