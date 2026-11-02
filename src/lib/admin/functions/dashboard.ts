@@ -1,3 +1,4 @@
+import type { SQL } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import { albumCoverUrl } from '@/lib/albums/urls'
 import { siteOrigin } from '@/lib/format'
@@ -216,7 +217,7 @@ export const getAdminDashboardAlertsFn = createServerFn({
 }).handler(async (): Promise<DashboardAlert[]> => {
   const { adminContext } = await import('@/lib/admin/server')
   const { booking, user, album } = await import('@/db/schema')
-  const { eq, and, gte, lte, gt, or, isNull } = await import('drizzle-orm')
+  const { eq, and, gte, lte, gt, or, isNull, sql } = await import('drizzle-orm')
 
   const { database } = await adminContext(['admin', 'manager'])
 
@@ -225,84 +226,87 @@ export const getAdminDashboardAlertsFn = createServerFn({
 
   const alerts: DashboardAlert[] = []
 
-  const overdueCount = await database
-    .select({ id: booking.id })
-    .from(booking)
-    .where(eq(booking.status, 'overdue'))
-    .all()
-  if (overdueCount.length > 0) {
+  const countWhere = (condition: SQL | undefined) =>
+    sql<number>`count(case when ${condition} then 1 end)`
+
+  const [bookingCounts, userCounts] = await Promise.all([
+    database
+      .select({
+        overdue: countWhere(eq(booking.status, 'overdue')),
+        active: countWhere(eq(booking.status, 'active')),
+        upcoming: countWhere(
+          and(
+            eq(booking.status, 'booked'),
+            gte(booking.startTime, now),
+            lte(booking.startTime, in15Minutes)
+          )
+        ),
+      })
+      .from(booking)
+      .get(),
+    database
+      .select({
+        violators: countWhere(
+          or(gt(user.cancelledInStartWindowCount, 1), gt(user.overdueCount, 1))
+        ),
+        unlinked: countWhere(
+          or(isNull(user.telegramChatId), eq(user.telegramChatId, ''))
+        ),
+      })
+      .from(user)
+      .get(),
+  ])
+  const overdue = bookingCounts?.overdue ?? 0
+  const active = bookingCounts?.active ?? 0
+  const upcoming = bookingCounts?.upcoming ?? 0
+  const violators = userCounts?.violators ?? 0
+  const unlinked = userCounts?.unlinked ?? 0
+
+  if (overdue > 0) {
     alerts.push({
       id: 'overdue-bookings',
       severity: 'danger',
-      title: `${overdueCount.length} overdue booking${overdueCount.length === 1 ? '' : 's'}`,
+      title: `${overdue} overdue booking${overdue === 1 ? '' : 's'}`,
       message: 'Equipment is overdue and needs to be returned.',
       href: '/admin/bookings',
     })
   }
 
-  const activeCount = await database
-    .select({ id: booking.id })
-    .from(booking)
-    .where(eq(booking.status, 'active'))
-    .all()
-  if (activeCount.length > 0) {
+  if (active > 0) {
     alerts.push({
       id: 'active-bookings',
       severity: 'warning',
-      title: `${activeCount.length} active booking${activeCount.length === 1 ? '' : 's'}`,
+      title: `${active} active booking${active === 1 ? '' : 's'}`,
       message: 'Equipment is currently checked out.',
       href: '/admin/bookings',
     })
   }
 
-  const upcoming = await database
-    .select({ id: booking.id })
-    .from(booking)
-    .where(
-      and(
-        eq(booking.status, 'booked'),
-        gte(booking.startTime, now),
-        lte(booking.startTime, in15Minutes)
-      )
-    )
-    .all()
-  if (upcoming.length > 0) {
+  if (upcoming > 0) {
     alerts.push({
       id: 'upcoming-bookings',
       severity: 'info',
-      title: `${upcoming.length} booking${upcoming.length === 1 ? '' : 's'} start within 15 minutes`,
+      title: `${upcoming} booking${upcoming === 1 ? '' : 's'} start within 15 minutes`,
       message: 'Make sure the equipment is ready for pickup.',
       href: '/admin/bookings',
     })
   }
 
-  const violators = await database
-    .select({ id: user.id })
-    .from(user)
-    .where(
-      or(gt(user.cancelledInStartWindowCount, 1), gt(user.overdueCount, 1))
-    )
-    .all()
-  if (violators.length > 0) {
+  if (violators > 0) {
     alerts.push({
       id: 'repeated-violations',
       severity: 'warning',
-      title: `${violators.length} user${violators.length === 1 ? '' : 's'} with 2+ violations`,
+      title: `${violators} user${violators === 1 ? '' : 's'} with 2+ violations`,
       message: 'Review users with repeated auto-cancelled or overdue bookings.',
       href: '/admin/users',
     })
   }
 
-  const unlinked = await database
-    .select({ id: user.id })
-    .from(user)
-    .where(or(isNull(user.telegramChatId), eq(user.telegramChatId, '')))
-    .all()
-  if (unlinked.length > 0) {
+  if (unlinked > 0) {
     alerts.push({
       id: 'unlinked-telegram',
       severity: 'info',
-      title: `${unlinked.length} user${unlinked.length === 1 ? '' : 's'} without a linked Telegram account`,
+      title: `${unlinked} user${unlinked === 1 ? '' : 's'} without a linked Telegram account`,
       message: 'These users will not receive broadcasts or reminders.',
       href: '/admin/users',
     })
@@ -476,27 +480,20 @@ export const getViolationsFn = createServerFn({ method: 'GET' })
       } else {
         conditions.push(gt(user.overdueCount, 0))
       }
-    } else if ((data.violationType?.length ?? 0) > 1) {
-      conditions.push(
-        or(gt(user.cancelledInStartWindowCount, 0), gt(user.overdueCount, 0))!
-      )
     }
 
     const whereClause = and(...conditions)
     const offset = (data.page - 1) * data.limit
     const dir = data.sortOrder === 'desc' ? desc : asc
-    const orderBy =
-      data.sortBy === 'email'
-        ? dir(user.email)
-        : data.sortBy === 'role'
-          ? dir(user.role)
-          : data.sortBy === 'status'
-            ? dir(user.status)
-            : data.sortBy === 'cancelledInStartWindowCount'
-              ? dir(user.cancelledInStartWindowCount)
-              : data.sortBy === 'overdueCount'
-                ? dir(user.overdueCount)
-                : dir(user.firstName)
+    const sortColumn = {
+      firstName: user.firstName,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      cancelledInStartWindowCount: user.cancelledInStartWindowCount,
+      overdueCount: user.overdueCount,
+    }[data.sortBy]
+    const orderBy = dir(sortColumn)
 
     const [totalResult, rows] = await Promise.all([
       database.select({ count: count() }).from(user).where(whereClause),
