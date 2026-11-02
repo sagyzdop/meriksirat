@@ -9,21 +9,91 @@
 
 import type { BotContext } from '../context'
 import { getSession, setSession } from '../kv-session'
-import { replyKeyboard } from '../server-utils'
-import { showMainMenu, backToMenuButton, backToMenuMarkup } from '../menu'
-import { renderStartConfirm, startBookingForChat } from './start-booking'
+import { getLinkedUserId, replyKeyboard } from '../server-utils'
+import { showMainMenu, BACK_TO_MENU, backToMenuMarkup } from '../menu'
+import { fetchBookingItems } from '../booking-queries'
+import { handleStart } from './start'
+import { handlePhoto } from './photo'
+import {
+  renderStartBookingList,
+  renderStartConfirm,
+  startBookingForChat,
+} from './start-booking'
+import { renderMyBookings } from './list-bookings'
 import {
   renderEndBookingList,
   renderReturnItemSelection,
-  getReturnableItemsForBooking,
+  RETURNABLE_STATUSES,
 } from './end-booking'
 import {
   renderCancelBookingList,
   renderCancelBookingItems,
-  getCancellableItemsForBooking,
   cancelItems,
-  getUserIdByChatId,
+  CANCELLABLE_STATUSES,
 } from './cancel-booking'
+
+type Handler = (ctx: BotContext) => Promise<void>
+
+function guarded(label: string, render: Handler): Handler {
+  return async (ctx) => {
+    try {
+      if (!ctx.message || !ctx.chat) return
+      await render(ctx)
+    } catch (error) {
+      console.error(`${label} command error:`, {
+        chatId: ctx.chat?.id,
+        username: ctx.from?.username,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+
+      await ctx.reply('Error fetching bookings. Please try again.')
+    }
+  }
+}
+
+const startBooking = guarded('Start booking', renderStartBookingList)
+const endBooking = guarded('Return equipment', renderEndBookingList)
+const listBookings = guarded('List bookings', renderMyBookings)
+const cancelBooking = guarded('Cancel booking', renderCancelBookingList)
+
+const COMMANDS: Array<[string, Handler]> = [
+  ['/start_booking', startBooking],
+  ['/return_equipment', endBooking],
+  ['/my_bookings', listBookings],
+  ['/cancel_booking', cancelBooking],
+  ['/start', handleStart],
+]
+
+const BUTTONS = new Map<string, Handler>([
+  ['📋 My Bookings', listBookings],
+  ['My Bookings', listBookings],
+  ['▶️ Start Booking', startBooking],
+  ['Start Booking', startBooking],
+  ['↩️ Return Equipment', endBooking],
+  ['End Booking', endBooking],
+  ['❌ Cancel Booking', cancelBooking],
+  ['Cancel Booking', cancelBooking],
+  [BACK_TO_MENU, showMainMenu],
+])
+
+export async function routeMessage(ctx: BotContext): Promise<void> {
+  const message = ctx.message
+  if (!message) return
+
+  if ('photo' in message) {
+    await handlePhoto(ctx)
+    return
+  }
+  if (!('text' in message)) return
+
+  const text = (message.text || '').trim()
+  const handler =
+    COMMANDS.find(([prefix]) => text.startsWith(prefix))?.[1] ??
+    BUTTONS.get(text) ??
+    handleFlowText
+  await handler(ctx)
+}
 
 const CONFIRM_BUTTON = '✅ Confirm'
 const CANCEL_BUTTON = 'Cancel'
@@ -37,12 +107,11 @@ function parseBookingNumber(text: string): number | null {
 }
 
 function confirmMarkup() {
-  return replyKeyboard([CONFIRM_BUTTON, CANCEL_BUTTON, backToMenuButton()])
+  return replyKeyboard([CONFIRM_BUTTON, CANCEL_BUTTON, BACK_TO_MENU])
 }
 
 /**
  * Dispatches an incoming text message according to the session flow step.
- * Commands and menu labels are handled in the webhook route before this.
  */
 export async function handleFlowText(ctx: BotContext): Promise<void> {
   const chatId = String(ctx.chat?.id)
@@ -55,7 +124,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
     return
   }
 
-  const userId = await getUserIdByChatId(ctx, chatId)
+  const userId = await getLinkedUserId(ctx, chatId)
 
   switch (session.step) {
     case 'awaiting_start_selection':
@@ -131,7 +200,12 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
         return
       }
 
-      const items = await getReturnableItemsForBooking(ctx, userId, bookingId)
+      const items = await fetchBookingItems(
+        ctx,
+        userId,
+        bookingId,
+        RETURNABLE_STATUSES
+      )
       let itemIds: number[] = []
 
       if (text === 'Return All Items') {
@@ -179,7 +253,12 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
         return
       }
 
-      const items = await getCancellableItemsForBooking(ctx, userId, bookingId)
+      const items = await fetchBookingItems(
+        ctx,
+        userId,
+        bookingId,
+        CANCELLABLE_STATUSES
+      )
       let itemIds: number[] = []
       let label = ''
 
