@@ -2,7 +2,7 @@ import { and, eq, gte, isNull, lte, notInArray, sql } from 'drizzle-orm'
 import { db } from '@/db/index'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { formatClubTime } from '@/lib/club-time'
-import { cancelBookingItems } from '@/lib/booking/booking-items'
+import { cancelWholeBooking } from '@/lib/booking/booking-items'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { recomputeBookingStatus } from '@/lib/booking/status'
 import { START_WINDOW_GRACE_MS } from '@/lib/booking/start-booking'
@@ -56,20 +56,15 @@ export async function cancelUnstartedBookings(
 
   for (const stale of staleBookings) {
     try {
-      const items = await database
-        .select({ id: bookingItem.id })
-        .from(bookingItem)
-        .where(eq(bookingItem.bookingId, stale.id))
-
-      const cost = items.length + 1 + (telegram && stale.telegramChatId ? 1 : 0)
-      if (!budget.take(cost)) break
-
-      if (items.length > 0) {
-        await cancelBookingItems(
-          database,
-          items.map((it) => it.id)
-        )
-      }
+      const proceeded = await cancelWholeBooking(
+        database,
+        stale.id,
+        (itemCount) =>
+          budget.take(
+            itemCount + 1 + (telegram && stale.telegramChatId ? 1 : 0)
+          )
+      )
+      if (!proceeded) break
 
       await database
         .update(user)

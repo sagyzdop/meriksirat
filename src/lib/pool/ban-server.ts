@@ -1,8 +1,8 @@
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { db } from '@/db'
-import { booking, bookingItem, session, user, volume } from '@/db/schema'
+import { booking, session, user, volume } from '@/db/schema'
 import { isMasterEmail } from '@/lib/flamekeeper/master'
-import { cancelBookingItems } from '@/lib/booking/booking-items'
+import { cancelWholeBooking } from '@/lib/booking/booking-items'
 import {
   logBookingActivityById,
   logUserBanActivity,
@@ -65,18 +65,10 @@ async function cancelBannedBookings(
 
   for (const { id } of upcoming) {
     try {
-      const items = await database
-        .select({ id: bookingItem.id })
-        .from(bookingItem)
-        .where(eq(bookingItem.bookingId, id))
-        .all()
-      if (!takeIfBudgeted(budget, items.length + 2)) return
-      if (items.length > 0) {
-        await cancelBookingItems(
-          database,
-          items.map((it) => it.id)
-        )
-      }
+      const proceeded = await cancelWholeBooking(database, id, (itemCount) =>
+        takeIfBudgeted(budget, itemCount + 2)
+      )
+      if (!proceeded) return
       await logBookingActivityById(id, 'cancelled', {
         actorName: 'system',
         reason: 'Account banned',

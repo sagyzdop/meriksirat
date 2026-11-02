@@ -168,6 +168,27 @@ export async function cancelBookingItems(
   }
 }
 
+export async function cancelWholeBooking(
+  database: BookingDatabase,
+  bookingId: number,
+  takeBudget?: (itemCount: number) => boolean
+): Promise<boolean> {
+  const items = await database
+    .select({ id: bookingItem.id })
+    .from(bookingItem)
+    .where(eq(bookingItem.bookingId, bookingId))
+
+  if (takeBudget && !takeBudget(items.length)) return false
+
+  if (items.length > 0) {
+    await cancelBookingItems(
+      database,
+      items.map((it) => it.id)
+    )
+  }
+  return true
+}
+
 export async function returnBookingItems(
   database: BookingDatabase,
   itemIds: number[]
