@@ -23,27 +23,15 @@ export function mainMenuMarkup() {
   return replyKeyboard(MAIN_MENU_BUTTONS)
 }
 
-export const backToMenuButton = () => '🏠 Main Menu'
+export const BACK_TO_MENU = '🏠 Main Menu'
 
 export function backToMenuMarkup() {
-  return replyKeyboard([backToMenuButton()])
-}
-
-/**
- * Renders a flow step as a new message with a reply keyboard. Chat state is
- * carried by the persistent reply keyboard and KV session, not message edits.
- */
-export async function renderInPlace(
-  ctx: BotContext,
-  text: string,
-  markup?: Record<string, unknown>
-): Promise<void> {
-  await ctx.reply(text, markup)
+  return replyKeyboard([BACK_TO_MENU])
 }
 
 /**
  * Shows the main menu (sends the menu text with the main reply keyboard).
  */
 export async function showMainMenu(ctx: BotContext): Promise<void> {
-  await renderInPlace(ctx, MENU_TEXT, mainMenuMarkup())
+  await ctx.reply(MENU_TEXT, mainMenuMarkup())
 }

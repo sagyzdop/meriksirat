@@ -11,6 +11,7 @@ import { env } from 'cloudflare:workers'
 import { db } from '@/db'
 import { booking, bookingItem, user, equipment } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import type { BotContext } from './context'
 
 // ============================================================================
 // KEYBOARD UTILITIES
@@ -32,6 +33,39 @@ export function replyKeyboard(buttons: string[] | string[][]) {
  */
 export function removeKeyboard() {
   return { reply_markup: { remove_keyboard: true } }
+}
+
+// ============================================================================
+// LINKED USER LOOKUP
+// ============================================================================
+
+export async function getLinkedUserId(
+  ctx: BotContext,
+  chatId: string
+): Promise<string | null> {
+  const record = await db(ctx.env.meriksirat_d1 as D1Database)
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.telegramChatId, chatId))
+    .limit(1)
+    .then((rows) => rows[0])
+  return record?.id ?? null
+}
+
+export async function requireLinkedUser(
+  ctx: BotContext
+): Promise<{ chatId: string; userId: string } | null> {
+  if (!ctx.chat) return null
+  const chatId = String(ctx.chat.id)
+  const userId = await getLinkedUserId(ctx, chatId)
+  if (!userId) {
+    await ctx.reply(
+      'Please link your account via /start first.',
+      removeKeyboard()
+    )
+    return null
+  }
+  return { chatId, userId }
 }
 
 // ============================================================================

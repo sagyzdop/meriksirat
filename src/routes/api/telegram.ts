@@ -14,14 +14,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { Update } from '@/lib/telegram/types'
 import type { BotContext } from '@/lib/telegram/context'
 import { TelegramAPI } from '@/lib/telegram/api'
-import { handleStart } from '@/lib/telegram/commands/start'
-import { handleEndBooking } from '@/lib/telegram/commands/end-booking'
-import { handleListBookings } from '@/lib/telegram/commands/list-bookings'
-import { handleCancelBooking } from '@/lib/telegram/commands/cancel-booking'
-import { handleStartBooking } from '@/lib/telegram/commands/start-booking'
-import { handlePhoto } from '@/lib/telegram/commands/photo'
-import { handleFlowText } from '@/lib/telegram/commands/text-router'
-import { showMainMenu } from '@/lib/telegram/menu'
+import { routeMessage } from '@/lib/telegram/commands/text-router'
 
 export const Route = createFileRoute('/api/telegram')({
   server: {
@@ -57,10 +50,7 @@ export const Route = createFileRoute('/api/telegram')({
           // webhook (every update triggers DB reads and possibly bot replies).
           // Keying on the chat id (not IP) is required because all webhooks
           // arrive from Telegram's own IPs.
-          const chatId =
-            ('message' in update && update.message?.chat?.id) ||
-            ('callback_query' in update &&
-              update.callback_query?.message?.chat?.id)
+          const chatId = update.message?.chat?.id
 
           if (chatId) {
             const { rateLimit } = await import('@/lib/ratelimit')
@@ -80,93 +70,22 @@ export const Route = createFileRoute('/api/telegram')({
           // Create Telegram API client
           const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN)
 
-          // Create a simple context object
+          const message = update.message
           const ctx: BotContext = {
             update,
             env,
             telegram,
+            message,
+            chat: message?.chat,
+            from: message?.from,
             reply: async (text: string, extra?: Record<string, unknown>) => {
-              if ('message' in update && update.message) {
-                return await telegram.sendMessage(
-                  update.message.chat.id,
-                  text,
-                  extra
-                )
-              }
-              if (
-                'callback_query' in update &&
-                update.callback_query?.message
-              ) {
-                return await telegram.sendMessage(
-                  update.callback_query.message.chat.id,
-                  text,
-                  extra
-                )
+              if (message) {
+                return await telegram.sendMessage(message.chat.id, text, extra)
               }
             },
           }
 
-          // Add update-specific properties to context
-          if ('message' in update && update.message) {
-            ctx.message = update.message
-            ctx.chat = update.message.chat
-            ctx.from = update.message.from
-          } else if ('callback_query' in update && update.callback_query) {
-            ctx.callbackQuery = update.callback_query
-            ctx.chat = update.callback_query.message?.chat
-            ctx.from = update.callback_query.from
-          }
-
-          // Route to appropriate handler
-          if (
-            'message' in update &&
-            update.message &&
-            'photo' in update.message
-          ) {
-            await handlePhoto(ctx)
-          } else if (
-            'message' in update &&
-            update.message &&
-            'text' in update.message
-          ) {
-            const text = (update.message.text || '').trim()
-
-            if (text.startsWith('/start_booking')) {
-              await handleStartBooking(ctx)
-            } else if (text.startsWith('/return_equipment')) {
-              await handleEndBooking(ctx)
-            } else if (text.startsWith('/my_bookings')) {
-              await handleListBookings(ctx)
-            } else if (text.startsWith('/cancel_booking')) {
-              await handleCancelBooking(ctx)
-            } else if (text.startsWith('/start')) {
-              // /start (bare) or /start <token> deep link (account linking)
-              await handleStart(ctx)
-            } else if (text === '📋 My Bookings' || text === 'My Bookings') {
-              await handleListBookings(ctx)
-            } else if (
-              text === '▶️ Start Booking' ||
-              text === 'Start Booking'
-            ) {
-              await handleStartBooking(ctx)
-            } else if (
-              text === '↩️ Return Equipment' ||
-              text === 'End Booking'
-            ) {
-              await handleEndBooking(ctx)
-            } else if (
-              text === '❌ Cancel Booking' ||
-              text === 'Cancel Booking'
-            ) {
-              await handleCancelBooking(ctx)
-            } else if (text === '🏠 Main Menu') {
-              await showMainMenu(ctx)
-            } else {
-              // Flow-step text from reply-keyboard taps (booking/item ids,
-              // confirm/cancel) - route via the session.
-              await handleFlowText(ctx)
-            }
-          }
+          await routeMessage(ctx)
 
           return new Response('OK', { status: 200 })
         } catch (error) {

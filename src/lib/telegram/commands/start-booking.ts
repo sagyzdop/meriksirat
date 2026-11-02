@@ -10,11 +10,11 @@
 import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and, inArray, notInArray } from 'drizzle-orm'
-import { user, booking, bookingItem, equipment } from '@/db/schema'
+import { booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
-import { removeKeyboard, replyKeyboard } from '../server-utils'
+import { requireLinkedUser, replyKeyboard } from '../server-utils'
 import { formatClubTime } from '@/lib/club-time'
-import { renderInPlace, backToMenuButton, backToMenuMarkup } from '../menu'
+import { BACK_TO_MENU, backToMenuMarkup } from '../menu'
 import {
   BookingStartError,
   listStartableBookings,
@@ -83,32 +83,14 @@ async function fetchStartableBookings(
  * Renders the "select which booking to start" list as a reply keyboard.
  */
 export async function renderStartBookingList(ctx: BotContext): Promise<void> {
-  const chatId = String(ctx.chat?.id)
-  if (!chatId) return
+  const linked = await requireLinkedUser(ctx)
+  if (!linked) return
+  const { chatId, userId } = linked
 
-  const database = db(ctx.env.meriksirat_d1 as D1Database)
-
-  const userRecord = await database
-    .select()
-    .from(user)
-    .where(eq(user.telegramChatId, chatId))
-    .limit(1)
-    .then((rows) => rows[0])
-
-  if (!userRecord) {
-    await renderInPlace(
-      ctx,
-      'Please link your account via /start first.',
-      removeKeyboard()
-    )
-    return
-  }
-
-  const bookings = await fetchStartableBookings(ctx, userRecord.id)
+  const bookings = await fetchStartableBookings(ctx, userId)
 
   if (bookings.length === 0) {
-    await renderInPlace(
-      ctx,
+    await ctx.reply(
       'You have no bookings to start right now.\n\nYour booking can be started up to 15 minutes before its start time, and up to 15 minutes after.',
       backToMenuMarkup()
     )
@@ -117,7 +99,7 @@ export async function renderStartBookingList(ctx: BotContext): Promise<void> {
 
   await setSession(ctx.env.meriksirat_kv, chatId, {
     step: 'awaiting_start_selection',
-    userId: userRecord.id,
+    userId,
     activeBookingIds: bookings.map((b) => b.id),
     createdAt: Date.now(),
   })
@@ -125,13 +107,9 @@ export async function renderStartBookingList(ctx: BotContext): Promise<void> {
   const buttons = bookings.map(
     (b) => `Booking #${b.id} — ${b.equipmentNames.join(', ')}`
   )
-  buttons.push(backToMenuButton())
+  buttons.push(BACK_TO_MENU)
 
-  await renderInPlace(
-    ctx,
-    'Select which booking to start:',
-    replyKeyboard(buttons)
-  )
+  await ctx.reply('Select which booking to start:', replyKeyboard(buttons))
 }
 
 /**
@@ -175,7 +153,7 @@ export async function renderStartConfirm(
 
   await ctx.reply(
     `Start booking #${bookingId} now?\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${timeStart} - ${timeEnd}\n\nTap Confirm to start, or Cancel.`,
-    replyKeyboard(['✅ Confirm', 'Cancel', backToMenuButton()])
+    replyKeyboard(['✅ Confirm', 'Cancel', BACK_TO_MENU])
   )
   return true
 }
@@ -203,31 +181,4 @@ export async function startBookingForChat(
     `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Use the Return Equipment flow when done.`,
     backToMenuMarkup()
   )
-}
-
-/**
- * Handles the "Start Booking" command / button.
- *
- * Flow:
- * 1. Verify user is linked to Telegram account
- * 2. Fetch bookings with an open start window
- * 3. Show a booking list to pick from (confirm happens via confirm/cancel)
- */
-export async function handleStartBooking(ctx: BotContext): Promise<void> {
-  try {
-    if (!ctx.message || !ctx.chat) {
-      return
-    }
-
-    await renderStartBookingList(ctx)
-  } catch (error) {
-    console.error('Start booking command error:', {
-      chatId: ctx.chat?.id,
-      username: ctx.from?.username,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    })
-
-    await ctx.reply('Error fetching bookings. Please try again.')
-  }
 }

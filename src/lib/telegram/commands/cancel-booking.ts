@@ -15,78 +15,16 @@
 import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
-import { user, booking, bookingItem, equipment } from '@/db/schema'
+import { booking, bookingItem } from '@/db/schema'
 import { setSession } from '../kv-session'
-import { removeKeyboard, replyKeyboard } from '../server-utils'
+import { requireLinkedUser, replyKeyboard } from '../server-utils'
 import { BOOKING_STATUS } from '../types'
 import { logBookingActivityById } from '../logging'
 import { cancelBookingItems } from '@/lib/booking/booking-items'
-import { renderInPlace, backToMenuButton, backToMenuMarkup } from '../menu'
+import { BACK_TO_MENU, backToMenuMarkup } from '../menu'
+import { fetchUserBookings, fetchBookingItems } from '../booking-queries'
 
-interface CancellableBooking {
-  id: number
-  items: Array<{
-    itemId: number
-    equipmentName: string
-  }>
-}
-
-export async function getUserIdByChatId(
-  ctx: BotContext,
-  chatId: string
-): Promise<string | null> {
-  const database = db(ctx.env.meriksirat_d1 as D1Database)
-  const userRecord = await database
-    .select({ id: user.id })
-    .from(user)
-    .where(eq(user.telegramChatId, chatId))
-    .limit(1)
-    .then((rows) => rows[0])
-  return userRecord?.id ?? null
-}
-
-/**
- * Fetch the user's bookings that still have cancellable (not yet picked up)
- * items, i.e. items still in the `booked` status.
- */
-async function fetchCancellableBookings(
-  ctx: BotContext,
-  userId: string
-): Promise<CancellableBooking[]> {
-  const database = db(ctx.env.meriksirat_d1 as D1Database)
-
-  const rows = await database
-    .select({
-      bookingId: booking.id,
-      itemId: bookingItem.id,
-      equipmentName: equipment.modelName,
-    })
-    .from(booking)
-    .innerJoin(bookingItem, eq(bookingItem.bookingId, booking.id))
-    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-    .where(
-      and(
-        eq(booking.userId, userId),
-        eq(bookingItem.status, BOOKING_STATUS.BOOKED)
-      )
-    )
-    .orderBy(booking.startTime, bookingItem.id)
-
-  const bookingsMap = new Map<number, CancellableBooking>()
-  for (const row of rows) {
-    let entry = bookingsMap.get(row.bookingId)
-    if (!entry) {
-      entry = { id: row.bookingId, items: [] }
-      bookingsMap.set(row.bookingId, entry)
-    }
-    entry.items.push({
-      itemId: row.itemId,
-      equipmentName: row.equipmentName,
-    })
-  }
-
-  return [...bookingsMap.values()]
-}
+export const CANCELLABLE_STATUSES = [BOOKING_STATUS.BOOKED]
 
 /**
  * Cancels the given set of booking items, reusing the shared per-item
@@ -162,25 +100,14 @@ export async function cancelItems(
  * Renders the "select which booking to cancel" list as a reply keyboard.
  */
 export async function renderCancelBookingList(ctx: BotContext): Promise<void> {
-  const chatId = String(ctx.chat?.id)
-  if (!chatId) return
+  const linked = await requireLinkedUser(ctx)
+  if (!linked) return
+  const { chatId, userId } = linked
 
-  const userId = await getUserIdByChatId(ctx, chatId)
-
-  if (!userId) {
-    await renderInPlace(
-      ctx,
-      'Please link your account via /start first.',
-      removeKeyboard()
-    )
-    return
-  }
-
-  const bookings = await fetchCancellableBookings(ctx, userId)
+  const bookings = await fetchUserBookings(ctx, userId, CANCELLABLE_STATUSES)
 
   if (bookings.length === 0) {
-    await renderInPlace(
-      ctx,
+    await ctx.reply(
       'You have no upcoming bookings to cancel.',
       backToMenuMarkup()
     )
@@ -198,43 +125,9 @@ export async function renderCancelBookingList(ctx: BotContext): Promise<void> {
     (b) =>
       `Booking #${b.id} — ${b.items.map((it) => it.equipmentName).join(', ')}`
   )
-  buttons.push(backToMenuButton())
+  buttons.push(BACK_TO_MENU)
 
-  await renderInPlace(
-    ctx,
-    'Select which booking to cancel:',
-    replyKeyboard(buttons)
-  )
-}
-
-/**
- * Returns the still-`booked` items of a booking owned by the user, ordered by
- * id. Shared between the item-selection renderer and the text router, which
- * maps the tapped number back to an item id.
- */
-export async function getCancellableItemsForBooking(
-  ctx: BotContext,
-  userId: string,
-  bookingId: number
-): Promise<Array<{ itemId: number; equipmentName: string }>> {
-  const database = db(ctx.env.meriksirat_d1 as D1Database)
-
-  return await database
-    .select({
-      itemId: bookingItem.id,
-      equipmentName: equipment.modelName,
-    })
-    .from(bookingItem)
-    .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
-    .innerJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-    .where(
-      and(
-        eq(bookingItem.bookingId, bookingId),
-        eq(booking.userId, userId),
-        eq(bookingItem.status, BOOKING_STATUS.BOOKED)
-      )
-    )
-    .orderBy(bookingItem.id)
+  await ctx.reply('Select which booking to cancel:', replyKeyboard(buttons))
 }
 
 /**
@@ -245,21 +138,15 @@ export async function renderCancelBookingItems(
   ctx: BotContext,
   bookingId: number
 ): Promise<void> {
-  const chatId = String(ctx.chat?.id)
-  if (!chatId) return
+  const linked = await requireLinkedUser(ctx)
+  if (!linked) return
 
-  const userId = await getUserIdByChatId(ctx, chatId)
-
-  if (!userId) {
-    await renderInPlace(
-      ctx,
-      'Please link your account via /start first.',
-      removeKeyboard()
-    )
-    return
-  }
-
-  const items = await getCancellableItemsForBooking(ctx, userId, bookingId)
+  const items = await fetchBookingItems(
+    ctx,
+    linked.userId,
+    bookingId,
+    CANCELLABLE_STATUSES
+  )
 
   if (items.length === 0) {
     await ctx.reply(
@@ -279,29 +166,7 @@ export async function renderCancelBookingItems(
   const buttons = items.map((_, index) => String(index + 1))
   buttons.push(`Cancel All Items (${items.length})`)
   buttons.push('⬅️ Back to bookings')
-  buttons.push(backToMenuButton())
+  buttons.push(BACK_TO_MENU)
 
   await ctx.reply(messageLines.join('\n'), replyKeyboard(buttons))
-}
-
-/**
- * Handles the /cancel_booking command.
- */
-export async function handleCancelBooking(ctx: BotContext): Promise<void> {
-  try {
-    if (!ctx.message || !ctx.chat) {
-      return
-    }
-
-    await renderCancelBookingList(ctx)
-  } catch (error) {
-    console.error('Cancel booking command error:', {
-      chatId: ctx.chat?.id,
-      username: ctx.from?.username,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    })
-
-    await ctx.reply('Error fetching bookings. Please try again.')
-  }
 }

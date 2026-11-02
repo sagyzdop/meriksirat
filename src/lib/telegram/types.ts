@@ -13,7 +13,6 @@
 export interface Update {
   update_id: number
   message?: Message
-  callback_query?: CallbackQuery
 }
 
 export interface Message {
@@ -23,13 +22,6 @@ export interface Message {
   date: number
   text?: string
   photo?: PhotoSize[]
-}
-
-export interface CallbackQuery {
-  id: string
-  from: User
-  message?: Message
-  data?: string
 }
 
 export interface User {

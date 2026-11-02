@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers'
 import { db } from '@/db'
 import { eq, and, gt } from 'drizzle-orm'
 import { user, telegramToken } from '@/db/schema'
-import { removeKeyboard } from '../server-utils'
+import { getLinkedUserId, removeKeyboard } from '../server-utils'
 import { showMainMenu } from '../menu'
 
 /**
@@ -43,15 +43,7 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     // If no token provided: linked users get the main menu, new users get the
     // welcome message (linking happens via the web app deep link /start <token>)
     if (!token) {
-      const database = db(ctx.env.meriksirat_d1 as D1Database)
-      const linkedUser = await database
-        .select({ id: user.id })
-        .from(user)
-        .where(eq(user.telegramChatId, chatId))
-        .limit(1)
-        .then((rows) => rows[0])
-
-      if (linkedUser) {
+      if (await getLinkedUserId(ctx, chatId)) {
         await showMainMenu(ctx)
       } else {
         await ctx.reply(
@@ -83,13 +75,7 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     if (!tokenRecord) {
       // A re-tap of an already-used link: if this chat is already linked just
       // proceed to the menu instead of showing a scary error.
-      const alreadyLinked = await database
-        .select({ id: user.id })
-        .from(user)
-        .where(eq(user.telegramChatId, chatId))
-        .limit(1)
-        .then((rows) => rows[0])
-      if (alreadyLinked) {
+      if (await getLinkedUserId(ctx, chatId)) {
         await showMainMenu(ctx)
         return
       }
