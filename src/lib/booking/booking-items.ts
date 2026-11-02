@@ -6,7 +6,7 @@ import {
   deleteCalendarEventRaw,
   updateCalendarEventRaw,
 } from '@/lib/google/google-calendar-client'
-import { toCalendarDateTime, CLUB_TIMEZONE } from '@/lib/google/google-caledar'
+import { buildCalendarEvent } from '@/lib/booking/calendar-events'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
 
@@ -234,18 +234,12 @@ export async function returnBookingItems(
       await updateCalendarEventRaw({
         equipmentCalendarId: it.equipmentCalendarId,
         eventId: it.googleCalendarEventId,
-        event: {
+        event: buildCalendarEvent({
           summary: `${it.equipmentName} (RETURNED)`,
           description: buildItemEventDetails(it, 'returned', returnedAt),
-          start: {
-            dateTime: toCalendarDateTime(eventStart),
-            timeZone: CLUB_TIMEZONE,
-          },
-          end: {
-            dateTime: toCalendarDateTime(returnedAt),
-            timeZone: CLUB_TIMEZONE,
-          },
-        },
+          start: eventStart,
+          end: returnedAt,
+        }),
       })
     } catch (err) {
       console.error('Failed to update calendar event for returned item:', err)

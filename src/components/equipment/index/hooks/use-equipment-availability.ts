@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { checkMultipleCalendarsFreeBusy } from '@/lib/google/google-caledar'
+import { checkMultipleCalendarsFreeBusy } from '@/lib/google/google-calendar'
 import {
   clubLocalToUtc,
   getNextBookableWindow,

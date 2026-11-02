@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
 import { Spinner } from '@/components/ui/spinner'
-import { getCalendarEvents } from '@/lib/google/google-caledar'
+import { getCalendarEvents } from '@/lib/google/google-calendar'
 import {
   EventCalendar,
   type CalendarEvent,

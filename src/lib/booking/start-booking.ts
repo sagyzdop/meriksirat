@@ -2,7 +2,10 @@ import type { db } from '@/db'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, and, inArray, isNull } from 'drizzle-orm'
 import { updateCalendarEventRaw } from '@/lib/google/google-calendar-client'
-import { toCalendarDateTime, CLUB_TIMEZONE } from '@/lib/google/google-caledar'
+import {
+  buildCalendarEvent,
+  equipmentLabel,
+} from '@/lib/booking/calendar-events'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
 import { logBookingActivityById } from '@/lib/telegram/logging'
@@ -136,29 +139,25 @@ export async function startBooking(
     if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
 
     try {
+      const label = equipmentLabel(item.equipmentName, item.equipmentId)
       await updateCalendarEventRaw({
         equipmentCalendarId: item.equipmentCalendarId,
         eventId: item.googleCalendarEventId,
-        event: {
-          summary: `${item.equipmentName || `Equipment ${item.equipmentId}`} (ACTIVE)`,
+        event: buildCalendarEvent({
+          summary: `${label} (ACTIVE)`,
           description: formatBookingDetailsPlain({
             bookingId,
             userDisplayName,
-            equipmentNames: [
-              item.equipmentName || `Equipment ${item.equipmentId}`,
-            ],
+            equipmentNames: [label],
             startTime: bookingData.startTime,
             endTime: bookingData.endTime,
             startedAt: now,
             status: 'active',
             notes: bookingData.userEventDetails,
           }),
-          start: { dateTime: toCalendarDateTime(now), timeZone: CLUB_TIMEZONE },
-          end: {
-            dateTime: toCalendarDateTime(bookingData.endTime),
-            timeZone: CLUB_TIMEZONE,
-          },
-        },
+          start: now,
+          end: bookingData.endTime,
+        }),
       })
     } catch (error) {
       console.error(

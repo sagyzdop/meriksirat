@@ -3,6 +3,10 @@ import { db } from '@/db/index'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { formatClubTime } from '@/lib/club-time'
 import { cancelWholeBooking } from '@/lib/booking/booking-items'
+import {
+  buildCalendarEvent,
+  equipmentLabel,
+} from '@/lib/booking/calendar-events'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { recomputeBookingStatus } from '@/lib/booking/status'
 import { START_WINDOW_GRACE_MS } from '@/lib/booking/start-booking'
@@ -198,27 +202,26 @@ export async function updateOverdueBookings(
 
         const eventStart = item.booking.startedAt ?? item.booking.startTime
 
-        const event = {
-          summary: `${item.equipment.modelName || `Equipment ${item.equipment.id}`} (OVERDUE)`,
+        const label = equipmentLabel(
+          item.equipment.modelName,
+          item.equipment.id
+        )
+        const event = buildCalendarEvent({
+          summary: `${label} (OVERDUE)`,
           description: formatBookingDetailsPlain({
             bookingId: item.bookingId,
             userDisplayName,
-            equipmentNames: [
-              item.equipment.modelName || `Equipment ${item.equipment.id}`,
-            ],
+            equipmentNames: [label],
             startTime: item.booking.startTime,
             endTime: item.booking.endTime,
             startedAt: item.booking.startedAt,
             status: 'overdue',
             notes: item.booking.userEventDetails,
           }),
-          // Times are never changed by the overdue transition.
-          start: { dateTime: eventStart.toISOString(), timeZone: 'UTC' },
-          end: {
-            dateTime: item.booking.endTime.toISOString(),
-            timeZone: 'UTC',
-          },
-        }
+          start: eventStart,
+          end: item.booking.endTime,
+          utc: true,
+        })
 
         await updateCalendarEventRaw({
           equipmentCalendarId: item.equipment.googleCalendarId,

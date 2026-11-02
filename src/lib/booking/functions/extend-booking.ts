@@ -23,8 +23,8 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
     const { userContext } = await import('@/lib/auth/context')
-    const { toCalendarDateTime, CLUB_TIMEZONE } =
-      await import('@/lib/google/google-caledar')
+    const { buildCalendarEvent, equipmentLabel } =
+      await import('../calendar-events')
     const { checkMultipleCalendarsFreeBusyRaw, updateCalendarEventRaw } =
       await import('@/lib/google/google-calendar-client')
     const { booking, bookingItem, equipment, user } =
@@ -198,10 +198,11 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
     for (const item of activeItems) {
       if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
 
+      const label = equipmentLabel(item.equipmentName, item.equipmentId)
       const description = formatBookingDetailsPlain({
         bookingId: data.bookingId,
         userDisplayName,
-        equipmentNames: [item.equipmentName || `Equipment ${item.equipmentId}`],
+        equipmentNames: [label],
         startTime: parent.startTime,
         endTime: newEndTime,
         startedAt: parent.startedAt,
@@ -213,20 +214,12 @@ export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
         await updateCalendarEventRaw({
           equipmentCalendarId: item.equipmentCalendarId,
           eventId: item.googleCalendarEventId,
-          event: {
-            summary: `${item.equipmentName || `Equipment ${item.equipmentId}`}${undidOverdue ? '' : ` (${parent.status.toUpperCase()})`}`,
+          event: buildCalendarEvent({
+            summary: `${label}${undidOverdue ? '' : ` (${parent.status.toUpperCase()})`}`,
             description,
-            start: {
-              dateTime: toCalendarDateTime(
-                parent.startedAt ?? parent.startTime
-              ),
-              timeZone: CLUB_TIMEZONE,
-            },
-            end: {
-              dateTime: toCalendarDateTime(newEndTime),
-              timeZone: CLUB_TIMEZONE,
-            },
-          },
+            start: parent.startedAt ?? parent.startTime,
+            end: newEndTime,
+          }),
         })
       } catch (calendarError) {
         console.error(

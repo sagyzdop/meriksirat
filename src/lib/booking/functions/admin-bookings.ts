@@ -135,8 +135,8 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingStatusAdminSchema)
   .handler(async ({ data }) => {
     const { adminContext } = await import('@/lib/admin/server')
-    const { toCalendarDateTime, CLUB_TIMEZONE } =
-      await import('@/lib/google/google-caledar')
+    const { buildCalendarEvent, equipmentLabel } =
+      await import('../calendar-events')
     const {
       deleteCalendarEventRaw,
       updateCalendarEventRaw,
@@ -350,31 +350,22 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     for (const item of items) {
       if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
 
-      const description = formatBookingDetailsPlain({
-        bookingId: data.bookingId,
-        userDisplayName,
-        equipmentNames: [
-          item.equipmentModelName || `Equipment ${item.equipmentId}`,
-        ],
-        startTime: newStartTime,
-        endTime: newEndTime,
-        startedAt: bookingData.startedAt,
-        status: previousStatus,
-        notes: updatedNotes,
+      const label = equipmentLabel(item.equipmentModelName, item.equipmentId)
+      const event = buildCalendarEvent({
+        summary: `${label} - Booking (${previousStatus.toUpperCase()})`,
+        description: formatBookingDetailsPlain({
+          bookingId: data.bookingId,
+          userDisplayName,
+          equipmentNames: [label],
+          startTime: newStartTime,
+          endTime: newEndTime,
+          startedAt: bookingData.startedAt,
+          status: previousStatus,
+          notes: updatedNotes,
+        }),
+        start: newStartTime,
+        end: newEndTime,
       })
-
-      const event = {
-        summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking (${previousStatus.toUpperCase()})`,
-        description,
-        start: {
-          dateTime: toCalendarDateTime(newStartTime),
-          timeZone: CLUB_TIMEZONE,
-        },
-        end: {
-          dateTime: toCalendarDateTime(newEndTime),
-          timeZone: CLUB_TIMEZONE,
-        },
-      }
 
       try {
         await updateCalendarEventRaw({

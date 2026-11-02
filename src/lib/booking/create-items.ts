@@ -7,7 +7,7 @@ import {
   deleteCalendarEventRaw,
 } from '@/lib/google/google-calendar-client'
 import { formatBookingDetailsPlain } from './details'
-import { CLUB_TIMEZONE, toCalendarDateTime } from '@/lib/google/google-caledar'
+import { buildCalendarEvent } from './calendar-events'
 
 type Database = ReturnType<typeof db>
 
@@ -112,7 +112,7 @@ export async function createItemsWithEvents(
 
   try {
     for (const { equipmentId, calendarId, name } of items) {
-      const event = {
+      const event = buildCalendarEvent({
         summary: `${name} - Booking`,
         description: formatBookingDetailsPlain({
           bookingId,
@@ -123,15 +123,9 @@ export async function createItemsWithEvents(
           status: 'booked',
           notes,
         }),
-        start: {
-          dateTime: toCalendarDateTime(startTime),
-          timeZone: CLUB_TIMEZONE,
-        },
-        end: {
-          dateTime: toCalendarDateTime(endTime),
-          timeZone: CLUB_TIMEZONE,
-        },
-      }
+        start: startTime,
+        end: endTime,
+      })
 
       const createdEvent = await retry(() =>
         createCalendarEventRaw({ equipmentCalendarId: calendarId, event })

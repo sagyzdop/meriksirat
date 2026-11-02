@@ -14,7 +14,7 @@ import { EquipmentCategoryNav } from './equipment-category-nav'
 import { EquipmentGrid } from './equipment-grid'
 import { EquipmentSearch } from './equipment-search'
 import { AvailabilityFilters } from './availability-filters'
-import { toCalendarDateTime } from '@/lib/google/google-caledar'
+import { toCalendarDateTime } from '@/lib/club-time'
 import { useIsMobile } from '@/hooks/use-mobile'
 
 interface EquipmentBookingBlockProps {

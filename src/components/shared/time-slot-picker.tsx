@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   checkCalendarFreeBusy,
   checkMultipleCalendarsFreeBusy,
-} from '@/lib/google/google-caledar'
+} from '@/lib/google/google-calendar'
 import { bookingsQueries } from '@/lib/booking/queries'
 import { MIN_BOOKING_ADVANCE_MS } from '@/lib/booking/operating-hours'
 import { toast } from 'sonner'

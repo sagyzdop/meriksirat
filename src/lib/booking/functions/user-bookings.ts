@@ -418,8 +418,8 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingSchema)
   .handler(async ({ data }) => {
     const { userContext } = await import('@/lib/auth/context')
-    const { toCalendarDateTime, CLUB_TIMEZONE } =
-      await import('@/lib/google/google-caledar')
+    const { buildCalendarEvent, equipmentLabel } =
+      await import('../calendar-events')
     const { checkCalendarFreeBusyRaw, updateCalendarEventRaw } =
       await import('@/lib/google/google-calendar-client')
     const { booking, bookingItem, equipment, user } =
@@ -556,30 +556,21 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     for (const item of items) {
       if (!item.googleCalendarEventId || !item.equipmentCalendarId) continue
 
-      const description = formatBookingDetailsPlain({
-        bookingId: data.bookingId,
-        userDisplayName,
-        equipmentNames: [
-          item.equipmentModelName || `Equipment ${item.equipmentId}`,
-        ],
-        startTime: newStartTime,
-        endTime: newEndTime,
-        status: bookingData.status,
-        notes: newNotes,
+      const label = equipmentLabel(item.equipmentModelName, item.equipmentId)
+      const event = buildCalendarEvent({
+        summary: `${label} - Booking`,
+        description: formatBookingDetailsPlain({
+          bookingId: data.bookingId,
+          userDisplayName,
+          equipmentNames: [label],
+          startTime: newStartTime,
+          endTime: newEndTime,
+          status: bookingData.status,
+          notes: newNotes,
+        }),
+        start: newStartTime,
+        end: newEndTime,
       })
-
-      const event = {
-        summary: `${item.equipmentModelName || `Equipment ${item.equipmentId}`} - Booking`,
-        description,
-        start: {
-          dateTime: toCalendarDateTime(newStartTime),
-          timeZone: CLUB_TIMEZONE,
-        },
-        end: {
-          dateTime: toCalendarDateTime(newEndTime),
-          timeZone: CLUB_TIMEZONE,
-        },
-      }
 
       try {
         await updateCalendarEventRaw({

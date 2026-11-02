@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
 import { bookingsQueries } from '@/lib/booking'
-import { checkCalendarFreeBusy } from '@/lib/google/google-caledar'
+import { checkCalendarFreeBusy } from '@/lib/google/google-calendar'
 import { buildAvailabilityWindow } from '../hooks/use-equipment-availability'
 import {
   availabilityBadgeClass,
