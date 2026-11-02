@@ -292,7 +292,7 @@ export const startRelayFn = createServerFn({ method: 'POST' })
     const sourceUserId = await resolveRelaySource(data.userId)
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { startRelay } = await import('@/lib/pool/drain-server')
+    const { startRelay } = await import('@/lib/pool/relay-server')
     return startRelay(
       db(env.meriksirat_d1 as D1Database),
       sourceUserId,
@@ -306,7 +306,7 @@ export const confirmRelayFn = createServerFn({ method: 'POST' })
     const sourceUserId = await resolveRelaySource(data.userId)
     const { env } = await import('cloudflare:workers')
     const { db } = await import('@/db')
-    const { confirmRelay } = await import('@/lib/pool/drain-server')
+    const { confirmRelay } = await import('@/lib/pool/relay-server')
     return confirmRelay(db(env.meriksirat_d1 as D1Database), sourceUserId, {
       photoId: data.photoId,
       reservationId: data.reservationId,

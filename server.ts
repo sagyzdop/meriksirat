@@ -245,7 +245,7 @@ async function maintainPool(env: Env, budget: Budget): Promise<void> {
 
 async function drainFlamekeepers(env: Env, budget: Budget): Promise<void> {
   try {
-    const { runDrainMaintenance } = await import('./src/lib/pool/drain-server')
+    const { runDrainMaintenance } = await import('./src/lib/pool/drain-cron')
     await runDrainMaintenance(env, budget)
   } catch (error) {
     console.error(
