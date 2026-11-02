@@ -14,7 +14,6 @@ import { DriveAuthError, DriveNotFoundError } from '@/lib/google/google-drive'
 import {
   hasBatchAuthFailure,
   parseBatchResults,
-  parseBatchStatuses,
 } from '@/lib/google/drive-batch'
 
 function row(id: string, owner: string | null): RecreateRow {
@@ -238,14 +237,5 @@ describe('parseBatchResults', () => {
     expect(
       hasBatchAuthFailure(parseBatchResults(response, ['a', 'b']).values())
     ).toBe(false)
-  })
-
-  it('agrees with parseBatchStatuses', () => {
-    expect(parseBatchStatuses(response, ['a', 'b'])).toEqual(
-      new Map([
-        ['a', 204],
-        ['b', 403],
-      ])
-    )
   })
 })

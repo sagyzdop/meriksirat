@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildBatchDeleteBody,
-  parseBatchStatuses,
+  parseBatchResults,
 } from '@/lib/google/drive-batch'
 
 describe('buildBatchDeleteBody', () => {
@@ -28,7 +28,7 @@ describe('buildBatchDeleteBody', () => {
   })
 })
 
-describe('parseBatchStatuses', () => {
+describe('parseBatchResults statuses', () => {
   it('maps each response part back to its file by Content-ID', () => {
     const response = [
       '--batch_x',
@@ -48,15 +48,12 @@ describe('parseBatchStatuses', () => {
       '',
       '--batch_x--',
     ].join('\r\n')
-    expect(parseBatchStatuses(response, ['f1', 'f2'])).toEqual(
-      new Map([
-        ['f1', 204],
-        ['f2', 404],
-      ])
-    )
+    const results = parseBatchResults(response, ['f1', 'f2'])
+    expect(results.get('f1')?.status).toBe(204)
+    expect(results.get('f2')?.status).toBe(404)
   })
 
   it('leaves out files whose part is missing', () => {
-    expect(parseBatchStatuses('--x--', ['f1'])).toEqual(new Map())
+    expect(parseBatchResults('--x--', ['f1'])).toEqual(new Map())
   })
 })

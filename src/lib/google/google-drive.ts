@@ -406,30 +406,11 @@ export async function batchDeleteDriveFiles(
   accessToken: string,
   fileIds: string[]
 ): Promise<string[]> {
-  const { DRIVE_BATCH_LIMIT, buildBatchDeleteBody, parseBatchStatuses } =
-    await import('./drive-batch')
-  const failed: string[] = []
-  for (let i = 0; i < fileIds.length; i += DRIVE_BATCH_LIMIT) {
-    const ids = fileIds.slice(i, i + DRIVE_BATCH_LIMIT)
-    const boundary = `batch_${crypto.randomUUID()}`
-    const response = await driveFetch(
-      accessToken,
-      'https://www.googleapis.com/batch/drive/v3',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': `multipart/mixed; boundary=${boundary}` },
-        body: buildBatchDeleteBody(ids, boundary),
-      }
-    )
-    const statuses = parseBatchStatuses(await response.text(), ids)
-    for (const id of ids) {
-      const status = statuses.get(id)
-      if (status === undefined || (status >= 300 && status !== 404)) {
-        failed.push(id)
-      }
-    }
-  }
-  return failed
+  const results = await batchDeleteDriveFileResults(accessToken, fileIds)
+  return fileIds.filter((id) => {
+    const status = results.get(id)?.status
+    return status === undefined || (status >= 300 && status !== 404)
+  })
 }
 
 export async function batchDeleteDriveFileResults(

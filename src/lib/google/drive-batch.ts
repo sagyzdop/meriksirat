@@ -49,14 +49,3 @@ export function hasBatchAuthFailure(
   }
   return false
 }
-
-export function parseBatchStatuses(
-  body: string,
-  fileIds: string[]
-): Map<string, number> {
-  const statuses = new Map<string, number>()
-  for (const [id, result] of parseBatchResults(body, fileIds)) {
-    statuses.set(id, result.status)
-  }
-  return statuses
-}
