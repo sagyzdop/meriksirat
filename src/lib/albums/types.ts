@@ -2,37 +2,22 @@ import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
 import type { TombstoneReason } from '@/lib/pool/expiry'
 
-/**
- * Minimum user clearance level required to create a new album. Users below
- * this level see the Albums section disabled in the sidebar.
- */
 export const ALBUM_CREATE_MIN_CLEARANCE = 3
 
 export const AlbumOwnershipFilterSchema = z.enum(['owner', 'co-author'])
 export type AlbumOwnershipFilter = z.infer<typeof AlbumOwnershipFilterSchema>
 
-/**
- * User-facing list filters (mirrored into the URL search params). Ownership
- * is a multi-select array; an empty array means "no filter".
- */
 export const AlbumListFiltersSchema = z.object({
   search: z.string().trim().max(200).optional().default(''),
   ownership: stringArrayParam(AlbumOwnershipFilterSchema).default([]),
 })
 export type AlbumListFilters = z.infer<typeof AlbumListFiltersSchema>
 
-/**
- * Search-only filters for the public albums page, where ownership
- * does not apply.
- */
 export const AlbumSearchSchema = z.object({
   search: z.string().trim().max(200).optional().default(''),
 })
 export type AlbumSearch = z.infer<typeof AlbumSearchSchema>
 
-/**
- * Server query: filters plus cursor pagination.
- */
 export const AlbumListQuerySchema = AlbumListFiltersSchema.extend({
   limit: z.number().int().min(1).max(100).optional().default(24),
   cursor: z.string().max(500).nullable().optional().default(null),

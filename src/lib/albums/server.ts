@@ -13,10 +13,6 @@ export interface SessionUser {
   clearanceLevel: number
 }
 
-/**
- * Resolve the current authenticated user (any role) from the request headers.
- * Returns null when there is no valid session.
- */
 export async function getSessionUser(
   headers: Headers
 ): Promise<SessionUser | null> {
@@ -75,10 +71,6 @@ export interface AlbumRow {
   ownerUserId: string
 }
 
-/**
- * Resolve the acting user's access level for a given album row.
- * manager > owner > editor > none.
- */
 export async function resolveAlbumAccess(
   headers: Headers,
   albumRow: AlbumRow
@@ -109,14 +101,6 @@ export function requireAccess(
     throw new Error('Insufficient permissions')
   }
 }
-
-// ---------------------------------------------------------------------------
-// Folder listing cache
-//
-// Public album views hit the Drive API once per page load. To protect the
-// master account's Drive API quota on shared links we cache the folder listing
-// in KV for ~5m. Uploads invalidate the cache right away.
-// ---------------------------------------------------------------------------
 
 const LISTING_TTL_SECONDS = 300
 
@@ -185,17 +169,8 @@ export async function invalidateCachedListing(folderId: string): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// In-isolate memo layer
-//
-// KV free tier allows only 1,000 writes/day, so hot payloads must not hit KV
-// on every rebuild. A tiny per-isolate Map absorbs repeat traffic: warm
-// isolates serve everything from RAM and only cold/expired reads touch KV.
-// Entries are viewer-independent payloads (album cores / public pages) so
-// sharing them across requests within an isolate is safe. Bounded to keep
-// isolate memory usage predictable.
-// ---------------------------------------------------------------------------
-
+// KV free tier allows 1,000 writes/day: the per-isolate memo absorbs repeat
+// traffic for viewer-independent payloads.
 const MEM_TTL_MS = 30_000
 const MEM_MAX_ENTRIES = 25
 

@@ -49,9 +49,6 @@ async function albumContext(albumId: string, allowed: AlbumAccessLevel[]) {
   return { database, headers, row, user, access }
 }
 
-/**
- * Resolve the Albums/{year}/{month} folder chain, creating any missing level.
- */
 async function resolveMonthFolder(
   accessToken: string
 ): Promise<{ id: string }> {
@@ -109,8 +106,7 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       monthFolder.id
     )
 
-    // Albums are always created public: the Drive folder is open to anyone
-    // with the link, so photos can be served straight from Google's CDN.
+    // Public folder: photos are served straight from Google's CDN.
     await setAnyoneReader(accessToken, folder.id)
 
     const database = db(env.meriksirat_d1 as D1Database)
