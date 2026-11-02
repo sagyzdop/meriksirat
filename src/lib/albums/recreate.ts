@@ -105,7 +105,7 @@ export function recreateSummary(tally: RecreateTally): string {
   return parts.join(' ')
 }
 
-export function abandonedAlertText(
+export function recreateAbandonedText(
   who: string,
   albumTitle: string,
   files: number

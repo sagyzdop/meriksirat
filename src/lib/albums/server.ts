@@ -219,6 +219,37 @@ function memSet(key: string, value: string): void {
   memStore.set(key, { value, expiresAt: Date.now() + MEM_TTL_MS })
 }
 
+function memoKvCache(ttlSeconds: number, label: string) {
+  return {
+    async get(key: string): Promise<unknown | null> {
+      const fromMem = memGet(key)
+      if (fromMem !== null) return parseCached(fromMem)
+      try {
+        const { env } = await import('cloudflare:workers')
+        const raw = await (env.meriksirat_kv as KVNamespace).get(key)
+        if (!raw) return null
+        memSet(key, raw)
+        return parseCached(raw)
+      } catch (error) {
+        console.warn(`Failed to read ${label} cache:`, error)
+        return null
+      }
+    },
+    async set(key: string, value: unknown): Promise<void> {
+      const raw = JSON.stringify(value)
+      memSet(key, raw)
+      try {
+        const { env } = await import('cloudflare:workers')
+        await (env.meriksirat_kv as KVNamespace).put(key, raw, {
+          expirationTtl: ttlSeconds,
+        })
+      } catch (error) {
+        console.warn(`Failed to write ${label} cache:`, error)
+      }
+    },
+  }
+}
+
 function parseCached(raw: string): unknown | null {
   try {
     const parsed: unknown = JSON.parse(raw)
@@ -229,62 +260,21 @@ function parseCached(raw: string): unknown | null {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Album detail core cache
-//
-// Building an album detail payload costs a Drive listing (or KV listing hit),
-// two D1 queries and O(photos) mapping/sorting on every view. Only three
-// fields of the final detail differ per viewer (`ownership`, `access`,
-// `editShareToken`) and all of them derive from data that is always loaded
-// fresh (the album row + session), so the expensive viewer-independent "core"
-// is cached behind the memo layer + KV for a short window. Mutations that
-// change the core explicitly invalidate it; anything else goes stale for at
-// most TTL seconds.
-//
-// Write volume note: with a 3600s TTL the theoretical worst case under
-// continuous viewing of a single album is ~24 KV writes/day, and the memo
-// layer keeps realistic counts far below that. Freshness is driven by the
-// explicit invalidation calls at every mutation point, not by the TTL.
-// ---------------------------------------------------------------------------
-
-const DETAIL_CORE_TTL_SECONDS = 3600
+const detailCache = memoKvCache(3600, 'album detail')
 
 function detailCoreKey(albumId: string): string {
   return `album:detail:${albumId}`
 }
 
-export async function getCachedDetailCore(
-  albumId: string
-): Promise<unknown | null> {
-  const key = detailCoreKey(albumId)
-  const fromMem = memGet(key)
-  if (fromMem !== null) return parseCached(fromMem)
-  try {
-    const { env } = await import('cloudflare:workers')
-    const raw = await (env.meriksirat_kv as KVNamespace).get(key)
-    if (!raw) return null
-    memSet(key, raw)
-    return parseCached(raw)
-  } catch (error) {
-    console.warn('Failed to read album detail cache:', error)
-    return null
-  }
+export function getCachedDetailCore(albumId: string): Promise<unknown | null> {
+  return detailCache.get(detailCoreKey(albumId))
 }
 
-export async function setCachedDetailCore(
+export function setCachedDetailCore(
   albumId: string,
   core: unknown
 ): Promise<void> {
-  const raw = JSON.stringify(core)
-  memSet(detailCoreKey(albumId), raw)
-  try {
-    const { env } = await import('cloudflare:workers')
-    await (env.meriksirat_kv as KVNamespace).put(detailCoreKey(albumId), raw, {
-      expirationTtl: DETAIL_CORE_TTL_SECONDS,
-    })
-  } catch (error) {
-    console.warn('Failed to write album detail cache:', error)
-  }
+  return detailCache.set(detailCoreKey(albumId), core)
 }
 
 export async function invalidateCachedDetailCore(
@@ -293,25 +283,13 @@ export async function invalidateCachedDetailCore(
   memStore.delete(detailCoreKey(albumId))
   try {
     const { env } = await import('cloudflare:workers')
-    const kv = env.meriksirat_kv as KVNamespace
-    await kv.delete(detailCoreKey(albumId))
-    // Note: guest HTML served by the edge Cache API (see server.ts) goes stale
-    // within its short TTL; per-colo purge isn't practical from here.
+    await (env.meriksirat_kv as KVNamespace).delete(detailCoreKey(albumId))
   } catch (error) {
     console.warn('Failed to invalidate album detail cache:', error)
   }
 }
 
-// ---------------------------------------------------------------------------
-// Public album list page cache
-//
-// The shared gallery index runs a joined D1 findMany on every view. Its
-// output is fully viewer-independent, so each distinct query (search /
-// visibility / cursor / limit) is cached behind the memo layer + KV instead.
-// No explicit invalidation: mutations surface within TTL seconds.
-// ---------------------------------------------------------------------------
-
-const PUBLIC_PAGE_TTL_SECONDS = 600
+const publicPageCache = memoKvCache(600, 'public album list')
 
 function publicPageKey(query: unknown): string {
   const raw = JSON.stringify(query)
@@ -322,36 +300,13 @@ function publicPageKey(query: unknown): string {
   return `album:publist:${(hash >>> 0).toString(36)}`
 }
 
-export async function getCachedPublicPage(
-  query: unknown
-): Promise<unknown | null> {
-  const key = publicPageKey(query)
-  const fromMem = memGet(key)
-  if (fromMem !== null) return parseCached(fromMem)
-  try {
-    const { env } = await import('cloudflare:workers')
-    const raw = await (env.meriksirat_kv as KVNamespace).get(key)
-    if (!raw) return null
-    memSet(key, raw)
-    return parseCached(raw)
-  } catch (error) {
-    console.warn('Failed to read public album list cache:', error)
-    return null
-  }
+export function getCachedPublicPage(query: unknown): Promise<unknown | null> {
+  return publicPageCache.get(publicPageKey(query))
 }
 
-export async function setCachedPublicPage(
+export function setCachedPublicPage(
   query: unknown,
   page: unknown
 ): Promise<void> {
-  const raw = JSON.stringify(page)
-  memSet(publicPageKey(query), raw)
-  try {
-    const { env } = await import('cloudflare:workers')
-    await (env.meriksirat_kv as KVNamespace).put(publicPageKey(query), raw, {
-      expirationTtl: PUBLIC_PAGE_TTL_SECONDS,
-    })
-  } catch (error) {
-    console.warn('Failed to write public album list cache:', error)
-  }
+  return publicPageCache.set(publicPageKey(query), page)
 }

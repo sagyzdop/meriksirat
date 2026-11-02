@@ -346,13 +346,13 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
 export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }) => {
-    const { album, photo, volume } = await import('@/db/schema')
-    const { and, eq } = await import('drizzle-orm')
+    const { album, volume } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
     const { invalidateCachedListing, invalidateCachedDetailCore } =
       await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { createDriveFolder, setAnyoneReader } =
+    const { createDriveFolder, getDriveFolderState, setAnyoneReader } =
       await import('@/lib/google/google-drive')
 
     const { database, row, headers, user } = await albumContext(data.albumId, [
@@ -370,7 +370,6 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     }
 
     const accessToken = await getGoogleAccessToken()
-    const { getDriveFolderState } = await import('@/lib/google/google-drive')
     const { folderCheckVerdict, pressAgainMessage } = await import('./recreate')
     let verdict: ReturnType<typeof folderCheckVerdict>
     try {
@@ -391,7 +390,8 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       )
     }
 
-    const { runRecreateDeletePass } = await import('./recreate-server')
+    const { loadLivePhotoRefs, runRecreateDeletePass } =
+      await import('./recreate-server')
     const pass = await runRecreateDeletePass(database, row, accessToken)
     if (pass.remaining !== 0) {
       throw new Error(pressAgainMessage(pass, pass.remaining))
@@ -413,16 +413,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       .where(eq(album.id, data.albumId))
     const { resetAlbumPhotos } = await import('./photo-index')
     const { releaseOwnedBytesStatements } = await import('@/lib/pool/server')
-    const heldPhotos = await database
-      .select({
-        id: photo.id,
-        driveFileId: photo.driveFileId,
-        bytes: photo.bytes,
-        flamekeeperUserId: photo.flamekeeperUserId,
-      })
-      .from(photo)
-      .where(and(eq(photo.albumId, data.albumId), eq(photo.state, 'live')))
-      .all()
+    const heldPhotos = await loadLivePhotoRefs(database, data.albumId)
     await resetAlbumPhotos(
       database,
       data.albumId,
