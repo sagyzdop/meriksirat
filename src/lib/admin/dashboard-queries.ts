@@ -1,14 +1,18 @@
 import { queryOptions } from '@tanstack/react-query'
 import {
-  broadcastTelegramMessageFn,
-  exportAlbumsFn,
-  exportUsersFn,
   getAdminDashboardAlertsFn,
   getAdminDashboardStatsFn,
+} from './functions/dashboard-stats'
+import {
+  exportUsersFn,
   getAdminMostActiveUsersFn,
   getAdminUserAlbumsFn,
   getViolationsFn,
-} from './functions/dashboard'
+} from './functions/dashboard-users'
+import {
+  broadcastTelegramMessageFn,
+  exportAlbumsFn,
+} from './functions/dashboard-exports'
 import type {
   AdminAlbumExport,
   AdminDashboardRange,

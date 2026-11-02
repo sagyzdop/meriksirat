@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getAdminAlumniFn, getAdminUsersFn } from './functions'
+import { getAdminAlumniFn, getAdminUsersFn } from './admin-functions'
 import type { AdminAlumniFilters, AdminUserFilters } from './types'
 
 export const usersQueries = {
