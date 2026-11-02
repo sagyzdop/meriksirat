@@ -6,7 +6,7 @@ import {
   ConfirmRelaySchema,
   ReleaseRelaySchema,
   StartDriveConnectSchema,
-  StartRelaySchema,
+  relaySource,
   UpdateFlamekeeperSchema,
   type AdminFlamekeeperRow,
   type DrainStatus,
@@ -327,7 +327,7 @@ export const optOutFlamekeeperFn = createServerFn({ method: 'POST' }).handler(
 )
 
 export const startRelayFn = createServerFn({ method: 'POST' })
-  .validator(StartRelaySchema)
+  .validator(relaySource)
   .handler(async ({ data }): Promise<RelayHandout> => {
     const sourceUserId = await resolveRelaySource(data.userId)
     const { env } = await import('cloudflare:workers')

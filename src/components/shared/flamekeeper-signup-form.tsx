@@ -14,16 +14,12 @@ import {
 
 interface FlamekeeperSignupFormProps {
   error?: string | null
-  submitLabel?: string
   onBeforeRedirect?: () => void
-  onCancel?: () => void
 }
 
 export function FlamekeeperSignupForm({
   error,
-  submitLabel = 'Connect Drive',
   onBeforeRedirect,
-  onCancel,
 }: FlamekeeperSignupFormProps) {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [pledge, setPledge] = useState(String(MIN_PLEDGE_GB))
@@ -146,19 +142,8 @@ export function FlamekeeperSignupForm({
       </p>
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? 'Redirecting to Google...' : submitLabel}
+        {isSubmitting ? 'Redirecting to Google...' : 'Connect Drive'}
       </Button>
-      {onCancel && (
-        <Button
-          type="button"
-          variant="ghost"
-          className="w-full"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
-          Back
-        </Button>
-      )}
     </form>
   )
 }

@@ -36,7 +36,6 @@ import {
   poolStats,
   recoverFull,
   type PoolFlamekeeper,
-  type PoolStats,
 } from './placement'
 import {
   ensureVolumeFolder,
@@ -98,14 +97,6 @@ export async function loadPoolFlamekeepers(
   }))
 }
 
-export async function loadPoolStats(database: Database): Promise<PoolStats> {
-  const [fks, cap] = await Promise.all([
-    loadPoolFlamekeepers(database),
-    loadCapBytes(database),
-  ])
-  return poolStats(fks, cap)
-}
-
 async function reserveUpload(
   database: Database,
   input: { id: string; userId: string; albumId: string; bytes: number },
@@ -130,7 +121,7 @@ async function dropReservation(database: Database, id: string): Promise<void> {
   await database.delete(uploadReservation).where(eq(uploadReservation.id, id))
 }
 
-export async function markFlamekeeperFull(
+async function markFlamekeeperFull(
   database: Database,
   userId: string
 ): Promise<void> {

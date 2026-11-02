@@ -95,13 +95,6 @@ export function takeIfBudgeted(budget: Budget | undefined, n: number): boolean {
   return budget ? budget.take(n) : true
 }
 
-export function takeUpToIfBudgeted(
-  budget: Budget | undefined,
-  n: number
-): number {
-  return budget ? budget.takeUpTo(n) : n
-}
-
 export function albumRemovalCost(photosPerOwner: number[]): number {
   let cost = 1
   for (const n of photosPerOwner) {

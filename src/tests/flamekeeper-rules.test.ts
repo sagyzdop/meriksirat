@@ -10,7 +10,6 @@ import {
   hasDriveFileScope,
   isValidGraduationDate,
   isValidPledgeGb,
-  pledgeLowerThanUsed,
 } from '../lib/flamekeeper/rules'
 
 describe('pledge', () => {
@@ -24,11 +23,6 @@ describe('pledge', () => {
     expect(gbToBytes(2)).toBe(2 * GB)
     expect(formatGb(2 * GB)).toBe('2 GB')
     expect(formatGb(1.5 * GB)).toBe('1.5 GB')
-  })
-
-  it('detects a pledge lowered below usage', () => {
-    expect(pledgeLowerThanUsed(GB, 2 * GB)).toBe(true)
-    expect(pledgeLowerThanUsed(2 * GB, 2 * GB)).toBe(false)
   })
 })
 

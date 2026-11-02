@@ -48,7 +48,7 @@ async function refreshGoogleAccessToken(
   return data.access_token
 }
 
-export function forgetGoogleAccessToken(): void {
+function forgetGoogleAccessToken(): void {
   cachedToken = null
   cachedAt = 0
 }

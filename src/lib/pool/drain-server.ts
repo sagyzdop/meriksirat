@@ -110,15 +110,6 @@ function toStatus(row: DrainRow): DrainStatus {
   }
 }
 
-export async function getDrainStatus(
-  database: Database,
-  userId: string
-): Promise<DrainStatus> {
-  const row = await loadDrainRow(database, userId)
-  if (!row) throw new Error('Not a flamekeeper')
-  return toStatus(row)
-}
-
 async function loadVolumePhotos(
   database: Database,
   userId: string,

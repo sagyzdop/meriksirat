@@ -39,13 +39,6 @@ export function isValidGraduationDate(
   return parsed.getTime() > now.getTime()
 }
 
-export function pledgeLowerThanUsed(
-  pledgedBytes: number,
-  usedBytes: number
-): boolean {
-  return pledgedBytes < usedBytes
-}
-
 export function isNuEmail(email: string): boolean {
   return email.trim().toLowerCase().endsWith('@nu.edu.kz')
 }

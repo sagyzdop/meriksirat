@@ -7,7 +7,6 @@ import {
   batchDeleteCost,
   createBudget,
   takeIfBudgeted,
-  takeUpToIfBudgeted,
 } from '@/lib/cron/budget'
 
 describe('createBudget', () => {
@@ -86,12 +85,10 @@ describe('sub budgets', () => {
 describe('optional budgets', () => {
   it('take freely without a budget', () => {
     expect(takeIfBudgeted(undefined, 99)).toBe(true)
-    expect(takeUpToIfBudgeted(undefined, 99)).toBe(99)
   })
   it('spend from a given budget', () => {
     const b = createBudget(2)
     expect(takeIfBudgeted(b, 3)).toBe(false)
-    expect(takeUpToIfBudgeted(b, 3)).toBe(2)
   })
 })
 

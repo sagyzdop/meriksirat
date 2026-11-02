@@ -90,11 +90,7 @@ export const AdminFlamekeepersSchema = z.object({
   search: z.string().optional(),
 })
 
-export type StartDriveConnectInput = z.infer<typeof StartDriveConnectSchema>
-
-const relaySource = z.object({ userId: z.string().optional() })
-
-export const StartRelaySchema = relaySource
+export const relaySource = z.object({ userId: z.string().optional() })
 
 export const ConfirmRelaySchema = relaySource.extend({
   photoId: z.string(),
