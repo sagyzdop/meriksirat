@@ -10,15 +10,7 @@ import { cancelBookingFn } from '@/lib/booking'
 import type { BookingWithItems } from '@/lib/booking/types'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-
-interface Pagination {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
-}
+import type { PageInfo } from '@/lib/pagination'
 
 interface Filters {
   status?: string[]
@@ -33,7 +25,7 @@ interface Filters {
 
 interface PageProps {
   bookings: BookingWithItems[]
-  pagination: Pagination
+  pagination: PageInfo
   filters: Filters
   telegramBotUsername: string
   currentUserName: string

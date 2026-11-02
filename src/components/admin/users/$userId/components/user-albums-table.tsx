@@ -23,13 +23,7 @@ import { DataTableColumnHeader } from '@/components/shared/data-table/data-table
 import { useScopedServerTableSorting } from '@/components/shared/data-table/use-scoped-server-table-sorting'
 import { PhotoImage } from '@/components/albums/photo-image'
 import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
-
-interface Pagination {
-  page: number
-  limit: number
-  totalCount: number
-  totalPages: number
-}
+import type { PaginationMeta } from '@/lib/pagination'
 
 export interface AlbumSearch {
   albumSearch?: string
@@ -41,7 +35,7 @@ export interface AlbumSearch {
 
 interface UserAlbumsTableProps {
   albums: AdminUserAlbum[]
-  pagination: Pagination
+  pagination: PaginationMeta
   filters: {
     search?: string
     page: number

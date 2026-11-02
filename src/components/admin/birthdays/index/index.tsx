@@ -7,15 +7,12 @@ import { BirthdayDataTable } from './components/birthday-data-table'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { syncBirthdaysToCalendarFn } from '@/lib/birthdays/functions/birthdays'
-import type {
-  BirthdayListFilters,
-  BirthdayPagination,
-  BirthdayUser,
-} from '@/lib/birthdays/types'
+import type { BirthdayListFilters, BirthdayUser } from '@/lib/birthdays/types'
+import type { PaginationMeta } from '@/lib/pagination'
 
 interface PageProps {
   birthdays: BirthdayUser[]
-  pagination: BirthdayPagination
+  pagination: PaginationMeta
   filters: BirthdayListFilters
   isLoading?: boolean
 }

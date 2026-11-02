@@ -12,6 +12,7 @@ import type { BookingItemRow } from '../mappers'
 import { mapBookingsWithItems, itemSelect } from '../mappers'
 import { formatUserDisplayName } from '@/lib/utils'
 import { formatBookingDetailsPlain } from '../details'
+import { buildPageInfo } from '@/lib/pagination'
 
 /**
  * Get all bookings with comprehensive filtering and pagination for admin oversight
@@ -120,7 +121,6 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     ])
 
     const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / data.limit)
 
     const pageBookingIds = pageBookings.map((b) => b.id)
 
@@ -216,14 +216,7 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
           user: parent?.user ?? null,
         }
       }) as AdminBookingWithDetails[],
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        total,
-        totalPages,
-        hasNext: data.page < totalPages,
-        hasPrev: data.page > 1,
-      },
+      pagination: buildPageInfo(total, data.page, data.limit),
     }
 
     return response

@@ -24,6 +24,7 @@ import type {
   ViolationRow,
   ViolationType,
 } from '../dashboard-types'
+import { buildPagination } from '@/lib/pagination'
 
 // ---------------------------------------------------------------------------
 // Helpers (pure, server-safe)
@@ -357,8 +358,9 @@ export const getAdminMostActiveUsersFn = createServerFn({ method: 'GET' })
   .validator(MostActiveUsersFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedMostActiveUsersResponse> => {
     const { adminContext } = await import('@/lib/admin/server')
+    const { userSearch } = await import('@/lib/user/search')
     const { user, album, albumMember } = await import('@/db/schema')
-    const { eq, and, gte, lte, or, like, asc, desc, sql, aliasedTable } =
+    const { eq, and, gte, lte, asc, desc, sql, aliasedTable } =
       await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
@@ -370,15 +372,7 @@ export const getAdminMostActiveUsersFn = createServerFn({ method: 'GET' })
 
     const searchConditions: import('drizzle-orm').SQL[] = []
     if (data.search) {
-      const term = `%${data.search}%`
-      searchConditions.push(
-        or(
-          like(user.name, term),
-          like(user.email, term),
-          like(user.firstName, term),
-          like(user.lastName, term)
-        )!
-      )
+      searchConditions.push(userSearch(data.search))
     }
     const whereClause = searchConditions.length
       ? and(...searchConditions)
@@ -450,12 +444,7 @@ export const getAdminMostActiveUsersFn = createServerFn({ method: 'GET' })
 
     return {
       users,
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / data.limit),
-      },
+      pagination: buildPagination(totalCount, data.page, data.limit),
     }
   })
 
@@ -467,8 +456,9 @@ export const getViolationsFn = createServerFn({ method: 'GET' })
   .validator(ViolationsFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedViolationsResponse> => {
     const { adminContext } = await import('@/lib/admin/server')
+    const { userSearch } = await import('@/lib/user/search')
     const { user } = await import('@/db/schema')
-    const { and, or, gt, like, asc, desc, count } = await import('drizzle-orm')
+    const { and, or, gt, asc, desc, count } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
@@ -477,15 +467,7 @@ export const getViolationsFn = createServerFn({ method: 'GET' })
     ]
 
     if (data.search) {
-      const term = `%${data.search}%`
-      conditions.push(
-        or(
-          like(user.name, term),
-          like(user.email, term),
-          like(user.firstName, term),
-          like(user.lastName, term)
-        )!
-      )
+      conditions.push(userSearch(data.search))
     }
 
     if (data.violationType?.length === 1) {
@@ -551,12 +533,7 @@ export const getViolationsFn = createServerFn({ method: 'GET' })
 
     return {
       users,
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / data.limit),
-      },
+      pagination: buildPagination(totalCount, data.page, data.limit),
     }
   })
 
@@ -640,12 +617,7 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
 
     return {
       albums,
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / data.limit),
-      },
+      pagination: buildPagination(totalCount, data.page, data.limit),
     }
   })
 
@@ -657,8 +629,9 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
   .validator(ExportUsersFiltersSchema)
   .handler(async ({ data }): Promise<AdminUserExport[]> => {
     const { adminContext } = await import('@/lib/admin/server')
+    const { userSearch } = await import('@/lib/user/search')
     const { user } = await import('@/db/schema')
-    const { and, or, like, inArray } = await import('drizzle-orm')
+    const { and, inArray } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
@@ -673,15 +646,7 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
       conditions.push(inArray(user.clearanceLevel, data.clearanceLevel))
     }
     if (data.search) {
-      const term = `%${data.search}%`
-      conditions.push(
-        or(
-          like(user.name, term),
-          like(user.email, term),
-          like(user.firstName, term),
-          like(user.lastName, term)
-        )!
-      )
+      conditions.push(userSearch(data.search))
     }
     const whereClause = conditions.length ? and(...conditions) : undefined
 

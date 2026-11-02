@@ -8,16 +8,7 @@ export const usersQueries = {
   adminList: (filters: AdminUserFilters) =>
     queryOptions({
       queryKey: [...usersQueries.lists(), filters],
-      queryFn: async () =>
-        (await getAdminUsersFn({ data: filters })) ?? {
-          users: [],
-          pagination: {
-            page: filters.page,
-            limit: filters.limit,
-            totalCount: 0,
-            totalPages: 0,
-          },
-        },
+      queryFn: () => getAdminUsersFn({ data: filters }),
     }),
   alumniList: (filters: AdminAlumniFilters) =>
     queryOptions({

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { PaginationMeta } from '@/lib/pagination'
 
 // ---------------------------------------------------------------------------
 // Dashboard data range
@@ -91,12 +92,7 @@ export interface MostActiveUser {
 
 export interface PaginatedMostActiveUsersResponse {
   users: MostActiveUser[]
-  pagination: {
-    page: number
-    limit: number
-    totalCount: number
-    totalPages: number
-  }
+  pagination: PaginationMeta
 }
 
 // ---------------------------------------------------------------------------
@@ -140,12 +136,7 @@ export interface ViolationRow {
 
 export interface PaginatedViolationsResponse {
   users: ViolationRow[]
-  pagination: {
-    page: number
-    limit: number
-    totalCount: number
-    totalPages: number
-  }
+  pagination: PaginationMeta
 }
 
 // ---------------------------------------------------------------------------
@@ -177,12 +168,7 @@ export interface AdminUserAlbum {
 
 export interface PaginatedAdminUserAlbumsResponse {
   albums: AdminUserAlbum[]
-  pagination: {
-    page: number
-    limit: number
-    totalCount: number
-    totalPages: number
-  }
+  pagination: PaginationMeta
 }
 
 // ---------------------------------------------------------------------------

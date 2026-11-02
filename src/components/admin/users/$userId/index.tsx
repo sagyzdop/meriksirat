@@ -30,6 +30,7 @@ import {
   type AlbumSearch,
 } from './components/user-albums-table'
 import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
+import type { PaginationMeta } from '@/lib/pagination'
 
 const formatDate = (value: string | number | null | undefined) => {
   if (!value) return '—'
@@ -87,13 +88,6 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
   return <Badge variant="outline">{value}</Badge>
 }
 
-interface Pagination {
-  page: number
-  limit: number
-  totalCount: number
-  totalPages: number
-}
-
 interface PageProps {
   user: {
     id: string
@@ -118,7 +112,7 @@ interface PageProps {
     updatedAt: Date
   }
   albums: AdminUserAlbum[]
-  albumsPagination: Pagination
+  albumsPagination: PaginationMeta
   albumsSearch: AlbumSearch
   albumsIsLoading?: boolean
   canBan?: boolean

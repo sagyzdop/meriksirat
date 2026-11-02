@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { PageInfo } from '@/lib/pagination'
 
 /**
  * Minimum user clearance level required to access equipment booking. Users
@@ -60,14 +61,7 @@ export interface EquipmentResponse {
 }
 
 export interface PaginatedEquipmentResponse extends EquipmentResponse {
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-    hasNext: boolean
-    hasPrev: boolean
-  }
+  pagination: PageInfo
 }
 
 // Admin equipment management schemas

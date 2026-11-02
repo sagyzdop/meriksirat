@@ -25,17 +25,11 @@ import type {
   MostActiveUser,
   MostActiveUsersFilters,
 } from '@/lib/admin/dashboard-types'
-
-interface Pagination {
-  page: number
-  limit: number
-  totalCount: number
-  totalPages: number
-}
+import type { PaginationMeta } from '@/lib/pagination'
 
 interface MostActiveUsersTableProps {
   users: MostActiveUser[]
-  pagination: Pagination
+  pagination: PaginationMeta
   filters: MostActiveUsersFilters
   search: DashboardSearchParams
   isLoading?: boolean

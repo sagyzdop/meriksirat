@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { MAX_BOOKING_ITEMS } from './operating-hours'
+import type { PageInfo } from '@/lib/pagination'
 
 interface BookingEquipmentInfo {
   id: number
@@ -110,26 +111,12 @@ export type BookingFilters = z.infer<typeof BookingFiltersSchema>
 
 export interface PaginatedBookingsResponse {
   data: BookingWithItems[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-    hasNext: boolean
-    hasPrev: boolean
-  }
+  pagination: PageInfo
 }
 
 export interface PaginatedAdminBookingsResponse {
   data: AdminBookingWithDetails[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-    hasNext: boolean
-    hasPrev: boolean
-  }
+  pagination: PageInfo
 }
 
 // Admin booking oversight schemas

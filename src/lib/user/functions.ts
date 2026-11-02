@@ -13,6 +13,7 @@ import {
   UnbanUserSchema,
   type UserProfile,
 } from './types'
+import { buildPagination } from '@/lib/pagination'
 
 export const getUserFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<UserProfile | null> => {
@@ -85,8 +86,9 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
+    const { userSearch } = await import('@/lib/user/search')
     const { user, flamekeeper } = await import('@/db/schema')
-    const { like, or, and, count, desc, asc, inArray, sql, eq } =
+    const { and, count, desc, asc, inArray, sql, eq } =
       await import('drizzle-orm')
 
     // Check admin permissions - both admin and manager can view users
@@ -108,15 +110,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     }
 
     if (data.search) {
-      const searchTerm = `%${data.search}%`
-      conditions.push(
-        or(
-          like(user.name, searchTerm),
-          like(user.email, searchTerm),
-          like(user.firstName, searchTerm),
-          like(user.lastName, searchTerm)
-        )
-      )
+      conditions.push(userSearch(data.search))
     }
 
     // Combine conditions with AND logic
@@ -183,12 +177,7 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
 
     const result = {
       users,
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / data.limit),
-      },
+      pagination: buildPagination(totalCount, data.page, data.limit),
     }
 
     return result
@@ -198,9 +187,10 @@ export const getAdminAlumniFn = createServerFn({ method: 'GET' })
   .validator(AdminAlumniFiltersSchema)
   .handler(async ({ data }) => {
     const { adminContext } = await import('@/lib/admin/server')
+    const { userSearch } = await import('@/lib/user/search')
     const { ALUMNI_EMAIL_LIKE } = await import('@/lib/auth/signup-domain')
     const { user } = await import('@/db/schema')
-    const { like, or, and, count, desc, asc } = await import('drizzle-orm')
+    const { like, and, count, desc, asc } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
@@ -208,15 +198,7 @@ export const getAdminAlumniFn = createServerFn({ method: 'GET' })
       like(user.email, ALUMNI_EMAIL_LIKE),
     ]
     if (data.search) {
-      const searchTerm = `%${data.search}%`
-      conditions.push(
-        or(
-          like(user.name, searchTerm),
-          like(user.email, searchTerm),
-          like(user.firstName, searchTerm),
-          like(user.lastName, searchTerm)
-        )
-      )
+      conditions.push(userSearch(data.search))
     }
     const where = and(...conditions)
 
@@ -251,12 +233,7 @@ export const getAdminAlumniFn = createServerFn({ method: 'GET' })
     const totalCount = totalCountResult[0]?.count || 0
     return {
       users,
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / data.limit),
-      },
+      pagination: buildPagination(totalCount, data.page, data.limit),
     }
   })
 

@@ -19,6 +19,7 @@ import {
 } from '../operating-hours'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type * as schema from '@/db/schema'
+import { buildPageInfo } from '@/lib/pagination'
 
 type UserIdentity = {
   firstName?: string | null
@@ -463,7 +464,6 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
     ])
 
     const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / data.limit)
 
     const pageBookingIds = pageBookings.map((b) => b.id)
 
@@ -553,14 +553,7 @@ export const getUserBookingsFn = createServerFn({ method: 'GET' })
 
     const response: PaginatedBookingsResponse = {
       data: dataWithItems as BookingWithItems[],
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        total,
-        totalPages,
-        hasNext: data.page < totalPages,
-        hasPrev: data.page > 1,
-      },
+      pagination: buildPageInfo(total, data.page, data.limit),
     }
 
     return response

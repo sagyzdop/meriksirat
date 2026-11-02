@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { PaginationMeta } from '@/lib/pagination'
 
 /**
  * Server-side list filters for the admin birthdays table, mirroring the
@@ -23,16 +24,9 @@ export const BirthdayListFiltersSchema = z.object({
 
 export type BirthdayListFilters = z.infer<typeof BirthdayListFiltersSchema>
 
-export interface BirthdayPagination {
-  page: number
-  limit: number
-  totalCount: number
-  totalPages: number
-}
-
 export interface BirthdayListResult {
   birthdays: BirthdayUser[]
-  pagination: BirthdayPagination
+  pagination: PaginationMeta
 }
 
 export interface BirthdayUser {

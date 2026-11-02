@@ -226,13 +226,13 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
   .validator(AdminFlamekeepersSchema)
   .handler(async ({ data }): Promise<AdminFlamekeeperRow[]> => {
     const { adminContext } = await import('@/lib/admin/server')
+    const { userSearch } = await import('@/lib/user/search')
     const { database } = await adminContext(['admin', 'manager'])
 
     const { flamekeeper, user } = await import('@/db/schema')
-    const { eq, like, or, desc } = await import('drizzle-orm')
+    const { eq, desc } = await import('drizzle-orm')
 
     const { drainBytesLeft } = await import('@/lib/pool/drain')
-    const term = data.search ? `%${data.search}%` : null
 
     const rows = await database
       .select({
@@ -255,16 +255,7 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
       })
       .from(flamekeeper)
       .innerJoin(user, eq(user.id, flamekeeper.userId))
-      .where(
-        term
-          ? or(
-              like(user.name, term),
-              like(user.email, term),
-              like(user.firstName, term),
-              like(user.lastName, term)
-            )
-          : undefined
-      )
+      .where(data.search ? userSearch(data.search) : undefined)
       .orderBy(desc(flamekeeper.createdAt))
       .limit(500)
 

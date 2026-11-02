@@ -27,17 +27,11 @@ import type {
   ViolationRow,
   ViolationsFilters,
 } from '@/lib/admin/dashboard-types'
-
-interface Pagination {
-  page: number
-  limit: number
-  totalCount: number
-  totalPages: number
-}
+import type { PaginationMeta } from '@/lib/pagination'
 
 interface ViolationsTableProps {
   users: ViolationRow[]
-  pagination: Pagination
+  pagination: PaginationMeta
   filters: ViolationsFilters
   search: DashboardSearchParams
   isLoading?: boolean

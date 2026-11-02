@@ -17,6 +17,7 @@ import {
   BulkUpdateEquipmentClearanceSchema,
 } from './types'
 import { getUserClearanceLevel } from './server'
+import { buildPageInfo } from '@/lib/pagination'
 
 export const getEquipmentFn = createServerFn({
   method: 'GET',
@@ -641,18 +642,10 @@ export const getAdminEquipmentFn = createServerFn({
     ])
 
     const total = totalCountResult[0]?.count || 0
-    const totalPages = Math.ceil(total / limit)
 
     const response: PaginatedEquipmentResponse = {
       data: equipmentList as EquipmentWithCategory[],
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      },
+      pagination: buildPageInfo(total, page, limit),
     }
 
     return response

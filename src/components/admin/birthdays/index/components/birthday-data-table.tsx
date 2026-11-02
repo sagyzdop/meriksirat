@@ -28,16 +28,13 @@ import { useServerTableSorting } from '@/components/shared/data-table/use-server
 import { createBirthdayColumns } from './birthday-columns'
 import { X } from 'lucide-react'
 
-import type {
-  BirthdayListFilters,
-  BirthdayPagination,
-  BirthdayUser,
-} from '@/lib/birthdays/types'
+import type { BirthdayListFilters, BirthdayUser } from '@/lib/birthdays/types'
+import type { PaginationMeta } from '@/lib/pagination'
 
 interface BirthdayDataTableProps {
   columns?: ColumnDef<BirthdayUser>[]
   data: BirthdayUser[]
-  pagination: BirthdayPagination
+  pagination: PaginationMeta
   filters: BirthdayListFilters
   isLoading?: boolean
 }

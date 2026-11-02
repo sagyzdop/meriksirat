@@ -1,7 +1,7 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/birthdays/index'
-import { birthdaysQueries } from '@/lib/birthdays/queries'
+import { birthdayQueries } from '@/lib/birthdays/queries'
 import { booleanArrayParam } from '@/lib/search-params'
 import { z } from 'zod'
 
@@ -29,7 +29,7 @@ export const Route = createFileRoute('/_authenticated/admin/birthdays')({
   loader: async ({ deps, context }) => {
     try {
       await context.queryClient.ensureQueryData(
-        birthdaysQueries.adminList(deps.search)
+        birthdayQueries.adminList(deps.search)
       )
     } catch (error) {
       console.error('[Birthdays Route Loader] Failed to load birthdays:', error)
@@ -39,7 +39,7 @@ export const Route = createFileRoute('/_authenticated/admin/birthdays')({
 
 function RouteComponent() {
   const search = Route.useSearch()
-  const { data, isFetching } = useQuery(birthdaysQueries.adminList(search))
+  const { data, isFetching } = useQuery(birthdayQueries.adminList(search))
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })

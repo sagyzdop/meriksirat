@@ -32,13 +32,7 @@ import { BulkEditClearanceDialog } from '@/components/shared/bulk-edit-clearance
 
 import { bulkUpdateUserClearanceFn } from '@/lib/user/functions'
 import { User } from '@/lib/user/types'
-
-interface Pagination {
-  page: number
-  limit: number
-  totalCount: number
-  totalPages: number
-}
+import type { PaginationMeta } from '@/lib/pagination'
 
 interface Filters {
   role?: string[]
@@ -62,7 +56,7 @@ interface Filters {
 interface UserDataTableProps {
   columns?: ColumnDef<User>[]
   data: User[]
-  pagination: Pagination
+  pagination: PaginationMeta
   filters: Filters
   isLoading?: boolean
 }

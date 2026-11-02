@@ -6,15 +6,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
-
-interface Pagination {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
-}
+import type { PageInfo } from '@/lib/pagination'
 
 interface Filters {
   categoryIds?: number[]
@@ -36,7 +28,7 @@ interface Filters {
 interface PageProps {
   equipment: EquipmentWithCategory[]
   categories: { id: number; name: string; sortOrder: number | null }[]
-  pagination: Pagination
+  pagination: PageInfo
   filters: Filters
   isLoading?: boolean
 }

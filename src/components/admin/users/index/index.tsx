@@ -10,13 +10,7 @@ import { toast } from 'sonner'
 
 import { User } from '@/lib/user/types'
 import type { ExportUsersFilters } from '@/lib/admin/dashboard-types'
-
-interface Pagination {
-  page: number
-  limit: number
-  totalCount: number
-  totalPages: number
-}
+import type { PaginationMeta } from '@/lib/pagination'
 
 interface Filters {
   role?: string[]
@@ -39,7 +33,7 @@ interface Filters {
 
 interface PageProps {
   users: User[]
-  pagination: Pagination
+  pagination: PaginationMeta
   filters: Filters
   isLoading?: boolean
   canAssignElevatedRoles?: boolean
