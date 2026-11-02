@@ -54,7 +54,7 @@ import {
 import { notifyAlbumTombstoned, ownerTelegramChat } from './notices'
 import { planRecoveryShare } from './volumes'
 import { volumeHasPhotoRows } from './volumes-server'
-import { sendAdminsTelegram } from './server'
+import { sendAdminsTelegramResult } from './server'
 
 type Database = ReturnType<typeof db>
 
@@ -437,7 +437,7 @@ async function reportMissing(
     reports.length > MAX_MISSING_LISTED
       ? `\n...and ${reports.length - MAX_MISSING_LISTED} more albums`
       : ''
-  await sendAdminsTelegram(
+  await sendAdminsTelegramResult(
     database,
     botToken,
     `#savenuimg health check: photos missing from Drive were removed from their albums.\n${lines.join('\n')}${extra}`,

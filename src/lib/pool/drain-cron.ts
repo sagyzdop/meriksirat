@@ -7,7 +7,7 @@ import { formatGb } from '@/lib/flamekeeper/rules'
 import { formatLongDate } from '@/lib/club-time'
 import { dropPhotoRows, removeAlbum } from '@/lib/albums/expiry'
 import { batchDeleteCost, takeIfBudgeted, type Budget } from '@/lib/cron/budget'
-import { deleteOwnedPhotos, sendAdminsTelegram } from './server'
+import { deleteOwnedPhotos, sendAdminsTelegramResult } from './server'
 import { notifyAlbumTombstoned, type NoticeEnv } from './notices'
 import {
   drainAdminAlertDue,
@@ -182,13 +182,13 @@ async function alertAdminsOfDrains(
       .where(eq(user.id, row.userId))
       .get()
     const who = owner ? `${owner.name} <${owner.email}>` : row.userId
-    const handled = await sendAdminsTelegram(
+    const result = await sendAdminsTelegramResult(
       database,
       botToken,
       adminAlertText(due, who, row),
       budget
     )
-    if (!handled) return
+    if (result !== 'sent') return
     await database
       .update(flamekeeper)
       .set(
@@ -227,13 +227,13 @@ async function alertAbandonedVolumes(
     .limit(ADMIN_ALERTS_PER_RUN)
     .all()
   for (const row of rows) {
-    const handled = await sendAdminsTelegram(
+    const result = await sendAdminsTelegramResult(
       database,
       botToken,
       abandonedAlertText(`${row.name} <${row.email}>`, row.title),
       budget
     )
-    if (!handled) return
+    if (result !== 'sent') return
     await database
       .update(volume)
       .set({ releaseAlertedAt: now })

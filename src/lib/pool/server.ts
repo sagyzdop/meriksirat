@@ -454,23 +454,6 @@ export async function sendAdminsTelegramResult(
   return 'sent'
 }
 
-export async function sendAdminsTelegram(
-  database: Database,
-  botToken: string | undefined,
-  text: string,
-  budget?: Budget,
-  options: { force?: boolean } = {}
-): Promise<boolean> {
-  const result = await sendAdminsTelegramResult(
-    database,
-    botToken,
-    text,
-    budget,
-    options
-  )
-  return result === 'sent'
-}
-
 export async function runPoolMaintenance(
   env: {
     meriksirat_d1: D1Database
@@ -519,13 +502,13 @@ export async function runPoolMaintenance(
   const alert = poolAlert(stats, settingsRow.alertedAt)
   if (alert === 'alert') {
     const { formatGb } = await import('@/lib/flamekeeper/rules')
-    const sent = await sendAdminsTelegram(
+    const result = await sendAdminsTelegramResult(
       database,
       env.TELEGRAM_BOT_TOKEN,
       `#savenuimg pool is low: ${formatGb(stats.freeBytes)} free of ${formatGb(stats.pledgedBytes)} pledged across ${stats.flamekeepers} flamekeepers. Recruit flamekeepers or free up space.`,
       budget
     )
-    if (!sent) return
+    if (result !== 'sent') return
     await database
       .update(settings)
       .set({ poolLowAlertedAt: now })
