@@ -393,8 +393,7 @@ async function listIndexedAlbumPhotos(
   const { getCachedListing, setCachedListing } = await import('./server')
   const { getGoogleAccessToken } =
     await import('@/lib/google/google-calendar-auth')
-  const { getDriveFolderState, DriveNotFoundError } =
-    await import('@/lib/google/google-drive')
+  const { getDriveFolderState } = await import('@/lib/google/google-drive')
   const { photo } = await import('@/db/schema')
   const { and, eq } = await import('drizzle-orm')
   const { photoRowToAlbumPhoto, sortPhotosByCapture } =
@@ -405,15 +404,10 @@ async function listIndexedAlbumPhotos(
   if (cached) {
     folderState = cached.folderState
   } else {
-    try {
-      folderState = await getDriveFolderState(
-        await getGoogleAccessToken(),
-        row.driveFolderId
-      )
-    } catch (error) {
-      if (!(error instanceof DriveNotFoundError)) throw error
-      folderState = 'missing'
-    }
+    folderState = await getDriveFolderState(
+      await getGoogleAccessToken(),
+      row.driveFolderId
+    )
     await setCachedListing(row.driveFolderId, [], folderState)
   }
 

@@ -22,10 +22,8 @@ function row(id: string, owner: string | null): RecreateRow {
 }
 
 describe('folderCheckVerdict', () => {
-  it('treats only a definite not-found as missing', () => {
-    expect(folderCheckVerdict({ error: new DriveNotFoundError() })).toBe(
-      'missing'
-    )
+  it('treats only a definite missing state as missing', () => {
+    expect(folderCheckVerdict({ state: 'missing' })).toBe('missing')
   })
 
   it('treats an existing or trashed folder as not missing', () => {
@@ -33,8 +31,11 @@ describe('folderCheckVerdict', () => {
     expect(folderCheckVerdict({ state: 'trashed' })).toBe('exists')
   })
 
-  it('treats every other failure as unknown', () => {
+  it('treats every thrown failure as unknown, never missing', () => {
     expect(folderCheckVerdict({ error: new DriveAuthError() })).toBe('unknown')
+    expect(folderCheckVerdict({ error: new DriveNotFoundError() })).toBe(
+      'unknown'
+    )
     expect(
       folderCheckVerdict({ error: new Error('Drive API error (500)') })
     ).toBe('unknown')
@@ -44,6 +45,7 @@ describe('folderCheckVerdict', () => {
     expect(folderCheckVerdict({ error: new TypeError('fetch failed') })).toBe(
       'unknown'
     )
+    expect(folderCheckVerdict({ error: undefined })).toBe('unknown')
   })
 })
 

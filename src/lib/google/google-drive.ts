@@ -217,35 +217,21 @@ export async function getDriveFileMeta(
 export type DriveFolderState = 'ok' | 'trashed' | 'missing'
 
 /**
- * Check whether an album folder is healthy, sitting in the Drive bin, or
- * permanently deleted. A trashed folder still resolves via `files.get`
+ * Check whether a Drive file or folder is healthy, sitting in the Drive bin,
+ * or permanently deleted. A trashed item still resolves via `files.get`
  * (with `trashed: true`), while a permanently deleted one returns 404.
  */
 export async function getDriveFolderState(
   accessToken: string,
   folderId: string
 ): Promise<DriveFolderState> {
-  const response = await driveFetch(
-    accessToken,
-    `${API}/files/${folderId}?fields=id,trashed`
-  )
-  const data = (await response.json()) as { trashed?: boolean }
-  return data.trashed ? 'trashed' : 'ok'
-}
-
-export type DriveFileProbe = 'exists' | 'trashed' | 'missing'
-
-export async function probeDriveFile(
-  accessToken: string,
-  fileId: string
-): Promise<DriveFileProbe> {
   try {
     const response = await driveFetch(
       accessToken,
-      `${API}/files/${encodeURIComponent(fileId)}?fields=id,trashed`
+      `${API}/files/${encodeURIComponent(folderId)}?fields=id,trashed`
     )
     const data = (await response.json()) as { trashed?: boolean }
-    return data.trashed ? 'trashed' : 'exists'
+    return data.trashed ? 'trashed' : 'ok'
   } catch (error) {
     if (error instanceof DriveNotFoundError) return 'missing'
     throw error

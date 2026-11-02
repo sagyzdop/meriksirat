@@ -139,7 +139,8 @@ export type AlbumAccessLevel = 'none' | 'owner' | 'editor' | 'manager'
  * - `trashed`: folder is in the Drive bin — uploads are blocked until restored.
  * - `missing`: folder was permanently deleted — photos are unrecoverable.
  */
-export type AlbumFolderState = 'ok' | 'trashed' | 'missing'
+export type AlbumFolderState =
+  import('@/lib/google/google-drive').DriveFolderState
 
 export interface AlbumAuthor {
   id: string

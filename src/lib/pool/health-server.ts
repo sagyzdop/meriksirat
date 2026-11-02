@@ -21,7 +21,7 @@ import {
   DriveNotFoundError,
   getDriveAbout,
   listDriveFolderFiles,
-  probeDriveFile,
+  getDriveFolderState,
   shareWithWriter,
 } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
@@ -245,7 +245,8 @@ async function auditVolumes(
         let outcome: FileProbeOutcome
         try {
           step.require(1)
-          outcome = await probeDriveFile(token, row.driveFileId)
+          const state = await getDriveFolderState(token, row.driveFileId)
+          outcome = state === 'ok' ? 'exists' : state
         } catch (error) {
           if (error instanceof BudgetExhaustedError) {
             exhausted = true

@@ -1,4 +1,4 @@
-import { DriveAuthError, DriveNotFoundError } from '@/lib/google/google-drive'
+import { DriveAuthError } from '@/lib/google/google-drive'
 import type { DriveFolderState } from '@/lib/google/google-drive'
 import { MAX_HEAL_DELETES } from '@/lib/pool/volumes'
 
@@ -27,8 +27,8 @@ export interface RecreateTally {
 export function folderCheckVerdict(
   outcome: { state: DriveFolderState } | { error: unknown }
 ): 'missing' | 'exists' | 'unknown' {
-  if ('state' in outcome) return 'exists'
-  return outcome.error instanceof DriveNotFoundError ? 'missing' : 'unknown'
+  if (!('state' in outcome)) return 'unknown'
+  return outcome.state === 'missing' ? 'missing' : 'exists'
 }
 
 export function classifyDeleteResult(
