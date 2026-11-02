@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
 import {
-  updateEquipmentAdminFn,
-  deleteEquipmentAdminFn,
+  updateEquipmentFn,
+  deleteEquipmentFn,
   uploadEquipmentImageFn,
 } from '@/lib/equipment'
 import type { EquipmentWithCategory } from '@/lib/equipment/types'
@@ -95,7 +95,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
     setSuccess(null)
 
     try {
-      await updateEquipmentAdminFn({
+      await updateEquipmentFn({
         data: {
           equipmentId,
           ...data,
@@ -155,7 +155,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
     setSuccess(null)
 
     try {
-      const result = await deleteEquipmentAdminFn({
+      const result = await deleteEquipmentFn({
         data: { equipmentId },
       })
 

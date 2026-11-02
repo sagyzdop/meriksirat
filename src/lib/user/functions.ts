@@ -274,36 +274,12 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Build update object with only provided fields
-    const updateData: Partial<typeof user.$inferInsert> = {}
-
-    if (data.role !== undefined) {
-      updateData.role = data.role
-    }
-
-    if (data.clearanceLevel !== undefined) {
-      updateData.clearanceLevel = data.clearanceLevel
-    }
-
-    if (data.status !== undefined) {
-      updateData.status = data.status
-    }
-
-    if (data.firstName !== undefined) {
-      updateData.firstName = data.firstName
-    }
-
-    if (data.lastName !== undefined) {
-      updateData.lastName = data.lastName
-    }
-
-    // Only update if there are changes
-    if (Object.keys(updateData).length === 0) {
+    const { userId, ...fields } = data
+    if (Object.values(fields).every((value) => value === undefined)) {
       throw new Error('No valid fields provided for update')
     }
 
-    // Perform the update
-    await database.update(user).set(updateData).where(eq(user.id, data.userId))
+    await database.update(user).set(fields).where(eq(user.id, userId))
 
     if (data.status !== undefined) {
       try {
@@ -485,51 +461,11 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
 
     const { session, database } = await userContext()
 
-    // Build update object with only provided fields
-    const updateData: Partial<typeof user.$inferInsert> = {}
-
-    if (data.firstName !== undefined) {
-      updateData.firstName = data.firstName
-    }
-
-    if (data.lastName !== undefined) {
-      updateData.lastName = data.lastName
-    }
-
-    if (data.instagramUsername !== undefined) {
-      updateData.instagramUsername = data.instagramUsername
-    }
-
-    if (data.nuId !== undefined) {
-      updateData.nuId = data.nuId
-    }
-
-    if (data.birthday !== undefined) {
-      updateData.birthday = data.birthday
-    }
-
-    if (data.major !== undefined) {
-      updateData.major = data.major
-    }
-
-    if (data.graduationYear !== undefined) {
-      updateData.graduationYear = data.graduationYear
-    }
-
-    if (data.image !== undefined) {
-      updateData.image = data.image
-    }
-
-    // Only update if there are changes
-    if (Object.keys(updateData).length === 0) {
+    if (Object.values(data).every((value) => value === undefined)) {
       throw new Error('No valid fields provided for update')
     }
 
-    // Perform the update
-    await database
-      .update(user)
-      .set(updateData)
-      .where(eq(user.id, session.user.id))
+    await database.update(user).set(data).where(eq(user.id, session.user.id))
 
     if (data.birthday !== undefined) {
       try {

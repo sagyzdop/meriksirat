@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import type {
   PaginatedEquipmentResponse,
@@ -7,7 +6,6 @@ import type {
   EquipmentWithCategory,
 } from './types'
 import {
-  EQUIPMENT_MIN_CLEARANCE,
   EquipmentFiltersSchema,
   AdminEquipmentFiltersSchema,
   CreateEquipmentSchema,
@@ -16,7 +14,6 @@ import {
   UploadEquipmentImageSchema,
   BulkUpdateEquipmentClearanceSchema,
 } from './types'
-import { getUserClearanceLevel } from './server'
 import { buildPageInfo } from '@/lib/pagination'
 
 export const getEquipmentFn = createServerFn({
@@ -24,119 +21,34 @@ export const getEquipmentFn = createServerFn({
 })
   .validator(EquipmentFiltersSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const {
+      requireEquipmentAccess,
+      equipmentWithCategory,
+      equipmentWhere,
+      equipmentOrderBy,
+    } = await import('./server')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, gte, lte, like, or, asc, desc, inArray } =
-      await import('drizzle-orm')
+    const { eq, lte, inArray } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
+    const access = await requireEquipmentAccess()
+    if (!access) return null
+    const { database, clearance } = access
 
-    if (!session?.user) {
-      return null
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
-    const userClearanceLevel = await getUserClearanceLevel(session.user.id)
-
-    if (userClearanceLevel < EQUIPMENT_MIN_CLEARANCE) {
-      return null
-    }
-
-    const sortBy = data.sortBy ?? 'modelName'
-    const sortOrder = data.sortOrder ?? 'asc'
-
-    // Build where conditions
-    const conditions = [
-      lte(equipment.requiredClearanceLevel, userClearanceLevel),
-    ]
-
-    // Add active status filter
-    if (data.isActive && data.isActive.length > 0) {
-      conditions.push(inArray(equipment.isActive, data.isActive))
-    } else {
-      // Default to showing only active equipment for users if no filter is applied
-      conditions.push(eq(equipment.isActive, true))
-    }
-
-    // Add category filter
-    if (data.categoryIds && data.categoryIds.length > 0) {
-      conditions.push(inArray(equipment.categoryId, data.categoryIds))
-    }
-
-    // Add search query filter
-    if (data.searchQuery) {
-      const searchTerm = `%${data.searchQuery}%`
-      conditions.push(
-        or(
-          like(equipment.modelName, searchTerm),
-          like(equipment.description, searchTerm),
-          like(category.name, searchTerm)
-        )!
-      )
-    }
-
-    // Add clearance level range filters
-    if (data.minClearanceLevel !== undefined) {
-      conditions.push(
-        gte(equipment.requiredClearanceLevel, data.minClearanceLevel)
-      )
-    }
-    if (data.maxClearanceLevel !== undefined) {
-      conditions.push(
-        lte(equipment.requiredClearanceLevel, data.maxClearanceLevel)
-      )
-    }
-
-    const whereClause = and(...conditions)
-
-    // Apply sorting
-    const sortColumn = {
-      modelName: equipment.modelName,
-      category: category.name,
-      requiredClearanceLevel: equipment.requiredClearanceLevel,
-      isActive: equipment.isActive,
-      createdAt: equipment.createdAt,
-    }[sortBy]
-
-    const orderBy = sortColumn
-      ? sortOrder === 'desc'
-        ? desc(sortColumn)
-        : asc(sortColumn)
-      : asc(equipment.modelName)
-
-    const equipmentListQuery = database
-      .select({
-        id: equipment.id,
-        modelName: equipment.modelName,
-        description: equipment.description,
-        categoryId: equipment.categoryId,
-        googleCalendarId: equipment.googleCalendarId,
-        requiredClearanceLevel: equipment.requiredClearanceLevel,
-        imagePath: equipment.imagePath,
-        isActive: equipment.isActive,
-        createdAt: equipment.createdAt,
-        updatedAt: equipment.updatedAt,
-        category: {
-          id: category.id,
-          name: category.name,
-          description: category.description,
-          sortOrder: category.sortOrder,
-        },
-      })
+    const equipmentList = await database
+      .select(equipmentWithCategory)
       .from(equipment)
       .leftJoin(category, eq(equipment.categoryId, category.id))
-      .where(whereClause)
-      .orderBy(orderBy)
+      .where(
+        equipmentWhere(data, [
+          lte(equipment.requiredClearanceLevel, clearance),
+          data.isActive && data.isActive.length > 0
+            ? inArray(equipment.isActive, data.isActive)
+            : eq(equipment.isActive, true),
+        ])
+      )
+      .orderBy(equipmentOrderBy(data))
 
-    const equipmentList = await equipmentListQuery
-
-    const response: EquipmentResponse = {
-      data: equipmentList as EquipmentWithCategory[],
-    }
+    const response: EquipmentResponse = { data: equipmentList }
 
     return response
   })
@@ -146,53 +58,24 @@ export const getEquipmentByIdFn = createServerFn({
 })
   .validator(z.object({ equipmentId: z.coerce.number() }))
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { requireEquipmentAccess, equipmentWithCategory } =
+      await import('./server')
     const { equipment, category } = await import('@/db/schema')
     const { eq, and, lte } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      return null
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
-    const userClearanceLevel = await getUserClearanceLevel(session.user.id)
-
-    if (userClearanceLevel < EQUIPMENT_MIN_CLEARANCE) {
-      return null
-    }
+    const access = await requireEquipmentAccess()
+    if (!access) return null
+    const { database, clearance } = access
 
     const equipmentItem = await database
-      .select({
-        id: equipment.id,
-        modelName: equipment.modelName,
-        description: equipment.description,
-        categoryId: equipment.categoryId,
-        googleCalendarId: equipment.googleCalendarId,
-        requiredClearanceLevel: equipment.requiredClearanceLevel,
-        imagePath: equipment.imagePath,
-        isActive: equipment.isActive,
-        createdAt: equipment.createdAt,
-        updatedAt: equipment.updatedAt,
-        category: {
-          id: category.id,
-          name: category.name,
-          description: category.description,
-          sortOrder: category.sortOrder,
-        },
-      })
+      .select(equipmentWithCategory)
       .from(equipment)
       .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(
         and(
           eq(equipment.id, data.equipmentId),
           eq(equipment.isActive, true),
-          lte(equipment.requiredClearanceLevel, userClearanceLevel)
+          lte(equipment.requiredClearanceLevel, clearance)
         )
       )
       .limit(1)
@@ -202,32 +85,16 @@ export const getEquipmentByIdFn = createServerFn({
 
 export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    // Import server-only code inside handler
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { requireEquipmentAccess } = await import('./server')
     const { category } = await import('@/db/schema')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
+    const access = await requireEquipmentAccess()
+    if (!access) return null
 
-    if (!session?.user) {
-      return null
-    }
-
-    if (
-      (await getUserClearanceLevel(session.user.id)) < EQUIPMENT_MIN_CLEARANCE
-    ) {
-      return null
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
-    const categories = await database
+    return access.database
       .select()
       .from(category)
       .orderBy(category.sortOrder, category.name)
-
-    return categories
   }
 )
 
@@ -237,7 +104,7 @@ export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
  * Create new equipment (Admin only)
  * Validates Google Calendar ID uniqueness and admin permissions
  */
-export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
+export const createEquipmentFn = createServerFn({ method: 'POST' })
   .validator(CreateEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
@@ -292,7 +159,7 @@ export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
  * Update existing equipment (Admin only)
  * Validates Google Calendar ID uniqueness and admin permissions
  */
-export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
+export const updateEquipmentFn = createServerFn({ method: 'POST' })
   .validator(UpdateEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
@@ -352,24 +219,11 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Build update object with only provided fields
-    const updateData: Record<string, unknown> = {}
-    if (data.modelName !== undefined) updateData.modelName = data.modelName
-    if (data.shortName !== undefined) updateData.shortName = data.shortName
-    if (data.description !== undefined)
-      updateData.description = data.description
-    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId
-    if (data.googleCalendarId !== undefined)
-      updateData.googleCalendarId = data.googleCalendarId
-    if (data.requiredClearanceLevel !== undefined)
-      updateData.requiredClearanceLevel = data.requiredClearanceLevel
-    if (data.imagePath !== undefined) updateData.imagePath = data.imagePath
-    if (data.isActive !== undefined) updateData.isActive = data.isActive
-
+    const { equipmentId, ...fields } = data
     await database
       .update(equipment)
-      .set(updateData)
-      .where(eq(equipment.id, data.equipmentId))
+      .set(fields)
+      .where(eq(equipment.id, equipmentId))
 
     return { success: true }
   })
@@ -402,7 +256,7 @@ export const bulkUpdateEquipmentClearanceFn = createServerFn({ method: 'POST' })
  * Delete equipment (Admin only)
  * Prevents deletion of equipment with active bookings by marking as inactive instead
  */
-export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
+export const deleteEquipmentFn = createServerFn({ method: 'POST' })
   .validator(DeleteEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
@@ -484,31 +338,14 @@ export const getAdminEquipmentByIdFn = createServerFn({
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
+    const { equipmentWithCategory } = await import('./server')
     const { equipment, category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
     const equipmentItem = await database
-      .select({
-        id: equipment.id,
-        modelName: equipment.modelName,
-        shortName: equipment.shortName,
-        description: equipment.description,
-        categoryId: equipment.categoryId,
-        googleCalendarId: equipment.googleCalendarId,
-        requiredClearanceLevel: equipment.requiredClearanceLevel,
-        imagePath: equipment.imagePath,
-        isActive: equipment.isActive,
-        createdAt: equipment.createdAt,
-        updatedAt: equipment.updatedAt,
-        category: {
-          id: category.id,
-          name: category.name,
-          description: category.description,
-          sortOrder: category.sortOrder,
-        },
-      })
+      .select(equipmentWithCategory)
       .from(equipment)
       .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(eq(equipment.id, data.equipmentId))
@@ -528,60 +365,25 @@ export const getAdminEquipmentFn = createServerFn({
   .handler(async ({ data }) => {
     // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
+    const { equipmentWithCategory, equipmentWhere, equipmentOrderBy } =
+      await import('./server')
     const { equipment, category } = await import('@/db/schema')
-    const { eq, and, or, gte, lte, like, sql, asc, desc, inArray } =
-      await import('drizzle-orm')
+    const { eq, sql, inArray } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Normalize defaults since page/limit/sortBy/sortOrder are optional
     const page = data.page ?? 1
     const limit = data.limit ?? 50
-    const sortBy = data.sortBy ?? 'modelName'
-    const sortOrder = data.sortOrder ?? 'asc'
 
-    // Build where conditions (no clearance level restriction for admins)
-    const conditions = []
-
-    // Add active status filter (optional for admins)
-    if (data.isActive && data.isActive.length > 0) {
-      conditions.push(inArray(equipment.isActive, data.isActive))
-    }
-
-    // Add category filter
-    if (data.categoryIds && data.categoryIds.length > 0) {
-      conditions.push(inArray(equipment.categoryId, data.categoryIds))
-    }
-
-    // Add search query filter
-    if (data.searchQuery) {
-      const searchTerm = `%${data.searchQuery}%`
-      conditions.push(
-        or(
-          like(equipment.modelName, searchTerm),
-          like(equipment.description, searchTerm),
-          like(category.name, searchTerm)
-        )!
-      )
-    }
-
-    // Add clearance level range filters
-    if (data.minClearanceLevel !== undefined) {
-      conditions.push(
-        gte(equipment.requiredClearanceLevel, data.minClearanceLevel)
-      )
-    }
-    if (data.maxClearanceLevel !== undefined) {
-      conditions.push(
-        lte(equipment.requiredClearanceLevel, data.maxClearanceLevel)
-      )
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+    const whereClause = equipmentWhere(
+      data,
+      data.isActive && data.isActive.length > 0
+        ? [inArray(equipment.isActive, data.isActive)]
+        : []
+    )
 
     const offset = (page - 1) * limit
 
-    // Get total count for pagination.
     // Only join category when the search query references category.name.
     const countQuery = data.searchQuery
       ? database
@@ -594,45 +396,12 @@ export const getAdminEquipmentFn = createServerFn({
           .from(equipment)
           .where(whereClause)
 
-    // Apply sorting
-    const sortColumn = {
-      modelName: equipment.modelName,
-      category: category.name,
-      requiredClearanceLevel: equipment.requiredClearanceLevel,
-      isActive: equipment.isActive,
-      createdAt: equipment.createdAt,
-    }[sortBy]
-
-    const orderBy = sortColumn
-      ? sortOrder === 'desc'
-        ? desc(sortColumn)
-        : asc(sortColumn)
-      : asc(equipment.modelName)
-
-    // Get paginated equipment list
     const equipmentListQuery = database
-      .select({
-        id: equipment.id,
-        modelName: equipment.modelName,
-        description: equipment.description,
-        categoryId: equipment.categoryId,
-        googleCalendarId: equipment.googleCalendarId,
-        requiredClearanceLevel: equipment.requiredClearanceLevel,
-        imagePath: equipment.imagePath,
-        isActive: equipment.isActive,
-        createdAt: equipment.createdAt,
-        updatedAt: equipment.updatedAt,
-        category: {
-          id: category.id,
-          name: category.name,
-          description: category.description,
-          sortOrder: category.sortOrder,
-        },
-      })
+      .select(equipmentWithCategory)
       .from(equipment)
       .leftJoin(category, eq(equipment.categoryId, category.id))
       .where(whereClause)
-      .orderBy(orderBy)
+      .orderBy(equipmentOrderBy(data))
       .limit(limit)
       .offset(offset)
 
@@ -644,7 +413,7 @@ export const getAdminEquipmentFn = createServerFn({
     const total = totalCountResult[0]?.count || 0
 
     const response: PaginatedEquipmentResponse = {
-      data: equipmentList as EquipmentWithCategory[],
+      data: equipmentList,
       pagination: buildPageInfo(total, page, limit),
     }
 

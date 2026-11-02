@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
-import { createEquipmentAdminFn, uploadEquipmentImageFn } from '@/lib/equipment'
+import { createEquipmentFn, uploadEquipmentImageFn } from '@/lib/equipment'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -67,7 +67,7 @@ export function Page({ categories }: PageProps) {
     setSuccess(null)
 
     try {
-      const result = await createEquipmentAdminFn({ data })
+      const result = await createEquipmentFn({ data })
 
       if (!result?.equipmentId) {
         throw new Error('Failed to create equipment - no ID returned')
