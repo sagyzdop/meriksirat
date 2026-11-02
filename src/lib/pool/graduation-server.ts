@@ -1,12 +1,13 @@
-import { and, eq, inArray, isNotNull } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db } from '@/db'
-import { flamekeeper, photo, user, volume } from '@/db/schema'
+import { flamekeeper, user } from '@/db/schema'
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import { formatLongDate } from '@/lib/club-time'
 import {
   accountLink,
   applyDrainTransition,
   drainColumns,
+  hasPhotosLeft,
   sendDrainStartedEmail,
   type DrainRow,
 } from './drain-server'
@@ -17,39 +18,8 @@ import {
 } from './graduation'
 import type { DrainTransition } from './drain'
 
-type Database = ReturnType<typeof db>
-
 const TRIGGERS_PER_RUN = 3
 const PROMPTS_PER_RUN = 2
-
-async function holdsPhotos(
-  database: Database,
-  userId: string
-): Promise<boolean> {
-  const pending = await database
-    .select({ albumId: volume.albumId })
-    .from(volume)
-    .where(
-      and(eq(volume.flamekeeperUserId, userId), isNotNull(volume.droppedAt))
-    )
-    .limit(1)
-    .get()
-  if (pending) return true
-  const row = await database
-    .select({ id: photo.id })
-    .from(volume)
-    .innerJoin(
-      photo,
-      and(
-        eq(photo.albumId, volume.albumId),
-        eq(photo.flamekeeperUserId, volume.flamekeeperUserId)
-      )
-    )
-    .where(and(eq(volume.flamekeeperUserId, userId), eq(photo.state, 'live')))
-    .limit(1)
-    .get()
-  return !!row
-}
 
 export async function runGraduationMaintenance(
   env: { meriksirat_d1: D1Database },
@@ -89,7 +59,9 @@ export async function runGraduationMaintenance(
     try {
       if (plan.kind === 'drained' || !needsPhotoCheck) {
         plan = { kind: 'drained' }
-      } else if (!(await holdsPhotos(database, row.userId))) {
+      } else if (
+        !(await hasPhotosLeft(database, row.userId, { includeDropped: true }))
+      ) {
         plan = { kind: 'drained' }
       }
       await applyDrainTransition(database, row.userId, plan, now, budget)

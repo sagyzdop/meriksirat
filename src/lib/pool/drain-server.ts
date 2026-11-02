@@ -1,4 +1,15 @@
-import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { db } from '@/db'
 import {
   album,
@@ -142,8 +153,20 @@ async function loadVolumePhotos(
 
 export async function hasPhotosLeft(
   database: Database,
-  userId: string
+  userId: string,
+  { includeDropped = false }: { includeDropped?: boolean } = {}
 ): Promise<boolean> {
+  if (includeDropped) {
+    const pending = await database
+      .select({ albumId: volume.albumId })
+      .from(volume)
+      .where(
+        and(eq(volume.flamekeeperUserId, userId), isNotNull(volume.droppedAt))
+      )
+      .limit(1)
+      .get()
+    if (pending) return true
+  }
   return (await loadVolumePhotos(database, userId, 1)).length > 0
 }
 
