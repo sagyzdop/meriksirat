@@ -8,32 +8,9 @@
  * is unavailable, so uploads keep working in-memory as a fallback.
  */
 
-export interface PersistedJob {
-  id: string
-  albumId: string
-  albumTitle: string
-  name: string
-  size: number
-  mimeType: string
-  status: string
-  progress: number
-  error?: string
-  /**
-   * Number of upload attempts already made. Persisted so the auto-retry budget
-   * survives page reloads (repeated refreshes can't loop forever).
-   */
-  attempts?: number
-  /**
-   * Earliest timestamp (ms) at which a backed-off queued job may be picked up
-   * again. Persisted so a reload doesn't shortcut an in-flight backoff.
-   */
-  nextAttemptAt?: number
-  /**
-   * When a job reached a terminal state (done/error/cancelled), used to
-   * auto-expire finished jobs after their TTL.
-   */
-  finishedAt?: number
-}
+import type { UploadJob } from './upload-manager'
+
+export type PersistedJob = Omit<UploadJob, 'status'> & { status: string }
 
 const JOBS_KEY = 'meriksirat.uploads.jobs.v1'
 const DB_NAME = 'meriksirat'
