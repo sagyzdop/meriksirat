@@ -1,6 +1,4 @@
-import * as React from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { Images } from 'lucide-react'
 import { albumQueries } from '@/lib/albums'
 import type { AlbumListFilters } from '@/lib/albums'
@@ -9,6 +7,7 @@ import { AuthenticatedShell } from '@/components/root/authenticated-shell'
 import { PublicAlbumsLayout } from '@/components/albums/public-layout'
 import { InfiniteAlbumGroupedList } from '@/components/albums/album-sections'
 import { AlbumToolbar } from '@/components/albums/album-toolbar'
+import { useAlbumList } from '@/components/albums/use-album-list'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { SplashText } from '@/components/layout/splash-text'
@@ -28,13 +27,8 @@ export function PublicAlbumsIndex({ user }: PublicAlbumsIndexProps) {
   const navigate = useNavigate({ from: '/albums/' })
   const search = useSearch({ from: '/albums/' })
 
-  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useInfiniteQuery(albumQueries.public(search))
-
-  const albums = React.useMemo(
-    () => data?.pages.flatMap((page) => page.albums) ?? [],
-    [data]
-  )
+  const { albums, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useAlbumList(albumQueries.public(search))
 
   const filters: AlbumListFilters = {
     search: search.search,

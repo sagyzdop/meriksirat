@@ -5,7 +5,7 @@ import { batchDeleteDriveFileResults } from '@/lib/google/google-drive'
 import { withFlamekeeperToken } from '@/lib/flamekeeper/tokens'
 import { releaseOwnedBytesStatements } from '@/lib/pool/server'
 import {
-  abandonedAlertText,
+  recreateAbandonedText,
   classifyDeleteError,
   classifyDeleteResult,
   planRecreateDeletes,
@@ -101,19 +101,18 @@ async function alertAbandoned(
     await sendAdminsTelegramResult(
       database,
       (env as { TELEGRAM_BOT_TOKEN?: string }).TELEGRAM_BOT_TOKEN,
-      abandonedAlertText(who, albumTitle, files)
+      recreateAbandonedText(who, albumTitle, files)
     )
   } catch (error) {
     console.error('Could not alert admins about abandoned files:', error)
   }
 }
 
-export async function runRecreateDeletePass(
+export function loadLivePhotoRefs(
   database: Database,
-  album: { id: string; title: string },
-  masterToken: string
-): Promise<RecreateTally & { remaining: number }> {
-  const rows = await database
+  albumId: string
+): Promise<RecreateRow[]> {
+  return database
     .select({
       id: photo.id,
       driveFileId: photo.driveFileId,
@@ -121,8 +120,16 @@ export async function runRecreateDeletePass(
       flamekeeperUserId: photo.flamekeeperUserId,
     })
     .from(photo)
-    .where(and(eq(photo.albumId, album.id), eq(photo.state, 'live')))
+    .where(and(eq(photo.albumId, albumId), eq(photo.state, 'live')))
     .all()
+}
+
+export async function runRecreateDeletePass(
+  database: Database,
+  album: { id: string; title: string },
+  masterToken: string
+): Promise<RecreateTally & { remaining: number }> {
+  const rows = await loadLivePhotoRefs(database, album.id)
 
   const tally = { removed: 0, abandoned: 0 }
   let handled = 0

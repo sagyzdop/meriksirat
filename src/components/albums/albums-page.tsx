@@ -1,19 +1,6 @@
 import * as React from 'react'
-import { Plus, Loader2, Images } from 'lucide-react'
+import { Plus, Images } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import DatePicker from '@/components/shared/date-picker'
-import { toDateOnlyString } from '@/lib/format'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   Empty,
   EmptyDescription,
@@ -23,10 +10,9 @@ import {
 } from '@/components/ui/empty'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-import { toast } from 'sonner'
-import { createAlbumFn } from '@/lib/albums'
 import type { AlbumListFilters, AlbumSummary } from '@/lib/albums'
 import { AlbumToolbar } from './album-toolbar'
+import { CreateAlbumDialog } from './create-album-dialog'
 import { InfiniteAlbumGroupedList } from './album-sections'
 
 interface AlbumsPageProps {
@@ -55,39 +41,6 @@ export function AlbumsPage({
   headerActions,
 }: AlbumsPageProps) {
   const [createOpen, setCreateOpen] = React.useState(false)
-  const [title, setTitle] = React.useState('')
-  const [description, setDescription] = React.useState('')
-  const [event, setEvent] = React.useState('')
-  const [eventDate, setEventDate] = React.useState<Date | undefined>()
-  const [busy, setBusy] = React.useState(false)
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
-    try {
-      await createAlbumFn({
-        data: {
-          title: title.trim(),
-          description: description.trim() || '',
-          event: event.trim(),
-          eventDate: toDateOnlyString(eventDate!),
-        },
-      })
-      toast.success('Album created')
-      setCreateOpen(false)
-      setTitle('')
-      setDescription('')
-      setEvent('')
-      setEventDate(undefined)
-      onCreated?.()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create album'
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
 
   return (
     <PageContainer>
@@ -144,71 +97,11 @@ export function AlbumsPage({
         />
       )}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New album</DialogTitle>
-            <DialogDescription>
-              Creates a photo folder in Google Drive.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-album-title">Title</Label>
-              <Input
-                id="new-album-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Tech Room Trip 2026"
-                required
-                maxLength={200}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-album-event">Event</Label>
-              <Input
-                id="new-album-event"
-                value={event}
-                onChange={(e) => setEvent(e.target.value)}
-                placeholder="e.g. Annual Photography Workshop"
-                required
-                maxLength={200}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Event Date</Label>
-              <DatePicker value={eventDate} onChange={setEventDate} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-album-description">Description</Label>
-              <Textarea
-                id="new-album-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional"
-                rows={3}
-                maxLength={1000}
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCreateOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={busy || !title.trim() || !event.trim() || !eventDate}
-              >
-                {busy ? <Loader2 className="animate-spin" /> : <Plus />}
-                Create
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CreateAlbumDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={onCreated}
+      />
     </PageContainer>
   )
 }

@@ -192,6 +192,31 @@ export function driveFileToPhotoValues(
   }
 }
 
+export function driveFileToAlbumPhoto(f: DriveFileLike): AlbumPhoto {
+  const capturedAt =
+    parseCapturedAt(f.imageMediaMetadata?.time)?.toISOString() ||
+    f.createdTime ||
+    ''
+  const { url, thumbnailUrl } = albumPhotoUrls(f.id)
+  const meta = f.imageMediaMetadata
+  const exif = meta && {
+    ...pickExif(meta),
+    ...(meta.width != null && { width: meta.width }),
+    ...(meta.height != null && { height: meta.height }),
+  }
+  return {
+    id: f.id,
+    name: f.name,
+    mimeType: f.mimeType,
+    size: f.size ? Number(f.size) : null,
+    capturedAt,
+    createdAt: f.createdTime ?? '',
+    url,
+    thumbnailUrl,
+    ...(exif && { exif }),
+  }
+}
+
 export function photoRowToAlbumPhoto(row: PhotoRowLike): AlbumPhoto {
   const { url, thumbnailUrl } = albumPhotoUrls(row.driveFileId)
   let exif: AlbumPhotoExif | undefined

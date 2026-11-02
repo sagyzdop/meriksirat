@@ -45,7 +45,9 @@ import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
 import { PhotoGrid } from '@/components/albums/photo-grid'
 import { PublicAlbumsLayout } from '@/components/albums/public-layout'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
+import { errorMessage } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface AlbumPageProps {
@@ -59,6 +61,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const goBack = useBackNavigation('/albums')
+  const { run } = useAsyncAction()
   const { data: session } = authClient.useSession()
 
   const { data: album, isLoading } = useQuery(albumQueries.detail(albumId))
@@ -92,9 +95,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         await claimEditAccessFn({ data: { albumId, token: edit } })
         toast.success('You are now a co-author of this album')
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Could not join album'
-        )
+        toast.error(errorMessage(error, 'Could not join album'))
       }
       navigate({
         to: '/albums/$albumId',
@@ -158,41 +159,27 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
       ? 0
       : Math.round((doneUploads.length / uploads.length) * 100)
 
-  const handleSetCover = async (photo: AlbumPhoto) => {
-    try {
+  const handleSetCover = (photo: AlbumPhoto) =>
+    run(async () => {
       await setCoverPhotoFn({ data: { albumId, fileId: photo.id } })
       toast.success('Cover photo updated')
       invalidate()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to set cover'
-      )
-    }
-  }
+    }, 'Failed to set cover')
 
-  const handleDeletePhoto = async (photo: AlbumPhoto) => {
-    try {
+  const handleDeletePhoto = (photo: AlbumPhoto) =>
+    run(async () => {
       await deletePhotoFn({ data: { albumId, fileId: photo.id } })
       toast.success('Photo deleted')
       invalidate()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete photo'
-      )
-    }
-  }
+    }, 'Failed to delete photo')
 
-  const handleTogglePin = async () => {
+  const handleTogglePin = () => {
     if (!album) return
-    try {
+    return run(async () => {
       await setAlbumPinnedFn({ data: { albumId, pinned: !album.pinned } })
       toast.success(album.pinned ? 'Album unpinned' : 'Album pinned')
       invalidate()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update pin'
-      )
-    }
+    }, 'Failed to update pin')
   }
 
   const handleAlbumDeleted = () => {

@@ -118,20 +118,12 @@ class UploadManager {
 
   constructor() {
     this.snapshot = loadJobs().map((job) => ({
-      id: job.id,
-      albumId: job.albumId,
-      albumTitle: job.albumTitle,
-      name: job.name,
-      size: job.size,
-      mimeType: job.mimeType,
+      ...job,
       // Uploads interrupted by a refresh restart from scratch.
       status:
         job.status === 'uploading' ? 'queued' : (job.status as UploadStatus),
       progress: job.status === 'uploading' ? 0 : job.progress,
-      error: job.error,
       attempts: job.attempts ?? 0,
-      nextAttemptAt: job.nextAttemptAt,
-      finishedAt: job.finishedAt,
     }))
     this.purgeExpired()
     this.persist()

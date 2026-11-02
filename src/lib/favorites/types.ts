@@ -8,10 +8,6 @@ export const SetFavoriteSchema = z.object({
   favorite: z.boolean(),
 })
 
-export const GetAlbumFavoritesSchema = z.object({
-  albumId: z.string(),
-})
-
 export interface FavoritePhoto extends AlbumPhoto {
   albumId: string
   albumTitle: string
