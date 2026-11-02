@@ -31,120 +31,111 @@ type CalendarEventInput = {
   [key: string]: unknown
 }
 
-/**
- * Check freeBusy for a single calendar.
- */
-export async function checkCalendarFreeBusyRaw(args: {
-  calendarId: string
-  timeMin: string
-  timeMax: string
-}): Promise<{ busy: Array<{ start: string; end: string }> }> {
-  const { calendarId, timeMin, timeMax } = args
+const CALENDAR_API = 'https://www.googleapis.com/calendar/v3'
+const MAX_CALENDARS_PER_REQUEST = 15
 
-  const accessToken = await getGoogleAccessToken()
+async function calendarFetch(
+  path: string,
+  init: { method: string; body?: unknown; token?: string; logError?: boolean },
+  failure: string
+): Promise<Response> {
+  const accessToken = init.token ?? (await getGoogleAccessToken())
 
-  const response = await fetch(
-    'https://www.googleapis.com/calendar/v3/freeBusy',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        timeMin,
-        timeMax,
-        items: [{ id: calendarId }],
-      }),
-    }
-  )
+  const response = await fetch(`${CALENDAR_API}${path}`, {
+    method: init.method,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...(init.body === undefined
+        ? {}
+        : { 'Content-Type': 'application/json' }),
+    },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  })
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Failed to check calendar availability: ${error}`)
+    if (init.logError) console.error('Calendar API error:', error)
+    throw new Error(`${failure}: ${error}`)
   }
 
-  const result = (await response.json()) as {
-    calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }>
-  }
-  const calendars = result.calendars ?? {}
-  const cal = calendars[calendarId] ?? { busy: [] }
-
-  return { busy: cal.busy ?? [] }
+  return response
 }
 
-/**
- * Check freeBusy for multiple calendars, batching to stay under Google's
- * ~50-item limit (batches of 15 because the API silently drops busy data for
- * some calendars on large requests).
- */
-export async function checkMultipleCalendarsFreeBusyRaw(args: {
-  equipmentCalendarIds: string[]
-  timeMin: string
-  timeMax: string
-}): Promise<{ [key: string]: { busy: CalendarBusyPeriod[] } }> {
-  const { equipmentCalendarIds, timeMin, timeMax } = args
+const eventPath = (calendarId: string, eventId?: string) =>
+  `/calendars/${encodeURIComponent(calendarId)}/events${
+    eventId === undefined ? '' : `/${encodeURIComponent(eventId)}`
+  }`
 
-  const MAX_CALENDARS_PER_REQUEST = 15
-
-  const accessToken = await getGoogleAccessToken()
+async function freeBusy(
+  calendarIds: string[],
+  timeMin: string,
+  timeMax: string,
+  failure: string
+): Promise<{ [key: string]: { busy: CalendarBusyPeriod[] } }> {
+  const token = await getGoogleAccessToken()
 
   const chunks: string[][] = []
-  for (
-    let i = 0;
-    i < equipmentCalendarIds.length;
-    i += MAX_CALENDARS_PER_REQUEST
-  ) {
-    chunks.push(equipmentCalendarIds.slice(i, i + MAX_CALENDARS_PER_REQUEST))
+  for (let i = 0; i < calendarIds.length; i += MAX_CALENDARS_PER_REQUEST) {
+    chunks.push(calendarIds.slice(i, i + MAX_CALENDARS_PER_REQUEST))
   }
 
   const output: { [key: string]: { busy: CalendarBusyPeriod[] } } = {}
 
   await Promise.all(
     chunks.map(async (chunk) => {
-      const response = await fetch(
-        'https://www.googleapis.com/calendar/v3/freeBusy',
+      const response = await calendarFetch(
+        '/freeBusy',
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            timeMin,
-            timeMax,
-            items: chunk.map((id: string) => ({ id })),
-          }),
-        }
+          body: { timeMin, timeMax, items: chunk.map((id) => ({ id })) },
+          token,
+        },
+        failure
       )
 
-      if (!response.ok) {
-        const error = await response.text()
-        throw new Error(`Failed to check calendars availability: ${error}`)
-      }
-
       const result = (await response.json()) as {
-        calendars?: Record<
-          string,
-          { busy?: Array<{ start: string; end: string }> }
-        >
+        calendars?: Record<string, { busy?: CalendarBusyPeriod[] }>
       }
       const calendars = result.calendars ?? {}
 
-      chunk.forEach((calendarId: string) => {
-        output[calendarId] = {
-          busy: calendars[calendarId]?.busy ?? [],
-        }
-      })
+      for (const calendarId of chunk) {
+        output[calendarId] = { busy: calendars[calendarId]?.busy ?? [] }
+      }
     })
   )
 
   return output
 }
 
-/**
- * List events from a calendar.
- */
+export async function checkCalendarFreeBusyRaw(args: {
+  calendarId: string
+  timeMin: string
+  timeMax: string
+}): Promise<{ busy: CalendarBusyPeriod[] }> {
+  const { calendarId, timeMin, timeMax } = args
+  const result = await freeBusy(
+    [calendarId],
+    timeMin,
+    timeMax,
+    'Failed to check calendar availability'
+  )
+  return result[calendarId]
+}
+
+export async function checkMultipleCalendarsFreeBusyRaw(args: {
+  equipmentCalendarIds: string[]
+  timeMin: string
+  timeMax: string
+}): Promise<{ [key: string]: { busy: CalendarBusyPeriod[] } }> {
+  const { equipmentCalendarIds, timeMin, timeMax } = args
+  return freeBusy(
+    equipmentCalendarIds,
+    timeMin,
+    timeMax,
+    'Failed to check calendars availability'
+  )
+}
+
 export async function getCalendarEventsRaw(args: {
   equipmentCalendarId: string
   timeMin?: string
@@ -152,8 +143,6 @@ export async function getCalendarEventsRaw(args: {
   maxResults?: number
 }): Promise<CalendarEvent[]> {
   const { equipmentCalendarId, timeMin, timeMax, maxResults = 250 } = args
-
-  const accessToken = await getGoogleAccessToken()
 
   const params = new URLSearchParams({
     maxResults: maxResults.toString(),
@@ -164,29 +153,18 @@ export async function getCalendarEventsRaw(args: {
   if (timeMin) params.append('timeMin', timeMin)
   if (timeMax) params.append('timeMax', timeMax)
 
-  const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-      equipmentCalendarId
-    )}/events?${params}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
+  const response = await calendarFetch(
+    `${eventPath(equipmentCalendarId)}?${params}`,
+    { method: 'GET' },
+    'Failed to get calendar events'
   )
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Failed to get calendar events: ${error}`)
-  }
 
   const result = (await response.json()) as { items?: CalendarEvent[] }
   return result.items || []
 }
 
 /**
- * Insert an event into a calendar.
+ * Insert an event into a calendar and return its id.
  *
  * Events are created WITHOUT attendees and with `sendUpdates=none`: the user
  * must not get an email per equipment event. The member is identified in the
@@ -195,34 +173,16 @@ export async function getCalendarEventsRaw(args: {
 export async function createCalendarEventRaw(args: {
   equipmentCalendarId: string
   event: CalendarEventInput
-}): Promise<{ success: boolean; eventId: string; event: CalendarEvent }> {
+}): Promise<string> {
   const { equipmentCalendarId, event } = args
 
-  const accessToken = await getGoogleAccessToken()
-
-  const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-      equipmentCalendarId
-    )}/events?sendUpdates=none`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(event),
-    }
+  const response = await calendarFetch(
+    `${eventPath(equipmentCalendarId)}?sendUpdates=none`,
+    { method: 'POST', body: event, logError: true },
+    'Failed to create calendar event'
   )
 
-  if (!response.ok) {
-    const error = await response.text()
-    console.error('Calendar API error:', error)
-    throw new Error(`Failed to create calendar event: ${error}`)
-  }
-
-  const createdEvent = (await response.json()) as CalendarEvent
-
-  return { success: true, eventId: createdEvent.id, event: createdEvent }
+  return ((await response.json()) as CalendarEvent).id
 }
 
 /**
@@ -235,61 +195,25 @@ export async function updateCalendarEventRaw(args: {
   equipmentCalendarId: string
   eventId: string
   event: CalendarEventInput
-}): Promise<{ success: boolean; event: CalendarEvent }> {
+}): Promise<void> {
   const { equipmentCalendarId, eventId, event } = args
 
-  const accessToken = await getGoogleAccessToken()
-
-  const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-      equipmentCalendarId
-    )}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
-    {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(event),
-    }
+  await calendarFetch(
+    `${eventPath(equipmentCalendarId, eventId)}?sendUpdates=none`,
+    { method: 'PATCH', body: event },
+    'Failed to update calendar event'
   )
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Failed to update calendar event: ${error}`)
-  }
-
-  const result = (await response.json()) as CalendarEvent
-  return { success: true, event: result }
 }
 
-/**
- * Delete an event from a calendar.
- */
 export async function deleteCalendarEventRaw(args: {
   equipmentCalendarId: string
   eventId: string
-}): Promise<{ success: boolean }> {
+}): Promise<void> {
   const { equipmentCalendarId, eventId } = args
 
-  const accessToken = await getGoogleAccessToken()
-
-  const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-      equipmentCalendarId
-    )}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
-    {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
+  await calendarFetch(
+    `${eventPath(equipmentCalendarId, eventId)}?sendUpdates=none`,
+    { method: 'DELETE' },
+    'Failed to delete calendar event'
   )
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Failed to delete calendar event: ${error}`)
-  }
-
-  return { success: true }
 }

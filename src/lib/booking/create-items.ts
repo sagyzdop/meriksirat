@@ -127,11 +127,10 @@ export async function createItemsWithEvents(
         end: endTime,
       })
 
-      const createdEvent = await retry(() =>
+      const eventId = await retry(() =>
         createCalendarEventRaw({ equipmentCalendarId: calendarId, event })
       )
 
-      const eventId = createdEvent?.eventId
       if (!eventId) {
         throw new Error('Calendar API responded without event id')
       }

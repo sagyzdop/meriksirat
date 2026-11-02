@@ -64,7 +64,7 @@ export const getCalendarEvents = createServerFn({ method: 'POST' })
     const { userContext } = await import('@/lib/auth/context')
     await userContext('Not authenticated')
     const { getCalendarEventsRaw } = await import('./google-calendar-client')
-    const { equipmentCalendarId, timeMin, timeMax, maxResults = 250 } = data
+    const { equipmentCalendarId, timeMin, timeMax, maxResults } = data
     return getCalendarEventsRaw({
       equipmentCalendarId,
       timeMin,
