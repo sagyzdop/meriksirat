@@ -17,7 +17,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
     try {
       await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/equipment',
+        callbackURL: '/login',
         errorCallbackURL: '/login',
       })
     } catch (error) {
