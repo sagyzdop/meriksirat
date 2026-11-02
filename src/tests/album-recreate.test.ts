@@ -12,7 +12,11 @@ import {
   type RecreateRow,
 } from '@/lib/albums/recreate'
 import { DriveAuthError, DriveNotFoundError } from '@/lib/google/google-drive'
-import { parseBatchResults, parseBatchStatuses } from '@/lib/google/drive-batch'
+import {
+  hasBatchAuthFailure,
+  parseBatchResults,
+  parseBatchStatuses,
+} from '@/lib/google/drive-batch'
 
 function row(id: string, owner: string | null): RecreateRow {
   return { id, driveFileId: `f-${id}`, bytes: 10, flamekeeperUserId: owner }
@@ -71,6 +75,21 @@ describe('classifyDeleteResult', () => {
     expect(classifyDeleteResult({ status: 500, body: '' })).toBe('retry')
     expect(classifyDeleteResult({ status: 503, body: '' })).toBe('retry')
     expect(classifyDeleteResult(undefined)).toBe('retry')
+  })
+
+  it('retries every Drive limit-exceeded reason', () => {
+    for (const reason of [
+      'userRateLimitExceeded',
+      'rateLimitExceeded',
+      'dailyLimitExceeded',
+    ]) {
+      expect(
+        classifyDeleteResult({
+          status: 403,
+          body: `{"error":{"errors":[{"reason":"${reason}"}]}}`,
+        })
+      ).toBe('retry')
+    }
   })
 
   it('gives up on other client errors so they cannot loop forever', () => {
@@ -211,6 +230,20 @@ describe('parseBatchResults', () => {
     expect(results.get('b')?.status).toBe(403)
     expect(results.get('b')?.body).toContain('userRateLimitExceeded')
     expect(results.get('a')?.body).not.toContain('userRateLimitExceeded')
+  })
+
+  it('flags a 401 part as an auth failure', () => {
+    const expired = [
+      part(0, '204 No Content', ''),
+      part(1, '401 Unauthorized', '{}'),
+      '--batch_x--',
+    ].join('\r\n')
+    expect(
+      hasBatchAuthFailure(parseBatchResults(expired, ['a', 'b']).values())
+    ).toBe(true)
+    expect(
+      hasBatchAuthFailure(parseBatchResults(response, ['a', 'b']).values())
+    ).toBe(false)
   })
 
   it('agrees with parseBatchStatuses', () => {

@@ -450,8 +450,12 @@ export async function batchDeleteDriveFileResults(
   accessToken: string,
   fileIds: string[]
 ): Promise<Map<string, { status: number; body: string }>> {
-  const { DRIVE_BATCH_LIMIT, buildBatchDeleteBody, parseBatchResults } =
-    await import('./drive-batch')
+  const {
+    DRIVE_BATCH_LIMIT,
+    buildBatchDeleteBody,
+    hasBatchAuthFailure,
+    parseBatchResults,
+  } = await import('./drive-batch')
   const results = new Map<string, { status: number; body: string }>()
   for (let i = 0; i < fileIds.length; i += DRIVE_BATCH_LIMIT) {
     const ids = fileIds.slice(i, i + DRIVE_BATCH_LIMIT)
@@ -465,7 +469,11 @@ export async function batchDeleteDriveFileResults(
         body: buildBatchDeleteBody(ids, boundary),
       }
     )
-    for (const [id, result] of parseBatchResults(await response.text(), ids)) {
+    const parts = parseBatchResults(await response.text(), ids)
+    if (hasBatchAuthFailure(parts.values())) {
+      throw new DriveAuthError('Drive rejected the access token in a batch')
+    }
+    for (const [id, result] of parts) {
       results.set(id, result)
     }
   }

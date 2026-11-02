@@ -38,7 +38,7 @@ export function classifyDeleteResult(
   const { status, body } = result
   if (status < 300 || status === 404) return 'gone'
   if (status === 408 || status === 429 || status >= 500) return 'retry'
-  if (status === 403 && /rateLimitExceeded/i.test(body)) return 'retry'
+  if (status === 403 && /LimitExceeded/i.test(body)) return 'retry'
   return 'give_up'
 }
 

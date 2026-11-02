@@ -41,6 +41,15 @@ export function parseBatchResults(
   return results
 }
 
+export function hasBatchAuthFailure(
+  results: Iterable<BatchPartResult>
+): boolean {
+  for (const result of results) {
+    if (result.status === 401) return true
+  }
+  return false
+}
+
 export function parseBatchStatuses(
   body: string,
   fileIds: string[]
