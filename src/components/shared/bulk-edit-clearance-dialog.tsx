@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { errorMessage } from '@/lib/utils'
 
 const bulkEditSchema = z.object({
   clearanceLevel: z.number().min(1).max(10),
@@ -77,8 +78,7 @@ export function BulkEditClearanceDialog({
       onSuccess?.()
     } catch (error) {
       toast.error(errorTitle, {
-        description:
-          error instanceof Error ? error.message : 'An error occurred',
+        description: errorMessage(error, 'An error occurred'),
       })
     }
   }

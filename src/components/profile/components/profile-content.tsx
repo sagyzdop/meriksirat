@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { Shield } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -50,8 +51,8 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>
 export function ProfileContent({ user }: ProfileContentProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isUpdatingTelegram, setIsUpdatingTelegram] = useState(false)
+  const { pending: isSaving, run: runSave } = useAsyncAction()
+  const { pending: isUpdatingTelegram, run: runTelegram } = useAsyncAction()
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -66,9 +67,8 @@ export function ProfileContent({ user }: ProfileContentProps) {
     },
   })
 
-  const handleUpdateTelegram = async () => {
-    setIsUpdatingTelegram(true)
-    try {
+  const handleUpdateTelegram = () =>
+    runTelegram(async () => {
       const { url } = await getTelegramUpdateLinkUrlFn()
       if (!url) {
         throw new Error('No Telegram link available')
@@ -77,18 +77,10 @@ export function ProfileContent({ user }: ProfileContentProps) {
       toast.success(
         'Open Telegram and tap Start to update your linked username'
       )
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to open Telegram'
-      )
-    } finally {
-      setIsUpdatingTelegram(false)
-    }
-  }
+    }, 'Failed to open Telegram')
 
-  const onSubmit = async (data: ProfileFormValues) => {
-    setIsSaving(true)
-    try {
+  const onSubmit = (data: ProfileFormValues) =>
+    runSave(async () => {
       const updateData = {
         ...data,
         birthday: data.birthday ? toDateOnlyString(data.birthday) : undefined,
@@ -103,14 +95,7 @@ export function ProfileContent({ user }: ProfileContentProps) {
       toast.success('Profile updated successfully')
       setIsEditing(false)
       router.invalidate()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update profile'
-      )
-    } finally {
-      setIsSaving(false)
-    }
-  }
+    }, 'Failed to update profile')
 
   const handleCancel = () => {
     form.reset()

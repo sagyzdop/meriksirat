@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { User } from '@/lib/user/types'
 import type { ExportUsersFilters } from '@/lib/admin/dashboard-types'
 import type { PaginationMeta } from '@/lib/pagination'
+import { errorMessage } from '@/lib/utils'
 
 interface Filters {
   role?: string[]
@@ -71,8 +72,7 @@ export function Page({
       toast.success('User updated')
     } catch (error) {
       toast.error('Failed to update user', {
-        description:
-          error instanceof Error ? error.message : 'An error occurred',
+        description: errorMessage(error, 'An error occurred'),
       })
     }
   }

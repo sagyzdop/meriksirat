@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { PageContainer } from '@/components/layout/page-container'
@@ -132,7 +133,7 @@ export function Page({
   const queryClient = useQueryClient()
   const goBack = useBackNavigation('/admin/users')
   const [showResetDialog, setShowResetDialog] = useState(false)
-  const [isResetting, setIsResetting] = useState(false)
+  const { pending: isResetting, run } = useAsyncAction()
   const [showBanDialog, setShowBanDialog] = useState(false)
   const userName =
     `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
@@ -140,22 +141,14 @@ export function Page({
   const hasViolations =
     (user.cancelledInStartWindowCount ?? 0) > 0 || (user.overdueCount ?? 0) > 0
 
-  const handleResetCounters = async () => {
-    setIsResetting(true)
-    try {
+  const handleResetCounters = () =>
+    run(async () => {
       await resetUserViolationCountersFn({ data: { userId: user.id } })
       toast.success('Violation counters reset')
       await queryClient.invalidateQueries()
       router.invalidate()
       setShowResetDialog(false)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to reset counters'
-      )
-    } finally {
-      setIsResetting(false)
-    }
-  }
+    }, 'Failed to reset counters')
 
   return (
     <PageContainer>

@@ -37,6 +37,7 @@ import { EquipmentFormFields } from '@/components/admin/equipment/components/equ
 import { EquipmentImageField } from '@/components/admin/equipment/components/equipment-image-field'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { Save, Trash2, AlertTriangle } from 'lucide-react'
+import { errorMessage } from '@/lib/utils'
 
 const editEquipmentSchema = z.object({
   modelName: z.string().min(1, 'Model name is required'),
@@ -139,9 +140,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
       }, 1500)
     } catch (error) {
       setError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to update equipment. Please try again.'
+        errorMessage(error, 'Failed to update equipment. Please try again.')
       )
     } finally {
       setIsSubmitting(false)
@@ -173,9 +172,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
       }
     } catch (error) {
       setError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to delete equipment. Please try again.'
+        errorMessage(error, 'Failed to delete equipment. Please try again.')
       )
     } finally {
       setIsDeleting(false)

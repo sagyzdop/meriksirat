@@ -17,7 +17,7 @@ import {
 import { broadcastMessage } from '@/lib/admin/dashboard-queries'
 import type { BroadcastResult } from '@/lib/admin/dashboard-types'
 import { Progress } from '@/components/ui/progress'
-import { cn } from '@/lib/utils'
+import { cn, errorMessage } from '@/lib/utils'
 
 const MAX_MESSAGE_LENGTH = 4000
 
@@ -106,8 +106,7 @@ export function BroadcastDialog({
       setStep('result')
     } catch (error) {
       toast.error('Broadcast failed', {
-        description:
-          error instanceof Error ? error.message : 'An error occurred',
+        description: errorMessage(error, 'An error occurred'),
       })
       setStep('confirm')
     } finally {

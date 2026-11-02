@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Copy, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ interface ClubCodeCardProps {
 
 export function ClubCodeCard({ clubCode }: ClubCodeCardProps) {
   const queryClient = useQueryClient()
-  const [isRotating, setIsRotating] = useState(false)
+  const { pending: isRotating, run } = useAsyncAction()
 
   const handleCopy = async () => {
     try {
@@ -30,20 +30,12 @@ export function ClubCodeCard({ clubCode }: ClubCodeCardProps) {
     }
   }
 
-  const handleRotate = async () => {
-    setIsRotating(true)
-    try {
+  const handleRotate = () =>
+    run(async () => {
       const next = await rotateClubCodeFn()
       queryClient.setQueryData(adminDashboardQueries.clubCode().queryKey, next)
       toast.success('Club code rotated')
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to rotate club code'
-      )
-    } finally {
-      setIsRotating(false)
-    }
-  }
+    }, 'Failed to rotate club code')
 
   return (
     <Card className="max-w-2xl">

@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import {
   Card,
   CardContent,
@@ -43,26 +44,19 @@ export function FreeSpacePanel({
 }: FreeSpacePanelProps) {
   const queryClient = useQueryClient()
   const [target, setTarget] = useState<FreeSpaceSuggestion | null>(null)
-  const [isExpiring, setIsExpiring] = useState(false)
+  const { pending: isExpiring, run } = useAsyncAction()
 
   const handleExpire = async () => {
     if (!target) return
-    setIsExpiring(true)
-    try {
+    await run(async () => {
       const result = await expireAlbumNowFn({ data: { albumId: target.id } })
       toast.success(
         `"${target.title}" will be deleted in 7 days. ${result.notified} ${result.notified === 1 ? 'person' : 'people'} notified.`
       )
       await queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] })
       await queryClient.invalidateQueries({ queryKey: ['albums'] })
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to expire album'
-      )
-    } finally {
-      setIsExpiring(false)
-      setTarget(null)
-    }
+    }, 'Failed to expire album')
+    setTarget(null)
   }
 
   return (

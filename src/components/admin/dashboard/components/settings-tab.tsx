@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -30,7 +31,7 @@ export function SettingsTab({ settings }: SettingsTabProps) {
   const [endTime, setEndTime] = useState(
     minutesToTime(settings?.operatingHoursEnd ?? 1439)
   )
-  const [isSaving, setIsSaving] = useState(false)
+  const { pending: isSaving, run } = useAsyncAction()
 
   const startMinutes = timeToMinutes(startTime)
   const endMinutes = timeToMinutes(endTime)
@@ -46,8 +47,7 @@ export function SettingsTab({ settings }: SettingsTabProps) {
 
   const handleSave = async () => {
     if (validationError) return
-    setIsSaving(true)
-    try {
+    await run(async () => {
       await updateSettingsFn({
         data: {
           globalBookingNote,
@@ -63,13 +63,7 @@ export function SettingsTab({ settings }: SettingsTabProps) {
         queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
         queryClient.invalidateQueries({ queryKey: ['bookings'] }),
       ])
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update settings'
-      )
-    } finally {
-      setIsSaving(false)
-    }
+    }, 'Failed to update settings')
   }
 
   const bookableHours = validationError

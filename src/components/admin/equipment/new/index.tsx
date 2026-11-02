@@ -14,6 +14,7 @@ import { EquipmentFormFields } from '@/components/admin/equipment/components/equ
 import { EquipmentImageField } from '@/components/admin/equipment/components/equipment-image-field'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { Save } from 'lucide-react'
+import { errorMessage } from '@/lib/utils'
 
 const createEquipmentSchema = z.object({
   modelName: z.string().min(1, 'Model name is required'),
@@ -114,9 +115,7 @@ export function Page({ categories }: PageProps) {
       }, 1500)
     } catch (error) {
       setError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to create equipment. Please try again.'
+        errorMessage(error, 'Failed to create equipment. Please try again.')
       )
     } finally {
       setIsSubmitting(false)

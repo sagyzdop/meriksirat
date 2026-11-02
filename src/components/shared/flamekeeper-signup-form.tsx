@@ -11,6 +11,7 @@ import {
   isValidGraduationDate,
   isValidPledgeGb,
 } from '@/lib/flamekeeper/rules'
+import { errorMessage } from '@/lib/utils'
 
 interface FlamekeeperSignupFormProps {
   error?: string | null
@@ -57,9 +58,7 @@ export function FlamekeeperSignupForm({
       onBeforeRedirect?.()
       window.location.assign(url)
     } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : 'Could not start Drive connection.'
-      )
+      setFormError(errorMessage(err, 'Could not start Drive connection.'))
       setIsSubmitting(false)
     }
   }

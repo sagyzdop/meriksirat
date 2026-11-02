@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { BirthdayDataTable } from './components/birthday-data-table'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
@@ -24,26 +24,16 @@ export function Page({
   isLoading = false,
 }: PageProps) {
   const router = useRouter()
-  const [isSyncing, setIsSyncing] = useState(false)
+  const { pending: isSyncing, run } = useAsyncAction()
 
-  const handleSync = async () => {
-    setIsSyncing(true)
-    try {
+  const handleSync = () =>
+    run(async () => {
       const result = await syncBirthdaysToCalendarFn()
       toast.success(
         `Calendar synced: ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`
       )
       router.invalidate()
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Failed to sync birthdays to the calendar'
-      )
-    } finally {
-      setIsSyncing(false)
-    }
-  }
+    }, 'Failed to sync birthdays to the calendar')
 
   const description =
     pagination.totalCount > 0

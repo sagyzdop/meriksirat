@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -44,21 +45,13 @@ export function DashboardHeaderActions({
 }: DashboardHeaderActionsProps) {
   const [exportOpen, setExportOpen] = React.useState(false)
   const [broadcastOpen, setBroadcastOpen] = React.useState(false)
-  const [isSendingTestEmail, setIsSendingTestEmail] = React.useState(false)
+  const { pending: isSendingTestEmail, run } = useAsyncAction()
 
-  const handleSendTestEmail = async () => {
-    setIsSendingTestEmail(true)
-    try {
+  const handleSendTestEmail = () =>
+    run(async () => {
       const { sentTo } = await sendTestEmailFn()
       toast.success(`Test email sent to ${sentTo}`)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to send test email'
-      )
-    } finally {
-      setIsSendingTestEmail(false)
-    }
-  }
+    }, 'Failed to send test email')
 
   return (
     <>

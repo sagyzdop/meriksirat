@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import type { ExportField } from '@/lib/admin/csv'
-import { cn } from '@/lib/utils'
+import { cn, errorMessage } from '@/lib/utils'
 
 interface ExportCsvDialogProps<K extends string, T> {
   noun: string
@@ -87,8 +87,7 @@ export function ExportCsvDialog<K extends string, T>({
       setOpen(false)
     } catch (error) {
       toast.error(`Failed to export ${noun}s`, {
-        description:
-          error instanceof Error ? error.message : 'An error occurred',
+        description: errorMessage(error, 'An error occurred'),
       })
     } finally {
       setIsExporting(false)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import {
   Card,
   CardContent,
@@ -30,7 +31,7 @@ interface PoolCardProps {
 export function PoolCard({ pool, isLoading, canEditCap }: PoolCardProps) {
   const queryClient = useQueryClient()
   const [capGb, setCapGb] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
+  const { pending: isSaving, run } = useAsyncAction()
 
   useEffect(() => {
     if (pool) setCapGb(String(Math.round(bytesToGb(pool.capBytes))))
@@ -42,18 +43,13 @@ export function PoolCard({ pool, isLoading, canEditCap }: PoolCardProps) {
       toast.error('Enter a cap of at least 1 GB')
       return
     }
-    setIsSaving(true)
-    try {
+    await run(async () => {
       await setFlamekeeperCapFn({ data: { capGb: value } })
       await queryClient.invalidateQueries({
         queryKey: adminDashboardQueries.pool().queryKey,
       })
       toast.success('Per-account cap updated')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save')
-    } finally {
-      setIsSaving(false)
-    }
+    }, 'Failed to save')
   }
 
   if (!pool) {
