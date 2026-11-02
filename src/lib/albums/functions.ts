@@ -197,6 +197,7 @@ async function listAlbumsPaginated({
   query,
 }: ListAlbumsPaginatedArgs): Promise<AlbumListPage> {
   const { album, albumMember, user } = await import('@/db/schema')
+  const { chunk } = await import('./photo-backfill')
   const { and, desc, eq, getTableColumns, inArray, isNull, lt, like, or, sql } =
     await import('drizzle-orm')
 
@@ -260,13 +261,9 @@ async function listAlbumsPaginated({
   // limit + 1 (up to 101) ids and D1 caps bound parameters at 100/query,
   // so the ids are sent in chunks of 100.
   const albumIds = albumRows.map((r) => r.id)
-  const idChunks: string[][] = []
-  for (let i = 0; i < albumIds.length; i += 100) {
-    idChunks.push(albumIds.slice(i, i + 100))
-  }
   const memberRows = (
     await Promise.all(
-      idChunks.map((chunk) =>
+      chunk(albumIds, 100).map((idPart) =>
         database
           .select({
             albumId: albumMember.albumId,
@@ -276,7 +273,7 @@ async function listAlbumsPaginated({
           })
           .from(albumMember)
           .innerJoin(user, eq(albumMember.userId, user.id))
-          .where(inArray(albumMember.albumId, chunk))
+          .where(inArray(albumMember.albumId, idPart))
           .all()
       )
     )

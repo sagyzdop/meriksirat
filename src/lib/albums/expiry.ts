@@ -22,6 +22,7 @@ import type { TombstoneReason } from '@/lib/pool/expiry'
 import type { HealTally } from '@/lib/pool/volumes'
 import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
 import { formatLongDate } from '@/lib/club-time'
+import { chunk } from './photo-backfill'
 import { siteOrigin } from '@/lib/format'
 
 type Database = ReturnType<typeof db>
@@ -30,24 +31,24 @@ type AlbumRecord = typeof album.$inferSelect
 const ROW_DELETE_CHUNK = 90
 const EXPIRES_PER_RUN = 3
 
+export const albumRecountSet = (albumId: string) => ({
+  photoCount: sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
+  photoBytes: sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
+  favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} INNER JOIN ${photo} ON ${photo.id} = ${favorite.photoId} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
+})
+
 export async function dropPhotoRows(
   database: Database,
   albumId: string,
   ids: string[]
 ): Promise<void> {
   if (ids.length === 0) return
-  for (let i = 0; i < ids.length; i += ROW_DELETE_CHUNK) {
-    await database
-      .delete(photo)
-      .where(inArray(photo.id, ids.slice(i, i + ROW_DELETE_CHUNK)))
+  for (const part of chunk(ids, ROW_DELETE_CHUNK)) {
+    await database.delete(photo).where(inArray(photo.id, part))
   }
   await database
     .update(album)
-    .set({
-      photoCount: sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
-      photoBytes: sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
-      favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} INNER JOIN ${photo} ON ${photo.id} = ${favorite.photoId} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
-    })
+    .set(albumRecountSet(albumId))
     .where(eq(album.id, albumId))
 }
 
@@ -320,20 +321,19 @@ export async function runAlbumExpiry(
     const allIds = [...plan.remind30, ...plan.remind7]
     const ownerChat = new Map<string, string | null>()
     const memberChats = new Map<string, (string | null)[]>()
-    for (let i = 0; i < allIds.length; i += ROW_DELETE_CHUNK) {
-      const chunk = allIds.slice(i, i + ROW_DELETE_CHUNK)
+    for (const idPart of chunk(allIds, ROW_DELETE_CHUNK)) {
       const owners = await database
         .select({ albumId: album.id, chatId: user.telegramChatId })
         .from(album)
         .innerJoin(user, eq(user.id, album.ownerUserId))
-        .where(inArray(album.id, chunk))
+        .where(inArray(album.id, idPart))
         .all()
       for (const o of owners) ownerChat.set(o.albumId, o.chatId)
       const members = await database
         .select({ albumId: albumMember.albumId, chatId: user.telegramChatId })
         .from(albumMember)
         .innerJoin(user, eq(user.id, albumMember.userId))
-        .where(inArray(albumMember.albumId, chunk))
+        .where(inArray(albumMember.albumId, idPart))
         .all()
       for (const m of members) {
         const list = memberChats.get(m.albumId) ?? []

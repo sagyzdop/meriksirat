@@ -2,7 +2,6 @@ import { and, asc, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import {
   album,
-  favorite,
   flamekeeper,
   flamekeeperGrant,
   photo,
@@ -11,6 +10,7 @@ import {
 } from '@/db/schema'
 import { BudgetExhaustedError, type Budget } from '@/lib/cron/budget'
 import { formatLongDate } from '@/lib/club-time'
+import { albumRecountSet } from '@/lib/albums/expiry'
 import { siteOrigin } from '@/lib/format'
 import {
   FlamekeeperGrantError,
@@ -102,13 +102,6 @@ async function markLost(
     )
 }
 
-const liveCount = (albumId: string) =>
-  sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`
-const liveBytes = (albumId: string) =>
-  sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`
-const liveFavorites = (albumId: string) =>
-  sql`(SELECT COUNT(*) FROM ${favorite} INNER JOIN ${photo} ON ${photo.id} = ${favorite.photoId} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`
-
 async function adjustUsedBytes(
   database: Database,
   userId: string,
@@ -158,9 +151,7 @@ async function removeMissingPhotos(
   await database
     .update(album)
     .set({
-      photoCount: liveCount(albumRow.id),
-      photoBytes: liveBytes(albumRow.id),
-      favoriteCount: liveFavorites(albumRow.id),
+      ...albumRecountSet(albumRow.id),
       updatedAt: new Date(),
     })
     .where(eq(album.id, albumRow.id))
@@ -563,9 +554,7 @@ async function finalizeLost(
     await database
       .update(album)
       .set({
-        photoCount: liveCount(v.albumId),
-        photoBytes: liveBytes(v.albumId),
-        favoriteCount: liveFavorites(v.albumId),
+        ...albumRecountSet(v.albumId),
         ...(tombstone
           ? {
               deletedAt: now,
@@ -743,9 +732,7 @@ async function recoverDropped(
         await database
           .update(album)
           .set({
-            photoCount: liveCount(v.albumId),
-            photoBytes: liveBytes(v.albumId),
-            favoriteCount: liveFavorites(v.albumId),
+            ...albumRecountSet(v.albumId),
             ...(revive ? { deletedAt: null, tombstoneReason: null } : {}),
             updatedAt: now,
           })

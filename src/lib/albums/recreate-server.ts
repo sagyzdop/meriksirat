@@ -13,6 +13,7 @@ import {
   type RecreateRow,
   type RecreateTally,
 } from './recreate'
+import { chunk } from './photo-backfill'
 
 type Database = ReturnType<typeof db>
 
@@ -22,16 +23,15 @@ async function dropRows(
   database: Database,
   rows: RecreateRow[]
 ): Promise<void> {
-  for (let i = 0; i < rows.length; i += ROW_CHUNK) {
-    const chunk = rows.slice(i, i + ROW_CHUNK)
+  for (const part of chunk(rows, ROW_CHUNK)) {
     const statements = [
       database.delete(photo).where(
         inArray(
           photo.id,
-          chunk.map((r) => r.id)
+          part.map((r) => r.id)
         )
       ),
-      ...releaseOwnedBytesStatements(database, chunk),
+      ...releaseOwnedBytesStatements(database, part),
     ]
     await database.batch(statements as unknown as [(typeof statements)[0]])
   }
