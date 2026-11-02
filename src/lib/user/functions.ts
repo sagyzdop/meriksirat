@@ -33,46 +33,30 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
       process.env.GOOGLE_MASTER_EMAIL
     )
 
-    const sessionUser = session.user as typeof session.user & {
-      onboardingComplete?: boolean | null
-      isMember?: boolean | null
-    }
+    const { db } = await import('@/db')
+    const { user, flamekeeper } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { env } = await import('cloudflare:workers')
 
-    // If the session snapshot lacks onboardingComplete, fall back to the DB.
-    // Better-auth's session may not reflect custom column changes immediately,
-    // so users who just completed onboarding must be resolved from the table.
-    if (!sessionUser.onboardingComplete || !sessionUser.isMember) {
-      const { db } = await import('@/db')
-      const { user } = await import('@/db/schema')
-      const { eq } = await import('drizzle-orm')
-      const { env } = await import('cloudflare:workers')
+    const database = db(env.meriksirat_d1 as D1Database)
+    const freshUser = await database
+      .select()
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get()
 
-      const database = db(env.meriksirat_d1 as D1Database)
-      const freshUser = await database
-        .select()
-        .from(user)
-        .where(eq(user.id, session.user.id))
-        .get()
+    if (!freshUser) return { ...session.user, isMaster } as UserProfile
 
-      if (freshUser) {
-        const { flamekeeper } = await import('@/db/schema')
-        const fk = await database
-          .select({ state: flamekeeper.state })
-          .from(flamekeeper)
-          .where(eq(flamekeeper.userId, freshUser.id))
-          .get()
-        return {
-          ...freshUser,
-          flamekeeperState: fk?.state ?? null,
-          isMaster,
-        } as UserProfile
-      }
-    }
-
-    // session.user from better-auth contains the user table data.
-    // We return it directly to avoid a redundant database hit on every page load.
-    // The session is kept fresh by better-auth.
-    return { ...session.user, isMaster } as UserProfile
+    const fk = await database
+      .select({ state: flamekeeper.state })
+      .from(flamekeeper)
+      .where(eq(flamekeeper.userId, freshUser.id))
+      .get()
+    return {
+      ...freshUser,
+      flamekeeperState: fk?.state ?? null,
+      isMaster,
+    } as UserProfile
   }
 )
 
