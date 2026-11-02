@@ -3,7 +3,7 @@
  *
  * These functions perform Google Calendar HTTP calls with the master
  * credentials. They live in their own module so they are never bundled into
- * the client (unlike google-caledar.ts, which client components import).
+ * the client (unlike google-calendar.ts, which client components import).
  */
 
 import { getGoogleAccessToken } from './google-calendar-auth'
