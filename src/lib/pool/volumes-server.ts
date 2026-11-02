@@ -352,7 +352,8 @@ export async function releaseVolumes(
           now,
           options.budget
         )
-        if (healed.outcome !== 'cleared' || !takeIfBudgeted(options.budget, 1)) throw error
+        if (healed.outcome !== 'cleared' || !takeIfBudgeted(options.budget, 1))
+          throw error
         await remove()
       }
       done.push(v)

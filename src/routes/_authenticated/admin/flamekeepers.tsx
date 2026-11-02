@@ -2,7 +2,7 @@ import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { Page } from '@/components/admin/flamekeepers'
-import { flamekeeperQueries } from '@/lib/flamekeeper'
+import { flamekeeperQueries } from '@/lib/flamekeeper/queries'
 
 const searchSchema = z.object({
   search: z.string().optional(),
