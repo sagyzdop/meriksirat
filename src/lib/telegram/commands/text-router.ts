@@ -55,7 +55,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
     return
   }
 
-  const userId = session.userId || (await getUserIdByChatId(ctx, chatId))
+  const userId = await getUserIdByChatId(ctx, chatId)
 
   switch (session.step) {
     case 'awaiting_start_selection':
@@ -68,12 +68,18 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
       }
 
       if (session.step === 'awaiting_start_selection') {
-        await setSession(ctx.env.meriksirat_kv, chatId, {
-          ...session,
-          step: 'awaiting_start_confirm',
-          startBookingId: bookingId,
-        })
-        await renderStartConfirm(ctx, bookingId)
+        if (!userId) {
+          await showMainMenu(ctx)
+          return
+        }
+        const found = await renderStartConfirm(ctx, userId, bookingId)
+        if (found) {
+          await setSession(ctx.env.meriksirat_kv, chatId, {
+            ...session,
+            step: 'awaiting_start_confirm',
+            startBookingId: bookingId,
+          })
+        }
       } else if (session.step === 'awaiting_booking_selection') {
         await setSession(ctx.env.meriksirat_kv, chatId, {
           ...session,
@@ -104,7 +110,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
           await showMainMenu(ctx)
           return
         }
-        await startBookingForChat(ctx, bookingId)
+        await startBookingForChat(ctx, userId, bookingId)
       } else if (text === CANCEL_BUTTON) {
         await ctx.reply('Start cancelled.', backToMenuMarkup())
       } else {

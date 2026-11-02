@@ -15,6 +15,7 @@ import { setSession } from '../kv-session'
 import { removeKeyboard, replyKeyboard } from '../server-utils'
 import { renderInPlace, backToMenuButton, backToMenuMarkup } from '../menu'
 import {
+  BookingStartError,
   listStartableBookings,
   startBooking,
 } from '@/lib/booking/start-booking'
@@ -137,8 +138,9 @@ export async function renderStartBookingList(ctx: BotContext): Promise<void> {
  */
 export async function renderStartConfirm(
   ctx: BotContext,
+  userId: string,
   bookingId: number
-): Promise<void> {
+): Promise<boolean> {
   const database = db(ctx.env.meriksirat_d1 as D1Database)
 
   const parent = await database
@@ -147,12 +149,12 @@ export async function renderStartConfirm(
       endTime: booking.endTime,
     })
     .from(booking)
-    .where(eq(booking.id, bookingId))
+    .where(and(eq(booking.id, bookingId), eq(booking.userId, userId)))
     .get()
 
   if (!parent) {
     await ctx.reply('Booking not found.', backToMenuMarkup())
-    return
+    return false
   }
 
   const items = await database
@@ -184,6 +186,7 @@ export async function renderStartConfirm(
     `Start booking #${bookingId} now?\n\n📦 Equipment: ${equipmentLabel}\n🕐 Time: ${timeStart} - ${timeEnd}\n\nTap Confirm to start, or Cancel.`,
     replyKeyboard(['✅ Confirm', 'Cancel', backToMenuButton()])
   )
+  return true
 }
 
 /**
@@ -192,10 +195,19 @@ export async function renderStartConfirm(
  */
 export async function startBookingForChat(
   ctx: BotContext,
+  userId: string,
   bookingId: number
 ): Promise<void> {
   const database = db(ctx.env.meriksirat_d1 as D1Database)
-  await startBooking(database, bookingId)
+  try {
+    await startBooking(database, bookingId, { onlyForUserId: userId })
+  } catch (error) {
+    if (error instanceof BookingStartError) {
+      await ctx.reply(`${error.message}.`, backToMenuMarkup())
+      return
+    }
+    throw error
+  }
   await ctx.reply(
     `✅ Booking #${bookingId} has been started.\n\nThe equipment is now marked as picked up. Use the Return Equipment flow when done.`,
     backToMenuMarkup()

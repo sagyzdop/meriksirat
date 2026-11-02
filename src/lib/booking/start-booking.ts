@@ -7,10 +7,13 @@ import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
 import { logBookingActivityById } from '@/lib/telegram/logging'
 import { recomputeBookingStatus } from '@/lib/booking/status'
+import { ownsBooking } from '@/lib/booking/ownership'
 
 type BookingDatabase = ReturnType<typeof db>
 
 export const START_WINDOW_GRACE_MS = 15 * 60 * 1000
+
+export class BookingStartError extends Error {}
 
 /**
  * Shared "start booking" logic used by both the web "Start pickup" flow and the
@@ -26,7 +29,8 @@ export const START_WINDOW_GRACE_MS = 15 * 60 * 1000
  */
 export async function startBooking(
   database: BookingDatabase,
-  bookingId: number
+  bookingId: number,
+  options: { onlyForUserId?: string } = {}
 ): Promise<{ bookingId: number }> {
   const now = new Date()
 
@@ -53,18 +57,22 @@ export async function startBooking(
     .limit(1)
 
   const bookingData = parent[0]
-  if (!bookingData) {
-    throw new Error('Booking not found')
+  if (
+    !bookingData ||
+    (options.onlyForUserId !== undefined &&
+      !ownsBooking(bookingData.userId, options.onlyForUserId))
+  ) {
+    throw new BookingStartError('Booking not found')
   }
 
   if (bookingData.status !== 'booked') {
-    throw new Error(
+    throw new BookingStartError(
       `Booking cannot be started from status "${bookingData.status}"`
     )
   }
 
   if (bookingData.startedAt) {
-    throw new Error('Booking has already been started')
+    throw new BookingStartError('Booking has already been started')
   }
 
   const windowStart = new Date(
@@ -74,12 +82,12 @@ export async function startBooking(
     bookingData.startTime.getTime() + START_WINDOW_GRACE_MS
   )
   if (now < windowStart) {
-    throw new Error(
+    throw new BookingStartError(
       'Booking can be started up to 15 minutes before the start time'
     )
   }
   if (now > windowEnd) {
-    throw new Error(
+    throw new BookingStartError(
       'Booking start window has passed; the booking will be auto-cancelled'
     )
   }
@@ -102,7 +110,7 @@ export async function startBooking(
   )
 
   if (startable.length === 0) {
-    throw new Error('Booking has no items that can be started')
+    throw new BookingStartError('Booking has no items that can be started')
   }
 
   await database
