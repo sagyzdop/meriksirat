@@ -27,25 +27,10 @@ export function normalizeBookingFilters<
   return { ...filters, status: [...DEFAULT_BOOKING_STATUS_FILTER] }
 }
 
-export function bookingsEmptyResponse(
-  filters: BookingFilters
-): PaginatedBookingsResponse {
-  return {
-    data: [],
-    pagination: {
-      page: filters.page,
-      limit: filters.limit,
-      total: 0,
-      totalPages: 0,
-      hasNext: false,
-      hasPrev: false,
-    },
-  }
-}
-
-export function adminBookingsEmptyResponse(
-  filters: AdminBookingFilters
-): PaginatedAdminBookingsResponse {
+export function emptyBookingsResponse(filters: {
+  page: number
+  limit: number
+}) {
   return {
     data: [],
     pagination: {
@@ -68,14 +53,14 @@ export const bookingsQueries = {
       queryKey: [...bookingsQueries.lists(), filters],
       queryFn: async (): Promise<PaginatedBookingsResponse> =>
         (await getUserBookingsFn({ data: filters })) ??
-        bookingsEmptyResponse(filters),
+        emptyBookingsResponse(filters),
     }),
   adminList: (filters: AdminBookingFilters) =>
     queryOptions({
       queryKey: [...bookingsQueries.adminLists(), filters],
       queryFn: async (): Promise<PaginatedAdminBookingsResponse> =>
         (await getAdminBookingsFn({ data: filters })) ??
-        adminBookingsEmptyResponse(filters),
+        emptyBookingsResponse(filters),
     }),
   bookingItemEquipmentIds: (bookingId?: number) =>
     queryOptions({

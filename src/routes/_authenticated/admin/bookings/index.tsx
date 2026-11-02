@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/admin/bookings/index'
 import {
   bookingsQueries,
-  adminBookingsEmptyResponse,
+  emptyBookingsResponse,
   normalizeBookingFilters,
 } from '@/lib/booking'
 import { z } from 'zod'
@@ -49,7 +49,7 @@ function RouteComponent() {
   const search = Route.useSearch()
   const filters = normalizeBookingFilters(search)
   const { data, isFetching } = useQuery(bookingsQueries.adminList(filters))
-  const response = data ?? adminBookingsEmptyResponse(filters)
+  const response = data ?? emptyBookingsResponse(filters)
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })

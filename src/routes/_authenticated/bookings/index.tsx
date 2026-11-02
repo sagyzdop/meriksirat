@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/bookings/index'
 import {
   bookingsQueries,
-  bookingsEmptyResponse,
+  emptyBookingsResponse,
   getTelegramBotUsernameFn,
   normalizeBookingFilters,
 } from '@/lib/booking'
@@ -62,7 +62,7 @@ function RouteComponent() {
   const filters = normalizeBookingFilters(search)
   const { user } = Route.useRouteContext()
   const { data, isFetching } = useQuery(bookingsQueries.mine(filters))
-  const response = data ?? bookingsEmptyResponse(filters)
+  const response = data ?? emptyBookingsResponse(filters)
   const isRouterPending = useRouterState({
     select: (state) => state.status === 'pending',
   })

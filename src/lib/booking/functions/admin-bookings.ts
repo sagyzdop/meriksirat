@@ -8,8 +8,6 @@ import {
   UpdateBookingStatusAdminSchema,
   GetBookingByIdSchema,
 } from '../types'
-import type { BookingItemRow } from '../mappers'
-import { mapBookingsWithItems, itemSelect } from '../mappers'
 import { formatUserDisplayName } from '@/lib/utils'
 import { formatBookingDetailsPlain } from '../details'
 import { buildPageInfo } from '@/lib/pagination'
@@ -24,202 +22,60 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
     const { adminContext } = await import('@/lib/admin/server')
     const { booking, bookingItem, equipment, user, category } =
       await import('@/db/schema')
-    const { eq, and, sql, desc, asc, gte, lte, inArray } =
-      await import('drizzle-orm')
+    const { eq, and } = await import('drizzle-orm')
+    const {
+      attachItems,
+      bookingFilterConditions,
+      bookingOrder,
+      countBookings,
+    } = await import('../list-query')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Build where conditions
-    const conditions = []
+    const whereClause = and(...bookingFilterConditions(data))
 
-    if (data.status && data.status.length > 0) {
-      conditions.push(inArray(booking.status, data.status))
-    }
-
-    if (data.startDate) {
-      conditions.push(gte(booking.startTime, new Date(data.startDate)))
-    }
-
-    if (data.endDate) {
-      conditions.push(
-        lte(
-          booking.endTime,
-          new Date(new Date(data.endDate).getTime() + 86_399_999)
-        )
-      )
-    }
-
-    const whereClause =
-      conditions.length === 0
-        ? undefined
-        : conditions.length === 1
-          ? conditions[0]
-          : and(...conditions)
-
-    const offset = (data.page - 1) * data.limit
-
-    const order = (() => {
-      const dir = data.sortOrder === 'desc' ? desc : asc
-      switch (data.sortBy) {
-        case 'startTime':
-          return dir(booking.startTime)
-        case 'endTime':
-          return dir(booking.endTime)
-        case 'status':
-          return dir(booking.status)
-        case 'createdAt':
-          return dir(booking.createdAt)
-        case 'equipment':
-          return dir(sql`min(${equipment.modelName})`)
-        case 'user':
-          return dir(user.email)
-        default:
-          return dir(booking.startTime)
-      }
-    })()
-
-    const countQuery = database
-      .select({ count: sql<number>`count(distinct ${booking.id})` })
-      .from(booking)
-      .leftJoin(bookingItem, eq(bookingItem.bookingId, booking.id))
-      .where(whereClause)
-
-    // Main data query (parent bookings + user info)
-    const bookingsQuery = database
-      .select({
-        id: booking.id,
-        userId: booking.userId,
-        startTime: booking.startTime,
-        endTime: booking.endTime,
-        status: booking.status,
-        userEventDetails: booking.userEventDetails,
-        startedAt: booking.startedAt,
-        createdAt: booking.createdAt,
-        updatedAt: booking.updatedAt,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          image: user.image,
-        },
-      })
-      .from(booking)
-      .leftJoin(user, eq(booking.userId, user.id))
-      .leftJoin(bookingItem, eq(bookingItem.bookingId, booking.id))
-      .leftJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-      .leftJoin(category, eq(equipment.categoryId, category.id))
-      .where(whereClause)
-      .groupBy(booking.id)
-      .orderBy(order)
-      .limit(data.limit)
-      .offset(offset)
-
-    const [totalCountResult, pageBookings] = await Promise.all([
-      countQuery,
-      bookingsQuery,
-    ])
-
-    const total = totalCountResult[0]?.count || 0
-
-    const pageBookingIds = pageBookings.map((b) => b.id)
-
-    // Fetch full item rows for the current page
-    let flatRows: BookingItemRow[] = []
-    if (pageBookingIds.length > 0) {
-      const itemRows = await database
+    const [total, pageBookings] = await Promise.all([
+      countBookings(database, whereClause),
+      database
         .select({
-          bookingId: bookingItem.bookingId,
-          ...itemSelect(bookingItem, equipment, category),
+          id: booking.id,
+          userId: booking.userId,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          status: booking.status,
+          userEventDetails: booking.userEventDetails,
+          startedAt: booking.startedAt,
+          createdAt: booking.createdAt,
+          updatedAt: booking.updatedAt,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            image: user.image,
+          },
         })
-        .from(bookingItem)
+        .from(booking)
+        .leftJoin(user, eq(booking.userId, user.id))
+        .leftJoin(bookingItem, eq(bookingItem.bookingId, booking.id))
         .leftJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
         .leftJoin(category, eq(equipment.categoryId, category.id))
-        .where(inArray(bookingItem.bookingId, pageBookingIds))
-        .orderBy(bookingItem.id)
+        .where(whereClause)
+        .groupBy(booking.id)
+        .orderBy(bookingOrder(data.sortBy, data.sortOrder))
+        .limit(data.limit)
+        .offset((data.page - 1) * data.limit),
+    ])
 
-      const itemsByBooking = new Map<number, (typeof itemRows)[number][]>()
-      for (const row of itemRows) {
-        const list = itemsByBooking.get(row.bookingId) ?? []
-        list.push(row)
-        itemsByBooking.set(row.bookingId, list)
-      }
+    const withItems = await attachItems(database, pageBookings)
 
-      flatRows = pageBookings.flatMap((b) => {
-        const items = itemsByBooking.get(b.id) ?? []
-        if (items.length === 0) {
-          return [
-            {
-              bookingId: b.id,
-              userId: b.userId,
-              startTime: b.startTime,
-              endTime: b.endTime,
-              status: b.status,
-              userEventDetails: b.userEventDetails,
-              startedAt: b.startedAt,
-              createdAt: b.createdAt,
-              updatedAt: b.updatedAt,
-              itemId: 0,
-              equipmentId: 0,
-              itemStatus: 'cancelled',
-              gcalEventId: null,
-              returnedAt: null,
-              itemCreatedAt: b.createdAt,
-              itemUpdatedAt: b.updatedAt,
-              eqId: null,
-              eqModelName: null,
-              eqDescription: null,
-              eqCategoryId: null,
-              eqImagePath: null,
-              eqGcalId: null,
-              catId: null,
-              catName: null,
-            } as BookingItemRow,
-          ]
-        }
-        return items.map((it) => ({
-          bookingId: b.id,
-          userId: b.userId,
-          startTime: b.startTime,
-          endTime: b.endTime,
-          status: b.status,
-          userEventDetails: b.userEventDetails,
-          startedAt: b.startedAt,
-          createdAt: b.createdAt,
-          updatedAt: b.updatedAt,
-          itemId: it.itemId,
-          equipmentId: it.equipmentId,
-          itemStatus: it.itemStatus,
-          gcalEventId: it.gcalEventId,
-          returnedAt: it.returnedAt,
-          itemCreatedAt: it.itemCreatedAt,
-          itemUpdatedAt: it.itemUpdatedAt,
-          eqId: it.eqId,
-          eqModelName: it.eqModelName,
-          eqDescription: it.eqDescription,
-          eqCategoryId: it.eqCategoryId,
-          eqImagePath: it.eqImagePath,
-          eqGcalId: it.eqGcalId,
-          catId: it.catId,
-          catName: it.catName,
-        }))
-      })
-    }
-
-    const dataWithItems = mapBookingsWithItems(flatRows)
-
-    const response: PaginatedAdminBookingsResponse = {
-      data: dataWithItems.map((b) => {
-        const parent = pageBookings.find((p) => p.id === b.id)
-        return {
-          ...b,
-          user: parent?.user ?? null,
-        }
-      }) as AdminBookingWithDetails[],
+    return {
+      data: withItems.map((b, i) => ({
+        ...b,
+        user: pageBookings[i].user ?? null,
+      })) as AdminBookingWithDetails[],
       pagination: buildPageInfo(total, data.page, data.limit),
     }
-
-    return response
   })
 
 /**
@@ -230,13 +86,13 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
   .validator(GetBookingByIdSchema)
   .handler(async ({ data }): Promise<AdminBookingWithDetails | null> => {
     const { adminContext } = await import('@/lib/admin/server')
-    const { booking, bookingItem, equipment, user, category } =
-      await import('@/db/schema')
+    const { booking, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
+    const { attachItems } = await import('../list-query')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    const parentRow = await database
+    const [parent] = await database
       .select({
         id: booking.id,
         userId: booking.userId,
@@ -260,54 +116,12 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
       .where(eq(booking.id, data.bookingId))
       .limit(1)
 
-    const parent = parentRow[0]
     if (!parent) return null
 
-    const itemRows = await database
-      .select({
-        bookingId: bookingItem.bookingId,
-        ...itemSelect(bookingItem, equipment, category),
-      })
-      .from(bookingItem)
-      .leftJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-      .leftJoin(category, eq(equipment.categoryId, category.id))
-      .where(eq(bookingItem.bookingId, parent.id))
-      .orderBy(bookingItem.id)
+    const [result] = await attachItems(database, [parent])
+    if (result.items.length === 0) return null
 
-    const flatRows: BookingItemRow[] = itemRows.map((it) => ({
-      bookingId: parent.id,
-      userId: parent.userId,
-      startTime: parent.startTime,
-      endTime: parent.endTime,
-      status: parent.status,
-      userEventDetails: parent.userEventDetails,
-      startedAt: parent.startedAt,
-      createdAt: parent.createdAt,
-      updatedAt: parent.updatedAt,
-      itemId: it.itemId,
-      equipmentId: it.equipmentId,
-      itemStatus: it.itemStatus,
-      gcalEventId: it.gcalEventId,
-      returnedAt: it.returnedAt,
-      itemCreatedAt: it.itemCreatedAt,
-      itemUpdatedAt: it.itemUpdatedAt,
-      eqId: it.eqId,
-      eqModelName: it.eqModelName,
-      eqDescription: it.eqDescription,
-      eqCategoryId: it.eqCategoryId,
-      eqImagePath: it.eqImagePath,
-      eqGcalId: it.eqGcalId,
-      catId: it.catId,
-      catName: it.catName,
-    }))
-
-    const mapped = mapBookingsWithItems(flatRows)[0]
-    if (!mapped) return null
-
-    return {
-      ...mapped,
-      user: parent.user ?? null,
-    } as AdminBookingWithDetails
+    return { ...result, user: parent.user ?? null } as AdminBookingWithDetails
   })
 
 /**
