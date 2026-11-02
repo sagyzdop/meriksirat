@@ -106,7 +106,7 @@ sequenceDiagram
   participant Cron
   participant Telegram
 
-  Member->>Worker: createAlbumFn (see the albums scenario file)
+  Member->>Worker: createAlbumFn (see 06-albums-and-uploads.md)
   Worker->>D1: insert album with expiresAt = eventDate + 2 years, photosIndexedAt = now
   Note over Worker,D1: Album is public from day one. Reminder columns stay empty.
   opt Member edits the event date and album is not pinned
@@ -415,7 +415,7 @@ sequenceDiagram
     end
   end
   Worker->>KV: write photo-backfill:budget with 2-day TTL, only if the count changed
-  Note over Worker,D1: A skipped album is retried only after restoreAlbumFolderFn clears photosIndexSkipped (see the albums scenario file)
+  Note over Worker,D1: A skipped album is retried only after restoreAlbumFolderFn clears photosIndexSkipped (see 06-albums-and-uploads.md)
 ```
 
 ## Clearing the Telegram command menu
@@ -484,7 +484,7 @@ sequenceDiagram
   alt Member finishes onboarding or saves profile, or admin edits a user
     Member->>Browser: save
     Browser->>Worker: completeTelegramOnboardingFn, updateUserProfileFn or updateUserAdminFn
-    Worker->>Calendar: reconcileBirthdaysToCalendar (see the onboarding and users scenario files)
+    Worker->>Calendar: reconcileBirthdaysToCalendar (see 01-sign-in-onboarding-and-profile.md and 05-admin-console.md)
   else Admin or manager taps sync
     Admin->>Browser: sync birthdays
     Browser->>Worker: syncBirthdaysToCalendarFn()

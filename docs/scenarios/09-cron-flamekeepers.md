@@ -425,7 +425,7 @@ sequenceDiagram
 ```
 
 ## Ban follow-up
-Step finishBans (runBanMaintenance). The ban itself is done by an admin (see another scenario file). This step finishes what a ban leaves behind for users with banned_at set.
+Step finishBans (runBanMaintenance). The ban itself is done by an admin (see 05-admin-console.md). This step finishes what a ban leaves behind for users with banned_at set.
 ```mermaid
 sequenceDiagram
   autonumber

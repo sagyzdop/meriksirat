@@ -80,7 +80,7 @@ sequenceDiagram
     participant Calendar
 
     Member->>Browser: Open /equipment
-    Browser->>Worker: Route guard getUserFn (see 01 auth file)
+    Browser->>Worker: Route guard getUserFn (see 01-sign-in-onboarding-and-profile.md)
     Note over Browser,Worker: Loader runs the next calls in parallel and only logs failures
     Browser->>Worker: getEquipmentFn(no filters)
     Worker->>Worker: resolveSession from request headers
@@ -95,10 +95,10 @@ sequenceDiagram
     end
     Browser->>Worker: getCategoriesFn()
     Worker->>D1: read category sorted by sort_order then name (same session and clearance-2 check, else null)
-    Browser->>Worker: getBookingSettingsFn() for operating hours (see booking files)
+    Browser->>Worker: getBookingSettingsFn() for operating hours (see 03-bookings.md)
     opt opened with mode add-to-booking and a bookingId
-        Browser->>Worker: getBookingItemEquipmentIdsFn(bookingId) (see booking files)
-        Browser->>Worker: getBookingWindowFn(bookingId) (see booking files)
+        Browser->>Worker: getBookingItemEquipmentIdsFn(bookingId) (see 03-bookings.md)
+        Browser->>Worker: getBookingWindowFn(bookingId) (see 03-bookings.md)
     end
     Browser-->>Member: Cards grouped by category in sort order, Uncategorized last
     Note over Browser: Equipment list is cached 60s, categories use the 30s default
@@ -122,7 +122,7 @@ sequenceDiagram
     Browser->>Browser: URL search params change, the list is not reloaded, availability is re-checked
     Member->>Browser: Tap Select on cards then View and Book Selected
     alt normal mode
-        Browser->>Browser: Go to /bookings/new with equipmentIds (see the booking creation file)
+        Browser->>Browser: Go to /bookings/new with equipmentIds (see 03-bookings.md)
     else add-to-booking mode
         Browser->>Worker: checkMultipleCalendarsFreeBusy again for the booking window
         alt any selected item is busy

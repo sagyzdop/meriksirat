@@ -127,7 +127,7 @@ sequenceDiagram
     Note right of Telegram: Only sent if the bot token and club channel are set
     opt user has a telegram_chat_id and the bot token is set
       Worker->>Telegram: sendMessage to the member
-      Note right of Telegram: "❌ Booking (number sign)ID was auto-cancelled." then "You did not pick up your equipment within 15 minutes of the start time (HH:MM). If this wasn't intentional, please make a new booking." Time is Almaty time.
+      Note right of Telegram: "❌ Booking #35;ID was auto-cancelled." then "You did not pick up your equipment within 15 minutes of the start time (HH:MM). If this wasn't intentional, please make a new booking." Time is Almaty time.
     end
     Note over Worker: An error for one booking is logged and the loop moves on.<br/>A failed channel log or Telegram message is logged and does not undo the cancel.
   end
@@ -171,7 +171,7 @@ sequenceDiagram
   opt bot token is set
     loop each changed booking whose user has a telegram_chat_id
       Worker->>Telegram: sendMessage to the member
-      Note right of Telegram: "⚠️ Booking (number sign)ID is now overdue." then "Please return the equipment as soon as possible via the Return Equipment flow."
+      Note right of Telegram: "⚠️ Booking #35;ID is now overdue." then "Please return the equipment as soon as possible via the Return Equipment flow."
     end
   end
 ```
@@ -249,7 +249,7 @@ sequenceDiagram
   else not started by S plus 15 minutes, first run from S plus 15 to S plus 20
     Cron->>Worker: cancelUnstartedBookings
     Worker->>D1: items and booking cancelled, cancelled_in_start_window_count plus 1
-    Worker->>Telegram: "❌ Booking (number sign)ID was auto-cancelled."
+    Worker->>Telegram: "❌ Booking #35;ID was auto-cancelled."
   end
   Note over Cron,Telegram: E to E plus 10 minutes, only if an item is not returned or cancelled
   Cron->>Worker: sendBookingReminders return_warning
@@ -262,5 +262,5 @@ sequenceDiagram
   Note over Cron,Telegram: from E plus 15 minutes, first run from E plus 15 to E plus 20, only for active items
   Cron->>Worker: updateOverdueBookings
   Worker->>D1: items and booking overdue, overdue_count plus 1
-  Worker->>Telegram: "⚠️ Booking (number sign)ID is now overdue."
+  Worker->>Telegram: "⚠️ Booking #35;ID is now overdue."
 ```

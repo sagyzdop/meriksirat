@@ -307,7 +307,7 @@ sequenceDiagram
     loop each booking
       Worker->>D1: cancel all items of the booking
       Worker->>Telegram: club channel log booking cancelled, reason "Account banned", actor system
-      Note over Worker,D1: see the bookings scenario file for what cancelling does
+      Note over Worker,D1: see 03-bookings.md for what cancelling does
     end
     Worker->>D1: find up to 10 volumes of banned flamekeepers with no photos left
     loop each idle volume

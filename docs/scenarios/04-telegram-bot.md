@@ -73,7 +73,7 @@ sequenceDiagram
         Worker->>D1: read user.telegram_chat_id
         alt already linked
             Worker-->>Browser: alreadyLinked true, no url
-            Note over Browser: onboarding continues, see the onboarding scenario file
+            Note over Browser: onboarding continues, see 01-sign-in-onboarding-and-profile.md
         else not linked
             Worker->>Worker: createTelegramLinkToken(userId)
             Worker->>D1: find unexpired telegram_link_token for user
@@ -491,7 +491,7 @@ sequenceDiagram
     end
     Worker->>Worker: logAlbumActivity and logAlbumActivityByUser(userId, input)
     Worker->>D1: read the user's name and telegram username
-    Worker->>Telegram: sendMessage to the channel with the Album log (see album scenario file)
+    Worker->>Telegram: sendMessage to the channel with the Album log (see 06-albums-and-uploads.md)
     Worker->>Worker: logUserBanActivity(input)
     Worker->>Telegram: sendMessage to the channel "🚫 User banned by ACTOR" or "✅ User unbanned by ACTOR" with name, reason and admin user link
 ```

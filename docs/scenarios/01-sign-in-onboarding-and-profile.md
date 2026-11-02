@@ -204,7 +204,7 @@ sequenceDiagram
       Browser-->>Person: Accept the terms to continue.
     else form valid
       Browser->>Worker: startDriveConnectFn(mode signup, pledgeGb, graduationDate, termsAccepted)
-      Note over Worker,KV: see the flamekeeper scenario for the full Drive grant. In short:
+      Note over Worker,KV: see 07-flamekeepers.md for the full Drive grant. In short:
       Worker->>D1: loadAccessRules: canBecomeFlamekeeper needs nu.edu.kz email and no active flamekeeper row
       alt master account or rule fails or bad pledge
         Worker-->>Browser: error text shown in the red box
@@ -341,7 +341,7 @@ sequenceDiagram
   Worker->>D1: find telegram_link_token not expired
   alt token invalid or expired
     alt this chat is already linked to a user
-      Worker->>Telegram: main menu (see the Telegram bot scenario)
+      Worker->>Telegram: main menu (see 04-telegram-bot.md)
     else not linked
       Worker->>Telegram: Link expired or invalid.
     end
@@ -367,7 +367,7 @@ sequenceDiagram
       Worker-->>Browser: error Telegram not linked, silently retried
     else linked
       Worker->>D1: set onboarding_complete = true
-      Worker->>Worker: reconcileBirthdaysToCalendar (see the birthdays scenario), failure only logged
+      Worker->>Worker: reconcileBirthdaysToCalendar (see 05-admin-console.md), failure only logged
       Browser->>Browser: invalidate router, go to /equipment
     end
   end
@@ -387,7 +387,7 @@ sequenceDiagram
   participant Telegram
 
   Person->>Browser: open /profile
-  Browser->>Worker: getUserFn() and getMyFlamekeeperFn() (see the flamekeeper scenario)
+  Browser->>Worker: getUserFn() and getMyFlamekeeperFn() (see 07-flamekeepers.md)
   Worker-->>Browser: user and flamekeeper
   Note over Browser: Tabs Editable Information and Admin Managed. A fk_error or flamekeeper=connected in the URL shows the Drive result.
   Person->>Browser: tap Edit Profile, change fields, tap Save Changes
@@ -404,7 +404,7 @@ sequenceDiagram
     else saved
       Worker->>D1: update the user row, then read it back
       opt birthday was sent
-        Worker->>Worker: reconcileBirthdaysToCalendar (see the birthdays scenario), failure only logged
+        Worker->>Worker: reconcileBirthdaysToCalendar (see 05-admin-console.md), failure only logged
       end
       Worker-->>Browser: updated user
       Browser-->>Person: toast Profile updated successfully
@@ -434,7 +434,7 @@ sequenceDiagram
   alt tap Cancel
     Browser->>Browser: close dialog
   else tap Delete account
-    Browser->>Worker: deleteMyAccountFn() (see the flamekeeper scenario)
+    Browser->>Worker: deleteMyAccountFn() (see 07-flamekeepers.md)
     Worker->>D1: loadAccessRules, canDeleteAccount needs non-member and no active flamekeeping
     alt not allowed
       Worker-->>Browser: Club members keep their account. Other accounts can be deleted once any flamekeeping has stopped and the photos have moved.
