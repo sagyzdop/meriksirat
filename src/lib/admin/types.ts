@@ -15,15 +15,6 @@ export interface AdminUser {
   updatedAt: Date
 }
 
-// Admin dashboard statistics
-export interface AdminStats {
-  totalUsers: number
-  totalEquipment: number
-  totalBookings: number
-  activeBookings: number
-  overdueBookings: number
-}
-
 // Category management schemas
 export const CreateCategorySchema = z.object({
   name: z.string().min(1, 'Category name is required'),

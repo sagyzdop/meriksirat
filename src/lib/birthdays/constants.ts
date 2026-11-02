@@ -7,4 +7,3 @@ export const BIRTHDAYS_CALENDAR_ID =
 
 /** Only these user statuses count for birthdays. */
 export const BIRTHDAY_STATUSES = ['Active', 'Board'] as const
-export type BirthdayStatus = (typeof BIRTHDAY_STATUSES)[number]

@@ -1,15 +1,5 @@
 import { z } from 'zod'
 
-export const UpcomingBirthdaysFiltersSchema = z.object({
-  /** Inclusive ISO date (`YYYY-MM-DD`) window; both default to sensible values. */
-  from: z.string().optional(),
-  to: z.string().optional(),
-})
-
-export type UpcomingBirthdaysFilters = z.infer<
-  typeof UpcomingBirthdaysFiltersSchema
->
-
 /**
  * Server-side list filters for the admin birthdays table, mirroring the
  * admin users table (search, filter, pagination, sorting).

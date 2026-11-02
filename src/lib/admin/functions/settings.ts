@@ -12,8 +12,6 @@ export const UpdateSettingsSchema = z.object({
   operatingHoursEnd: z.number().min(0).max(1439).optional(),
 })
 
-export type UpdateSettingsInput = z.infer<typeof UpdateSettingsSchema>
-
 /** The global settings row as returned by getSettingsFn. */
 export interface SettingsData {
   id: string

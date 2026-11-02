@@ -1,68 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import type { AdminStats } from './types'
 import {
   CreateCategorySchema,
   UpdateCategorySchema,
   DeleteCategorySchema,
   UpdateCategorySortOrderSchema,
 } from './types'
-
-/**
- * Get admin dashboard statistics
- * Provides overview data for the admin dashboard
- */
-export const getAdminStatsFn = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<AdminStats> => {
-    // Import server-only code inside handler
-    const { checkAdminPermission } = await import('./server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { user, equipment, booking } = await import('@/db/schema')
-    const { eq, count } = await import('drizzle-orm')
-
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    // Get total users count
-    const totalUsersResult = await database
-      .select({ count: count() })
-      .from(user)
-
-    // Get total equipment count (active only)
-    const totalEquipmentResult = await database
-      .select({ count: count() })
-      .from(equipment)
-      .where(eq(equipment.isActive, true))
-
-    // Get total bookings count
-    const totalBookingsResult = await database
-      .select({ count: count() })
-      .from(booking)
-
-    // Get active bookings count
-    const activeBookingsResult = await database
-      .select({ count: count() })
-      .from(booking)
-      .where(eq(booking.status, 'active'))
-
-    // Get overdue bookings count
-    const overdueBookingsResult = await database
-      .select({ count: count() })
-      .from(booking)
-      .where(eq(booking.status, 'overdue'))
-
-    return {
-      totalUsers: totalUsersResult[0]?.count || 0,
-      totalEquipment: totalEquipmentResult[0]?.count || 0,
-      totalBookings: totalBookingsResult[0]?.count || 0,
-      activeBookings: activeBookingsResult[0]?.count || 0,
-      overdueBookings: overdueBookingsResult[0]?.count || 0,
-    }
-  }
-)
 
 /**
  * Create a new equipment category

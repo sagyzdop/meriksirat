@@ -159,31 +159,6 @@ export async function cancelItems(
 }
 
 /**
- * Collects the ids of all still-`booked` items of a booking owned by the user.
- */
-export async function collectCancellableItemIds(
-  ctx: BotContext,
-  userId: string,
-  bookingId: number
-): Promise<number[]> {
-  const database = db(ctx.env.meriksirat_d1 as D1Database)
-
-  const rows = await database
-    .select({ itemId: bookingItem.id })
-    .from(bookingItem)
-    .innerJoin(booking, eq(bookingItem.bookingId, booking.id))
-    .where(
-      and(
-        eq(bookingItem.bookingId, bookingId),
-        eq(booking.userId, userId),
-        eq(bookingItem.status, BOOKING_STATUS.BOOKED)
-      )
-    )
-
-  return rows.map((r) => r.itemId)
-}
-
-/**
  * Renders the "select which booking to cancel" list as a reply keyboard.
  */
 export async function renderCancelBookingList(ctx: BotContext): Promise<void> {

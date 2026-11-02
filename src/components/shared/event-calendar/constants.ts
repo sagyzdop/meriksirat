@@ -15,4 +15,3 @@ export const EndHour = 24
 
 // Default start and end times
 export const DefaultStartHour = 9 // 9 AM
-export const DefaultEndHour = 10 // 10 AM

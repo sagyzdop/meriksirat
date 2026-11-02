@@ -101,30 +101,12 @@ export function buildBookingDetailFields(
   return fields
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 /**
  * Plain-text rendering for Google Calendar event descriptions.
  */
 export function formatBookingDetailsPlain(input: BookingDetailInput): string {
   const lines = buildBookingDetailFields(input).map(
     (field) => `${field.label}: ${field.value}`
-  )
-  return lines.join('\n')
-}
-
-/**
- * HTML rendering for Telegram log messages and bot confirmations.
- */
-export function formatBookingDetailsHtml(input: BookingDetailInput): string {
-  const lines = buildBookingDetailFields(input).map(
-    (field) => `<b>${escapeHtml(field.label)}:</b> ${escapeHtml(field.value)}`
   )
   return lines.join('\n')
 }

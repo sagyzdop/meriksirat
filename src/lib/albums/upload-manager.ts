@@ -524,12 +524,6 @@ export function useUploads(): UploadJob[] {
   )
 }
 
-export function useActiveUploadCount(): number {
-  const jobs = useUploads()
-  return jobs.filter((j) => j.status === 'queued' || j.status === 'uploading')
-    .length
-}
-
 interface UploadRevealState {
   albumId: string | null
   nonce: number
