@@ -4,7 +4,7 @@ import { ExtendBookingSchema } from '../types'
 import { formatBookingDetailsPlain } from '../details'
 import { formatUserDisplayName } from '@/lib/utils'
 
-export const EXTEND_BOOKING_MINUTES = 30
+const EXTEND_BOOKING_MINUTES = 30
 
 /**
  * Extend a booking by 30 minutes if all its items are available for the extra

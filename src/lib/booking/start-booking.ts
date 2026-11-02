@@ -11,7 +11,7 @@ import { ownsBooking } from '@/lib/booking/ownership'
 
 type BookingDatabase = ReturnType<typeof db>
 
-export const START_WINDOW_GRACE_MS = 15 * 60 * 1000
+const START_WINDOW_GRACE_MS = 15 * 60 * 1000
 
 export class BookingStartError extends Error {}
 

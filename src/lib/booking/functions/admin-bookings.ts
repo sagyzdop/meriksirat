@@ -8,7 +8,6 @@ import {
   AdminBookingFiltersSchema,
   UpdateBookingStatusAdminSchema,
   GetBookingByIdSchema,
-  DeleteBookingSchema,
 } from '../types'
 import type { BookingItemRow } from '../mappers'
 import { mapBookingsWithItems, itemSelect } from '../mappers'
@@ -595,83 +594,4 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     }
 
     return { success: true, previousStatus, newStatus: previousStatus }
-  })
-
-/**
- * Delete booking permanently with admin privileges
- * Also handles Google Calendar event deletion for all items
- */
-export const deleteBookingAdminFn = createServerFn({ method: 'POST' })
-  .validator(DeleteBookingSchema)
-  .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { deleteCalendarEventRaw } =
-      await import('@/lib/google/google-calendar-client')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
-    const { booking, bookingItem, equipment } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
-    const { logBookingActivityById } = await import('@/lib/telegram/logging')
-
-    const headers = getRequestHeaders()
-    const adminUser = await checkAdminPermission(headers, ['admin', 'manager'])
-    const adminDisplayName = formatUserDisplayName({
-      firstName: adminUser.firstName,
-      lastName: adminUser.lastName,
-      name: adminUser.name || adminUser.email,
-      telegramUsername: adminUser.telegramUsername,
-    })
-
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    // Get the booking's items with equipment details for calendar deletion
-    const items = await database
-      .select({
-        googleCalendarEventId: bookingItem.googleCalendarEventId,
-        equipmentCalendarId: equipment.googleCalendarId,
-      })
-      .from(bookingItem)
-      .leftJoin(equipment, eq(bookingItem.equipmentId, equipment.id))
-      .where(eq(bookingItem.bookingId, data.bookingId))
-
-    const bookingExists = await database
-      .select({ id: booking.id })
-      .from(booking)
-      .where(eq(booking.id, data.bookingId))
-      .limit(1)
-
-    if (bookingExists.length === 0) {
-      throw new Error('Booking not found')
-    }
-
-    // Delete calendar events if they exist
-    for (const item of items) {
-      if (item.googleCalendarEventId && item.equipmentCalendarId) {
-        try {
-          await deleteCalendarEventRaw({
-            equipmentCalendarId: item.equipmentCalendarId,
-            eventId: item.googleCalendarEventId,
-          })
-        } catch (calendarError) {
-          console.error(
-            'Failed to delete calendar event during booking deletion:',
-            calendarError
-          )
-        }
-      }
-    }
-
-    // Log booking deletion to Telegram channel before deleting record
-    try {
-      await logBookingActivityById(data.bookingId, 'deleted', {
-        actorName: adminDisplayName,
-      })
-    } catch (logError) {
-      console.error('Failed to log booking deletion:', logError)
-    }
-
-    // Delete booking record from database (booking_item rows cascade)
-    await database.delete(booking).where(eq(booking.id, data.bookingId))
-
-    return { success: true }
   })

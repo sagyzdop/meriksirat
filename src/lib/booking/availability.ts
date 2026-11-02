@@ -2,7 +2,7 @@
  * Shared availability-check helpers for booking server functions.
  */
 
-export interface BusyPeriod {
+interface BusyPeriod {
   start: string
   end: string
 }

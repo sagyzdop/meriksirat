@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { StartBookingSchema } from '../types'
-import { startBooking, listStartableBookings } from '../start-booking'
+import { startBooking } from '../start-booking'
 
 /**
  * Start a booking (pickup) from the web app. Verifies the caller is the
@@ -45,25 +45,3 @@ export const startBookingFn = createServerFn({ method: 'POST' })
 
     return { success: true }
   })
-
-/**
- * List the current user's bookings whose start window is open and can be
- * started right now.
- */
-export const getStartableBookingsFn = createServerFn({ method: 'GET' }).handler(
-  async () => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
-
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      return []
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
-    return listStartableBookings(database, session.user.id)
-  }
-)

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { MAX_BOOKING_ITEMS } from './operating-hours'
 
-export interface BookingEquipmentInfo {
+interface BookingEquipmentInfo {
   id: number
   modelName: string
   description: string | null
@@ -56,14 +56,6 @@ export const BOOKING_STATUSES = [
   'overdue',
   'partially_returned',
 ] as const
-export const SETTABLE_BOOKING_STATUSES = [
-  'booked',
-  'active',
-  'returned',
-  'cancelled',
-  'overdue',
-] as const
-
 // Statuses shown in the booking lists by default. Returned and Cancelled
 // bookings stay hidden unless explicitly selected via the status filter.
 export const DEFAULT_BOOKING_STATUS_FILTER = [
@@ -74,7 +66,6 @@ export const DEFAULT_BOOKING_STATUS_FILTER = [
 ] as const
 
 export type BookingStatus = (typeof BOOKING_STATUSES)[number]
-export type SettableBookingStatus = (typeof SETTABLE_BOOKING_STATUSES)[number]
 
 export interface BookingSettings {
   globalBookingNote: string
@@ -196,9 +187,5 @@ export const ExtendBookingSchema = z.object({
 })
 
 export const GetBookingByIdSchema = z.object({
-  bookingId: z.coerce.number(),
-})
-
-export const DeleteBookingSchema = z.object({
   bookingId: z.coerce.number(),
 })
