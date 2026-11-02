@@ -1,18 +1,16 @@
 # Scenarios
 
-What the app does, end to end. Each file has one data diagram (ERD) and sequence diagrams that follow a click, Telegram tap or cron run through to what the person sees at the end.
+What the app does, from a click, Telegram tap or cron run through to what the person sees at the end. Each file holds one diagram, with the question it answers above it. `erd.md` in each folder shows the tables that folder uses.
 
-| File | Covers |
+| Folder | Covers |
 |---|---|
-| [01](01-sign-in-onboarding-and-profile.md) | Sign-in, onboarding, Drive grant step, profile |
-| [02](02-equipment-and-favorites.md) | Catalog, admin equipment and categories, images, favorites |
-| [03](03-bookings.md) | Bookings on the website, for members and admins |
-| [04](04-telegram-bot.md) | Bot commands, pickup and return, club channel log |
-| [05](05-admin-console.md) | Dashboard, users, bans, birthdays, settings, exports |
-| [06](06-albums-and-uploads.md) | Browsing, uploads, deleting, recreating folders and albums |
-| [07](07-flamekeepers.md) | Joining, tokens, stepping down, moving photos, admin pool |
-| [08](08-cron-overview-and-bookings.md) | The 5-minute cron in order, booking timers and reminders |
-| [09](09-cron-flamekeepers.md) | Cron: health, pool, drain, bans, graduation |
-| [10](10-cron-albums-and-housekeeping.md) | Cron: album expiry, notices, backfill, bot setup, signup cleanup |
+| [account](account/) | Sign-in, onboarding, profile, deleting an account |
+| [equipment](equipment/) | Browsing equipment, availability, favorites, images |
+| [bookings](bookings/) | Bookings on the website, for members and admins |
+| [telegram](telegram/) | The bot and the club channel log |
+| [admin](admin/) | Dashboard, members, bans, categories, equipment, birthdays |
+| [albums](albums/) | Albums, uploads, deleting, recreating folders |
+| [flamekeepers](flamekeepers/) | Connecting a Drive, stepping down, moving photos, the pool |
+| [cron](cron/) | The 5-minute run: start at [overview](cron/overview.md), then bookings, flamekeepers, albums and housekeeping |
 
 When you change behaviour, change its diagram in the same commit.
