@@ -20,6 +20,7 @@ import {
   UpdateAlbumSchema,
 } from './types'
 import type {
+  AlbumAccessLevel,
   AlbumAuthor,
   AlbumDetail,
   AlbumFolderState,
@@ -49,6 +50,19 @@ async function loadAlbum(
     .get()
   if (!row || row.deletedAt) throw new Error('Album not found')
   return row
+}
+
+async function albumContext(albumId: string, allowed: AlbumAccessLevel[]) {
+  const { getRequestHeaders } = await import('@tanstack/react-start/server')
+  const { env } = await import('cloudflare:workers')
+  const { db } = await import('@/db')
+  const { resolveAlbumAccess, requireAccess } = await import('./server')
+  const headers = getRequestHeaders()
+  const database = db(env.meriksirat_d1 as D1Database)
+  const row = await loadAlbum(database, albumId)
+  const { user, access } = await resolveAlbumAccess(headers, row)
+  requireAccess(access, allowed)
+  return { database, headers, row, user, access }
 }
 
 async function loadAlbumOrNull(
@@ -967,28 +981,20 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
 export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
   .validator(RecreateAlbumSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { album, photo, volume } = await import('@/db/schema')
     const { and, eq } = await import('drizzle-orm')
-    const {
-      resolveAlbumAccess,
-      requireAccess,
-      invalidateCachedListing,
-      invalidateCachedDetailCore,
-    } = await import('./server')
+    const { invalidateCachedListing, invalidateCachedDetailCore } =
+      await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { createDriveFolder, setAnyoneReader } =
       await import('@/lib/google/google-drive')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { access, user } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const { database, row, headers, user } = await albumContext(data.albumId, [
+      'owner',
+      'editor',
+      'manager',
+    ])
 
     if (user?.id) {
       const { rateLimit } = await import('@/lib/ratelimit')
@@ -1074,25 +1080,17 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
 export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })
   .validator(RestoreAlbumSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const {
-      resolveAlbumAccess,
-      requireAccess,
-      invalidateCachedListing,
-      invalidateCachedDetailCore,
-    } = await import('./server')
+    const { invalidateCachedListing, invalidateCachedDetailCore } =
+      await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { restoreDriveFile } = await import('@/lib/google/google-drive')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const { database, row } = await albumContext(data.albumId, [
+      'owner',
+      'editor',
+      'manager',
+    ])
 
     const accessToken = await getGoogleAccessToken()
     await restoreDriveFile(accessToken, row.driveFolderId)
@@ -1113,24 +1111,19 @@ export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })
 export const updateAlbumFn = createServerFn({ method: 'POST' })
   .validator(UpdateAlbumSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedDetailCore } =
-      await import('./server')
+    const { invalidateCachedDetailCore } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { renameDriveFile, DriveNotFoundError } =
       await import('@/lib/google/google-drive')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const {
+      database,
+      row,
+      user: currentUser,
+    } = await albumContext(data.albumId, ['owner', 'editor', 'manager'])
 
     // Keep the Drive folder name in sync with the album title.
     if (data.title !== undefined && data.title.trim() !== row.title) {
@@ -1224,20 +1217,15 @@ export const setAlbumPinnedFn = createServerFn({ method: 'POST' })
 export const deleteAlbumFn = createServerFn({ method: 'POST' })
   .validator(DeleteAlbumSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
     const { removeAlbum } = await import('./expiry')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'manager'])
+    const {
+      database,
+      row,
+      user: currentUser,
+    } = await albumContext(data.albumId, ['owner', 'manager'])
 
     const accessToken = await getGoogleAccessToken()
     await removeAlbum(database, row, accessToken)
@@ -1304,20 +1292,15 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
 export const rotateEditTokenFn = createServerFn({ method: 'POST' })
   .validator(RotateEditTokenSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
     const { newShareToken } = await import('./ids')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'manager'])
+    const {
+      database,
+      row,
+      user: currentUser,
+    } = await albumContext(data.albumId, ['owner', 'manager'])
 
     // A fresh token invalidates every previously shared edit link.
     const editShareToken = newShareToken()
@@ -1341,24 +1324,19 @@ export const rotateEditTokenFn = createServerFn({ method: 'POST' })
 export const createUploadSessionFn = createServerFn({ method: 'POST' })
   .validator(CreateUploadSessionSchema)
   .handler(async ({ data }): Promise<UploadSession> => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { photo } = await import('@/db/schema')
     const { and, eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { findDriveFileByName, getDriveFolderState } =
       await import('@/lib/google/google-drive')
     const { startFlamekeeperUpload } = await import('@/lib/pool/server')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const { database, row, headers } = await albumContext(data.albumId, [
+      'owner',
+      'editor',
+      'manager',
+    ])
 
     const accessToken = await getGoogleAccessToken()
 
@@ -1424,17 +1402,11 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
 export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
   .validator(ConfirmPhotoUploadSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { resolveAlbumAccess, requireAccess } = await import('./server')
-
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const { database, row } = await albumContext(data.albumId, [
+      'owner',
+      'editor',
+      'manager',
+    ])
 
     const { confirmFlamekeeperUpload } = await import('@/lib/pool/server')
     const registered = await confirmFlamekeeperUpload(
@@ -1472,27 +1444,19 @@ export const releaseUploadFn = createServerFn({ method: 'POST' })
 export const deletePhotoFn = createServerFn({ method: 'POST' })
   .validator(DeletePhotoSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { album, photo } = await import('@/db/schema')
     const { and, eq, sql } = await import('drizzle-orm')
-    const {
-      resolveAlbumAccess,
-      requireAccess,
-      invalidateCachedListing,
-      invalidateCachedDetailCore,
-    } = await import('./server')
+    const { invalidateCachedListing, invalidateCachedDetailCore } =
+      await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { deleteDriveFile } = await import('@/lib/google/google-drive')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { user: currentUser, access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const {
+      database,
+      row,
+      user: currentUser,
+    } = await albumContext(data.albumId, ['owner', 'editor', 'manager'])
 
     const registered = await database
       .select({
@@ -1554,20 +1518,15 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
 export const setCoverPhotoFn = createServerFn({ method: 'POST' })
   .validator(SetCoverPhotoSchema)
   .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { album, photo } = await import('@/db/schema')
     const { and, eq } = await import('drizzle-orm')
-    const { resolveAlbumAccess, requireAccess, invalidateCachedDetailCore } =
-      await import('./server')
+    const { invalidateCachedDetailCore } = await import('./server')
 
-    const headers = getRequestHeaders()
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    const row = await loadAlbum(database, data.albumId)
-    const { access } = await resolveAlbumAccess(headers, row)
-    requireAccess(access, ['owner', 'editor', 'manager'])
+    const { database, row } = await albumContext(data.albumId, [
+      'owner',
+      'editor',
+      'manager',
+    ])
 
     if (row.photosIndexedAt) {
       const registered = await database
