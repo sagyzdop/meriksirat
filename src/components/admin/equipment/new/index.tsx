@@ -1,44 +1,30 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { useState } from 'react'
-import { createEquipmentFn, uploadEquipmentImageFn } from '@/lib/equipment'
+import { createEquipmentFn } from '@/lib/equipment'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { EquipmentFormFields } from '@/components/admin/equipment/components/equipment-form-fields'
+import {
+  EquipmentFormFields,
+  equipmentFormSchema,
+} from '@/components/admin/equipment/components/equipment-form-fields'
+import type { z } from 'zod'
+import type { EquipmentFormCategory } from '@/components/admin/equipment/components/equipment-form-fields'
+import { uploadEquipmentImage } from '@/components/admin/equipment/components/upload-equipment-image'
 import { EquipmentImageField } from '@/components/admin/equipment/components/equipment-image-field'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { Save } from 'lucide-react'
 import { errorMessage } from '@/lib/utils'
 
-const createEquipmentSchema = z.object({
-  modelName: z.string().min(1, 'Model name is required'),
-  shortName: z.string().optional(),
-  description: z.string().optional(),
-  categoryId: z.number().min(1, 'Category is required'),
-  googleCalendarId: z.string().min(1, 'Google Calendar ID is required'),
-  requiredClearanceLevel: z
-    .number()
-    .min(1, 'Clearance level must be at least 1')
-    .max(10, 'Clearance level cannot exceed 10'),
-})
-
-type CreateEquipmentForm = z.infer<typeof createEquipmentSchema>
+type CreateEquipmentForm = z.infer<typeof equipmentFormSchema>
 
 interface PageProps {
-  categories: Array<{
-    id: number
-    name: string
-    description: string | null
-    sortOrder: number | null
-    createdAt: Date | null
-    updatedAt: Date | null
-  }>
+  categories: EquipmentFormCategory[]
 }
 
 export function Page({ categories }: PageProps) {
@@ -51,7 +37,7 @@ export function Page({ categories }: PageProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
 
   const form = useForm<CreateEquipmentForm>({
-    resolver: zodResolver(createEquipmentSchema),
+    resolver: zodResolver(equipmentFormSchema),
     defaultValues: {
       modelName: '',
       shortName: '',
@@ -79,21 +65,10 @@ export function Page({ categories }: PageProps) {
       if (selectedImage) {
         setIsUploadingImage(true)
         try {
-          const reader = new FileReader()
-          const imageData = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(selectedImage)
-          })
-
-          const uploadResult = await uploadEquipmentImageFn({
-            data: {
-              equipmentId: result.equipmentId,
-              imageData,
-              contentType: selectedImage.type,
-              fileName: selectedImage.name,
-            },
-          })
+          const uploadResult = await uploadEquipmentImage(
+            result.equipmentId,
+            selectedImage
+          )
           imagePath = uploadResult?.imagePath
         } catch {
           setError(

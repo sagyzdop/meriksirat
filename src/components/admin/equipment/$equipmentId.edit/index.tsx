@@ -3,11 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
-import {
-  updateEquipmentFn,
-  deleteEquipmentFn,
-  uploadEquipmentImageFn,
-} from '@/lib/equipment'
+import { updateEquipmentFn, deleteEquipmentFn } from '@/lib/equipment'
 import type { EquipmentWithCategory } from '@/lib/equipment/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,22 +29,18 @@ import {
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { EquipmentFormFields } from '@/components/admin/equipment/components/equipment-form-fields'
+import {
+  EquipmentFormFields,
+  equipmentFormSchema,
+} from '@/components/admin/equipment/components/equipment-form-fields'
+import type { EquipmentFormCategory } from '@/components/admin/equipment/components/equipment-form-fields'
+import { uploadEquipmentImage } from '@/components/admin/equipment/components/upload-equipment-image'
 import { EquipmentImageField } from '@/components/admin/equipment/components/equipment-image-field'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { Save, Trash2, AlertTriangle } from 'lucide-react'
 import { errorMessage } from '@/lib/utils'
 
-const editEquipmentSchema = z.object({
-  modelName: z.string().min(1, 'Model name is required'),
-  shortName: z.string().optional(),
-  description: z.string().optional(),
-  categoryId: z.number().min(1, 'Category is required'),
-  googleCalendarId: z.string().min(1, 'Google Calendar ID is required'),
-  requiredClearanceLevel: z
-    .number()
-    .min(1, 'Clearance level must be at least 1')
-    .max(10, 'Clearance level cannot exceed 10'),
+const editEquipmentSchema = equipmentFormSchema.extend({
   isActive: z.boolean(),
 })
 
@@ -56,14 +48,7 @@ type EditEquipmentForm = z.infer<typeof editEquipmentSchema>
 
 interface PageProps {
   equipment: EquipmentWithCategory
-  categories: Array<{
-    id: number
-    name: string
-    description: string | null
-    sortOrder: number | null
-    createdAt: Date | null
-    updatedAt: Date | null
-  }>
+  categories: EquipmentFormCategory[]
   equipmentId: number
 }
 
@@ -106,21 +91,7 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
       if (selectedImage) {
         setIsUploadingImage(true)
         try {
-          const reader = new FileReader()
-          const imageData = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(selectedImage)
-          })
-
-          await uploadEquipmentImageFn({
-            data: {
-              equipmentId,
-              imageData,
-              contentType: selectedImage.type,
-              fileName: selectedImage.name,
-            },
-          })
+          await uploadEquipmentImage(equipmentId, selectedImage)
           setSuccess(
             `Equipment "${data.modelName}" updated successfully with new image!`
           )

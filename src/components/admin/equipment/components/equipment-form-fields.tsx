@@ -1,4 +1,5 @@
 import type { UseFormReturn } from 'react-hook-form'
+import { z } from 'zod'
 import {
   FormControl,
   FormField,
@@ -16,22 +17,27 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-type EquipmentFormFields = {
-  modelName: string
-  shortName?: string
-  description?: string
-  categoryId: number
-  googleCalendarId: string
-  requiredClearanceLevel: number
+export const equipmentFormSchema = z.object({
+  modelName: z.string().min(1, 'Model name is required'),
+  shortName: z.string().optional(),
+  description: z.string().optional(),
+  categoryId: z.number().min(1, 'Category is required'),
+  googleCalendarId: z.string().min(1, 'Google Calendar ID is required'),
+  requiredClearanceLevel: z
+    .number()
+    .min(1, 'Clearance level must be at least 1')
+    .max(10, 'Clearance level cannot exceed 10'),
+})
+
+export interface EquipmentFormCategory {
+  id: number
+  name: string
 }
 
 interface EquipmentFormFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
-  categories: Array<{
-    id: number
-    name: string
-  }>
+  categories: EquipmentFormCategory[]
   disabled?: boolean
 }
 
