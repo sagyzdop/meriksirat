@@ -21,12 +21,12 @@ export type UserExportFieldKey =
   | 'overdue'
   | 'albums'
 
-export interface AdminUserExportField {
-  key: UserExportFieldKey
+export interface ExportField<K extends string> {
+  key: K
   label: string
 }
 
-export const USER_EXPORT_FIELDS: AdminUserExportField[] = [
+export const USER_EXPORT_FIELDS: ExportField<UserExportFieldKey>[] = [
   { key: 'fullName', label: 'Full Name' },
   { key: 'email', label: 'Email' },
   { key: 'role', label: 'Role' },
@@ -126,17 +126,26 @@ export function buildCsv(lines: string[][]): string {
   return `\uFEFF${body}\n`
 }
 
+function rowsToCsv<T, K extends string>(
+  rows: T[],
+  fields: ExportField<K>[],
+  keys: readonly K[],
+  getValue: (row: T, key: K) => string
+): string {
+  const header = keys.map(
+    (key) => fields.find((field) => field.key === key)?.label ?? key
+  )
+  return buildCsv([
+    header,
+    ...rows.map((row) => keys.map((key) => getValue(row, key))),
+  ])
+}
+
 export function usersToCsv(
   users: AdminUserExport[],
   keys: readonly UserExportFieldKey[] = DEFAULT_USER_EXPORT_KEYS
 ): string {
-  const header = keys.map(
-    (key) => USER_EXPORT_FIELDS.find((field) => field.key === key)?.label ?? key
-  )
-  const rows = users.map((user) =>
-    keys.map((key) => getUserExportFieldValue(user, key))
-  )
-  return buildCsv([header, ...rows])
+  return rowsToCsv(users, USER_EXPORT_FIELDS, keys, getUserExportFieldValue)
 }
 
 // ---------------------------------------------------------------------------
@@ -152,12 +161,7 @@ export type AlbumExportFieldKey =
   | 'albumUrl'
   | 'albumDate'
 
-export interface AdminAlbumExportField {
-  key: AlbumExportFieldKey
-  label: string
-}
-
-export const ALBUM_EXPORT_FIELDS: AdminAlbumExportField[] = [
+export const ALBUM_EXPORT_FIELDS: ExportField<AlbumExportFieldKey>[] = [
   { key: 'event', label: 'Event' },
   { key: 'eventDate', label: 'Event Date' },
   { key: 'authors', label: 'Authors' },
@@ -217,12 +221,5 @@ export function albumsToCsv(
   albums: AdminAlbumExport[],
   keys: readonly AlbumExportFieldKey[] = DEFAULT_ALBUM_EXPORT_KEYS
 ): string {
-  const header = keys.map(
-    (key) =>
-      ALBUM_EXPORT_FIELDS.find((field) => field.key === key)?.label ?? key
-  )
-  const rows = albums.map((album) =>
-    keys.map((key) => getAlbumExportFieldValue(album, key))
-  )
-  return buildCsv([header, ...rows])
+  return rowsToCsv(albums, ALBUM_EXPORT_FIELDS, keys, getAlbumExportFieldValue)
 }
