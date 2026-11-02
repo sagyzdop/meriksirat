@@ -19,16 +19,35 @@ export function buildBatchDeleteBody(
   return lines.join('\r\n')
 }
 
+export interface BatchPartResult {
+  status: number
+  body: string
+}
+
+export function parseBatchResults(
+  body: string,
+  fileIds: string[]
+): Map<string, BatchPartResult> {
+  const results = new Map<string, BatchPartResult>()
+  const segments = body.split(/Content-ID:\s*<?response-(\d+)>?/i)
+  for (let i = 1; i + 1 < segments.length; i += 2) {
+    const id = fileIds[Number(segments[i])]
+    const text = segments[i + 1]
+    const match = text.match(/HTTP\/\d(?:\.\d)?\s+(\d{3})/i)
+    if (id !== undefined && match) {
+      results.set(id, { status: Number(match[1]), body: text })
+    }
+  }
+  return results
+}
+
 export function parseBatchStatuses(
   body: string,
   fileIds: string[]
 ): Map<string, number> {
   const statuses = new Map<string, number>()
-  const pattern =
-    /Content-ID:\s*<?response-(\d+)>?[\s\S]*?HTTP\/\d(?:\.\d)?\s+(\d{3})/gi
-  for (const match of body.matchAll(pattern)) {
-    const id = fileIds[Number(match[1])]
-    if (id !== undefined) statuses.set(id, Number(match[2]))
+  for (const [id, result] of parseBatchResults(body, fileIds)) {
+    statuses.set(id, result.status)
   }
   return statuses
 }

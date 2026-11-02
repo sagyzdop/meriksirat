@@ -38,6 +38,7 @@ import {
   updateAlbumFn,
 } from '@/lib/albums'
 import type { AlbumDetail } from '@/lib/albums'
+import { recreateSummary } from '@/lib/albums/recreate'
 import { clearUploadReveal, useUploadReveal } from '@/lib/albums/upload-manager'
 
 interface AlbumManagerProps {
@@ -66,6 +67,7 @@ export function AlbumManager({
   )
   const [busy, setBusy] = React.useState(false)
   const [recreating, setRecreating] = React.useState(false)
+  const [recreateOpen, setRecreateOpen] = React.useState(false)
   const [restoring, setRestoring] = React.useState(false)
   const [refreshing, setRefreshing] = React.useState(false)
   const [removing, setRemoving] = React.useState<string | null>(null)
@@ -147,8 +149,11 @@ export function AlbumManager({
   const handleRecreate = async () => {
     setRecreating(true)
     try {
-      await recreateAlbumFolderFn({ data: { albumId: album.id } })
-      toast.success('Album folder recreated')
+      const result = await recreateAlbumFolderFn({
+        data: { albumId: album.id },
+      })
+      toast.success(recreateSummary(result))
+      setRecreateOpen(false)
       onChanged()
     } catch (error) {
       toast.error(
@@ -214,16 +219,17 @@ export function AlbumManager({
           <TriangleAlert />
           <AlertTitle>Album folder deleted from Google Drive</AlertTitle>
           <AlertDescription>
-            The folder behind this album was permanently deleted, so its photos
-            are gone. You can recreate an empty folder to keep uploading, or
-            delete the album.
+            The folder behind this album was permanently deleted. Photos that
+            flamekeepers uploaded may still be in their Google Drives. You can
+            recreate an empty folder to keep uploading, which permanently
+            deletes those photos, or delete the album.
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="mt-2"
               disabled={recreating}
-              onClick={handleRecreate}
+              onClick={() => setRecreateOpen(true)}
             >
               {recreating ? (
                 <Loader2 className="animate-spin" />
@@ -479,6 +485,38 @@ export function AlbumManager({
               disabled={busy}
             >
               {busy ? 'Deleting...' : 'Delete album'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={recreateOpen} onOpenChange={setRecreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recreate folder?</DialogTitle>
+            <DialogDescription>
+              Any photos from this album that are still in the Google Drives of
+              flamekeepers will be permanently deleted and cannot be recovered.
+              The album will restart empty with a new folder.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRecreateOpen(false)}
+              disabled={recreating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleRecreate}
+              disabled={recreating}
+            >
+              {recreating && <Loader2 className="animate-spin" />}
+              {recreating ? 'Deleting...' : 'Delete photos and recreate'}
             </Button>
           </DialogFooter>
         </DialogContent>

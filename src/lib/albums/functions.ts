@@ -989,17 +989,43 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     const { access, user } = await resolveAlbumAccess(headers, row)
     requireAccess(access, ['owner', 'editor', 'manager'])
 
-    // Each upload session mints a Drive resumable upload URL and hits the
-    // Drive API, so cap how fast a user can mint them.
     if (user?.id) {
       const { rateLimit } = await import('@/lib/ratelimit')
-      const rl = await rateLimit(headers, 'rl_create_upload_session', user.id)
+      const rl = await rateLimit(headers, 'rl_refresh_album', user.id)
       if (!rl.allowed) {
-        throw new Error('Too many upload sessions. Please try again shortly.')
+        throw new Error('Too many requests. Please try again shortly.')
       }
     }
 
     const accessToken = await getGoogleAccessToken()
+    const { getDriveFolderState } = await import('@/lib/google/google-drive')
+    const { folderCheckVerdict, isRecreatePassFinished, pressAgainMessage } =
+      await import('./recreate')
+    let verdict: ReturnType<typeof folderCheckVerdict>
+    try {
+      verdict = folderCheckVerdict({
+        state: await getDriveFolderState(accessToken, row.driveFolderId),
+      })
+    } catch (error) {
+      verdict = folderCheckVerdict({ error })
+    }
+    if (verdict === 'exists') {
+      throw new Error(
+        'The album folder still exists in Google Drive, so it was not recreated. Refresh the album.'
+      )
+    }
+    if (verdict === 'unknown') {
+      throw new Error(
+        'Could not confirm that the album folder is deleted. Nothing was changed. Please try again later.'
+      )
+    }
+
+    const { runRecreateDeletePass } = await import('./recreate-server')
+    const pass = await runRecreateDeletePass(database, row, accessToken)
+    if (!isRecreatePassFinished(pass.remaining)) {
+      throw new Error(pressAgainMessage(pass, pass.remaining))
+    }
+
     const monthFolder = await resolveMonthFolder(accessToken)
     const folder = await createDriveFolder(
       accessToken,
@@ -1025,7 +1051,11 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       .from(photo)
       .where(and(eq(photo.albumId, data.albumId), eq(photo.state, 'live')))
       .all()
-    await resetAlbumPhotos(database, data.albumId, releaseOwnedBytesStatements(database, heldPhotos))
+    await resetAlbumPhotos(
+      database,
+      data.albumId,
+      releaseOwnedBytesStatements(database, heldPhotos)
+    )
     await database
       .update(volume)
       .set({
@@ -1037,7 +1067,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       })
       .where(eq(volume.albumId, data.albumId))
 
-    return { success: true }
+    return { success: true, removed: pass.removed, abandoned: pass.abandoned }
   })
 
 export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })

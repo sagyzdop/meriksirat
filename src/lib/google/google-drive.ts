@@ -445,3 +445,29 @@ export async function batchDeleteDriveFiles(
   }
   return failed
 }
+
+export async function batchDeleteDriveFileResults(
+  accessToken: string,
+  fileIds: string[]
+): Promise<Map<string, { status: number; body: string }>> {
+  const { DRIVE_BATCH_LIMIT, buildBatchDeleteBody, parseBatchResults } =
+    await import('./drive-batch')
+  const results = new Map<string, { status: number; body: string }>()
+  for (let i = 0; i < fileIds.length; i += DRIVE_BATCH_LIMIT) {
+    const ids = fileIds.slice(i, i + DRIVE_BATCH_LIMIT)
+    const boundary = `batch_${crypto.randomUUID()}`
+    const response = await driveFetch(
+      accessToken,
+      'https://www.googleapis.com/batch/drive/v3',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/mixed; boundary=${boundary}` },
+        body: buildBatchDeleteBody(ids, boundary),
+      }
+    )
+    for (const [id, result] of parseBatchResults(await response.text(), ids)) {
+      results.set(id, result)
+    }
+  }
+  return results
+}
