@@ -30,3 +30,7 @@ export function formatUserDisplayName(user: UserIdentity): string {
 
   return telegramHandle ? `${baseName} (${telegramHandle})` : baseName
 }
+
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback
+}

@@ -18,6 +18,7 @@ import {
   isValidPledgeGb,
 } from '@/lib/flamekeeper/rules'
 import type { MyFlamekeeper } from '@/lib/flamekeeper/types'
+import { useAsyncAction } from '@/hooks/use-async-action'
 
 interface EditPledgeDialogProps {
   open: boolean
@@ -38,7 +39,7 @@ export function EditPledgeDialog({
   const [graduationDate, setGraduationDate] = useState(
     flamekeeper.graduationDate
   )
-  const [isSaving, setIsSaving] = useState(false)
+  const { pending: isSaving, run } = useAsyncAction()
 
   const handleSave = async () => {
     const pledgeGb = Number(pledge)
@@ -46,17 +47,12 @@ export function EditPledgeDialog({
       toast.error(`Pledge at least ${MIN_PLEDGE_GB} GB`)
       return
     }
-    setIsSaving(true)
-    try {
+    await run(async () => {
       await updateFlamekeeperFn({ data: { pledgeGb, graduationDate } })
       await onSaved()
       toast.success('Flamekeeper settings updated')
       onOpenChange(false)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Update failed')
-    } finally {
-      setIsSaving(false)
-    }
+    }, 'Update failed')
   }
 
   return (

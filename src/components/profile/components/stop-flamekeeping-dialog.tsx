@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -12,6 +11,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { optOutFlamekeeperFn } from '@/lib/flamekeeper/functions'
 import { formatGb } from '@/lib/flamekeeper/rules'
+import { useAsyncAction } from '@/hooks/use-async-action'
 
 interface StopFlamekeepingDialogProps {
   open: boolean
@@ -26,11 +26,10 @@ export function StopFlamekeepingDialog({
   usedBytes,
   onStopped,
 }: StopFlamekeepingDialogProps) {
-  const [isLoading, setIsLoading] = useState(false)
+  const { pending: isLoading, run } = useAsyncAction()
 
-  const handleConfirm = async () => {
-    setIsLoading(true)
-    try {
+  const handleConfirm = () =>
+    run(async () => {
       const status = await optOutFlamekeeperFn()
       toast.success(
         status.state === 'drained'
@@ -39,14 +38,7 @@ export function StopFlamekeepingDialog({
       )
       onOpenChange(false)
       await onStopped()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not stop flamekeeping'
-      )
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    }, 'Could not stop flamekeeping')
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

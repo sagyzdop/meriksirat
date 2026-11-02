@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,23 +18,21 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { deleteMyAccountFn } from '@/lib/flamekeeper/functions'
+import { useAsyncAction } from '@/hooks/use-async-action'
 
 export function DeleteAccountCard() {
   const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const { pending: isLoading, run } = useAsyncAction()
 
-  const handleConfirm = async () => {
-    setIsLoading(true)
-    try {
-      await deleteMyAccountFn()
-      window.location.assign('/')
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not delete the account'
-      )
-      setIsLoading(false)
-    }
-  }
+  const handleConfirm = () =>
+    run(
+      async () => {
+        await deleteMyAccountFn()
+        window.location.assign('/')
+      },
+      'Could not delete the account',
+      { keepPendingOnSuccess: true }
+    )
 
   return (
     <Card>
