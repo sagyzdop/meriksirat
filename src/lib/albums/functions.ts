@@ -980,7 +980,8 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     } = await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { createDriveFolder } = await import('@/lib/google/google-drive')
+    const { createDriveFolder, setAnyoneReader } =
+      await import('@/lib/google/google-drive')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -1032,6 +1033,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
       row.title,
       monthFolder.id
     )
+    await setAnyoneReader(accessToken, folder.id)
 
     await invalidateCachedListing(row.driveFolderId)
     await invalidateCachedDetailCore(data.albumId)
