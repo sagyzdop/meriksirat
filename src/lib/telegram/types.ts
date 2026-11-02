@@ -95,6 +95,5 @@ export interface SessionData {
   startBookingId?: number
   cancelBookingId?: number
   pendingCancelItemIds?: number[]
-  photoPromptMessageId?: number
   createdAt?: number
 }

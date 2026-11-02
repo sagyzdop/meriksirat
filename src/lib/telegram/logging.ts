@@ -6,8 +6,8 @@
  */
 
 import { env } from 'cloudflare:workers'
+import { TelegramAPI } from './api'
 import {
-  createTelegramForLogging,
   isTelegramLoggingEnabled,
   getBookingDetailsForLogging,
 } from './server-utils'
@@ -93,7 +93,7 @@ async function loadBookingLogData(
 async function sendChannelText(text: string): Promise<void> {
   if (!isTelegramLoggingEnabled()) return
   try {
-    const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
+    const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN!)
     await telegram.sendMessage(env.TELEGRAM_CLUB_CHANNEL_ID!, text, {
       parse_mode: 'HTML',
       disable_web_page_preview: true,
@@ -134,23 +134,6 @@ export async function logBookingActivityById(
 }
 
 /**
- * Builds the "Name Surname (@telegram)" form of a user record.
- */
-function formatLogActor(user: {
-  firstName?: string | null
-  lastName?: string | null
-  name?: string | null
-  telegramUsername?: string | null
-}): string {
-  return formatUserDisplayName({
-    firstName: user.firstName ?? undefined,
-    lastName: user.lastName ?? undefined,
-    name: user.name ?? undefined,
-    telegramUsername: user.telegramUsername ?? undefined,
-  })
-}
-
-/**
  * Logs album activity to the club Telegram channel. Never throws.
  */
 export async function logAlbumActivity(input: {
@@ -172,7 +155,7 @@ export async function logAlbumActivity(input: {
       albumId: input.albumId,
       albumTitle: input.albumTitle,
       action: input.action,
-      actorName: input.actor ? formatLogActor(input.actor) : null,
+      actorName: input.actor ? formatUserDisplayName(input.actor) : null,
       details: input.details,
       url: albumUrl(input.albumId),
     })
@@ -235,7 +218,7 @@ export async function logReturnPhotoToChannel(input: {
       caption = formatBookingLog(data, { compactEquipment: true })
     }
 
-    const telegram = createTelegramForLogging(env.TELEGRAM_BOT_TOKEN!)
+    const telegram = new TelegramAPI(env.TELEGRAM_BOT_TOKEN!)
     await telegram.sendPhoto(env.TELEGRAM_CLUB_CHANNEL_ID!, input.photoFileId, {
       caption,
       parse_mode: 'HTML',
