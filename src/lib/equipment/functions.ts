@@ -98,23 +98,15 @@ export const getCategoriesFn = createServerFn({ method: 'GET' }).handler(
   }
 )
 
-// Admin Equipment Management Functions
-
-/**
- * Create new equipment (Admin only)
- * Validates Google Calendar ID uniqueness and admin permissions
- */
 export const createEquipmentFn = createServerFn({ method: 'POST' })
   .validator(CreateEquipmentSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { equipment, category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Check if Google Calendar ID already exists
     const existingEquipment = await database
       .select({ id: equipment.id })
       .from(equipment)
@@ -127,7 +119,6 @@ export const createEquipmentFn = createServerFn({ method: 'POST' })
       )
     }
 
-    // Verify category exists
     const categoryExists = await database
       .select({ id: category.id })
       .from(category)
@@ -155,21 +146,15 @@ export const createEquipmentFn = createServerFn({ method: 'POST' })
     return { equipmentId: result[0]?.id }
   })
 
-/**
- * Update existing equipment (Admin only)
- * Validates Google Calendar ID uniqueness and admin permissions
- */
 export const updateEquipmentFn = createServerFn({ method: 'POST' })
   .validator(UpdateEquipmentSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { equipment, category } = await import('@/db/schema')
     const { eq, and, ne } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Check if equipment exists
     const existingEquipment = await database
       .select({
         id: equipment.id,
@@ -183,7 +168,6 @@ export const updateEquipmentFn = createServerFn({ method: 'POST' })
       throw new Error('Equipment not found')
     }
 
-    // Check Google Calendar ID uniqueness if it's being updated
     if (
       data.googleCalendarId &&
       data.googleCalendarId !== existingEquipment.googleCalendarId
@@ -206,7 +190,6 @@ export const updateEquipmentFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Verify category exists if it's being updated
     if (data.categoryId) {
       const categoryExists = await database
         .select({ id: category.id })
@@ -228,9 +211,6 @@ export const updateEquipmentFn = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
-/**
- * Bulk update required clearance level for multiple equipment (Admin only)
- */
 export const bulkUpdateEquipmentClearanceFn = createServerFn({ method: 'POST' })
   .validator(BulkUpdateEquipmentClearanceSchema)
   .handler(async ({ data }) => {
@@ -252,21 +232,15 @@ export const bulkUpdateEquipmentClearanceFn = createServerFn({ method: 'POST' })
     return { success: true, count: data.equipmentIds.length }
   })
 
-/**
- * Delete equipment (Admin only)
- * Prevents deletion of equipment with active bookings by marking as inactive instead
- */
 export const deleteEquipmentFn = createServerFn({ method: 'POST' })
   .validator(DeleteEquipmentSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { equipment, booking, bookingItem } = await import('@/db/schema')
     const { eq, and, or, sql } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Check if equipment exists
     const equipmentToDelete = await database
       .select({
         id: equipment.id,
@@ -281,7 +255,6 @@ export const deleteEquipmentFn = createServerFn({ method: 'POST' })
       throw new Error('Equipment not found')
     }
 
-    // Check for active bookings
     const activeBookings = await database
       .select({ count: sql<number>`count(*)` })
       .from(bookingItem)
@@ -301,7 +274,6 @@ export const deleteEquipmentFn = createServerFn({ method: 'POST' })
     const hasActiveBookings = (activeBookings[0]?.count || 0) > 0
 
     if (hasActiveBookings) {
-      // Mark as inactive instead of deleting
       await database
         .update(equipment)
         .set({
@@ -316,7 +288,6 @@ export const deleteEquipmentFn = createServerFn({ method: 'POST' })
         message: `Equipment "${equipmentToDelete.modelName}" has been marked as inactive due to active bookings. It will no longer be available for new bookings.`,
       }
     } else {
-      // Safe to delete - no active bookings
       await database.delete(equipment).where(eq(equipment.id, data.equipmentId))
 
       return {
@@ -327,16 +298,11 @@ export const deleteEquipmentFn = createServerFn({ method: 'POST' })
     }
   })
 
-/**
- * Get equipment by ID for admin management (Admin only)
- * Returns equipment regardless of clearance level or active status
- */
 export const getAdminEquipmentByIdFn = createServerFn({
   method: 'GET',
 })
   .validator(z.object({ equipmentId: z.number() }))
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { equipmentWithCategory } = await import('./server')
     const { equipment, category } = await import('@/db/schema')
@@ -354,16 +320,11 @@ export const getAdminEquipmentByIdFn = createServerFn({
     return equipmentItem[0] as EquipmentWithCategory | undefined
   })
 
-/**
- * Get all equipment for admin management (Admin only)
- * Returns all equipment regardless of clearance level or active status
- */
 export const getAdminEquipmentFn = createServerFn({
   method: 'GET',
 })
   .validator(AdminEquipmentFiltersSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { equipmentWithCategory, equipmentWhere, equipmentOrderBy } =
       await import('./server')
@@ -420,14 +381,9 @@ export const getAdminEquipmentFn = createServerFn({
     return response
   })
 
-/**
- * Upload equipment image to Cloudflare R2 (Admin only)
- * Handles image upload and returns the path for storage
- */
 export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
   .validator(UploadEquipmentImageSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
     const { equipment } = await import('@/db/schema')
@@ -435,7 +391,6 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     if (!allowedTypes.includes(data.contentType)) {
       throw new Error(
@@ -443,17 +398,14 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
       )
     }
 
-    // Decode base64 image data
     const base64Data = data.imageData.split(',')[1] || data.imageData
     const imageBuffer = Buffer.from(base64Data, 'base64')
 
-    // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024 // 5MB
     if (imageBuffer.length > maxSize) {
       throw new Error('File size too large. Maximum size is 5MB.')
     }
 
-    // Check if equipment exists
     const equipmentExists = await database
       .select({ id: equipment.id })
       .from(equipment)
@@ -465,11 +417,9 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
     }
 
     try {
-      // Generate unique filename
       const fileExtension = data.contentType.split('/')[1]
       const fileName = `equipment-images/${data.equipmentId}-${Date.now()}.${fileExtension}`
 
-      // Upload to Cloudflare R2
       const r2Response = await env.meriksirat_r2.put(fileName, imageBuffer, {
         httpMetadata: {
           contentType: data.contentType,
@@ -480,7 +430,6 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
         throw new Error('Failed to upload image to storage')
       }
 
-      // Update equipment record with image path
       await database
         .update(equipment)
         .set({

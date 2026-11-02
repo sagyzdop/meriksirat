@@ -12,25 +12,17 @@ import {
 } from './types'
 import { buildPagination } from '@/lib/pagination'
 
-/**
- * Get users with admin filtering, pagination, and search capabilities
- * Supports filtering by role, status, clearance level, and text search
- * Includes pagination and sorting functionality
- */
 export const getAdminUsersFn = createServerFn({ method: 'GET' })
   .validator(AdminUserFiltersSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { userSearch } = await import('@/lib/user/search')
     const { user, flamekeeper } = await import('@/db/schema')
     const { and, count, desc, asc, inArray, sql, eq } =
       await import('drizzle-orm')
 
-    // Check admin permissions - both admin and manager can view users
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Build WHERE conditions
     const conditions: (SQL | undefined)[] = [eq(user.isMember, true)]
 
     if (data.role && data.role.length > 0) {
@@ -49,11 +41,9 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
       conditions.push(userSearch(data.search))
     }
 
-    // Combine conditions with AND logic
     const whereCondition =
       conditions.length > 0 ? and(...conditions) : undefined
 
-    // Apply sorting
     const sortColumn = {
       firstName: user.firstName,
       lastName: user.lastName,
@@ -71,7 +61,6 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
         : asc(sortColumn)
       : asc(user.firstName)
 
-    // Build the main query
     const usersQuery = database
       .select({
         id: user.id,
@@ -93,13 +82,10 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
       .leftJoin(flamekeeper, eq(flamekeeper.userId, user.id))
       .$dynamic()
 
-    // Get total count for pagination
     const countQuery = database.select({ count: count() }).from(user).$dynamic()
 
-    // Apply WHERE conditions and execute queries
     const offset = (data.page - 1) * data.limit
 
-    // Execute queries in parallel
     const [totalCountResult, users] = await Promise.all([
       countQuery.where(whereCondition || sql`1=1`),
       usersQuery
@@ -173,26 +159,18 @@ export const getAdminAlumniFn = createServerFn({ method: 'GET' })
     }
   })
 
-/**
- * Update user information with admin privileges
- * Validates role assignment permissions - only admins can assign admin/manager roles
- * Supports updating role, clearance level, status, and profile information
- */
 export const updateUserAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateUserAdminSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    // Check admin permissions and get admin user info
     const { admin: adminUser, database } = await adminContext([
       'admin',
       'manager',
     ])
 
-    // Check if target user exists
     const targetUser = await database
       .select({
         id: user.id,
@@ -217,7 +195,6 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Validate role assignment permissions
     if (data.role && ['admin', 'manager'].includes(data.role)) {
       if (adminUser.role !== 'admin') {
         throw new Error(
@@ -251,7 +228,6 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Return updated user data
     const updatedUser = await database
       .select({
         id: user.id,
@@ -270,10 +246,6 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
     return { user: updatedUser }
   })
 
-/**
- * Bulk update user clearance levels
- * Only admins and managers can perform bulk updates
- */
 export const bulkUpdateUserClearanceFn = createServerFn({ method: 'POST' })
   .validator(BulkUpdateUserClearanceSchema)
   .handler(async ({ data }) => {
@@ -295,19 +267,13 @@ export const bulkUpdateUserClearanceFn = createServerFn({ method: 'POST' })
     return { success: true, count: data.userIds.length }
   })
 
-/**
- * Get a specific user by ID for admin purposes
- * Used for user detail views and edit forms
- */
 export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
   .validator(GetUserByIdSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    // Check admin permissions
     const { database } = await adminContext(['admin', 'manager'])
 
     const userData = await database
@@ -345,10 +311,6 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
     return userData
   })
 
-/**
- * Reset a user's violation counters (auto-cancelled bookings and overdue returns).
- * Only admins and managers can reset counters.
- */
 export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })
   .validator(ResetUserViolationCountersSchema)
   .handler(async ({ data }) => {

@@ -20,10 +20,6 @@ import { buildPagination } from '@/lib/pagination'
 
 import { resolveRange } from './dashboard-stats'
 
-// ---------------------------------------------------------------------------
-// Most active users (owned + co-authored albums in range)
-// ---------------------------------------------------------------------------
-
 export const getAdminMostActiveUsersFn = createServerFn({ method: 'GET' })
   .validator(MostActiveUsersFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedMostActiveUsersResponse> => {
@@ -118,10 +114,6 @@ export const getAdminMostActiveUsersFn = createServerFn({ method: 'GET' })
     }
   })
 
-// ---------------------------------------------------------------------------
-// Violations
-// ---------------------------------------------------------------------------
-
 export const getViolationsFn = createServerFn({ method: 'GET' })
   .validator(ViolationsFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedViolationsResponse> => {
@@ -199,10 +191,6 @@ export const getViolationsFn = createServerFn({ method: 'GET' })
       pagination: buildPagination(totalCount, data.page, data.limit),
     }
   })
-
-// ---------------------------------------------------------------------------
-// User albums (admin user detail)
-// ---------------------------------------------------------------------------
 
 export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
   .validator(AdminUserAlbumsFiltersSchema)
@@ -283,10 +271,6 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
       pagination: buildPagination(totalCount, data.page, data.limit),
     }
   })
-
-// ---------------------------------------------------------------------------
-// User export (all matching users, no pagination)
-// ---------------------------------------------------------------------------
 
 export const exportUsersFn = createServerFn({ method: 'GET' })
   .validator(ExportUsersFiltersSchema)

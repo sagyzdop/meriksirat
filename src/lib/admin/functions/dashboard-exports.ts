@@ -3,10 +3,6 @@ import { siteOrigin } from '@/lib/format'
 import { BroadcastMessageSchema } from '../dashboard-types'
 import type { AdminAlbumExport, BroadcastResult } from '../dashboard-types'
 
-// ---------------------------------------------------------------------------
-// Album export
-// ---------------------------------------------------------------------------
-
 export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<AdminAlbumExport[]> => {
     const { adminContext } = await import('@/lib/admin/server')
@@ -91,10 +87,6 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
     })
   }
 )
-
-// ---------------------------------------------------------------------------
-// Telegram broadcast (admin only)
-// ---------------------------------------------------------------------------
 
 export const broadcastTelegramMessageFn = createServerFn({ method: 'POST' })
   .validator(BroadcastMessageSchema)

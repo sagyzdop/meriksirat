@@ -7,10 +7,6 @@ import type {
   DashboardAlert,
 } from '../dashboard-types'
 
-// ---------------------------------------------------------------------------
-// Helpers (pure, server-safe)
-// ---------------------------------------------------------------------------
-
 function monthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
 }
@@ -46,10 +42,6 @@ export function resolveRange(
   return { start, endOfRange }
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard statistics
-// ---------------------------------------------------------------------------
-
 export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
   .validator(AdminDashboardRangeSchema)
   .handler(async ({ data }): Promise<AdminDashboardStats> => {
@@ -66,7 +58,6 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       isNull(album.deletedAt)
     )
 
-    // --- Albums per month -------------------------------------------------
     const albumRows = await database
       .select({ createdAt: album.createdAt })
       .from(album)
@@ -86,7 +77,6 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       count,
     }))
 
-    // --- Booking statistics by status (scoped to bookings starting in range)
     const bookingRows = await database
       .select({ status: booking.status, count: sql<number>`count(*)` })
       .from(booking)
@@ -111,7 +101,6 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       bookingStats.total += Number(row.count)
     }
 
-    // --- Album storage (photos + bytes) within the range ------------------
     const rangeAlbums = await database
       .select({
         id: album.id,
@@ -187,10 +176,6 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       },
     }
   })
-
-// ---------------------------------------------------------------------------
-// Dashboard alerts
-// ---------------------------------------------------------------------------
 
 export const getAdminDashboardAlertsFn = createServerFn({
   method: 'GET',

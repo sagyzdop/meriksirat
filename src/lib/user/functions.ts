@@ -4,7 +4,6 @@ import { UpdateUserProfileSchema, type UserProfile } from './types'
 
 export const getUserFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<UserProfile | null> => {
-    // Import server-only code inside handler
     const { resolveSession } = await import('@/lib/auth/resolve-session')
 
     const headers = getRequestHeaders()
@@ -47,14 +46,9 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
   }
 )
 
-/**
- * Update user's own profile information
- * Users can update their personal information but not role/status/clearance
- */
 export const updateUserProfileFn = createServerFn({ method: 'POST' })
   .validator(UpdateUserProfileSchema)
   .handler(async ({ data }) => {
-    // Import server-only code inside handler
     const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
@@ -77,7 +71,6 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Return updated user data
     const updatedUser = await database
       .select()
       .from(user)
