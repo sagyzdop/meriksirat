@@ -1,4 +1,4 @@
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { recomputeBookingStatus } from '@/lib/booking/status'
@@ -9,8 +9,6 @@ import {
 import { buildCalendarEvent } from '@/lib/booking/calendar-events'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { formatUserDisplayName } from '@/lib/utils'
-
-type BookingDatabase = ReturnType<typeof db>
 
 /**
  * Shared per-item booking actions.
@@ -55,7 +53,7 @@ interface BookingItemWithContext {
 }
 
 async function selectItemsWithContext(
-  database: BookingDatabase,
+  database: Database,
   itemIds: number[]
 ): Promise<BookingItemWithContext[]> {
   return database
@@ -108,7 +106,7 @@ function buildItemEventDetails(
 }
 
 export async function cancelBookingItems(
-  database: BookingDatabase,
+  database: Database,
   itemIds: number[]
 ): Promise<BookingItemActionResult> {
   const items = await selectItemsWithContext(database, itemIds)
@@ -169,7 +167,7 @@ export async function cancelBookingItems(
 }
 
 export async function cancelWholeBooking(
-  database: BookingDatabase,
+  database: Database,
   bookingId: number,
   takeBudget?: (itemCount: number) => boolean
 ): Promise<boolean> {
@@ -190,7 +188,7 @@ export async function cancelWholeBooking(
 }
 
 export async function returnBookingItems(
-  database: BookingDatabase,
+  database: Database,
   itemIds: number[]
 ): Promise<BookingItemActionResult> {
   const items = await selectItemsWithContext(database, itemIds)

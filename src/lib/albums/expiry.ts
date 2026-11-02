@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
-import { db } from '@/db'
+import { db, type Database } from '@/db'
 import { album, albumMember, favorite, photo, user, volume } from '@/db/schema'
 import {
   DriveAppNotAuthorizedError,
@@ -22,10 +22,9 @@ import type { TombstoneReason } from '@/lib/pool/expiry'
 import type { HealTally } from '@/lib/pool/volumes'
 import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
 import { formatLongDate } from '@/lib/club-time'
-import { chunk } from './photo-backfill'
+import { chunk } from '@/lib/utils'
 import { siteOrigin } from '@/lib/format'
 
-type Database = ReturnType<typeof db>
 type AlbumRecord = typeof album.$inferSelect
 
 const ROW_DELETE_CHUNK = 90

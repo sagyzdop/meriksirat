@@ -1,15 +1,15 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
-import { db } from '@/db'
+import { db, type Database } from '@/db'
 import { album, photo } from '@/db/schema'
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
+import { chunk } from '@/lib/utils'
 import { newId } from './ids'
 import {
   MAX_ALBUMS_PER_RUN,
   MAX_PHOTOS_PER_RUN,
   PHOTO_INSERT_CHUNK,
   budgetDayKey,
-  chunk,
   driveFileToPhotoValues,
   isImage,
   missingFromTable,
@@ -29,8 +29,6 @@ import {
   listDriveFolderFiles,
 } from '@/lib/google/google-drive'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
-
-type Database = ReturnType<typeof db>
 
 const BUDGET_KEY = 'photo-backfill:budget'
 const BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60

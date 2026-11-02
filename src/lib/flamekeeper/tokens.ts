@@ -1,12 +1,10 @@
 import { eq } from 'drizzle-orm'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { flamekeeperGrant, user } from '@/db/schema'
 import { isMasterEmail } from './master'
 import { isInvalidGrantResponse } from '@/lib/pool/health'
 import { withTokenRetry } from '@/lib/google/token-retry'
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
-
-type Database = ReturnType<typeof db>
 
 const TOKEN_TTL_MS = 50 * 60 * 1000
 const cache = new Map<string, { token: string; at: number }>()

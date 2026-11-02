@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm'
-import { db } from '@/db'
+import type { Database } from '@/db'
 import { album, flamekeeper, photo, uploadReservation } from '@/db/schema'
 import {
   DriveNotFoundError,
@@ -24,8 +24,6 @@ import {
   releaseEmptyVolumes,
   toStatus,
 } from './drain-server'
-
-type Database = ReturnType<typeof db>
 
 const RELAY_CANDIDATES = 20
 

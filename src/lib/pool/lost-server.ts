@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
-import { db } from '@/db'
+import type { Database } from '@/db'
 import { album, flamekeeper, photo, user, volume } from '@/db/schema'
 import { type Budget } from '@/lib/cron/budget'
 import { formatLongDate } from '@/lib/club-time'
@@ -15,9 +15,8 @@ import { LOST_GRACE_MS, RESTORE_BATCH, planRecovery } from './health'
 import { notifyAlbumTombstoned, ownerTelegramChat } from './notices'
 import { planRecoveryShare } from './volumes'
 import { volumeHasPhotoRows } from './volumes-server'
-import { adjustUsedBytes, chunked, type HealthEnv } from './health-shared'
-
-type Database = ReturnType<typeof db>
+import { chunk } from '@/lib/utils'
+import { adjustUsedBytes, IN_CHUNK, type HealthEnv } from './health-shared'
 
 const MAX_EMAILS_PER_RUN = 3
 const MAX_FINALIZE_VOLUMES_PER_RUN = 10
@@ -199,7 +198,10 @@ async function markBatch(
     .limit(limit)
     .all()
   if (rows.length === 0) return rows
-  const statements = chunked(rows.map((r) => r.id)).map((ids) =>
+  const statements = chunk(
+    rows.map((r) => r.id),
+    IN_CHUNK
+  ).map((ids) =>
     database
       .update(photo)
       .set({ state })

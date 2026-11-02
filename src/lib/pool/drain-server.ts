@@ -1,5 +1,5 @@
 import { and, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm'
-import { db } from '@/db'
+import type { Database } from '@/db'
 import {
   flamekeeper,
   photo,
@@ -27,8 +27,6 @@ import {
 import { planFlamekeeperEdit } from './graduation'
 import { releaseVolumes } from './volumes-server'
 import { releaseAbandonedCutoff } from './volumes'
-
-type Database = ReturnType<typeof db>
 
 export interface DrainRow extends DrainFlamekeeper {
   userId: string

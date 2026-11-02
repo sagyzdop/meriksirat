@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, ne, sql, type SQL } from 'drizzle-orm'
-import { db } from '@/db'
+import type { Database } from '@/db'
 import { flamekeeperGrant, photo, uploadReservation, volume } from '@/db/schema'
 import {
   DriveAppNotAuthorizedError,
@@ -24,8 +24,6 @@ import {
   releaseAbandonedCutoff,
   volumeFolderName,
 } from './volumes'
-
-type Database = ReturnType<typeof db>
 
 export const VOLUME_RELEASES_PER_CALL = 20
 const HEALS_PER_CALL = 3

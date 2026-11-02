@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
-import { db } from '@/db'
+import { db, type Database } from '@/db'
 import { booking, session, user, volume } from '@/db/schema'
 import { isMasterEmail } from '@/lib/flamekeeper/master'
 import { cancelWholeBooking } from '@/lib/booking/booking-items'
@@ -16,8 +16,6 @@ import {
   hasPhotosLeft,
   loadDrainRow,
 } from './drain-server'
-
-type Database = ReturnType<typeof db>
 
 const CANCELS_PER_RUN = 3
 const REVOKES_PER_RUN = 10

@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { env } from 'cloudflare:workers'
-import { db } from '@/db'
+import type { Database } from '@/db'
 import { album, favorite, photo, user } from '@/db/schema'
 import { sendEmail } from '@/lib/google/email'
 import {
@@ -12,8 +12,6 @@ import {
 import type { NoticeUser } from '@/lib/pool/suggestions'
 import { formatLongDate } from '@/lib/club-time'
 import { siteOrigin } from '@/lib/format'
-
-type Database = ReturnType<typeof db>
 
 export interface DeletionSuggestion {
   id: string

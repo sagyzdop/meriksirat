@@ -1,5 +1,5 @@
 import type { BookingStatus } from '@/lib/booking/types'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 
 /**
  * Derive a parent booking's status from the statuses of its items.
@@ -39,7 +39,7 @@ export function deriveParentBookingStatus(
  * Returns the newly derived status.
  */
 export async function recomputeBookingStatus(
-  database: ReturnType<typeof db>,
+  database: Database,
   bookingId: number
 ): Promise<BookingStatus> {
   const { bookingItem, booking } = await import('@/db/schema')

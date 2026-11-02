@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, lte, sql } from 'drizzle-orm'
-import { db } from '@/db'
+import { db, type Database } from '@/db'
 import {
   album,
   flamekeeper,
@@ -49,9 +49,8 @@ import {
   recoverDropped,
   sendReconnectEmails,
 } from './lost-server'
-import { adjustUsedBytes, chunked, type HealthEnv } from './health-shared'
-
-type Database = ReturnType<typeof db>
+import { chunk } from '@/lib/utils'
+import { adjustUsedBytes, IN_CHUNK, type HealthEnv } from './health-shared'
 
 const RETRY_AFTER_TRANSIENT_MS = 60 * 60 * 1000
 const MAX_MISSING_LISTED = 10
@@ -86,7 +85,10 @@ async function removeMissingPhotos(
   albumRow: { id: string; driveFolderId: string },
   missing: { id: string }[]
 ): Promise<number> {
-  const statements = chunked(missing.map((m) => m.id)).map((ids) =>
+  const statements = chunk(
+    missing.map((m) => m.id),
+    IN_CHUNK
+  ).map((ids) =>
     database
       .update(photo)
       .set({ state: 'deleted' })
@@ -121,7 +123,10 @@ async function removeMissingPhotos(
       updatedAt: new Date(),
     })
     .where(eq(album.id, albumRow.id))
-  for (const ids of chunked(removed.map((r) => r.driveFileId))) {
+  for (const ids of chunk(
+    removed.map((r) => r.driveFileId),
+    IN_CHUNK
+  )) {
     await database
       .update(album)
       .set({ coverFileId: null })

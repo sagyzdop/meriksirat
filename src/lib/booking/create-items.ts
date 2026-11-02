@@ -1,5 +1,5 @@
 import { eq, inArray } from 'drizzle-orm'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { bookingItem, equipment } from '@/db/schema'
 import {
   checkMultipleCalendarsFreeBusyRaw,
@@ -8,8 +8,6 @@ import {
 } from '@/lib/google/google-calendar-client'
 import { formatBookingDetailsPlain } from './details'
 import { buildCalendarEvent } from './calendar-events'
-
-type Database = ReturnType<typeof db>
 
 export interface BookableEquipment {
   equipmentId: number

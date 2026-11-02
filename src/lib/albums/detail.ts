@@ -1,6 +1,6 @@
 import { and, eq, isNotNull } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { album, albumMember, photo, user } from '@/db/schema'
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
 import {
@@ -26,7 +26,6 @@ import type {
 } from './types'
 import { albumCoverUrl } from './urls'
 
-type Database = ReturnType<typeof db>
 export type AlbumRecord = typeof album.$inferSelect
 
 interface Listing {

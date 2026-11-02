@@ -4,7 +4,6 @@ import {
   DEFAULT_DAILY_WRITE_BUDGET,
   MAX_PHOTOS_PER_RUN,
   budgetDayKey,
-  chunk,
   driveFileToAlbumPhoto,
   driveFileToPhotoValues,
   missingFromTable,
@@ -19,6 +18,7 @@ import {
   sortPhotosByCapture,
   sumBytes,
 } from '../lib/albums/photo-backfill'
+import { chunk } from '../lib/utils'
 
 describe('parseDailyWriteBudget', () => {
   it('defaults to 60k when unset or invalid', () => {

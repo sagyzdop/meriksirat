@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { toDateOnlyString } from '@/lib/format'
 import { BIRTHDAYS_CALENDAR_ID, BIRTHDAY_STATUSES } from '../constants'
 import type { BirthdaySyncResult, BirthdayUser } from '../types'
@@ -35,7 +35,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
  * creates/updates/deletes as needed. Callers wrap errors themselves.
  */
 export async function reconcileBirthdaysToCalendar(
-  database: ReturnType<typeof db>
+  database: Database
 ): Promise<BirthdaySyncResult> {
   const { user, settings } = await import('@/db/schema')
   const { inArray, isNotNull, and, eq } = await import('drizzle-orm')

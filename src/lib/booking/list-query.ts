@@ -1,12 +1,10 @@
 import { asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { booking, bookingItem, category, equipment, user } from '@/db/schema'
 import { groupItemsByBooking } from './mappers'
 import type { BookingParent } from './mappers'
 import type { BookingStatus, BookingWithItems } from './types'
-
-type Database = ReturnType<typeof db>
 
 const END_OF_DAY_MS = 86_399_999
 

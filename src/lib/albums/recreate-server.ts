@@ -1,5 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { photo, user } from '@/db/schema'
 import { batchDeleteDriveFileResults } from '@/lib/google/google-drive'
 import { withFlamekeeperToken } from '@/lib/flamekeeper/tokens'
@@ -13,9 +13,7 @@ import {
   type RecreateRow,
   type RecreateTally,
 } from './recreate'
-import { chunk } from './photo-backfill'
-
-type Database = ReturnType<typeof db>
+import { chunk } from '@/lib/utils'
 
 const ROW_CHUNK = 90
 

@@ -41,3 +41,10 @@ export function formatUserDisplayName(user: UserIdentity): string {
 export function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
+
+export function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size)
+    out.push(items.slice(i, i + size))
+  return out
+}

@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNull, lte } from 'drizzle-orm'
-import { db } from '@/db'
+import { db, type Database } from '@/db'
 import { album, flamekeeper, user, volume } from '@/db/schema'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { FlamekeeperGrantError } from '@/lib/flamekeeper/tokens'
@@ -28,8 +28,6 @@ import {
   sendFlamekeeperEmail,
   type DrainRow,
 } from './drain-server'
-
-type Database = ReturnType<typeof db>
 
 const DEADLINE_DELETES_PER_RUN = 200
 const REMINDERS_PER_RUN = 2

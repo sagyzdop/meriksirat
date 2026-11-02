@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { settings } from '@/db/schema'
 
-export async function loadSettings(database: ReturnType<typeof db>) {
+export async function loadSettings(database: Database) {
   const existing = await database
     .select()
     .from(settings)

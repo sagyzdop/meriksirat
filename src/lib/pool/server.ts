@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNotNull, lt, isNull, sql } from 'drizzle-orm'
-import { db } from '@/db'
+import { db, type Database } from '@/db'
 import {
   album,
   flamekeeper,
@@ -44,8 +44,6 @@ import {
   loadVolumeFolderId,
 } from './volumes-server'
 import { isInVolumeFolder } from './volumes'
-
-type Database = ReturnType<typeof db>
 
 const RESERVATION_TTL_MS = 2 * 60 * 60 * 1000
 const RESERVATION_KEEP_MS = 24 * 60 * 60 * 1000

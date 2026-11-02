@@ -1,10 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { db } from '@/db'
+import type { Database } from '@/db'
 import { user } from '@/db/schema'
 import { siteOrigin } from '@/lib/format'
 import { tombstoneNoticeText, type FlamekeeperTombstoneReason } from './expiry'
-
-type Database = ReturnType<typeof db>
 
 export interface NoticeEnv {
   TELEGRAM_BOT_TOKEN?: string

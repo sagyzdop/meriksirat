@@ -1,4 +1,4 @@
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { booking, bookingItem, equipment, user } from '@/db/schema'
 import { eq, and, inArray, isNull } from 'drizzle-orm'
 import { updateCalendarEventRaw } from '@/lib/google/google-calendar-client'
@@ -12,8 +12,6 @@ import { logBookingActivityById } from '@/lib/telegram/logging'
 import { recomputeBookingStatus } from '@/lib/booking/status'
 import { ownsBooking } from '@/lib/booking/ownership'
 import { START_WINDOW_GRACE_MS } from '@/lib/booking/operating-hours'
-
-type BookingDatabase = ReturnType<typeof db>
 
 export class BookingStartError extends Error {}
 
@@ -30,7 +28,7 @@ export class BookingStartError extends Error {}
  *   end stays the booked end time, summary `(ACTIVE)`.
  */
 export async function startBooking(
-  database: BookingDatabase,
+  database: Database,
   bookingId: number,
   options: { onlyForUserId?: string } = {}
 ): Promise<{ bookingId: number }> {
@@ -184,7 +182,7 @@ export async function startBooking(
  * Never throws.
  */
 async function sendGlobalBookingNote(
-  database: BookingDatabase,
+  database: Database,
   bookingData: {
     user?: {
       telegramChatId?: string | null
@@ -222,7 +220,7 @@ async function sendGlobalBookingNote(
  * [startTime - 15min, startTime + 15min]) and that can still be started.
  */
 export async function listStartableBookings(
-  database: BookingDatabase,
+  database: Database,
   userId: string
 ): Promise<
   Array<{ id: number; startTime: Date; endTime: Date; status: string }>

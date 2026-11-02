@@ -11,9 +11,9 @@ import {
   sql,
 } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
-import type { db } from '@/db'
+import type { Database } from '@/db'
 import { album, albumMember, user } from '@/db/schema'
-import { chunk } from './photo-backfill'
+import { chunk } from '@/lib/utils'
 import type {
   AlbumAuthor,
   AlbumListPage,
@@ -22,7 +22,6 @@ import type {
 } from './types'
 import { albumCoverUrl } from './urls'
 
-type Database = ReturnType<typeof db>
 type Ownership = 'owner' | 'co-author'
 
 type AlbumRowWithAuthors = typeof album.$inferSelect & {
