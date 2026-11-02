@@ -2,7 +2,6 @@ import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { Page } from '@/components/profile'
-import { getUserFn } from '@/lib/user'
 import { flamekeeperQueries } from '@/lib/flamekeeper/queries'
 import { CONNECT_ERROR_MESSAGES } from '@/lib/flamekeeper/rules'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
@@ -19,16 +18,12 @@ export const Route = createFileRoute('/_authenticated/profile')({
   component: RouteComponent,
   validateSearch: searchSchema,
   loader: async ({ context }) => {
-    const user = await getUserFn()
     await context.queryClient.ensureQueryData(flamekeeperQueries.mine())
-    return {
-      user: user || undefined,
-    }
   },
 })
 
 function RouteComponent() {
-  const { user } = Route.useLoaderData()
+  const { user } = Route.useRouteContext()
   const search = Route.useSearch()
   const { data: flamekeeper } = useQuery(flamekeeperQueries.mine())
   const isLoading = useRouterState({
