@@ -16,6 +16,7 @@ import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
+import { setSession } from '../kv-session'
 import { removeKeyboard, replyKeyboard } from '../server-utils'
 import { BOOKING_STATUS } from '../types'
 import { logBookingActivityById } from '../logging'
@@ -210,6 +211,13 @@ export async function renderCancelBookingList(ctx: BotContext): Promise<void> {
     )
     return
   }
+
+  await setSession(ctx.env.meriksirat_kv, chatId, {
+    step: 'awaiting_cancel_selection',
+    userId,
+    activeBookingIds: bookings.map((b) => b.id),
+    createdAt: Date.now(),
+  })
 
   const buttons = bookings.map(
     (b) =>
