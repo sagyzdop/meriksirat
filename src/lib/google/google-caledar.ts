@@ -1,11 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { CLUB_TIMEZONE } from '@/lib/club-time'
 
 /**
  * Club timezone (UTC+5). All calendar event payloads and rendered timestamps
  * use the club's local time so events show up at the correct local time.
  */
-export const CLUB_TIMEZONE = 'Asia/Almaty'
+export { CLUB_TIMEZONE }
 
 /**
  * Formats a Date (or ISO string) as the club's local wall-clock time,

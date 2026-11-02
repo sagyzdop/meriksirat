@@ -6,7 +6,8 @@
  * imports so it can be unit tested.
  */
 
-const CLUB_TIMEZONE = 'Asia/Almaty'
+import { CLUB_TIMEZONE } from '@/lib/club-time'
+
 const MAX_TEXT_LENGTH = 200
 export const MAX_CAPTION_LENGTH = 1024
 

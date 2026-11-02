@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { albumCoverUrl } from '@/lib/albums/urls'
+import { siteOrigin } from '@/lib/format'
 import {
   AdminDashboardRangeSchema,
   AdminUserAlbumsFiltersSchema,
@@ -732,7 +733,7 @@ export const exportAlbumsFn = createServerFn({ method: 'GET' }).handler(
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    const origin = (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
+    const origin = siteOrigin(env.BETTER_AUTH_URL)
 
     // D1 caps bound parameters at 100/query, so this export avoids inArray:
     // the owner comes from a join and the member query is intentionally

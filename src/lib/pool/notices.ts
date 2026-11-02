@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { user } from '@/db/schema'
+import { siteOrigin } from '@/lib/format'
 import { tombstoneNoticeText, type FlamekeeperTombstoneReason } from './expiry'
 
 type Database = ReturnType<typeof db>
@@ -32,9 +33,9 @@ export async function notifyAlbumTombstoned(
     if (!env.TELEGRAM_BOT_TOKEN) return false
     const chatId = await ownerTelegramChat(database, album.ownerUserId)
     if (!chatId) return false
-    const origin = (env.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL ?? '')
-      .trim()
-      .replace(/\/+$/, '')
+    const origin = siteOrigin(
+      env.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL
+    )
     const { TelegramAPI } = await import('@/lib/telegram/api')
     await new TelegramAPI(env.TELEGRAM_BOT_TOKEN).sendMessage(
       chatId,

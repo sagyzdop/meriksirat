@@ -10,6 +10,7 @@ import { db } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { removeKeyboard } from '../server-utils'
+import { CLUB_TIMEZONE, formatClubTime } from '@/lib/club-time'
 import { renderInPlace, backToMenuMarkup } from '../menu'
 import { BOOKING_STATUS } from '../types'
 
@@ -82,20 +83,10 @@ function formatTimeRange(startTime: Date, endTime: Date): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    timeZone: 'Asia/Almaty',
+    timeZone: CLUB_TIMEZONE,
   })
-  const timeStart = startTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'Asia/Almaty',
-  })
-  const timeEnd = endTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'Asia/Almaty',
-  })
+  const timeStart = formatClubTime(startTime, true)
+  const timeEnd = formatClubTime(endTime, true)
   return `${date}, ${timeStart} - ${timeEnd}`
 }
 

@@ -22,6 +22,7 @@ import {
   type BookingLogEvent,
 } from './log-format'
 import { formatUserDisplayName } from '@/lib/utils'
+import { siteOrigin } from '@/lib/format'
 import { db } from '@/db'
 import { user } from '@/db/schema'
 import { eq } from 'drizzle-orm'
@@ -43,7 +44,7 @@ export type BookingLogOptions = Pick<
  * Reads BETTER_AUTH_URL (same origin the web app is served from).
  */
 function appOrigin(): string {
-  return (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
+  return siteOrigin(env.BETTER_AUTH_URL)
 }
 
 function bookingUrl(bookingId: number): string | undefined {

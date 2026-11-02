@@ -26,6 +26,8 @@ import {
   formatGb,
 } from '@/lib/flamekeeper/rules'
 import type { DrainStatus, RelayHandout } from '@/lib/flamekeeper/types'
+import { formatLongDate } from '@/lib/club-time'
+import { siteOrigin } from '@/lib/format'
 import { dropPhotoRows, removeAlbum } from '@/lib/albums/expiry'
 import {
   batchDeleteCost,
@@ -324,19 +326,8 @@ async function sendFlamekeeperEmail(
   })
 }
 
-function formatDay(d: Date | null): string {
-  return d
-    ? d.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        timeZone: 'Asia/Almaty',
-      })
-    : ''
-}
-
-function accountLink(): string {
-  const origin = (process.env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
+export function accountLink(): string {
+  const origin = siteOrigin(process.env.BETTER_AUTH_URL)
   return origin ? `\n\nOpen your account page: ${origin}/profile` : ''
 }
 
@@ -361,7 +352,7 @@ export async function sendDrainStartedEmail(
     row.userId,
     '#savenuimg: we are moving your photos',
     (name) =>
-      `Hi ${name},\n\n${why}, so ${left} of club photos now need to move to other flamekeepers. Open your account page and keep the tab open while the photos move; an admin may also move them for you.\n\nPhotos still with you on ${formatDay(row.drainingDeadline)} will be deleted.${accountLink()}\n\nThank you for keeping the flame.`
+      `Hi ${name},\n\n${why}, so ${left} of club photos now need to move to other flamekeepers. Open your account page and keep the tab open while the photos move; an admin may also move them for you.\n\nPhotos still with you on ${formatLongDate(row.drainingDeadline)} will be deleted.${accountLink()}\n\nThank you for keeping the flame.`
   )
 }
 
@@ -748,7 +739,7 @@ function adminAlertText(
   row: DrainRow
 ): string {
   const left = formatGb(drainBytesLeft(row))
-  const deadline = formatDay(row.drainingDeadline)
+  const deadline = formatLongDate(row.drainingDeadline)
   if (kind === 'started') {
     return `#savenuimg drain started: ${who} (${row.drainReason ?? 'drain'}) has ${left} to move off. Deadline ${deadline}; photos still there then are deleted.`
   }
@@ -877,7 +868,7 @@ export async function runDrainMaintenance(
       row.userId,
       '#savenuimg: your photos will be deleted soon',
       (name) =>
-        `Hi ${name},\n\n${left} of club photos are still with you. On ${formatDay(row.drainingDeadline)} the photos that have not moved will be deleted. Open your account page and keep the tab open to move them now.${accountLink()}`
+        `Hi ${name},\n\n${left} of club photos are still with you. On ${formatLongDate(row.drainingDeadline)} the photos that have not moved will be deleted. Open your account page and keep the tab open to move them now.${accountLink()}`
     )
     if (sent) {
       await database

@@ -10,6 +10,8 @@ import {
   suggestDeletions,
 } from '@/lib/pool/suggestions'
 import type { NoticeUser } from '@/lib/pool/suggestions'
+import { formatLongDate } from '@/lib/club-time'
+import { siteOrigin } from '@/lib/format'
 
 type Database = ReturnType<typeof db>
 
@@ -42,15 +44,6 @@ export async function listDeletionSuggestions(
   return suggestDeletions(rows).map(
     ({ pinned: _pinned, deletedAt: _deletedAt, ...rest }) => rest
   )
-}
-
-function formatDate(d: Date): string {
-  return d.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'Asia/Almaty',
-  })
 }
 
 export async function expireAlbumEarly(
@@ -110,9 +103,9 @@ export async function expireAlbumEarly(
   const users: NoticeUser[] = [...owner, ...favoriters]
   const recipients = planEarlyExpiryNotices(row.ownerUserId, users)
 
-  const origin = (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
+  const origin = siteOrigin(env.BETTER_AUTH_URL)
   const link = origin ? `\n${origin}/albums/${albumId}` : ''
-  const when = formatDate(expiresAt)
+  const when = formatLongDate(expiresAt)
   const botToken = env.TELEGRAM_BOT_TOKEN
   const telegram = botToken
     ? new (await import('@/lib/telegram/api')).TelegramAPI(botToken)

@@ -1,4 +1,4 @@
-import { CLUB_TIMEZONE } from '@/lib/google/google-caledar'
+import { CLUB_TIMEZONE } from '@/lib/club-time'
 import { minutesToTime } from './functions/settings'
 
 /**

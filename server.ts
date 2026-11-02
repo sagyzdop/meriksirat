@@ -8,6 +8,7 @@
 
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 import { createBudget, type Budget } from './src/lib/cron/budget'
+import { formatClubTime } from './src/lib/club-time'
 
 interface Env {
   meriksirat_d1: D1Database
@@ -378,12 +379,7 @@ async function cancelUnstartedBookings(
 
         if (telegram && stale.telegramChatId) {
           try {
-            const time = stale.startTime.toLocaleTimeString('en-US', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false,
-              timeZone: 'Asia/Almaty',
-            })
+            const time = formatClubTime(stale.startTime, false)
             await telegram.sendMessage(
               stale.telegramChatId,
               `❌ Booking #${stale.id} was auto-cancelled.\n\nYou did not pick up your equipment within 15 minutes of the start time (${time}). If this wasn't intentional, please make a new booking.`
@@ -771,13 +767,7 @@ function buildReminderMessage(
     equipmentNames: string[]
   }
 ): string {
-  const time = (d: Date) =>
-    d.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'Asia/Almaty',
-    })
+  const time = (d: Date) => formatClubTime(d, false)
   const equipmentLabel =
     info.equipmentNames.length === 1
       ? info.equipmentNames[0]

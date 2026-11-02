@@ -56,3 +56,7 @@ export function formatUtcDateTime(iso: string | null | undefined): string {
     timeZone: 'UTC',
   }).format(date)
 }
+
+export function siteOrigin(value: string | undefined): string {
+  return (value ?? '').trim().replace(/\/+$/, '')
+}

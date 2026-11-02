@@ -21,6 +21,8 @@ import {
 import type { TombstoneReason } from '@/lib/pool/expiry'
 import type { HealTally } from '@/lib/pool/volumes'
 import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
+import { formatLongDate } from '@/lib/club-time'
+import { siteOrigin } from '@/lib/format'
 
 type Database = ReturnType<typeof db>
 type AlbumRecord = typeof album.$inferSelect
@@ -227,17 +229,6 @@ export async function removeAlbum(
   }
 }
 
-function formatDate(d: Date | null): string {
-  return d
-    ? d.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        timeZone: 'Asia/Almaty',
-      })
-    : ''
-}
-
 async function removalCost(
   database: Database,
   albumId: string
@@ -319,7 +310,7 @@ export async function runAlbumExpiry(
   if (botToken) {
     const { TelegramAPI } = await import('@/lib/telegram/api')
     const telegram = new TelegramAPI(botToken)
-    const origin = (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
+    const origin = siteOrigin(env.BETTER_AUTH_URL)
 
     const reminders = [
       { ids: plan.remind30, days: 30, column: 'expiryReminder30SentAt' },
@@ -361,7 +352,7 @@ export async function runAlbumExpiry(
         if (!takeIfBudgeted(budget, recipients.length)) break outer
         try {
           const link = origin ? `\n${origin}/albums/${id}` : ''
-          const text = `Your album "${row.title}" will be deleted in ${days} days, on ${formatDate(row.expiresAt)}. There is no backup, so download the photos you want to keep.${link}`
+          const text = `Your album "${row.title}" will be deleted in ${days} days, on ${formatLongDate(row.expiresAt)}. There is no backup, so download the photos you want to keep.${link}`
           let failed = 0
           for (const chatId of recipients) {
             try {

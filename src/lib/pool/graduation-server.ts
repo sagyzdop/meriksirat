@@ -2,7 +2,9 @@ import { and, eq, inArray, isNotNull } from 'drizzle-orm'
 import { db } from '@/db'
 import { flamekeeper, photo, user, volume } from '@/db/schema'
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
+import { formatLongDate } from '@/lib/club-time'
 import {
+  accountLink,
   applyDrainTransition,
   drainColumns,
   sendDrainStartedEmail,
@@ -47,20 +49,6 @@ async function holdsPhotos(
     .limit(1)
     .get()
   return !!row
-}
-
-function formatDay(value: string): string {
-  return new Date(`${value}T00:00:00Z`).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
-}
-
-function profileLink(): string {
-  const origin = (process.env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
-  return origin ? `\n\nOpen your account page: ${origin}/profile` : ''
 }
 
 export async function runGraduationMaintenance(
@@ -130,7 +118,7 @@ export async function runGraduationMaintenance(
     const sent = await sendEmail({
       to: row.email,
       subject: '#savenuimg: is your graduation date still right?',
-      text: `Hi ${row.firstName || row.name},\n\nWe have your expected graduation date as ${formatDay(row.graduationDate)}. Photos you hold are moved to other flamekeepers 60 days before it, so please confirm it is still right or change it.${profileLink()}\n\nThank you for keeping the flame.`,
+      text: `Hi ${row.firstName || row.name},\n\nWe have your expected graduation date as ${formatLongDate(new Date(`${row.graduationDate}T00:00:00Z`), 'UTC')}. Photos you hold are moved to other flamekeepers 60 days before it, so please confirm it is still right or change it.${accountLink()}\n\nThank you for keeping the flame.`,
     })
     if (sent) {
       await database

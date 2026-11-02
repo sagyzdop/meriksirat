@@ -10,6 +10,8 @@ import {
   volume,
 } from '@/db/schema'
 import { BudgetExhaustedError, type Budget } from '@/lib/cron/budget'
+import { formatLongDate } from '@/lib/club-time'
+import { siteOrigin } from '@/lib/format'
 import {
   FlamekeeperGrantError,
   forgetFlamekeeperAccessToken,
@@ -475,12 +477,7 @@ async function sendReconnectEmails(
     if (!row?.lostSince) continue
     sentCount++
     const deadline = new Date(row.lostSince.getTime() + LOST_GRACE_MS)
-    const deadlineText = deadline.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      timeZone: 'Asia/Almaty',
-    })
+    const deadlineText = formatLongDate(deadline)
     const link = origin ? `${origin}/profile` : 'your account page'
     const sent = await sendEmail({
       to: row.email,
@@ -843,7 +840,7 @@ export async function runFlamekeeperHealth(
     now
   )
 
-  const origin = (env.BETTER_AUTH_URL ?? '').trim().replace(/\/+$/, '')
+  const origin = siteOrigin(env.BETTER_AUTH_URL)
   await sendReconnectEmails(database, plan.notify, origin, now, budget)
 
   for (const userId of plan.finalize.slice(0, 1)) {

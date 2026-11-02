@@ -13,6 +13,7 @@ import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { user, booking, bookingItem, equipment } from '@/db/schema'
 import { setSession } from '../kv-session'
 import { removeKeyboard, replyKeyboard } from '../server-utils'
+import { formatClubTime } from '@/lib/club-time'
 import { renderInPlace, backToMenuButton, backToMenuMarkup } from '../menu'
 import {
   BookingStartError,
@@ -168,18 +169,8 @@ export async function renderStartConfirm(
       )
     )
 
-  const timeStart = parent.startTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'Asia/Almaty',
-  })
-  const timeEnd = parent.endTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'Asia/Almaty',
-  })
+  const timeStart = formatClubTime(parent.startTime, true)
+  const timeEnd = formatClubTime(parent.endTime, true)
   const equipmentLabel = items.map((i) => i.equipmentName).join(', ')
 
   await ctx.reply(
