@@ -4,14 +4,20 @@ import { SetFavoriteSchema } from './types'
 import type { FavoriteRef } from './logic'
 import type { FavoritePhoto } from './types'
 
-async function requireFavoriter(headers: Headers) {
+async function sessionAndDb(headers: Headers) {
   const { getSessionUser } = await import('@/lib/albums/server')
-  const sessionUser = await getSessionUser(headers)
-  if (!sessionUser) throw new Error('Sign in to favorite photos')
   const { env } = await import('cloudflare:workers')
   const { db } = await import('@/db')
+  return {
+    sessionUser: await getSessionUser(headers),
+    database: db(env.meriksirat_d1 as D1Database),
+  }
+}
+
+async function requireFavoriter(headers: Headers) {
+  const { database, sessionUser } = await sessionAndDb(headers)
+  if (!sessionUser) throw new Error('Sign in to favorite photos')
   const { loadAccessRules } = await import('@/lib/access/server')
-  const database = db(env.meriksirat_d1 as D1Database)
   const rules = await loadAccessRules(database, sessionUser.id).catch(
     () => null
   )
@@ -24,15 +30,11 @@ export const getAlbumFavoritesFn = createServerFn({ method: 'GET' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<FavoriteRef[]> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { favorite, photo } = await import('@/db/schema')
     const { and, eq } = await import('drizzle-orm')
-    const { getSessionUser } = await import('@/lib/albums/server')
 
-    const sessionUser = await getSessionUser(getRequestHeaders())
+    const { database, sessionUser } = await sessionAndDb(getRequestHeaders())
     if (!sessionUser) return []
-    const database = db(env.meriksirat_d1 as D1Database)
     return database
       .select({ photoId: photo.id, driveFileId: photo.driveFileId })
       .from(favorite)
