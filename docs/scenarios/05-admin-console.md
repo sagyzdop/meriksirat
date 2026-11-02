@@ -475,7 +475,7 @@ sequenceDiagram
 
 ## Birthdays page and birthday calendar
 
-The calendar holds one yearly all-day event per Active or Board member with a readable birthday. The same sync also runs after a status change by an admin, after a member edits their birthday on their profile, and after onboarding (see the sign-up and onboarding scenario file).
+The calendar holds one yearly all-day event per Active or Board member with a readable birthday. The same sync also runs after a status change by an admin, after a member edits their birthday on their profile, and after onboarding (see 01-sign-in-onboarding-and-profile.md).
 
 ```mermaid
 sequenceDiagram

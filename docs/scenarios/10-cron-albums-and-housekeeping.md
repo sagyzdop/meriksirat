@@ -94,7 +94,7 @@ erDiagram
 
 ## An album from creation to expiry
 
-Albums live two years after their event date. Only the cron warnings and the removal are covered in detail in the sections below. Creation, date edits and pinning belong to the albums scenario files.
+Albums live two years after their event date. Only the cron warnings and the removal are covered in detail in the sections below. Creation, date edits and pinning belong to 06-albums-and-uploads.md.
 
 ```mermaid
 sequenceDiagram
