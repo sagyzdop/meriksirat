@@ -44,15 +44,15 @@ export interface AlbumListPage {
   nextCursor: string | null
 }
 
+export const AlbumIdSchema = z.object({
+  albumId: z.string(),
+})
+
 export const CreateAlbumSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(1000).optional().default(''),
   event: z.string().min(1, 'Event is required').max(200),
   eventDate: z.string().min(1, 'Event date is required'),
-})
-
-export const GetAlbumSchema = z.object({
-  albumId: z.string(),
 })
 
 export const UpdateAlbumSchema = z.object({
@@ -68,17 +68,9 @@ export const SetAlbumPinnedSchema = z.object({
   pinned: z.boolean(),
 })
 
-export const DeleteAlbumSchema = z.object({
-  albumId: z.string(),
-})
-
 export const ClaimEditAccessSchema = z.object({
   albumId: z.string(),
   token: z.string(),
-})
-
-export const RotateEditTokenSchema = z.object({
-  albumId: z.string(),
 })
 
 export const DeletePhotoSchema = z.object({
@@ -117,18 +109,6 @@ export const CreateUploadSessionSchema = z.object({
     .int()
     .positive()
     .max(5 * 1024 * 1024 * 1024),
-})
-
-export const RefreshAlbumSchema = z.object({
-  albumId: z.string(),
-})
-
-export const RecreateAlbumSchema = z.object({
-  albumId: z.string(),
-})
-
-export const RestoreAlbumSchema = z.object({
-  albumId: z.string(),
 })
 
 export type AlbumAccessLevel = 'none' | 'owner' | 'editor' | 'manager'

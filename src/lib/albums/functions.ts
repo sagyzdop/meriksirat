@@ -1,20 +1,15 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
   ALBUM_CREATE_MIN_CLEARANCE,
+  AlbumIdSchema,
   AlbumListQuerySchema,
   ClaimEditAccessSchema,
   ConfirmPhotoUploadSchema,
   CreateAlbumSchema,
   CreateUploadSessionSchema,
-  DeleteAlbumSchema,
   DeletePhotoSchema,
-  GetAlbumSchema,
-  RecreateAlbumSchema,
-  RefreshAlbumSchema,
   ReleaseUploadSchema,
   RemoveMemberSchema,
-  RestoreAlbumSchema,
-  RotateEditTokenSchema,
   SetAlbumPinnedSchema,
   SetCoverPhotoSchema,
   UpdateAlbumSchema,
@@ -879,7 +874,7 @@ export const getAllAlbumsFn = createServerFn({ method: 'GET' })
   })
 
 export const getAlbumFn = createServerFn({ method: 'GET' })
-  .validator(GetAlbumSchema)
+  .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<AlbumDetail | null> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
@@ -928,7 +923,7 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
   })
 
 export const refreshAlbumFn = createServerFn({ method: 'POST' })
-  .validator(RefreshAlbumSchema)
+  .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<AlbumDetail | null> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
@@ -970,7 +965,7 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
   })
 
 export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
-  .validator(RecreateAlbumSchema)
+  .validator(AlbumIdSchema)
   .handler(async ({ data }) => {
     const { album, photo, volume } = await import('@/db/schema')
     const { and, eq } = await import('drizzle-orm')
@@ -1069,7 +1064,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
   })
 
 export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })
-  .validator(RestoreAlbumSchema)
+  .validator(AlbumIdSchema)
   .handler(async ({ data }) => {
     const { invalidateCachedListing, invalidateCachedDetailCore } =
       await import('./server')
@@ -1206,7 +1201,7 @@ export const setAlbumPinnedFn = createServerFn({ method: 'POST' })
   })
 
 export const deleteAlbumFn = createServerFn({ method: 'POST' })
-  .validator(DeleteAlbumSchema)
+  .validator(AlbumIdSchema)
   .handler(async ({ data }) => {
     const { removeAlbum } = await import('./expiry')
     const { getGoogleAccessToken } =
@@ -1281,7 +1276,7 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
   })
 
 export const rotateEditTokenFn = createServerFn({ method: 'POST' })
-  .validator(RotateEditTokenSchema)
+  .validator(AlbumIdSchema)
   .handler(async ({ data }) => {
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')

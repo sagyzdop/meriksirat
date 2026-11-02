@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
-import { GetAlbumFavoritesSchema, SetFavoriteSchema } from './types'
+import { AlbumIdSchema } from '@/lib/albums/types'
+import { SetFavoriteSchema } from './types'
 import type { FavoriteRef } from './logic'
 import type { FavoritePhoto } from './types'
 
@@ -20,7 +21,7 @@ async function requireFavoriter(headers: Headers) {
 }
 
 export const getAlbumFavoritesFn = createServerFn({ method: 'GET' })
-  .validator(GetAlbumFavoritesSchema)
+  .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<FavoriteRef[]> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { env } = await import('cloudflare:workers')
