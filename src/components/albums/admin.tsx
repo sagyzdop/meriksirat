@@ -1,9 +1,8 @@
-import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { albumQueries } from '@/lib/albums'
 import type { AlbumListFilters } from '@/lib/albums'
 import { AlbumsPage } from '@/components/albums/albums-page'
+import { useAlbumList } from '@/components/albums/use-album-list'
 import { ExportAlbumsDialog } from '@/components/shared/export-albums-dialog'
 
 interface AdminAlbumsProps {
@@ -13,13 +12,8 @@ interface AdminAlbumsProps {
 export function AdminAlbums({ search }: AdminAlbumsProps) {
   const navigate = useNavigate()
 
-  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useInfiniteQuery(albumQueries.manage(search))
-
-  const albums = React.useMemo(
-    () => data?.pages.flatMap((page) => page.albums) ?? [],
-    [data]
-  )
+  const { albums, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useAlbumList(albumQueries.manage(search))
 
   const handleFiltersChange = (next: Partial<AlbumListFilters>) => {
     navigate({

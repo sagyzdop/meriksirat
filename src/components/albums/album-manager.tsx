@@ -11,7 +11,6 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Dialog,
@@ -22,13 +21,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import DatePicker from '@/components/shared/date-picker'
 import { toDateOnlyString } from '@/lib/format'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { UploadDropzone } from './upload-dropzone'
 import { ShareDialog } from './share-dialog'
+import { EditAlbumDialog } from './edit-album-dialog'
+import type { AlbumFormValues } from './album-form-fields'
+import { useAsyncAction } from '@/hooks/use-async-action'
 import {
   deleteAlbumFn,
   recreateAlbumFolderFn,
@@ -59,18 +59,14 @@ export function AlbumManager({
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [leaveOpen, setLeaveOpen] = React.useState(false)
-  const [title, setTitle] = React.useState(album.title)
-  const [description, setDescription] = React.useState(album.description)
-  const [event, setEvent] = React.useState(album.event)
-  const [eventDate, setEventDate] = React.useState<Date | undefined>(
-    album.eventDate ? new Date(album.eventDate) : undefined
-  )
-  const [busy, setBusy] = React.useState(false)
-  const [recreating, setRecreating] = React.useState(false)
   const [recreateOpen, setRecreateOpen] = React.useState(false)
-  const [restoring, setRestoring] = React.useState(false)
-  const [refreshing, setRefreshing] = React.useState(false)
-  const [removing, setRemoving] = React.useState<string | null>(null)
+  const { pending: busy, run: runBusy } = useAsyncAction()
+  const { pending: recreating, run: runRecreate } = useAsyncAction()
+  const { pending: restoring, run: runRestore } = useAsyncAction()
+  const { pending: refreshing, run: runRefresh } = useAsyncAction()
+  const { pending: removePending, run: runRemove } = useAsyncAction()
+  const [removingId, setRemovingId] = React.useState<string | null>(null)
+  const removing = removePending ? removingId : null
   const reveal = useUploadReveal()
 
   React.useEffect(() => {
@@ -86,127 +82,75 @@ export function AlbumManager({
     album.access === 'editor' &&
     album.authors.some((a) => a.id === currentUserId)
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
-    try {
+  const handleUpdate = (values: AlbumFormValues) =>
+    runBusy(async () => {
       await updateAlbumFn({
         data: {
           albumId: album.id,
-          title: title.trim(),
-          description: description.trim() || '',
-          event: event.trim(),
-          eventDate: eventDate ? toDateOnlyString(eventDate) : undefined,
+          title: values.title.trim(),
+          description: values.description.trim() || '',
+          event: values.event.trim(),
+          eventDate: values.eventDate
+            ? toDateOnlyString(values.eventDate)
+            : undefined,
         },
       })
       toast.success('Album updated')
       setEditOpen(false)
       onChanged()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to update album'
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
+    }, 'Failed to update album')
 
-  const handleDelete = async () => {
-    setBusy(true)
-    try {
+  const handleDelete = () =>
+    runBusy(async () => {
       await deleteAlbumFn({ data: { albumId: album.id } })
       toast.success('Album deleted')
       setDeleteOpen(false)
       onDeleted()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete album'
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
+    }, 'Failed to delete album')
 
-  const handleLeave = async () => {
+  const handleLeave = () => {
     if (!currentUserId) return
-    setBusy(true)
-    try {
+    return runBusy(async () => {
       await removeMemberFn({
         data: { albumId: album.id, userId: currentUserId },
       })
       toast.success('You left the album')
       setLeaveOpen(false)
       onDeleted()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to leave album'
-      )
-    } finally {
-      setBusy(false)
-    }
+    }, 'Failed to leave album')
   }
 
-  const handleRecreate = async () => {
-    setRecreating(true)
-    try {
+  const handleRecreate = () =>
+    runRecreate(async () => {
       const result = await recreateAlbumFolderFn({
         data: { albumId: album.id },
       })
       toast.success(recreateSummary(result))
       setRecreateOpen(false)
       onChanged()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to recreate folder'
-      )
-    } finally {
-      setRecreating(false)
-    }
-  }
+    }, 'Failed to recreate folder')
 
-  const handleRestore = async () => {
-    setRestoring(true)
-    try {
+  const handleRestore = () =>
+    runRestore(async () => {
       await restoreAlbumFolderFn({ data: { albumId: album.id } })
       toast.success('Album folder restored')
       onChanged()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to restore folder'
-      )
-    } finally {
-      setRestoring(false)
-    }
-  }
+    }, 'Failed to restore folder')
 
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    try {
+  const handleRefresh = () =>
+    runRefresh(async () => {
       await refreshAlbumFn({ data: { albumId: album.id } })
       toast.success('Album refreshed')
       onChanged()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to refresh album'
-      )
-    } finally {
-      setRefreshing(false)
-    }
-  }
+    }, 'Failed to refresh album')
 
-  const handleRemoveMember = async (userId: string) => {
-    setRemoving(userId)
-    try {
+  const handleRemoveMember = (userId: string) => {
+    setRemovingId(userId)
+    return runRemove(async () => {
       await removeMemberFn({ data: { albumId: album.id, userId } })
       toast.success('Co-author removed')
       onChanged()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to remove member'
-      )
-    } finally {
-      setRemoving(null)
-    }
+    }, 'Failed to remove member')
   }
 
   const folderMissing = album.folderState === 'missing'
@@ -300,15 +244,7 @@ export function AlbumManager({
             type="button"
             variant="secondary"
             className="w-full justify-start sm:w-auto"
-            onClick={() => {
-              setTitle(album.title)
-              setDescription(album.description)
-              setEvent(album.event)
-              setEventDate(
-                album.eventDate ? new Date(album.eventDate) : undefined
-              )
-              setEditOpen(true)
-            }}
+            onClick={() => setEditOpen(true)}
           >
             <Pencil />
             Edit details
@@ -399,67 +335,13 @@ export function AlbumManager({
         onChanged={onChanged}
       />
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit album</DialogTitle>
-            <DialogDescription>
-              Update the title, event, date, and description.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdate} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="album-title">Title</Label>
-              <Input
-                id="album-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                maxLength={200}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="album-event">Event</Label>
-              <Input
-                id="album-event"
-                value={event}
-                onChange={(e) => setEvent(e.target.value)}
-                required
-                maxLength={200}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Event Date</Label>
-              <DatePicker value={eventDate} onChange={setEventDate} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="album-description">Description</Label>
-              <Textarea
-                id="album-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                maxLength={1000}
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={busy || !title.trim() || !event.trim() || !eventDate}
-              >
-                {busy ? 'Saving...' : 'Save'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <EditAlbumDialog
+        album={album}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        busy={busy}
+        onSave={handleUpdate}
+      />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
