@@ -338,6 +338,9 @@ export const cancelBookingItemFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db/index')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { cancelBookingItems } = await import('../booking-items')
+    const { bookingItem } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const { itemBelongsToBooking } = await import('../ownership')
 
     const headers = getRequestHeaders()
     const session = await resolveSession(headers)
@@ -353,6 +356,16 @@ export const cancelBookingItemFn = createServerFn({ method: 'POST' })
       bookingId: data.bookingId,
       sessionUserId: session.user.id,
     })
+
+    const itemRow = await database
+      .select({ bookingId: bookingItem.bookingId })
+      .from(bookingItem)
+      .where(eq(bookingItem.id, data.itemId))
+      .get()
+
+    if (!itemBelongsToBooking(itemRow?.bookingId, data.bookingId)) {
+      throw new Error('Item not found')
+    }
 
     const result = await cancelBookingItems(database, [data.itemId])
 
