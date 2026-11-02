@@ -3,6 +3,7 @@ import { cancelBookingFn, startBookingFn } from '@/lib/booking'
 import { useAddBookingItems } from '@/hooks/use-add-booking-items'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import type { BookingInfoTableBookedBy } from '@/components/shared/booking-info-table'
+import { START_WINDOW_GRACE_MS } from '@/lib/booking/operating-hours'
 import type { BookingWithItems } from '@/lib/booking/types'
 
 interface PageProps {
@@ -22,8 +23,10 @@ export function Page({ booking, telegramBotUsername, bookedBy }: PageProps) {
   const canStart =
     booking.status === 'booked' &&
     !booking.startedAt &&
-    new Date(booking.startTime).getTime() - 15 * 60 * 1000 <= now.getTime() &&
-    now.getTime() <= new Date(booking.startTime).getTime() + 15 * 60 * 1000
+    new Date(booking.startTime).getTime() - START_WINDOW_GRACE_MS <=
+      now.getTime() &&
+    now.getTime() <=
+      new Date(booking.startTime).getTime() + START_WINDOW_GRACE_MS
 
   useAddBookingItems(booking.id)
 

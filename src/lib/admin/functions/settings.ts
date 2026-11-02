@@ -29,32 +29,11 @@ export interface SettingsData {
 export const getSettingsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const { adminContext } = await import('../server')
-    const { settings } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
+    const { loadSettings } = await import('@/lib/booking/load-settings')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    // Try to get existing settings
-    let settingsData = await database
-      .select()
-      .from(settings)
-      .where(eq(settings.id, 'global'))
-      .get()
-
-    // If no settings exist, create default settings
-    if (!settingsData) {
-      const result = await database
-        .insert(settings)
-        .values({
-          id: 'global',
-          globalBookingNote: '',
-          operatingHoursStart: 0,
-          operatingHoursEnd: 1439,
-        })
-        .returning()
-
-      settingsData = result[0]
-    }
+    const settingsData = await loadSettings(database)
 
     const { clubCode: _clubCode, ...publicSettings } = settingsData
     return publicSettings

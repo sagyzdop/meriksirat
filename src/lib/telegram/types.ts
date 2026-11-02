@@ -65,8 +65,6 @@ export const BOOKING_STATUS = {
   PARTIALLY_RETURNED: 'partially_returned',
 } as const
 
-export type BookingStatus = (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS]
-
 /**
  * Session data structure for KV storage
  */

@@ -10,15 +10,12 @@ import {
   checkMultipleCalendarsFreeBusy,
 } from '@/lib/google/google-calendar'
 import { bookingsQueries } from '@/lib/booking/queries'
-import { MIN_BOOKING_ADVANCE_MS } from '@/lib/booking/operating-hours'
+import {
+  MIN_BOOKING_ADVANCE_MS,
+  timeToMinutes,
+} from '@/lib/booking/operating-hours'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-
-/** Converts "HH:MM" to minutes since midnight. */
-function timeToMinutes(time: string): number {
-  const [hour, minute] = time.split(':').map(Number)
-  return hour * 60 + minute
-}
 
 interface TimeSlot {
   time: string

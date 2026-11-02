@@ -9,18 +9,11 @@ import {
 } from '@/components/shared/booking-collapsible'
 import { CancelBookingDialog } from '@/components/admin/bookings/$bookingId.edit/components/cancel-booking-dialog'
 import { updateBookingStatusAdminFn } from '@/lib/booking'
+import { BOOKING_STATUS_OPTIONS } from '@/lib/booking/types'
 import type { AdminBookingWithDetails } from '@/lib/booking/types'
+import type { PageInfo } from '@/lib/pagination'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-
-interface Pagination {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
-}
 
 interface Filters {
   status?: string[]
@@ -34,19 +27,10 @@ interface Filters {
 
 interface PageProps {
   bookings: AdminBookingWithDetails[]
-  pagination: Pagination
+  pagination: PageInfo
   filters: Filters
   isLoading?: boolean
 }
-
-const statusOptions = [
-  { value: 'booked', label: 'Booked' },
-  { value: 'active', label: 'Active' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'partially_returned', label: 'Partially Returned' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'cancelled', label: 'Cancelled' },
-]
 
 export function Page({
   bookings,
@@ -78,7 +62,7 @@ export function Page({
         bookings={bookings}
         pagination={pagination}
         filters={filters}
-        statusOptions={statusOptions}
+        statusOptions={BOOKING_STATUS_OPTIONS}
         showOverdueBanner
         isLoading={isLoading}
         calendarActionText="update their calendar events"

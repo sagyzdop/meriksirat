@@ -9,7 +9,7 @@ import {
 } from '@/lib/booking/calendar-events'
 import { formatBookingDetailsPlain } from '@/lib/booking/details'
 import { recomputeBookingStatus } from '@/lib/booking/status'
-import { START_WINDOW_GRACE_MS } from '@/lib/booking/start-booking'
+import { START_WINDOW_GRACE_MS } from '@/lib/booking/operating-hours'
 import type { Budget } from '@/lib/cron/budget'
 import { updateCalendarEventRaw } from '@/lib/google/google-calendar-client'
 import { TelegramAPI } from '@/lib/telegram/api'

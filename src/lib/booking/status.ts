@@ -1,4 +1,4 @@
-import type { BookingStatus } from '@/lib/telegram/types'
+import type { BookingStatus } from '@/lib/booking/types'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import * as schema from '@/db/schema'
 

@@ -68,6 +68,16 @@ export const DEFAULT_BOOKING_STATUS_FILTER = [
 
 export type BookingStatus = (typeof BOOKING_STATUSES)[number]
 
+export const BOOKING_STATUS_OPTIONS: { value: BookingStatus; label: string }[] =
+  [
+    { value: 'booked', label: 'Booked' },
+    { value: 'active', label: 'Active' },
+    { value: 'overdue', label: 'Overdue' },
+    { value: 'partially_returned', label: 'Partially Returned' },
+    { value: 'returned', label: 'Returned' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ]
+
 export interface BookingSettings {
   globalBookingNote: string
   /** Opening minute of the club day (minutes since midnight, 0-1439) */

@@ -7,40 +7,21 @@ import {
 } from '@/components/shared/booking-collapsible'
 import { CancelBookingDialog } from './components/cancel-booking-dialog'
 import { cancelBookingFn } from '@/lib/booking'
-import type { BookingWithItems } from '@/lib/booking/types'
+import { BOOKING_STATUS_OPTIONS } from '@/lib/booking/types'
+import type { BookingFilters, BookingWithItems } from '@/lib/booking/types'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import type { PageInfo } from '@/lib/pagination'
 
-interface Filters {
-  status?: string[]
-  equipmentId?: number
-  startDate?: string
-  endDate?: string
-  page: number
-  limit: number
-  sortBy: 'startTime' | 'endTime' | 'status' | 'createdAt' | 'equipment'
-  sortOrder: 'asc' | 'desc'
-}
-
 interface PageProps {
   bookings: BookingWithItems[]
   pagination: PageInfo
-  filters: Filters
+  filters: BookingFilters
   telegramBotUsername: string
   currentUserName: string
   currentUserImage?: string | null
   isLoading?: boolean
 }
-
-const statusOptions = [
-  { value: 'booked', label: 'Booked' },
-  { value: 'active', label: 'Active' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'partially_returned', label: 'Partially Returned' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'cancelled', label: 'Cancelled' },
-]
 
 export function Page({
   bookings,
@@ -67,7 +48,7 @@ export function Page({
         bookings={bookings}
         pagination={pagination}
         filters={filters}
-        statusOptions={statusOptions}
+        statusOptions={BOOKING_STATUS_OPTIONS}
         isLoading={isLoading}
         calendarActionText="remove their calendar events"
         isCancellable={(status) => status === 'booked'}
@@ -83,7 +64,7 @@ export function Page({
             to: '.',
             search: {
               ...filters,
-              sortBy: sortBy as Filters['sortBy'],
+              sortBy: sortBy as BookingFilters['sortBy'],
               sortOrder,
               page: 1,
             },

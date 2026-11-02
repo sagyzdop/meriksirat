@@ -1,5 +1,4 @@
 import { CLUB_TIMEZONE } from '@/lib/club-time'
-import { minutesToTime } from './functions/settings'
 
 /**
  * Club-local wall-clock helpers used to enforce operating hours.
@@ -161,4 +160,17 @@ export function getNextBookableWindow(
     startTime: minutesToTime(startMinutes),
     endTime: minutesToTime(endMinutes),
   }
+}
+
+export const START_WINDOW_GRACE_MS = 15 * 60 * 1000
+
+export function minutesToTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+}
+
+export function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
 }

@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { updateSettingsFn } from '@/lib/admin/functions/settings'
 import type { SettingsData } from '@/lib/admin/functions/settings'
-import { minutesToTime, timeToMinutes } from '@/lib/booking/functions/settings'
+import { minutesToTime, timeToMinutes } from '@/lib/booking/operating-hours'
 import { cn } from '@/lib/utils'
 
 interface SettingsTabProps {

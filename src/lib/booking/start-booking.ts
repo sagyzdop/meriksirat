@@ -11,10 +11,9 @@ import { formatUserDisplayName } from '@/lib/utils'
 import { logBookingActivityById } from '@/lib/telegram/logging'
 import { recomputeBookingStatus } from '@/lib/booking/status'
 import { ownsBooking } from '@/lib/booking/ownership'
+import { START_WINDOW_GRACE_MS } from '@/lib/booking/operating-hours'
 
 type BookingDatabase = ReturnType<typeof db>
-
-export const START_WINDOW_GRACE_MS = 15 * 60 * 1000
 
 export class BookingStartError extends Error {}
 
