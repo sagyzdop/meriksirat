@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
 const clubCodeSchema = z.object({
@@ -24,21 +23,12 @@ const updateOnboardingSchema = z.object({
 export const submitClubCodeFn = createServerFn({ method: 'POST' })
   .validator(clubCodeSchema)
   .handler(async ({ data }) => {
-    const headers = getRequestHeaders()
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { clubCodeMatches } = await import('@/lib/access/access-rules')
     const { getClubCode } = await import('@/lib/access/server')
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database } = await userContext()
 
     if (!clubCodeMatches(data.code, await getClubCode(database))) {
       return { success: false as const }
@@ -55,24 +45,16 @@ export const submitClubCodeFn = createServerFn({ method: 'POST' })
 export const acceptSignupTermsFn = createServerFn({ method: 'POST' })
   .validator(z.object({ accepted: z.literal(true) }))
   .handler(async () => {
-    const headers = getRequestHeaders()
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { signupKind } = await import('@/lib/auth/signup-domain')
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
+    const { session, database } = await userContext()
 
     if (signupKind(session.user.email) === 'nu') {
       throw new Error('NU accounts finish signup by connecting Drive')
     }
 
-    const database = db(env.meriksirat_d1 as D1Database)
     await database
       .update(user)
       .set({ termsAcceptedAt: new Date(), updatedAt: new Date() })
@@ -84,19 +66,10 @@ export const acceptSignupTermsFn = createServerFn({ method: 'POST' })
 export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
   .validator(updateOnboardingSchema)
   .handler(async ({ data }) => {
-    const headers = getRequestHeaders()
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database } = await userContext()
 
     const { loadAccessRules } = await import('@/lib/access/server')
     const rules = await loadAccessRules(database, session.user.id)
@@ -126,19 +99,10 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
 export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
   .validator(z.object({ skipTelegram: z.boolean().optional() }))
   .handler(async ({ data }) => {
-    const headers = getRequestHeaders()
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database } = await userContext()
 
     const { loadAccessRules } = await import('@/lib/access/server')
     const rules = await loadAccessRules(database, session.user.id)
@@ -178,19 +142,11 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
   })
 export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const headers = getRequestHeaders()
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const session = await resolveSession(headers)
+    const { session, database } = await userContext()
 
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
     const isDevelopment = process.env.DEV === 'true'
 
     // Check if user already has telegram linked
@@ -228,13 +184,8 @@ export const getTelegramLinkUrlFn = createServerFn({ method: 'GET' }).handler(
 export const getTelegramUpdateLinkUrlFn = createServerFn({
   method: 'GET',
 }).handler(async () => {
-  const headers = getRequestHeaders()
-  const { resolveSession } = await import('@/lib/auth/resolve-session')
-  const session = await resolveSession(headers)
-
-  if (!session?.user) {
-    throw new Error('Unauthorized')
-  }
+  const { userContext } = await import('@/lib/auth/context')
+  const { session } = await userContext()
 
   // Import the telegram helper only on server side
   const { createTelegramLinkToken } =
@@ -257,20 +208,12 @@ export const getTelegramUpdateLinkUrlFn = createServerFn({
 export const deleteOnboardingAccountFn = createServerFn({ method: 'POST' })
   .validator(z.object({ confirm: z.literal(true) }))
   .handler(async () => {
-    const headers = getRequestHeaders()
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const sessionData = await resolveSession(headers)
-
-    if (!sessionData?.user) {
-      throw new Error('Unauthorized')
-    }
+    const { session: sessionData, database } = await userContext()
 
     // Safety: an onboarded account must never be deleted through this path.
-    const database = db(env.meriksirat_d1 as D1Database)
     const { flamekeeper } = await import('@/db/schema')
     const record = await database
       .select({

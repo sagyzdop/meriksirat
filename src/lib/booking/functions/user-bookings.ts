@@ -81,7 +81,7 @@ export const getTelegramBotUsernameFn = createServerFn({
 export const createBookingFn = createServerFn({ method: 'POST' })
   .validator(CreateBookingSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const { userContext } = await import('@/lib/auth/context')
     const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const {
@@ -128,12 +128,8 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       throw new Error('Bookings must start within 60 days.')
     }
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
+    const { session, database, headers } =
+      await userContext('Not authenticated')
 
     const { assertAccess } = await import('@/lib/access/server')
     await assertAccess(
@@ -209,7 +205,6 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       throw err
     }
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const now = Date.now()
     const userDisplayName = await resolveUserDisplayName({
       database,
@@ -657,25 +652,17 @@ export const getBookingByIdFn = createServerFn({ method: 'GET' })
 export const cancelBookingFn = createServerFn({ method: 'POST' })
   .validator(CancelBookingSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const { userContext } = await import('@/lib/auth/context')
     const { deleteCalendarEventRaw } =
       await import('@/lib/google/google-calendar-client')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('../status')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
+    const { session, database } = await userContext('Not authenticated')
 
     const userId = session.user.id
-    const database = db(env.meriksirat_d1 as D1Database)
 
     // Get the booking to verify ownership
     const bookingItemData = await database
@@ -761,27 +748,19 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
 export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const { userContext } = await import('@/lib/auth/context')
     const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const { checkCalendarFreeBusyRaw, updateCalendarEventRaw } =
       await import('@/lib/google/google-calendar-client')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
       await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
+    const { session, database } = await userContext('Not authenticated')
 
     const userId = session.user.id
-    const database = db(env.meriksirat_d1 as D1Database)
     const userDisplayName = await resolveUserDisplayName({
       database,
       userId,

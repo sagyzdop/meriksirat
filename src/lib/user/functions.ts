@@ -84,19 +84,13 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
   .validator(AdminUserFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user, flamekeeper } = await import('@/db/schema')
     const { like, or, and, count, desc, asc, inArray, sql, eq } =
       await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-
     // Check admin permissions - both admin and manager can view users
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Build WHERE conditions
     const conditions: (SQL | undefined)[] = [eq(user.isMember, true)]
@@ -203,16 +197,12 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
 export const getAdminAlumniFn = createServerFn({ method: 'GET' })
   .validator(AdminAlumniFiltersSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { adminContext } = await import('@/lib/admin/server')
     const { ALUMNI_EMAIL_LIKE } = await import('@/lib/auth/signup-domain')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { user } = await import('@/db/schema')
     const { like, or, and, count, desc, asc } = await import('drizzle-orm')
 
-    await checkAdminPermission(getRequestHeaders(), ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     const conditions: (SQL | undefined)[] = [
       like(user.email, ALUMNI_EMAIL_LIKE),
@@ -279,18 +269,15 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateUserAdminSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-
     // Check admin permissions and get admin user info
-    const adminUser = await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { admin: adminUser, database } = await adminContext([
+      'admin',
+      'manager',
+    ])
 
     // Check if target user exists
     const targetUser = await database
@@ -401,16 +388,11 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
 export const bulkUpdateUserClearanceFn = createServerFn({ method: 'POST' })
   .validator(BulkUpdateUserClearanceSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { inArray } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     if (data.userIds.length === 0) {
       throw new Error('No user IDs provided')
@@ -432,18 +414,12 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
   .validator(GetUserByIdSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-
     // Check admin permissions
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     const userData = await database
       .select({
@@ -487,16 +463,11 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
 export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })
   .validator(ResetUserViolationCountersSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     const result = await database
       .update(user)
@@ -513,13 +484,11 @@ export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })
 export const banUserFn = createServerFn({ method: 'POST' })
   .validator(BanUserSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { banUser } = await import('@/lib/pool/ban-server')
 
-    const actor = await checkAdminPermission(getRequestHeaders(), ['admin'])
-    await banUser(db(env.meriksirat_d1 as D1Database), {
+    const { admin: actor, database } = await adminContext(['admin'])
+    await banUser(database, {
       actorId: actor.id,
       targetId: data.userId,
       reason: data.reason,
@@ -530,13 +499,11 @@ export const banUserFn = createServerFn({ method: 'POST' })
 export const unbanUserFn = createServerFn({ method: 'POST' })
   .validator(UnbanUserSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { unbanUser } = await import('@/lib/pool/ban-server')
 
-    const actor = await checkAdminPermission(getRequestHeaders(), ['admin'])
-    await unbanUser(db(env.meriksirat_d1 as D1Database), {
+    const { admin: actor, database } = await adminContext(['admin'])
+    await unbanUser(database, {
       actorId: actor.id,
       targetId: data.userId,
     })
@@ -551,20 +518,11 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
   .validator(UpdateUserProfileSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database } = await userContext()
 
     // Build update object with only provided fields
     const updateData: Partial<typeof user.$inferInsert> = {}

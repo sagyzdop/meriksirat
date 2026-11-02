@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
   PaginatedAdminBookingsResponse,
   AdminBookingWithDetails,
@@ -21,18 +20,13 @@ import { formatBookingDetailsPlain } from '../details'
 export const getAdminBookingsFn = createServerFn({ method: 'GET' })
   .validator(AdminBookingFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedAdminBookingsResponse> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { adminContext } = await import('@/lib/admin/server')
     const { booking, bookingItem, equipment, user, category } =
       await import('@/db/schema')
     const { eq, and, sql, desc, asc, gte, lte, inArray } =
       await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Build where conditions
     const conditions = []
@@ -242,17 +236,12 @@ export const getAdminBookingsFn = createServerFn({ method: 'GET' })
 export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
   .validator(GetBookingByIdSchema)
   .handler(async ({ data }): Promise<AdminBookingWithDetails | null> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { adminContext } = await import('@/lib/admin/server')
     const { booking, bookingItem, equipment, user, category } =
       await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     const parentRow = await database
       .select({
@@ -338,7 +327,7 @@ export const getAdminBookingByIdFn = createServerFn({ method: 'GET' })
 export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateBookingStatusAdminSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { adminContext } = await import('@/lib/admin/server')
     const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const {
@@ -346,16 +335,16 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       updateCalendarEventRaw,
       checkCalendarFreeBusyRaw,
     } = await import('@/lib/google/google-calendar-client')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
       await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('../status')
 
-    const headers = getRequestHeaders()
-    const adminUser = await checkAdminPermission(headers, ['admin', 'manager'])
+    const { admin: adminUser, database } = await adminContext([
+      'admin',
+      'manager',
+    ])
     const adminDisplayName = formatUserDisplayName({
       firstName: adminUser.firstName,
       lastName: adminUser.lastName,
@@ -370,8 +359,6 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
         'Admins can only change a booking status to "cancelled". Other statuses are set automatically.'
       )
     }
-
-    const database = db(env.meriksirat_d1 as D1Database)
 
     // Get the booking with user details
     const bookingDataResult = await database

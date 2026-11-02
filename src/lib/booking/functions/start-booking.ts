@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import { StartBookingSchema } from '../types'
 import { startBooking } from '../start-booking'
 
@@ -11,20 +10,11 @@ import { startBooking } from '../start-booking'
 export const startBookingFn = createServerFn({ method: 'POST' })
   .validator(StartBookingSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { userContext } = await import('@/lib/auth/context')
     const { booking } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database } = await userContext('Not authenticated')
 
     const bookingData = await database
       .select({ userId: booking.userId })

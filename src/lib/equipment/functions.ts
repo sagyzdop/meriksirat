@@ -240,16 +240,11 @@ export const createEquipmentAdminFn = createServerFn({ method: 'POST' })
   .validator(CreateEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { equipment, category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Check if Google Calendar ID already exists
     const existingEquipment = await database
@@ -300,16 +295,11 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
   .validator(UpdateEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { equipment, category } = await import('@/db/schema')
     const { eq, and, ne } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Check if equipment exists
     const existingEquipment = await database
@@ -389,16 +379,11 @@ export const updateEquipmentAdminFn = createServerFn({ method: 'POST' })
 export const bulkUpdateEquipmentClearanceFn = createServerFn({ method: 'POST' })
   .validator(BulkUpdateEquipmentClearanceSchema)
   .handler(async ({ data }) => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { equipment } = await import('@/db/schema')
     const { inArray } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     if (data.equipmentIds.length === 0) {
       throw new Error('No equipment IDs provided')
@@ -420,16 +405,11 @@ export const deleteEquipmentAdminFn = createServerFn({ method: 'POST' })
   .validator(DeleteEquipmentSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { equipment, booking, bookingItem } = await import('@/db/schema')
     const { eq, and, or, sql } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Check if equipment exists
     const equipmentToDelete = await database
@@ -502,16 +482,12 @@ export const getAdminEquipmentByIdFn = createServerFn({
   .validator(z.object({ equipmentId: z.number() }))
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { equipment, category } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
+    const { database } = await adminContext(['admin', 'manager'])
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const equipmentItem = await database
       .select({
         id: equipment.id,
@@ -550,17 +526,12 @@ export const getAdminEquipmentFn = createServerFn({
   .validator(AdminEquipmentFiltersSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { equipment, category } = await import('@/db/schema')
     const { eq, and, or, gte, lte, like, sql, asc, desc, inArray } =
       await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Normalize defaults since page/limit/sortBy/sortOrder are optional
     const page = data.page ?? 1
@@ -695,16 +666,12 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
   .validator(UploadEquipmentImageSchema)
   .handler(async ({ data }) => {
     // Import server-only code inside handler
-    const { checkAdminPermission } = await import('@/lib/admin/server')
+    const { adminContext } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { equipment } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']

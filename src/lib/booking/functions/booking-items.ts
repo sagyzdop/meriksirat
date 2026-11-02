@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import {
   AddBookingItemsSchema,
   CancelBookingItemSchema,
@@ -58,9 +57,7 @@ async function assertBookingAccess(params: {
 export const addBookingItemsFn = createServerFn({ method: 'POST' })
   .validator(AddBookingItemsSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { userContext } = await import('@/lib/auth/context')
     const { booking, bookingItem, equipment, user } =
       await import('@/db/schema')
     const { eq, inArray } = await import('drizzle-orm')
@@ -76,11 +73,8 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     const { formatBookingDetailsPlain } = await import('../details')
     const { formatUserDisplayName } = await import('@/lib/utils')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
+    const { session, database, headers } =
+      await userContext('Not authenticated')
 
     // Per-user rate limit so a single member cannot spam adding items (each
     // attempt runs free/busy queries + calendar event inserts).
@@ -93,8 +87,6 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
     if (!addItemsRateLimit.allowed) {
       throw new Error('Too many requests. Please try again shortly.')
     }
-
-    const database = db(env.meriksirat_d1 as D1Database)
 
     await assertBookingAccess({
       headers,
@@ -333,22 +325,15 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
 export const cancelBookingItemFn = createServerFn({ method: 'POST' })
   .validator(CancelBookingItemSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { userContext } = await import('@/lib/auth/context')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { cancelBookingItems } = await import('../booking-items')
     const { bookingItem } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { itemBelongsToBooking } = await import('../ownership')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database, headers } =
+      await userContext('Not authenticated')
 
     await assertBookingAccess({
       headers,
@@ -392,19 +377,12 @@ export const cancelBookingItemFn = createServerFn({ method: 'POST' })
 export const getBookingItemEquipmentIdsFn = createServerFn({ method: 'POST' })
   .validator(GetBookingByIdSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { userContext } = await import('@/lib/auth/context')
     const { bookingItem } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database, headers } =
+      await userContext('Not authenticated')
 
     await assertBookingAccess({
       headers,
@@ -429,19 +407,12 @@ export const getBookingItemEquipmentIdsFn = createServerFn({ method: 'POST' })
 export const getBookingWindowFn = createServerFn({ method: 'POST' })
   .validator(GetBookingByIdSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
+    const { userContext } = await import('@/lib/auth/context')
     const { booking } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database, headers } =
+      await userContext('Not authenticated')
 
     await assertBookingAccess({
       headers,

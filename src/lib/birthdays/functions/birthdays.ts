@@ -168,17 +168,12 @@ export async function reconcileBirthdaysToCalendar(
 export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
   .validator(BirthdayListFiltersSchema)
   .handler(async ({ data }): Promise<BirthdayListResult> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { adminContext } = await import('@/lib/admin/server')
     const { user } = await import('@/db/schema')
     const { inArray, isNotNull, and, or, like, sql } =
       await import('drizzle-orm')
 
-    const headers = getRequestHeaders()
-    await checkAdminPermission(headers, ['admin', 'manager'])
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { database } = await adminContext(['admin', 'manager'])
 
     const from = startOfDay(new Date())
 
@@ -300,14 +295,10 @@ export const getUpcomingBirthdaysFn = createServerFn({ method: 'POST' })
 export const syncBirthdaysToCalendarFn = createServerFn({
   method: 'POST',
 }).handler(async (): Promise<BirthdaySyncResult> => {
-  const { checkAdminPermission } = await import('@/lib/admin/server')
-  const { env } = await import('cloudflare:workers')
-  const { db } = await import('@/db')
+  const { adminContext } = await import('@/lib/admin/server')
 
-  const headers = getRequestHeaders()
-  await checkAdminPermission(headers, ['admin', 'manager'])
+  const { database } = await adminContext(['admin', 'manager'])
 
-  const database = db(env.meriksirat_d1 as D1Database)
   return reconcileBirthdaysToCalendar(database)
 })
 

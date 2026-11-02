@@ -47,8 +47,8 @@ export const checkCalendarFreeBusy = createServerFn({ method: 'POST' })
     })
   )
   .handler(async ({ data }) => {
-    const { requireAuthenticatedUser } = await import('@/lib/auth/require-auth')
-    await requireAuthenticatedUser()
+    const { userContext } = await import('@/lib/auth/context')
+    await userContext('Not authenticated')
     const { checkCalendarFreeBusyRaw } =
       await import('./google-calendar-client')
     const { calendarId, timeMin, timeMax } = data
@@ -67,8 +67,8 @@ export const checkMultipleCalendarsFreeBusy = createServerFn({ method: 'POST' })
     })
   )
   .handler(async ({ data }) => {
-    const { requireAuthenticatedUser } = await import('@/lib/auth/require-auth')
-    await requireAuthenticatedUser()
+    const { userContext } = await import('@/lib/auth/context')
+    await userContext('Not authenticated')
     const { checkMultipleCalendarsFreeBusyRaw } =
       await import('./google-calendar-client')
     const { equipmentCalendarIds, timeMin, timeMax } = data
@@ -92,8 +92,8 @@ export const getCalendarEvents = createServerFn({ method: 'POST' })
     })
   )
   .handler(async ({ data }) => {
-    const { requireAuthenticatedUser } = await import('@/lib/auth/require-auth')
-    await requireAuthenticatedUser()
+    const { userContext } = await import('@/lib/auth/context')
+    await userContext('Not authenticated')
     const { getCalendarEventsRaw } = await import('./google-calendar-client')
     const { equipmentCalendarId, timeMin, timeMax, maxResults = 250 } = data
     return getCalendarEventsRaw({

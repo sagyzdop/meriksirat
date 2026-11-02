@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import { ExtendBookingSchema } from '../types'
 import { formatBookingDetailsPlain } from '../details'
 import { formatUserDisplayName } from '@/lib/utils'
@@ -23,27 +22,19 @@ const EXTEND_BOOKING_MINUTES = 30
 export const extendBookingByThirtyMinutesFn = createServerFn({ method: 'POST' })
   .validator(ExtendBookingSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
+    const { userContext } = await import('@/lib/auth/context')
     const { toCalendarDateTime, CLUB_TIMEZONE } =
       await import('@/lib/google/google-caledar')
     const { checkMultipleCalendarsFreeBusyRaw, updateCalendarEventRaw } =
       await import('@/lib/google/google-calendar-client')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db/index')
     const { booking, bookingItem, equipment, user } =
       await import('@/db/schema')
     const { eq, inArray, sql } = await import('drizzle-orm')
     const { logBookingActivityById } = await import('@/lib/telegram/logging')
     const { recomputeBookingStatus } = await import('../status')
 
-    const headers = getRequestHeaders()
-    const session = await resolveSession(headers)
-
-    if (!session?.user) {
-      throw new Error('Not authenticated')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
+    const { session, database, headers } =
+      await userContext('Not authenticated')
 
     const parentRows = await database
       .select({

@@ -15,13 +15,11 @@ import {
 } from './types'
 
 async function resolveRelaySource(userId: string | undefined) {
-  const { resolveSession } = await import('@/lib/auth/resolve-session')
-  const headers = getRequestHeaders()
-  const session = await resolveSession(headers)
-  if (!session?.user) throw new Error('Unauthorized')
+  const { userContext } = await import('@/lib/auth/context')
+  const { session } = await userContext()
   if (userId && userId !== session.user.id) {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    await checkAdminPermission(headers, ['admin', 'manager'])
+    const { adminContext } = await import('@/lib/admin/server')
+    await adminContext(['admin', 'manager'])
     return userId
   }
   return session.user.id
@@ -29,16 +27,11 @@ async function resolveRelaySource(userId: string | undefined) {
 
 export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<MyFlamekeeper | null> => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const session = await resolveSession(getRequestHeaders())
-    if (!session?.user) throw new Error('Unauthorized')
-
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
+    const { session, database } = await userContext()
     const { flamekeeper } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    const database = db(env.meriksirat_d1 as D1Database)
     let row = await database
       .select()
       .from(flamekeeper)
@@ -81,12 +74,9 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
 export const startDriveConnectFn = createServerFn({ method: 'POST' })
   .validator(StartDriveConnectSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const session = await resolveSession(getRequestHeaders())
-    if (!session?.user) throw new Error('Unauthorized')
-
+    const { userContext } = await import('@/lib/auth/context')
+    const { session, database } = await userContext()
     const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { flamekeeper } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { loadAccessRules } = await import('@/lib/access/server')
@@ -104,7 +94,6 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
       throw new Error(MASTER_FLAMEKEEPER_MESSAGE)
     }
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const clientId = process.env.GOOGLE_CLIENT_ID
     if (!clientId) throw new Error('GOOGLE_CLIENT_ID not set')
 
@@ -170,12 +159,8 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
 export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
   .validator(UpdateFlamekeeperSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const session = await resolveSession(getRequestHeaders())
-    if (!session?.user) throw new Error('Unauthorized')
-
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
+    const { session, database } = await userContext()
     const { flamekeeper } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { gbToBytes, isValidGraduationDate, isValidPledgeGb } =
@@ -183,7 +168,6 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
 
     if (!isValidPledgeGb(data.pledgeGb)) throw new Error('Invalid pledge')
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const existing = await database
       .select()
       .from(flamekeeper)
@@ -213,17 +197,12 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
 export const confirmGraduationFn = createServerFn({ method: 'POST' })
   .validator(ConfirmGraduationSchema)
   .handler(async ({ data }) => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const session = await resolveSession(getRequestHeaders())
-    if (!session?.user) throw new Error('Unauthorized')
-
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
+    const { session, database } = await userContext()
     const { flamekeeper } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { isValidGraduationDate } = await import('./rules')
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const existing = await database
       .select()
       .from(flamekeeper)
@@ -246,16 +225,13 @@ export const confirmGraduationFn = createServerFn({ method: 'POST' })
 export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
   .validator(AdminFlamekeepersSchema)
   .handler(async ({ data }): Promise<AdminFlamekeeperRow[]> => {
-    const { checkAdminPermission } = await import('@/lib/admin/server')
-    await checkAdminPermission(getRequestHeaders(), ['admin', 'manager'])
+    const { adminContext } = await import('@/lib/admin/server')
+    const { database } = await adminContext(['admin', 'manager'])
 
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
     const { flamekeeper, user } = await import('@/db/schema')
     const { eq, like, or, desc } = await import('drizzle-orm')
 
     const { drainBytesLeft } = await import('@/lib/pool/drain')
-    const database = db(env.meriksirat_d1 as D1Database)
     const term = data.search ? `%${data.search}%` : null
 
     const rows = await database
@@ -312,17 +288,10 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
 
 export const optOutFlamekeeperFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<DrainStatus> => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const session = await resolveSession(getRequestHeaders())
-    if (!session?.user) throw new Error('Unauthorized')
-
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
+    const { session, database } = await userContext()
     const { optOutFlamekeeper } = await import('@/lib/pool/drain-server')
-    return optOutFlamekeeper(
-      db(env.meriksirat_d1 as D1Database),
-      session.user.id
-    )
+    return optOutFlamekeeper(database, session.user.id)
   }
 )
 
@@ -372,17 +341,12 @@ export const releaseRelayFn = createServerFn({ method: 'POST' })
 
 export const deleteMyAccountFn = createServerFn({ method: 'POST' }).handler(
   async () => {
-    const { resolveSession } = await import('@/lib/auth/resolve-session')
-    const session = await resolveSession(getRequestHeaders())
-    if (!session?.user) throw new Error('Unauthorized')
-
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
+    const { userContext } = await import('@/lib/auth/context')
+    const { session, database } = await userContext()
     const { user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { loadAccessRules } = await import('@/lib/access/server')
 
-    const database = db(env.meriksirat_d1 as D1Database)
     const rules = await loadAccessRules(database, session.user.id)
     if (!rules.canDeleteAccount) {
       throw new Error(
