@@ -76,10 +76,6 @@ export function planRecreateDeletes(
   return [...groups].map(([owner, groupRows]) => ({ owner, rows: groupRows }))
 }
 
-export function isRecreatePassFinished(remaining: number): boolean {
-  return remaining === 0
-}
-
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`
 

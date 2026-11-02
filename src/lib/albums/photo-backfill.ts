@@ -8,8 +8,6 @@ export const MAX_PHOTOS_PER_RUN = 500
 export const MAX_ALBUMS_PER_RUN = 5
 export const PHOTO_INSERT_CHUNK = 6
 
-export type IndexSkipReason = 'trashed' | 'missing'
-
 export interface DriveFileLike {
   id: string
   name: string
@@ -104,12 +102,6 @@ export function photosAffordable(
   const remaining = budget - spentToday - ALBUM_TOTALS_WRITES
   if (remaining < WRITES_PER_PHOTO) return 0
   return Math.min(Math.floor(remaining / WRITES_PER_PHOTO), maxPerRun)
-}
-
-export function readsFromTable(album: {
-  photosIndexedAt: Date | null
-}): boolean {
-  return album.photosIndexedAt !== null
 }
 
 export function selectNextAlbum(

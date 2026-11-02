@@ -10,25 +10,14 @@ import type {
   AlbumListFilters,
   AlbumListPage,
   AlbumOwnershipFilter,
-  AlbumSummary,
 } from './types'
-
-export function albumsEmptyResponse(): AlbumSummary[] {
-  return []
-}
-
-function emptyPage(): AlbumListPage {
-  return { albums: [], nextCursor: null }
-}
 
 export interface AlbumListQueryInput {
   search?: string
   ownership?: AlbumOwnershipFilter[]
 }
 
-export function normalizeFilters(
-  filters: AlbumListQueryInput
-): AlbumListFilters {
+function normalizeFilters(filters: AlbumListQueryInput): AlbumListFilters {
   return {
     search: filters.search ?? '',
     ownership: filters.ownership ?? [],
@@ -46,8 +35,7 @@ export const albumQueries = {
       refetchOnWindowFocus: true,
       initialPageParam: null as string | null,
       queryFn: async ({ pageParam }): Promise<AlbumListPage> =>
-        (await getMyAlbumsFn({ data: { ...filters, cursor: pageParam } })) ??
-        emptyPage(),
+        await getMyAlbumsFn({ data: { ...filters, cursor: pageParam } }),
       getNextPageParam: (last) => last.nextCursor,
     }),
   public: (filters: AlbumListQueryInput = {}) =>
@@ -57,9 +45,9 @@ export const albumQueries = {
       refetchOnWindowFocus: true,
       initialPageParam: null as string | null,
       queryFn: async ({ pageParam }): Promise<AlbumListPage> =>
-        (await getPublicAlbumsFn({
+        await getPublicAlbumsFn({
           data: { ...filters, cursor: pageParam },
-        })) ?? emptyPage(),
+        }),
       getNextPageParam: (last) => last.nextCursor,
     }),
   manage: (filters: AlbumListQueryInput = {}) =>
@@ -69,8 +57,7 @@ export const albumQueries = {
       refetchOnWindowFocus: true,
       initialPageParam: null as string | null,
       queryFn: async ({ pageParam }): Promise<AlbumListPage> =>
-        (await getAllAlbumsFn({ data: { ...filters, cursor: pageParam } })) ??
-        emptyPage(),
+        await getAllAlbumsFn({ data: { ...filters, cursor: pageParam } }),
       getNextPageParam: (last) => last.nextCursor,
     }),
   detail: (albumId: string) =>

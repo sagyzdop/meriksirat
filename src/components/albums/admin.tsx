@@ -37,7 +37,6 @@ export function AdminAlbums({ search }: AdminAlbumsProps) {
       hasNextPage={hasNextPage}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
-      onCreated={() => {}}
       headerActions={<ExportAlbumsDialog />}
     />
   )

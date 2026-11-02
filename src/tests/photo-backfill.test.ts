@@ -11,7 +11,6 @@ import {
   photoRowToAlbumPhoto,
   photoWriteCost,
   photosAffordable,
-  readsFromTable,
   recordSpend,
   rollBudget,
   selectNextAlbum,
@@ -96,13 +95,6 @@ describe('selectNextAlbum', () => {
     expect(selectNextAlbum(list, new Set(['b']))?.id).toBe('a')
     expect(selectNextAlbum(list, new Set(['a', 'b']))).toBeNull()
     expect(selectNextAlbum([])).toBeNull()
-  })
-})
-
-describe('readsFromTable', () => {
-  it('uses the table only once the album is indexed', () => {
-    expect(readsFromTable({ photosIndexedAt: null })).toBe(false)
-    expect(readsFromTable({ photosIndexedAt: new Date() })).toBe(true)
   })
 })
 

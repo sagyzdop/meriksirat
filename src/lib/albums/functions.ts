@@ -1000,8 +1000,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
 
     const accessToken = await getGoogleAccessToken()
     const { getDriveFolderState } = await import('@/lib/google/google-drive')
-    const { folderCheckVerdict, isRecreatePassFinished, pressAgainMessage } =
-      await import('./recreate')
+    const { folderCheckVerdict, pressAgainMessage } = await import('./recreate')
     let verdict: ReturnType<typeof folderCheckVerdict>
     try {
       verdict = folderCheckVerdict({
@@ -1023,7 +1022,7 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
 
     const { runRecreateDeletePass } = await import('./recreate-server')
     const pass = await runRecreateDeletePass(database, row, accessToken)
-    if (!isRecreatePassFinished(pass.remaining)) {
+    if (pass.remaining !== 0) {
       throw new Error(pressAgainMessage(pass, pass.remaining))
     }
 

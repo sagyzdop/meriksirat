@@ -37,9 +37,8 @@ interface AlbumsPageProps {
   hasNextPage: boolean
   isFetchingNextPage: boolean
   fetchNextPage: () => void
-  showOwnershipFilter?: boolean
   canCreate?: boolean
-  onCreated: () => void
+  onCreated?: () => void
   headerActions?: React.ReactNode
 }
 
@@ -51,7 +50,6 @@ export function AlbumsPage({
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
-  showOwnershipFilter = true,
   canCreate = true,
   onCreated,
   headerActions,
@@ -67,7 +65,7 @@ export function AlbumsPage({
     e.preventDefault()
     setBusy(true)
     try {
-      const { id } = await createAlbumFn({
+      await createAlbumFn({
         data: {
           title: title.trim(),
           description: description.trim() || '',
@@ -81,8 +79,7 @@ export function AlbumsPage({
       setDescription('')
       setEvent('')
       setEventDate(undefined)
-      onCreated()
-      return id
+      onCreated?.()
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to create album'
@@ -118,11 +115,7 @@ export function AlbumsPage({
         }
       />
 
-      <AlbumToolbar
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-        showOwnership={showOwnershipFilter}
-      />
+      <AlbumToolbar filters={filters} onFiltersChange={onFiltersChange} />
 
       {albums.length === 0 ? (
         <Empty>

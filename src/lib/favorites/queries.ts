@@ -9,14 +9,13 @@ export const favoriteQueries = {
     queryOptions({
       queryKey: [...favoriteQueries.all, 'mine'],
       staleTime: 0,
-      queryFn: async (): Promise<FavoritePhoto[]> =>
-        (await listMyFavoritesFn()) ?? [],
+      queryFn: async (): Promise<FavoritePhoto[]> => await listMyFavoritesFn(),
     }),
   album: (albumId: string) =>
     queryOptions({
       queryKey: [...favoriteQueries.all, 'album', albumId],
       staleTime: 30_000,
       queryFn: async (): Promise<FavoriteRef[]> =>
-        (await getAlbumFavoritesFn({ data: { albumId } })) ?? [],
+        await getAlbumFavoritesFn({ data: { albumId } }),
     }),
 }

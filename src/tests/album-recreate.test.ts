@@ -5,7 +5,6 @@ import {
   classifyDeleteError,
   classifyDeleteResult,
   folderCheckVerdict,
-  isRecreatePassFinished,
   planRecreateDeletes,
   pressAgainMessage,
   recreateSummary,
@@ -167,13 +166,6 @@ describe('planRecreateDeletes', () => {
     ]
     const plan = planRecreateDeletes(rows)
     expect(plan[0].rows.map((r) => r.id)).toEqual(['x0', 'late'])
-  })
-})
-
-describe('isRecreatePassFinished', () => {
-  it('is finished only when no rows remain', () => {
-    expect(isRecreatePassFinished(0)).toBe(true)
-    expect(isRecreatePassFinished(1)).toBe(false)
   })
 })
 

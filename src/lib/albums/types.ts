@@ -196,8 +196,7 @@ export interface AlbumSummary {
   authors: AlbumAuthor[]
 }
 
-export interface AlbumDetail extends Omit<AlbumSummary, 'coverUrl'> {
-  coverUrl: string | null
+export interface AlbumDetail extends AlbumSummary {
   photos: AlbumPhoto[]
   access: AlbumAccessLevel
   editShareToken: string | null
