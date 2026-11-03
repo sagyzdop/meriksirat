@@ -7,18 +7,27 @@
 > **Answer:** checkFlamekeeperHealth looks at flamekeepers in
 > state active, full or draining and probes each one at most
 > once every 24 hours, oldest check first. The probe refreshes
-> the flamekeeper's Google token, records the Drive usage and
-> keeps the saved email in step with Google. If Google says the
+> the flamekeeper's Google token, records the Drive usage,
+> copies Google's email onto the account if it differs, and
+> checks that their photos still exist. If Google says the
 > grant is gone (invalid_grant, or no grant row at all), the
 > flamekeeper is marked lost. Any other failure is retried in
-> about 1 hour. The step has its own cap of 24 requests, taken
-> from the shared 40.
+> about 1 hour. The probes share a cap of 24 requests, taken
+> from the run's 40.
 >
 > **Notes:**
 > - Cost per flamekeeper is 2 requests (token refresh and Drive
 >   about call), or 1 when the previous run stopped half-way
->   through the photo audit and is resuming from a saved cursor.
->   The pick stops at the first flamekeeper that no longer fits.
+>   through the photo check and is resuming from a saved
+>   place. The pick stops at the first flamekeeper that no
+>   longer fits. The photo check itself spends more requests
+>   from the same cap of 24.
+> - If the cap runs out during the photo check, the place is
+>   saved and the flamekeeper is due again on the next run,
+>   instead of waiting 24 hours.
+> - The reconnect emails, the lost-flamekeeper work and the
+>   admin report that follow use the run's budget outside this
+>   cap of 24.
 > - Flamekeepers who host no volumes are planned at a cost of 1,
 >   but a fresh probe still takes 2.
 > - The cached token is always thrown away first, so every probe
@@ -26,7 +35,7 @@
 >   minutes.
 > - Only active, full and draining flamekeepers are probed. A
 >   lost flamekeeper is not probed again until it reconnects.
-> - The photo audit is in missing-photos.md. What happens to
+> - The photo check is in missing-photos.md. What happens to
 >   lost flamekeepers is in lost-notice.md.
 > - If Google reports no email for the account, the email sync
 >   is skipped and a warning is logged once per Worker instance.
@@ -59,7 +68,12 @@ sequenceDiagram
                     Worker->>D1: set user.email = Google email in lower case<br/>if another account owns it, leave unchanged
                 end
             end
-            Worker->>Worker: audit the flamekeeper's volumes,<br/>see missing-photos.md
+            Worker->>Worker: check the flamekeeper's photos,<br/>see missing-photos.md
+            alt check finished
+                Worker->>D1: set healthCheckedAt = now, clear healthCursor
+            else cap of 24 ran out
+                Worker->>D1: set healthCheckedAt = now minus 24 hours<br/>save healthCursor, due again next run
+            end
         end
     end
     Worker->>Worker: report removed photos to admins and handle<br/>lost flamekeepers, see missing-photos.md<br/>and lost-notice.md

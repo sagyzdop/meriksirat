@@ -14,6 +14,10 @@
 > **Notes:**
 > - A flamekeeper in state lost no longer receives uploads:
 >   placement only looks at active flamekeepers.
+> - The email goes out in the same run that marks the loss,
+>   right after the probes.
+> - If the budget is gone or the cap of 3 is reached, the rest
+>   wait for the next run.
 > - Banned flamekeepers get no reconnect email, but are still
 >   finalized after 7 days.
 > - The email is sent from the club account. Subject: Reconnect
@@ -22,8 +26,8 @@
 >   files stay in the flamekeeper's Drive and come back if they
 >   reconnect later.
 > - Reconnecting is done by the flamekeeper in the app, see
->   ../../flamekeepers/. The restoration after it is in
->   lost-recovery.md.
+>   ../../flamekeepers/connect-drive.md. The restoration after
+>   it is in lost-recovery.md.
 > - How the loss is detected is in health-probe.md.
 
 ```mermaid
@@ -36,7 +40,7 @@ sequenceDiagram
 
     Note over Worker: Marked lost by the probe, see health-probe.md
     Worker->>D1: set state = lost, lostSince = now
-    Worker->>D1: next run: load lost flamekeepers where<br/>lostNotifiedAt or lostFinalizedAt is empty
+    Worker->>D1: later in the same run: load lost flamekeepers<br/>where lostNotifiedAt or lostFinalizedAt is empty
     Worker->>Worker: planLost: notify if no lostNotifiedAt and not banned<br/>finalize if lostSince is 7 days ago or more
     loop up to 3 flamekeepers to notify
         Worker->>Worker: take 1 request, if not affordable stop

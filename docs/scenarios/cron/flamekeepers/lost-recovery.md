@@ -28,7 +28,7 @@
 >   check time and cursor are cleared so the next probe audits
 >   them again at once.
 > - The reconnect itself happens in the app, see
->   ../../flamekeepers/.
+>   ../../flamekeepers/drive-callback.md.
 > - No message is sent to anyone when an album comes back.
 
 ```mermaid

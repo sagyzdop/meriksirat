@@ -10,8 +10,8 @@
 > when their expected graduation date is 60 days away or closer,
 > they are drained with reason graduation. Up to 3 drains start
 > per run, 2 requests each. The flamekeeper is told by email
-> that their photos must move within 14 days. If they hold no
-> photos, they go straight to drained.
+> that their photos must move before a deletion date 14 days
+> away. If they hold no photos, they go straight to drained.
 >
 > **Notes:**
 > - A draining flamekeeper with reason pledge or graduation
@@ -32,7 +32,7 @@
 >   in the budget, the loop stops.
 > - The drain itself continues in drain-notices.md,
 >   drain-deadline.md and drain-finish.md. The move of the
->   photos is in ../../flamekeepers/.
+>   photos is in ../../flamekeepers/relay-move-photo.md.
 > - Flamekeepers without photos (used bytes 0, or no live or
 >   dropped volumes) skip the drain and are finished at once,
 >   see drain-finish.md.
