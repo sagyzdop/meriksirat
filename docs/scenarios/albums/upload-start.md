@@ -8,8 +8,9 @@
 > - The Upload photos button is disabled unless the folder state is ok, with hover texts "Restore the album folder from the Drive bin before uploading" and "Recreate the album folder before uploading".
 > - The queue survives a page refresh: jobs go to localStorage and the files to IndexedDB. A job that was uploading is restarted from 0 after a refresh. A job whose file cannot be found fails with "File is no longer available — choose it again".
 > - Finished jobs disappear after 1 hour (done or cancelled) or 7 days (failed).
-> - Names are compared exactly. The same name in the same album is refused by the browser and again by the Worker.
-> - A rate limit named rl_create_upload_session is declared in the project settings, but createUploadSessionFn does not use it.
+> - Names are compared exactly. The same name in the same album is refused by the browser and again by the Worker. The browser counts a file as an image if its type starts with image/ or is empty.
+> - A rate limit named rl_create_upload_session (20 a minute) is declared in the project settings, but createUploadSessionFn does not use it.
+> - Only a queued or uploading job of the same name blocks a new pick in the browser. A failed job with the same name is replaced instead.
 > - What the browser does next is in upload-send-and-confirm.md.
 
 ```mermaid
@@ -22,10 +23,12 @@ sequenceDiagram
     participant G as Master Drive
     M->>B: Choose photos or drop them on the upload box
     alt No image files in the selection
-        B->>M: Toast "Please choose image files"
+        B->>M: Red toast "Please choose image files"
     else Some images
         B->>B: Skip names already in the album,<br/>in the queue or twice in the batch
-        opt Duplicates skipped
+        alt Every file skipped
+            B->>M: Warning toast, NAME is already in the album,<br/>or N photos skipped — already in the album.<br/>No session is requested
+        else Some skipped, some kept
             B->>M: Toast "N duplicates skipped — already in the album"
         end
         B->>B: Save jobs and files in the browser, start 2 at a time

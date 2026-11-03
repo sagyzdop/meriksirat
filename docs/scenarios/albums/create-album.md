@@ -10,8 +10,9 @@
 > - The month folder uses the current UTC date, not the event date.
 > - The album is saved as already indexed, so it is read from the photo table from the start. Older albums are not, see legacy-albums.md.
 > - If the database save fails after the Drive folder was made, the empty folder stays in Drive and no album row exists.
-> - Expiry and reminders are handled by cron, see ../cron/albums-and-housekeeping/.
+> - Expiry and reminders are handled by cron, see ../cron/albums-and-housekeeping/expiry-plan.md and ../cron/albums-and-housekeeping/expiry-reminders.md.
 > - The Telegram log line is only sent when channel logging is enabled.
+> - Club member here means the member flag on the account, set by an admin. Clearance level alone is not enough.
 
 ```mermaid
 sequenceDiagram

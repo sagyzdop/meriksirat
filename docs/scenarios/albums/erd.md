@@ -2,7 +2,7 @@
 
 > **Question:** Which tables, KV keys and Drive folders do the album scenarios read and write?
 >
-> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in photo. Photos stored by flamekeepers carry the flamekeeper's user id, and each album has one volume row per flamekeeper who stored photos in it. Upload reservations hold space for uploads in progress. Short-lived copies of album pages and lists sit in KV. No R2 storage is used for albums.
+> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in photo. Favorites point at photos, and the settings row holds the per-flamekeeper storage cap. Photos stored by flamekeepers carry the flamekeeper's user id, and each album has one volume row per flamekeeper who stored photos in it. Upload reservations hold space for uploads in progress. Short-lived copies of album pages and lists sit in KV. No R2 storage is used for albums.
 >
 > **Notes:**
 > - KV `album:detail:ALBUM_ID`: shared album page core (photos, authors, cover, folder health), TTL 3600 s, plus a 30 s per-Worker memory copy.
@@ -11,7 +11,9 @@
 > - KV `photo-backfill:budget`: day and writes spent by the indexer, TTL 2 days.
 > - Drive layout in the master account: Albums / year / month / album title, with a "Volume xxxxxx" folder inside for each flamekeeper. Photo files are owned by the flamekeeper who uploaded them. See create-album.md and upload-pick-flamekeeper.md.
 > - Photo state values other than live (moving, deleted, dropped) belong to the flamekeeper moves, see flamekeepers/.
-> - The ids: album id 10 characters, edit token 24 characters, reservation id 16 characters.
+> - The ids: album id 10 characters, edit token 24 characters, reservation id 16 characters, co-author link id 12 characters, photo id 16 characters.
+> - Column names are the database names, for example album_count and clearance_level.
+> - R2 is not used for albums. Cover and photo images come from Google's image servers.
 
 ```mermaid
 erDiagram
@@ -21,72 +23,87 @@ erDiagram
     album ||--o{ photo : contains
     album ||--o{ volume : has
     album ||--o{ upload_reservation : holds
+    photo ||--o{ favorite : has
+    user ||--o{ favorite : makes
     user ||--o{ volume : stores
     user ||--o{ upload_reservation : reserves
     user ||--o| flamekeeper : is
     user {
         text id PK
-        integer albumCount "albums owned or co-authored"
-        integer clearanceLevel "3 or more may create albums"
+        integer album_count "albums owned or co-authored"
+        integer clearance_level "3 or more may create albums"
         text role "user, manager, admin"
+        integer is_member "must be true to create albums"
+        text telegram_chat_id "reminders go here"
     }
     album {
         text id PK
-        text ownerUserId FK
+        text owner_user_id FK
         text title
         text description
         text event
-        integer eventDate
-        text driveFolderId "unique, master Drive folder"
-        text coverFileId
-        integer photoCount
-        integer photoBytes
-        integer favoriteCount
-        integer photosIndexedAt "empty means legacy album"
-        integer photosIndexRequestedAt
-        text photosIndexSkipped "trashed, missing"
-        integer expiresAt
+        integer event_date
+        text drive_folder_id "unique, master Drive folder"
+        text cover_file_id
+        integer photo_count
+        integer photo_bytes
+        integer favorite_count
+        integer photos_indexed_at "empty means legacy album"
+        integer photos_index_requested_at
+        text photos_index_skipped "trashed, missing"
+        integer expires_at
         integer pinned
-        text tombstoneReason "expired, flamekeeper_left, flamekeeper_lost, no_space"
-        integer deletedAt
-        integer expiryReminder30SentAt
-        integer expiryReminder7SentAt
-        text editShareToken "unique"
-        integer publicNoticePendingAt
+        text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space"
+        integer deleted_at
+        integer expiry_reminder_30_sent_at
+        integer expiry_reminder_7_sent_at
+        text edit_share_token "unique"
+        integer public_notice_pending_at
+        integer created_at "lists are sorted and grouped by this"
     }
     album_member {
         text id PK
-        text albumId FK
-        text userId FK
+        text album_id FK
+        text user_id FK
     }
     photo {
         text id PK
-        text albumId FK
-        text driveFileId "unique"
+        text album_id FK
+        text drive_file_id "unique"
         text name
         integer bytes
-        text mimeType
-        text flamekeeperUserId "empty for master-owned files"
+        text mime_type
+        text flamekeeper_user_id "empty for master-owned files"
         text state "live, moving, deleted, dropped"
+        integer created_at "earliest one is the default cover"
+    }
+    favorite {
+        text user_id PK, FK
+        text photo_id PK, FK
     }
     volume {
-        text albumId PK, FK
-        text flamekeeperUserId PK, FK
-        text permissionId
-        text driveFolderId "Volume folder in the album folder"
+        text album_id PK, FK
+        text flamekeeper_user_id PK, FK
+        text permission_id
+        text drive_folder_id "Volume folder in the album folder"
+        integer dropped_at
     }
     upload_reservation {
         text id PK
-        text flamekeeperUserId FK
-        text albumId FK
+        text flamekeeper_user_id FK
+        text album_id FK
         integer bytes
-        integer expiresAt "2 hours after creation"
+        integer expires_at "2 hours after creation"
     }
     flamekeeper {
-        text userId PK
-        integer pledgedBytes
-        integer usedBytes
-        integer driveUsageBytes
+        text user_id PK
+        integer pledged_bytes
+        integer used_bytes
+        integer drive_usage_bytes
         text state "active, full, draining, lost, drained"
+    }
+    settings {
+        text id PK "global"
+        integer flamekeeper_cap_bytes "default 20 GB"
     }
 ```
