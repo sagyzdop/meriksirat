@@ -14,17 +14,20 @@
 >
 > **Notes:**
 > - The button shows for booked, active, partially returned and
->   overdue bookings. It can be tapped repeatedly.
+>   overdue bookings. It can be tapped repeatedly. It appears on
+>   the booking page, the edit page and the expanded rows of the
+>   lists, for members and admins.
 > - The browser checks the limit first and shows a dialog "This
 >   booking can't be extended" instead of the confirm dialog. The
->   server repeats the check.
+>   server repeats the check. Both use club time and the closing
+>   minute from the settings.
 > - The availability check runs only when the person confirms, and
 >   only for the extra 30 minutes after the current finish time.
 > - If the new finish time is still in the past, the booking stays
 >   overdue and the overdue count is not changed.
 > - The overdue count never goes below 0.
 > - The overdue marking itself is done by the clock, see
->   cron/bookings/.
+>   ../cron/bookings/mark-overdue.md.
 
 ```mermaid
 sequenceDiagram
@@ -36,21 +39,22 @@ sequenceDiagram
     participant C as Calendar
     participant T as Telegram
     P->>B: Tap Add 30 min
-    alt finish plus 30 min passes midnight
-        B-->>P: Dialog "This booking can't be extended"<br/>(crosses midnight)
+    alt finish plus 30 min passes midnight (club time)
+        B-->>P: Dialog "This booking can't be extended"<br/>(crosses midnight), button Got it
     else finish plus 30 min is after closing time
-        B-->>P: Dialog "This booking can't be extended"<br/>(past closing time)
+        B-->>P: Dialog "This booking can't be extended"<br/>(past closing time), button Got it
+    else extension allowed
+        B-->>P: Dialog "Extend this booking by 30 minutes?"
     end
-    B-->>P: Dialog "Extend this booking by 30 minutes?"
     P->>B: Tap Extend booking (shows Checking availability...)
     B->>W: extendBookingFn(bookingId)
     W->>D: Read session, booking, owner and operating hours
     alt not signed in or booking missing
-        W-->>B: "Not authenticated" or "Booking not found"
+        W-->>B: Error "Not authenticated" or "Booking not found"
     else not the owner and not admin or manager
         W-->>B: Error "Insufficient permissions"
     else cancelled or returned
-        W-->>B: Error A booking with status X cannot be extended
+        W-->>B: Error: A booking with status #quot;X#quot;<br/>cannot be extended (X is cancelled or returned)
     else past midnight
         W-->>B: Error "This booking cannot be extended past midnight"
     else past closing time
@@ -70,7 +74,7 @@ sequenceDiagram
     loop each live item with an event
         W->>C: Update event title and finish time (see<br/>calendar-event-titles.md)
     end
-    W->>T: Post extended log to the channel (see telegram folder)
+    W->>T: Post extended log to the channel<br/>(see telegram/channel-log.md)
     W-->>B: success, new finish time, undidOverdue
     B-->>P: Toast "Booking extended by 30 minutes"<br/>or "...and the overdue status was reset"
     B->>B: Refresh bookings queries and reload the page

@@ -18,9 +18,9 @@
 > - Before the window opens the server says "Booking can be started
 >   up to 15 minutes before the start time". After it closes it says
 >   "Booking start window has passed" and the booking is cancelled
->   by the clock, see cron/bookings/.
+>   by the clock, see ../cron/bookings/cancel-unstarted.md.
 > - The same start logic is used by the Telegram Start Booking
->   command, see the telegram folder.
+>   command, see ../telegram/start-booking.md.
 > - The Global Booking Note is the only reason that message is sent.
 >   A failure sending it, or the channel post, is only logged.
 > - Returning equipment is not possible on the website. See
@@ -51,13 +51,13 @@ sequenceDiagram
     end
     W->>D: Read booking, owner and items
     alt status is not booked
-        W-->>B: Error Booking cannot be started from status X
+        W-->>B: Error: Booking cannot be started from status<br/>#quot;X#quot; (X is the current status)
     else already has a start time
         W-->>B: Error "Booking has already been started"
     else more than 15 minutes before start
         W-->>B: Error "Booking can be started up to 15 minutes<br/>before the start time"
     else more than 15 minutes after start
-        W-->>B: Error "Booking start window has passed.<br/>The booking will be auto-cancelled"
+        W-->>B: Error "Booking start window has passed#59;<br/>the booking will be auto-cancelled"
     else no live items
         W-->>B: Error "Booking has no items that can be started"
     end
@@ -66,12 +66,12 @@ sequenceDiagram
     loop each live item with an event
         W->>C: Update event to "item name (ACTIVE)",<br/>start now, finish as booked
     end
-    W->>T: Post picked up log to the channel (see telegram folder)
+    W->>T: Post picked up log to the channel<br/>(see telegram/channel-log.md)
     W->>T: Send Global Booking Note to the member if set
     W-->>B: success
     B-->>M: Toast "Booking started successfully"
     B->>B: Refresh bookings queries and reload the page
     alt any error
-        B-->>M: Toast with the error text or "Failed to start booking"
+        B-->>M: Toast with the error text or<br/>"Failed to start booking"
     end
 ```

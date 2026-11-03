@@ -4,9 +4,10 @@
 > booking?
 >
 > **Answer:** The same "Booking #id" page as the member, with an
-> extra "Booked by" row that links to the member's profile in the
+> extra "Booked by" row that links to the member's user page in the
 > admin console. An admin or manager can open any booking. A missing
 > booking, or one with no items, fails with "Booking not found".
+> Anyone else sees "Page not found".
 > Buttons depend on status like the member page, except that there
 > is no Start Pickup button, and Cancel Booking runs the admin
 > cancel.
@@ -32,12 +33,15 @@ sequenceDiagram
     participant D as D1
     A->>B: Open a booking from Manage Bookings (View details)
     B->>B: Go to /admin/bookings/bookingId
+    alt role is not admin or manager
+        B-->>A: Error "Page not found"
+    end
     alt bookingId is not a number
         B-->>A: Error "Invalid booking ID"
     end
     B->>W: getAdminBookingByIdFn(bookingId)
     W->>D: Read session user and role
-    alt role is not admin or manager
+    alt role is not admin or manager (direct call)
         W-->>B: Error "Insufficient permissions"
     end
     W->>D: Read booking with its booker, then items<br/>with equipment and category

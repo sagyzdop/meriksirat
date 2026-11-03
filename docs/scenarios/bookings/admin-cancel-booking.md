@@ -24,8 +24,9 @@
 >   Manage Bookings. The list dialog refreshes the list. Bulk cancel
 >   shows "Cancelled N bookings" and "Some bookings could not be
 >   cancelled" for failures. Bookings not in booked status are
->   skipped by the bulk button.
-> - The channel post is described in the telegram folder.
+>   skipped by the bulk button. Errors show as a toast on the list
+>   and the booking page, and as a red message on the edit page.
+> - The channel post is described in ../telegram/channel-log.md.
 > - Calendar delete, post and status recompute failures are only
 >   logged, as in cancel-booking.md.
 > - Fixing a started booking is done through the Telegram return,
@@ -44,13 +45,15 @@ sequenceDiagram
     B-->>A: Dialog "Cancel Booking" for booking number
     A->>B: Confirm
     B->>W: updateBookingStatusAdminFn(bookingId, status cancelled,<br/>notes reason)
+    W->>D: Read session role
+    alt not admin or manager
+        W-->>B: Error "Insufficient permissions"
+    end
     alt status is anything other than cancelled
         W-->>B: Refused. Admins can only change a booking status<br/>to cancelled
     end
-    W->>D: Read session role, the booking and its items
-    alt not admin or manager
-        W-->>B: Error "Insufficient permissions"
-    else booking missing
+    W->>D: Read the booking and its items
+    alt booking missing
         W-->>B: Error "Booking not found"
     else status is not booked
         W-->>B: Error "Only upcoming bookings can be cancelled. This<br/>booking has already started and must be<br/>returned through the Telegram bot."
@@ -60,7 +63,7 @@ sequenceDiagram
     W->>D: Save notes with the admin reason added
     W->>D: Set every item status = cancelled
     W->>D: Recompute booking status, becomes cancelled
-    W->>T: Post cancelled log with admin name and reason<br/>(see telegram folder)
+    W->>T: Post cancelled log with admin name and reason<br/>(see telegram/channel-log.md)
     loop each item with an event
         W->>C: Delete the item's calendar event
     end

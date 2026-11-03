@@ -20,10 +20,10 @@
 >   overdue, a mix of returned and live gives partially returned,
 >   any active gives active, otherwise booked.
 > - The Telegram channel post uses the same "cancelled" event as a
->   whole booking cancel. See the telegram folder.
+>   whole booking cancel. See ../telegram/channel-log.md.
 > - Cancelling items is also available from the Telegram command
->   /cancel_booking, which uses the same item logic, see telegram
->   folder.
+>   /cancel_booking, which uses the same item logic, see
+>   ../telegram/cancel-booking.md.
 > - A failed calendar delete is only logged and the event stays.
 
 ```mermaid
@@ -59,7 +59,7 @@ sequenceDiagram
     end
     W->>D: Recompute booking status from all items
     W->>C: Delete the item's calendar event
-    W->>T: Post cancelled log to the channel (see telegram folder)
+    W->>T: Post cancelled log to the channel<br/>(see telegram/channel-log.md)
     W-->>B: success
     B-->>P: Toast "Item cancelled successfully"
     B->>B: Refresh all bookings queries and reload the page

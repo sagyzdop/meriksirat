@@ -19,6 +19,9 @@
 >   cancelled bookings only show the details.
 > - Start window: from 15 minutes before the booked start to 15
 >   minutes after it, and only while the booking has not started.
+> - Only club members reach this page. The details table has a
+>   "Booked by" row with the member's own name, linking to their
+>   profile.
 > - The page is built when opened. A booking whose window opens
 >   later keeps its old buttons until the page is reloaded.
 > - Status badges are colored from the stored status. The admin

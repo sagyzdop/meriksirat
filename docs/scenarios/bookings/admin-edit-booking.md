@@ -17,7 +17,8 @@
 >   notes-only save skips the availability check.
 > - Unlike the member edit, there is no 1 hour advance check and no
 >   48 hour, 60 day or operating hours check.
-> - Notes are replaced as a whole. An empty note is saved as empty.
+> - Notes are replaced as a whole. Blank notes are saved as no
+>   notes.
 > - The server does not require status booked. The page shows the
 >   schedule picker only for booked bookings, but the notes box is
 >   always editable.
@@ -43,17 +44,17 @@ sequenceDiagram
     A->>B: Tap Edit on a booking
     B->>W: getAdminBookingByIdFn, getBookingSettingsFn,<br/>getTelegramBotUsernameFn
     W-->>B: Booking, operating hours, bot username
-    alt any of these fails
-        B-->>A: Error "Failed to load booking data"
+    alt booking or bot username call fails, or booking has no items
+        B-->>A: Error "Failed to load booking data"<br/>(a settings failure is only logged)
     end
     A->>B: Change notes and slots, tap Save Changes
     alt booked and no slot selected
-        B-->>A: Alert "Please select at least one time slot<br/>to update the schedule."
+        B-->>A: Red alert "Please select at least one time slot<br/>to update the schedule."
     end
     B->>W: updateBookingStatusAdminFn(bookingId, notes,<br/>startTime, endTime when changed)
     W->>D: Read session role, the booking and its items
     alt not admin or manager
-        W-->>B: Error "Insufficient permissions"
+        W-->>B: Error "Insufficient permissions"<br/>(no session gives "Unauthorized: No session")
     else booking missing
         W-->>B: Error "Booking not found"
     else booking has no items
@@ -69,12 +70,12 @@ sequenceDiagram
     end
     W->>D: Save notes, times if changed, updated time
     W->>D: Recompute booking status (stays the same)
-    W->>T: Post edited log naming the admin (see telegram folder)
+    W->>T: Post edited log naming the admin<br/>(see telegram/channel-log.md)
     loop each item with an event
         W->>C: Update event "item name - Booking (STATUS)"<br/>with new times and details
     end
     W-->>B: success, previous status, new status
-    B-->>A: "Booking updated successfully! Database and calendar<br/>have been synchronized."
+    B-->>A: Green message "Booking updated successfully! Database<br/>and calendar have been synchronized."
     B->>B: After 2 seconds go to Manage Bookings
     alt any error
         B-->>A: Red alert with the error text or<br/>"Failed to update booking. Please try again."

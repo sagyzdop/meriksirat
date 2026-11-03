@@ -8,9 +8,9 @@
 > loads the club's operating hours, shows each item's calendar, and
 > lets the member pick one day and a run of 30 minute slots. Slots
 > outside operating hours, slots that overlap a busy period on any
-> chosen item's calendar, and slots starting within the next hour are
-> greyed out and cannot be clicked. "Book Equipment" stays disabled
-> until at least one slot is picked.
+> chosen item's calendar, and slots starting less than an hour from
+> now are greyed out and cannot be clicked. "Book Equipment" stays
+> disabled until at least one slot is picked.
 >
 > **Notes:**
 > - Operating hours are stored as minutes since midnight in club
@@ -26,8 +26,18 @@
 >   picked slot to 30 minutes after the last picked slot.
 > - The selection is kept in the browser under the key
 >   equipment-selection. The server does not store it.
-> - The equipment lookup is in the equipment folder. The free/busy
->   and calendar view calls belong to the Google calendar helpers.
+> - The busy check for the picked day uses the browser's own
+>   midnight to midnight, not club time. Today is picked when the
+>   page opens, and the Today and Tomorrow buttons jump to those
+>   days. The catalog is in ../equipment/select-and-book.md and
+>   the equipment lookup is in ../equipment/equipment-detail.md.
+> - Every Google call here uses the master token and needs a
+>   signed-in person. Busy checks go to Google at most 15
+>   calendars at a time.
+> - The page can also remove an item (Remove) or go back to the
+>   catalog (Add More). Removing the last item returns to the
+>   catalog.
+> - The club's booking note is not shown on this page.
 > - Next step: create-booking.md.
 
 ```mermaid
@@ -40,21 +50,24 @@ sequenceDiagram
     M->>B: Tick equipment, tap View and Book Selected
     B->>B: Go to New Booking page with equipmentIds
     B->>W: getBookingSettingsFn()
-    W-->>B: Note, operating hours start and finish<br/>(defaults 0 and 1439 minutes)
+    W-->>B: Operating hours start and finish<br/>(defaults 0 and 1439 minutes)
     alt settings call fails
         B->>B: Log the error and show the page anyway<br/>with the default hours 0 to 1439
     end
-    B->>W: getEquipmentByIdFn for each id<br/>(see equipment folder)
+    B->>W: getEquipmentByIdFn for each id<br/>(see equipment/equipment-detail.md)
     alt no equipment found
         B-->>M: Toast "Equipment not found"
     else lookup throws
         B-->>M: Toast "Failed to load equipment"
     end
-    B->>W: getCalendarEvents for the Availability view
-    W->>C: Read events of each equipment calendar
-    M->>B: Pick a day (today or later)
+    B->>W: getCalendarEvents, once per equipment calendar<br/>(Availability view)
+    W->>C: Read events of that calendar with the master token
+    alt events call fails
+        B-->>M: Toast "Failed to load calendar events"
+    end
+    M->>B: Pick a day (today is picked by default)
     B->>W: checkMultipleCalendarsFreeBusy for the whole day<br/>(one item uses checkCalendarFreeBusy)
-    W->>C: Free/busy for 00:00 to 23:59 of that day
+    W->>C: Free/busy for that day, browser midnight to midnight
     C-->>B: Busy periods per calendar
     alt free/busy call fails
         B-->>M: Toast "Failed to load availability"

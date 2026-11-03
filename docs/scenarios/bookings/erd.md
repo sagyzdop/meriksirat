@@ -12,13 +12,16 @@
 >
 > **Notes:**
 > - No KV or R2 data is used by these scenarios. Equipment images
->   are shown from R2 by the equipment folder.
+>   are shown from R2, see ../equipment/equipment-images.md.
 > - The rate limits (10 per 60 seconds for creating a booking and
 >   for adding items) use Cloudflare rate limit bindings, not KV
 >   or D1.
 > - The settings row has id global and is created with hours 0 to
 >   1439 if it is missing when the hours are first read.
-> - Dates are stored as millisecond timestamps.
+> - Booking and item dates are stored as millisecond timestamps.
+> - Deleting a booking deletes its booking items with it.
+> - The browser also keeps the picked equipment under the local
+>   storage key equipment-selection. The server never sees it.
 > - Item status has no partially_returned value. That booking
 >   status is derived.
 
@@ -30,6 +33,8 @@ erDiagram
     category ||--o{ equipment : groups
     user {
         text id PK
+        text email
+        text image
         text first_name
         text last_name
         text name

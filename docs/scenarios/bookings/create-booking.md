@@ -18,6 +18,11 @@
 >   within 60 days.
 > - Operating hours are not checked here. They are enforced only by
 >   the slot picker in choose-equipment-and-time.md.
+> - The conflict toast names no items. The booking page has code
+>   for a "Time slot unavailable for: ..." toast with item names,
+>   but the server error reaches the browser with its message
+>   only, so that toast never shows. The member sees the plain
+>   conflict text above.
 > - Rate limit: 10 creations per 60 seconds per member. If the
 >   limiter itself breaks, requests are let through.
 > - One request can carry 1 to 10 items. Repeated ids are merged.
@@ -25,7 +30,8 @@
 > - Event titles and what happens if calendar writes fail are in
 >   create-booking-rollback.md. Titles at every step are in
 >   calendar-event-titles.md.
-> - The Telegram channel post is described in the telegram folder.
+> - The Telegram channel post is described in
+>   ../telegram/channel-log.md.
 >   A failed post is only logged and does not stop the booking.
 
 ```mermaid
@@ -62,16 +68,19 @@ sequenceDiagram
     end
     W->>D: Read each equipment calendar id
     alt an item has no calendar
-        W-->>B: Error "No calendar configured for equipment id"
+        W-->>B: Error "No calendar configured for equipment"<br/>followed by the item id
     end
-    W->>C: Free/busy for all item calendars in the window
+    W->>C: Free/busy for all item calendars in the window<br/>(master token, 15 calendars per Google request)
+    alt Google call fails
+        W-->>B: Error "Failed to check calendars availability"<br/>followed by Google's reply
+    end
     alt any calendar has a busy period
-        W-->>B: Error "Requested time conflicts with<br/>existing booking(s)" listing the item ids
-        B-->>M: Toast "Time slot unavailable for: item names"<br/>or the error text if no ids came back
+        W-->>B: Error "Requested time conflicts with<br/>existing booking(s)"
+        B-->>M: Error toast with that same text
     end
     W->>D: Insert booking, status booked, notes, owner
     W->>C: Create one event per item and insert booking items<br/>(see create-booking-rollback.md)
-    W->>T: Post booked log to the channel (see telegram folder)
+    W->>T: Post booked log to the channel<br/>(see telegram/channel-log.md)
     W-->>B: bookingId
     B-->>M: Toast "Booking created successfully! Booking ID: bookingId"
     B->>B: Clear picked slots, notes and saved selection
