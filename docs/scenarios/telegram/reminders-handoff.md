@@ -8,8 +8,10 @@
 > The bot's webhook never sees them and has no handler for them.
 >
 > **Notes:**
-> - Reminder timing, wording and the sent-at markers are described
->   in `../cron/bookings/`.
+> - Reminder timing, wording and the sent-at markers are in
+>   `../cron/bookings/reminders.md`. The auto-cancel notice is in
+>   `../cron/bookings/cancel-unstarted.md` and the overdue notice
+>   in `../cron/bookings/mark-overdue.md`.
 > - The same cron run also refreshes the bot's command list with
 >   `configureTelegramBot`. See `main-menu.md`.
 > - A member who replies to a reminder is handled like any other
@@ -22,7 +24,7 @@ sequenceDiagram
     participant Telegram
     actor Member
     participant Worker
-    Cron->>Telegram: send reminder to user.telegram_chat_id<br/>see ../cron/bookings/
+    Cron->>Telegram: send reminder to user.telegram_chat_id<br/>see ../cron/bookings/reminders.md
     Telegram-->>Member: reminder message
     Member->>Telegram: replies or taps a button
     Telegram->>Worker: POST /api/telegram<br/>see webhook.md

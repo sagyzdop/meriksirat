@@ -7,12 +7,13 @@
 > grant, the volumes it hosts in albums, the photos it holds,
 > its upload reservations, and the global settings row. They
 > also read users (email, Telegram chat, ban) and, for banned
-> members, bookings and booking items.
+> members, bookings, booking items and the equipment calendar
+> each item was booked on.
 >
 > **Notes:**
-> - KV key album:list:album Drive folder id (TTL 300 seconds)
->   and album:detail:album id (TTL 3600 seconds) are only
->   deleted by these steps, never written.
+> - KV keys album:list:(album Drive folder id), TTL 300
+>   seconds, and album:detail:(album id), TTL 3600 seconds,
+>   are only deleted by these steps, never written.
 > - R2 is not used by these steps.
 > - Dropped photos and volumes are kept in the database so a
 >   reconnecting flamekeeper can bring them back.
@@ -24,6 +25,7 @@ erDiagram
     user ||--o{ album : owns
     user ||--o{ booking : makes
     booking ||--o{ booking_item : contains
+    equipment ||--o{ booking_item : booked_as
     album ||--o{ volume : stored_in
     flamekeeper ||--o{ volume : hosts
     album ||--o{ photo : has
@@ -118,9 +120,14 @@ erDiagram
         text user_id FK
         text status "booked, active, returned, cancelled, overdue, partially_returned"
     }
+    equipment {
+        integer id PK
+        text gcal_id "equipment calendar"
+    }
     booking_item {
         integer id PK
         integer booking_id FK
+        integer equipment_id FK
         text status "booked, active, returned, cancelled, overdue"
         text gcal_event_id
     }

@@ -2,7 +2,7 @@
 
 > **Question:** How does someone pick a photo as the album's cover?
 >
-> **Answer:** The owner, co-authors and admins or managers open a photo and click the cover button, which is greyed out for the photo that is already the cover. The Worker checks that the photo belongs to this album and saves it as the cover, and the page shows "Cover photo updated". If nobody picks one, the earliest uploaded photo is used and saved the first time the album page is built.
+> **Answer:** The owner, co-authors and admins or managers open a photo and click "Set as cover", which is greyed out for the photo that is already the cover. The Worker checks that the photo belongs to this album and saves it as the cover, and the page shows "Cover photo updated". If nobody picks one, the earliest uploaded photo is used and saved the first time the album page is built.
 >
 > **Notes:**
 > - For a legacy album that is not indexed, the photo check is skipped, see legacy-albums.md.
@@ -17,7 +17,7 @@ sequenceDiagram
     participant W as Worker
     participant D as D1
     participant K as KV
-    M->>B: Open a photo, click the cover button
+    M->>B: Open a photo, click Set as cover
     B->>W: setCoverPhotoFn(albumId, fileId)
     W->>D: Load album and the caller's role
     alt Album missing, deleted or caller has no role

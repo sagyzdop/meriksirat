@@ -30,6 +30,9 @@ erDiagram
     equipment ||--o{ booking_item : "booked as"
     user {
         text id PK
+        text name
+        text first_name
+        text last_name
         text telegram_chat_id "chat linked to the account"
         text telegram_username
         integer onboarding_complete
@@ -45,6 +48,7 @@ erDiagram
         integer start_time
         integer end_time
         text status "booked, active, returned, cancelled, overdue, partially_returned"
+        text user_event_details "member notes"
         integer started_at "set when picked up"
     }
     booking_item {
@@ -52,6 +56,7 @@ erDiagram
         integer booking_id FK
         integer equipment_id FK
         text status "booked, active, returned, cancelled, overdue"
+        text gcal_event_id "calendar event of this item"
         integer returned_at
     }
     settings {

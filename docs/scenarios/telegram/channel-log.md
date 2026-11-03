@@ -17,10 +17,12 @@
 >   links to `/admin/bookings/ID` when the app address is known.
 > - A photo caption is limited to 1024 characters. If the full log
 >   is longer, the equipment list is shortened to a count.
-> - The same log builder serves other events (booked, extended,
->   edited, deleted, overdue, auto-cancelled, albums, bans), which
->   other folders trigger. Overdue and auto-cancelled are posted
->   by the cron, see `../cron/bookings/`.
+> - The same log builder also writes other events (booked,
+>   extended, items added, edited, overdue, auto-cancelled), plus
+>   album and ban logs, which other folders trigger. Overdue and
+>   auto-cancelled are posted by the cron, see
+>   `../cron/bookings/mark-overdue.md` and
+>   `../cron/bookings/cancel-unstarted.md`.
 > - A cancel logs once for each booking touched.
 > - If the booking is not found, a warning is written to the
 >   console and nothing is posted.

@@ -16,6 +16,10 @@
 >   or anyone not active.
 > - The source access token is created before the destination is
 >   chosen, so it is minted even when the round ends with no space.
+>   A saved token is reused for up to 50 minutes.
+> - If the source Drive access cannot be refreshed, or another
+>   unexpected error happens, the server call fails and the
+>   browser counts a failure, see relay-move-photo.md.
 > - An admin acts for someone else by passing that person's user
 >   id. A person passing someone else's id without the admin or
 >   manager role is refused.
@@ -48,6 +52,9 @@ sequenceDiagram
         else Photos remain
             Worker->>D1: pick one of up to 20 live photos at random
             Worker->>Drive: source flamekeeper token<br/>refreshed from the saved grant
+            opt Source access cannot be refreshed
+                Worker-->>Browser: error, counted as a failure
+            end
             Worker->>D1: choose another flamekeeper with most<br/>room and reserve the bytes (2 hours)
             Worker->>Drive: master token creates and shares the<br/>destination folder if needed
             Worker->>Drive: destination flamekeeper token starts a<br/>resumable upload

@@ -14,6 +14,9 @@
 > **Notes:**
 > - Retry waits: 400 ms after the first failure, 800 ms after the
 >   second, 1200 ms after the third. The error shown is the last one.
+> - If the event is made but the item row cannot be saved, that
+>   one event is not in the rollback list and stays in the
+>   calendar.
 > - Each rollback step is attempted on its own. If a calendar delete
 >   or a database delete fails, it is only logged and the rest of
 >   the rollback goes on. A leftover event is then possible.

@@ -2,7 +2,7 @@
 
 > **Question:** What stops the club account (nu_image, the master account) from holding uploads or being drained?
 >
-> **Answer:** The club account owns every album folder, so it must never become a flamekeeper. It is refused at three points: when it starts the Drive connection, when Google returns (either the signed-in email or the Google email matches it), and whenever the app picks a flamekeeper to receive a photo, where it is skipped even if a row somehow exists. It also cannot be banned, since a ban starts a drain. Because it never gets a flamekeeper row, it can never be draining.
+> **Answer:** The club account owns every album folder, so it must never become a flamekeeper. It is refused at three points: when it starts the Drive connection, when Google returns (if either the signed-in email or the Google email matches it), and whenever the app picks a flamekeeper to receive a photo, where it is skipped even if a row somehow exists. It also cannot be banned, since a ban starts a drain. Because it never gets a flamekeeper row, it can never be draining.
 >
 > **Notes:**
 > - The club account is identified by comparing the email, ignoring
@@ -15,7 +15,12 @@
 >   cannot be a flamekeeper." Ban: "The club account owns every
 >   album folder and cannot be banned."
 > - The ban refusal is part of the admin ban flow, see
->   ../admin/ for the dialog itself.
+>   ../admin/ban-member.md for the dialog itself.
+> - The Google return check only happens after Google has handed
+>   back tokens, so a failed token exchange shows the token error
+>   first.
+> - The club account is also skipped by onboarding, so it is not
+>   sent to the sign-up pages.
 > - Normal connection steps are in connect-drive.md and
 >   drive-callback.md.
 

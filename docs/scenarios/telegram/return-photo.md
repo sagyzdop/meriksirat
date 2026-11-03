@@ -17,9 +17,13 @@
 >   already returned (for example a photo sent twice).
 > - The photo handler does not check that the chat is linked. It
 >   relies on the saved selection.
-> - On error the member sees "❌ Error processing return. Please
->   try again." and the saved selection stays, so a new photo
->   retries.
+> - On a database error the member sees "❌ Error processing
+>   return. Please try again." and the saved selection stays. A
+>   new photo retries only if the items were not already marked
+>   returned.
+> - "Photo sent to the club channel." is shown even when channel
+>   logging is off or the post fails, because posting never
+>   raises an error.
 > - The saved step is not cleared and simply expires after 1 hour.
 > - Calendar failures per item are logged to the console and do not
 >   stop the return.
@@ -41,10 +45,10 @@ sequenceDiagram
         Worker-->>Member: nothing sent
     else waiting for photo
         Worker->>D1: returnBookingItems(selectedItemIds)<br/>items = returned, returned_at, recompute booking status
-        Worker->>Calendar: update item events with the actual return time
         alt no items updated
             Worker-->>Member: nothing sent, already returned
         else items updated
+            Worker->>Calendar: update item events with the actual return time
             Worker->>D1: find booking id of the first selected item
             Worker->>Telegram: logReturnPhotoToChannel<br/>photo + "✅ Returned" caption to club channel
             Worker->>Telegram: "✅ Return logged for N item(s).<br/>Photo sent to the club channel."<br/>+ "🏠 Main Menu" button

@@ -21,6 +21,11 @@
 > - The question reads `Cancel "NAME"?` for one item or
 >   `Cancel all items in booking #35;id?` for all.
 > - Other text at the confirm step gets "Send Confirm or Cancel."
+> - If the chat is no longer linked, Confirm shows the main menu.
+>   With no items saved it shows the booking list.
+> - The saved step is not cleared after a cancel. Tapping Confirm
+>   again gets the "already been picked up" refusal, although
+>   the item was cancelled.
 > - Channel log failures are logged to the console only.
 > - Earlier steps are in `cancel-booking.md`. The log is in
 >   `channel-log.md`.

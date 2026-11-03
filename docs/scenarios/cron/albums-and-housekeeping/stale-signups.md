@@ -19,6 +19,11 @@
 >   code then picks the oldest 20 of those. Each tick the rest wait.
 > - The master account is skipped only when GOOGLE_MASTER_EMAIL is
 >   set. The comparison ignores case and spaces.
+> - The user's role is not checked. An admin or manager account
+>   that is not marked as a member, has no activity and is over 7
+>   days old would be deleted like any other.
+> - Deleting the user also removes rows that cascade from it, such
+>   as Telegram link tokens.
 > - Nothing is sent to the person. The only trace is the log line
 >   "Deleted N unfinished signup(s)".
 > - The same rules are applied twice, in the database query and
@@ -30,7 +35,7 @@ sequenceDiagram
     participant Cron
     participant Worker
     participant D1
-    Cron->>Worker: cleanupStaleSignups, runStaleSignupCleanup(env)
+    Cron->>Worker: cleanupStaleSignups (runStaleSignupCleanup)
     Worker->>Worker: cutoff = now minus 7 days
     Worker->>D1: users not members, not banned, not alumni email,<br/>not master email, created before cutoff
     Note over D1: Also no flamekeeper row, no flamekeeper_grant,<br/>no booking, album, album_member, favorite, volume, photo
@@ -40,7 +45,7 @@ sequenceDiagram
         Worker-->>Cron: step ends
     else some selected
         Worker->>D1: delete their sessions
-        Worker->>D1: delete their accounts, the sign-in records
+        Worker->>D1: delete their account rows, the sign-in records
         Worker->>D1: delete the users
         Worker->>Worker: log Deleted N unfinished signup(s)
     end

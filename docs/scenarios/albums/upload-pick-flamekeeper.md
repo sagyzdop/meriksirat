@@ -9,7 +9,9 @@
 > - Up to 4 flamekeepers are tried per photo. A flamekeeper whose Drive reports no quota is marked full and skipped. One whose grant is revoked or whose folder is gone is skipped for this photo.
 > - A vanished volume folder is only forgotten and recreated when that flamekeeper has no photos in the album, otherwise they are skipped to protect the photos.
 > - The reservation only blocks space in the database. Google is not told in advance.
-> - Pool rules, caps and moving photos between flamekeepers are in flamekeepers/ and cron/flamekeepers/.
+> - Pool rules and the per-person cap are in ../flamekeepers/admin-pool.md. Moving photos between flamekeepers is in ../flamekeepers/relay-move-photo.md.
+> - Any other error from Google or the database while setting up a flamekeeper stops the search and is shown to the member as it is.
+> - If two flamekeepers have the same free room, the one with the lower user id is chosen.
 
 ```mermaid
 sequenceDiagram
@@ -20,7 +22,7 @@ sequenceDiagram
     participant F as Flamekeeper Drive
     W->>D: Read the per-person cap from settings, default 20 GB
     loop Up to 4 tries
-        W->>D: Load active and full flamekeepers with reserved bytes
+        W->>D: Load active and full flamekeepers with their reserved bytes
         alt No active flamekeeper has room, master excluded
             W-->>W: Stop trying
         else Best flamekeeper found
@@ -40,6 +42,8 @@ sequenceDiagram
                     W->>D: Drop the reservation, forget the folder if it holds no photos
                 else Grant revoked or Drive refused access
                     W->>D: Drop the reservation, skip this flamekeeper
+                else Any other error
+                    W-->>W: Drop the reservation, stop and show the error
                 end
             end
         end

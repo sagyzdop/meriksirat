@@ -10,6 +10,7 @@
 > - An album whose photos are not yet counted in the database is counted by listing its Drive folder. The folder listing is cached in KV for 300 seconds, so the Drive is called only for albums not in KV.
 > - A Drive "not found" for one album is skipped silently. Any other Drive error is logged and that album adds nothing to the totals.
 > - Alerts about album folders use only what KV already holds and never call Drive.
+> - The Telegram alert counts every account without a linked chat, not only club members.
 > - Picking a date range or pressing Reset range changes the URL and reloads the stats.
 
 ```mermaid

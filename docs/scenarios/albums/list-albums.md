@@ -2,13 +2,15 @@
 
 > **Question:** How do the three album lists (My Albums, Manage Albums, public Albums) load, who can see what, and how fresh are they?
 >
-> **Answer:** All three lists show albums that are not deleted, newest first, 24 per page (up to 100), grouped by year and month, and load more as you scroll. My Albums shows albums you own or co-author, Manage Albums (admin or manager only) shows every album, and the public gallery at /albums shows every album to anyone, signed in or not. Search matches title or description. The public list is limited to 120 requests a minute per IP and is cached, so a new or changed album can take up to 10 minutes to show there.
+> **Answer:** All three lists show albums that are not deleted, newest created first, 24 per page, grouped by the year and month the album was created, and load more as you scroll. My Albums shows albums you own or co-author, Manage Albums (admin or manager only) shows every album, and the public gallery at /albums shows every album to anyone, signed in or not. Search matches title or description. The public list is limited to 120 requests a minute per IP and is cached, so a new or changed album can take up to 10 minutes to show there.
 >
 > **Notes:**
 > - Public list cache: a 30 second memory copy per Worker instance (25 entries) in front of KV key `album:publist:HASH (hash of the query)` with a 10 minute TTL. Nothing clears it when albums change.
 > - The lists are always refetched on a visit or window focus (staleTime 0). The public cache is the only delay.
 > - Not signed in on My Albums, or not admin or manager on Manage Albums, returns an empty list instead of an error.
-> - Ownership filter chips (owner, co-author) exist on My Albums and Manage Albums only.
+> - The ownership filter ("Owned by me" and "Shared with me") exists on My Albums and Manage Albums only. On Manage Albums "Shared with me" means every album owned by someone else.
+> - The server accepts a page size of 1 to 100. The web pages always ask for the default of 24.
+> - Grouping uses the creation date in UTC, not the event date.
 > - Cover images come from Google's CDN, see download-photos.md for how images load.
 > - Opening one album is in view-album.md.
 
@@ -39,7 +41,7 @@ sequenceDiagram
     end
     U->>B: Open the public gallery at Albums
     B->>W: getPublicAlbumsFn(search, limit, cursor)
-    W->>W: rl_public_albums, 120 per 60 seconds per IP
+    W->>W: rl_public_albums, 120 per 60 seconds per IP,<br/>skipped if the IP is unknown
     alt Rate limited
         W-->>B: Error Too many requests. Try again in 60 seconds.
     else Allowed

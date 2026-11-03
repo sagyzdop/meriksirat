@@ -2,14 +2,16 @@
 
 > **Question:** Which album tasks happen on their own after an album exists, and where are they described?
 >
-> **Answer:** Four steps of the 5-minute cron touch albums: one deletes albums that reached their expiry date and sends 30 day and 7 day Telegram reminders, one tells owners their older albums are now public, one indexes legacy albums into the photo table, and one cleans old upload reservations. Photos are also moved between flamekeepers' Drives when a flamekeeper leaves, loses access or is drained. This file only shows the hand-offs. The detail lives in the folders named in the diagram.
+> **Answer:** Four steps of the 5-minute cron touch albums directly. One deletes albums that reached their expiry date and sends 30 day and 7 day Telegram reminders. One tells owners their older albums are now public. One records legacy albums' photos in the photo table. One deletes old upload reservations. Two flamekeeper steps also change albums. The drain step emails flamekeepers and alerts admins about drains, and after a drain deadline it deletes the photos still left. The health step marks a flamekeeper lost when Google no longer accepts their connection, and after 7 days it drops that flamekeeper's photos from the albums and hides albums left empty. The cron never moves photos between Drives. Moving is done in the browser of a flamekeeper or admin. This file only shows the hand-offs and names the file with the detail.
 >
 > **Notes:**
-> - Expiry date is the event date plus 2 years, set at creation and moved when the event date is edited, see create-album.md and edit-album-and-pin.md. Pinned albums are skipped.
+> - Expiry date is the event date plus 2 years, set at creation and moved when the event date is edited (unless the album is pinned), see create-album.md and edit-album-and-pin.md. Pinned albums are skipped.
 > - An expired album keeps a small "deleted" record, so its link shows a notice instead of "Album not found", see view-album.md. The reason can be expired, flamekeeper_left, flamekeeper_lost or no_space.
-> - Expiry removes at most 3 albums per run. Reminders go to the owner and co-authors who have Telegram.
-> - Indexing is explained in legacy-albums.md.
-> - Moving photos between Drives is in flamekeepers/ and cron/flamekeepers/ and is not redrawn here.
+> - Expiry removes at most 3 albums per run. Reminders go to the owner and to co-authors who have Telegram.
+> - The public-album notice goes to at most 5 owners per run.
+> - The reservation cleanup deletes a reservation 24 hours after its expiry time. A reservation expires 2 hours after it is made.
+> - Indexing legacy albums is explained in legacy-albums.md.
+> - Photos moved between flamekeepers by the browser are in ../flamekeepers/relay-move-photo.md. Drive-side checks and the 7 day drop are in ../cron/flamekeepers/health-probe.md and ../cron/flamekeepers/lost-finalize.md.
 
 ```mermaid
 sequenceDiagram
@@ -23,17 +25,20 @@ sequenceDiagram
     W->>D: Unpinned albums past expiresAt, or 30 and 7 days before
     W->>G: Delete expired albums' Drive files and folders
     W->>T: Reminder to owner and co-authors
-    Note over C,T: Detail: cron/albums-and-housekeeping/
+    Note over C,T: Detail: ../cron/albums-and-housekeeping/expiry-plan.md
     C->>W: notifyPublicAlbums step runs runPublicAlbumNotices
     W->>T: "is now public and listed in the gallery" to owners
-    Note over C,T: Detail: cron/albums-and-housekeeping/
+    Note over C,T: Detail: ../cron/albums-and-housekeeping/public-notice.md
     C->>W: backfillAlbumPhotos step runs runPhotoBackfill
     W->>D: Record legacy albums' photos in the photo table
     Note over C,D: Detail: legacy-albums.md
     C->>W: maintainPool step runs runPoolMaintenance
     W->>D: Delete upload reservations 24 hours past expiry
-    Note over C,D: Detail: cron/flamekeepers/
-    C->>W: drainFlamekeepers and checkFlamekeeperHealth steps
-    W->>G: Move or drop photos of leaving or lost flamekeepers
-    Note over C,G: Detail: flamekeepers/ and cron/flamekeepers/
+    Note over C,D: Detail: ../cron/flamekeepers/pool-top-up.md
+    C->>W: drainFlamekeepers step runs runDrainMaintenance
+    W->>G: After the deadline, delete photos still on the drain
+    Note over C,G: Detail: ../cron/flamekeepers/drain-deadline.md
+    C->>W: checkFlamekeeperHealth step runs runFlamekeeperHealth
+    W->>D: 7 days after loss, mark photos dropped, hide empty albums
+    Note over C,D: Detail: ../cron/flamekeepers/lost-finalize.md
 ```

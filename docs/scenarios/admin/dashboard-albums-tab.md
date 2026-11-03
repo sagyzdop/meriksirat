@@ -6,9 +6,9 @@
 >
 > **Notes:**
 > - The tab loads its data only when it is opened. The default is 10 rows, sorted by album count, highest first.
-> - Only people with at least one album in the range appear in the ranking.
+> - Only people with at least one album in the range appear in the ranking. The ranking counts deleted albums too, and the same date range as the Overview tab applies.
 > - The Free up space order is: albums with no favorites before favorited ones, then soonest expiry (never-expiring last), then biggest size. Pinned and deleted albums are left out.
-> - The pool card on this tab is documented in [../flamekeepers/](../flamekeepers/).
+> - The pool card on this tab is documented in [../flamekeepers/admin-pool.md](../flamekeepers/admin-pool.md).
 > - Expiring an album from the list is in [expire-album-early.md](expire-album-early.md).
 
 ```mermaid
@@ -25,7 +25,7 @@ sequenceDiagram
     Note over Worker,D1: range filters album creation date<br/>users with no albums are left out
     Worker-->>Browser: users with albumCount and paging info
     Browser->>Worker: getPoolOverviewFn()
-    Note over Browser,Worker: pool card, see ../flamekeepers/
+    Note over Browser,Worker: pool card, see flamekeepers/admin-pool.md
     opt person is an admin
         Browser->>Worker: getDeletionSuggestionsFn()
         Worker->>D1: read albums not deleted and not pinned

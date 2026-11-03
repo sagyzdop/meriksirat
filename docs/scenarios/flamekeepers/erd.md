@@ -9,6 +9,9 @@
 >   graduation date and terms time as JSON, for 600 seconds. It is
 >   deleted when read, see connect-drive.md and drive-callback.md.
 > - R2 is not used by these scenarios.
+> - The flamekeeper and flamekeeper_grant rows are deleted with
+>   the user. Photos keep flamekeeper_user_id as plain text with
+>   no link to the user table.
 > - Reservations expire 2 hours after they are made.
 > - Used and pledged sizes are in bytes. The default cap is
 >   21474836480 bytes (20 GB).
@@ -26,62 +29,68 @@ erDiagram
     album ||--o{ upload_reservation : "for"
     user {
         text id PK
+        text name "account name"
+        text first_name "shown in admin list"
+        text last_name "shown in admin list"
         text email "compared with the club account email"
-        boolean isMember "is_member"
+        text image "avatar"
+        integer is_member "0 or 1"
         text role "user, manager, admin"
-        integer bannedAt "banned_at"
-        text banReason "ban_reason"
+        integer banned_at "set when banned"
+        text ban_reason "shown on the Banned badge"
     }
     flamekeeper {
-        text userId PK "FK to user.id"
-        integer pledgedBytes "pledged_bytes"
-        integer usedBytes "used_bytes"
-        integer driveUsageBytes "drive_usage_bytes"
+        text user_id PK "FK to user.id"
+        integer pledged_bytes "pledge in bytes"
+        integer used_bytes "bytes stored"
+        integer drive_usage_bytes "whole Drive usage"
         text state "active, full, draining, lost, drained"
-        text graduationDate "graduation_date, YYYY-MM-DD"
-        integer graduationConfirmedAt "graduation_confirmed_at"
-        integer drainingDeadline "draining_deadline"
-        text drainReason "opt_out, pledge, graduation, domain, ban"
-        integer lostSince "lost_since"
-        integer termsAcceptedAt "terms_accepted_at"
-        integer createdAt "created_at"
+        text graduation_date "YYYY-MM-DD"
+        integer graduation_confirmed_at "last confirmation"
+        integer draining_deadline "14 days after drain start"
+        text drain_reason "opt_out, pledge, graduation, domain, ban"
+        integer lost_since "set when Drive is lost"
+        integer terms_accepted_at "terms time"
+        integer created_at "signup time"
     }
     flamekeeper_grant {
-        text userId PK "FK to user.id"
-        text refreshToken "refresh_token"
-        text scopes "scopes"
-        integer lastRefreshAt "last_refresh_at"
+        text user_id PK "FK to user.id"
+        text refresh_token "Google refresh token"
+        text scopes "granted scopes"
+        integer last_refresh_at "last refresh"
     }
     volume {
-        text albumId PK "FK to album.id"
-        text flamekeeperUserId PK "FK to user.id, flamekeeper_user_id"
-        text driveFolderId "drive_folder_id"
-        text permissionId "permission_id"
-        integer droppedAt "dropped_at"
+        text album_id PK "FK to album.id"
+        text flamekeeper_user_id PK "FK to user.id"
+        text drive_folder_id "folder in the flamekeeper Drive"
+        text permission_id "share permission"
+        integer dropped_at "set when the folder is dropped"
     }
     upload_reservation {
         text id PK
-        text flamekeeperUserId FK "flamekeeper_user_id"
-        text albumId FK "album_id"
-        integer bytes "bytes"
-        integer expiresAt "expires_at"
+        text flamekeeper_user_id FK "user.id"
+        text album_id FK "album.id"
+        integer bytes "reserved size"
+        integer expires_at "2 hours after creation"
     }
     photo {
         text id PK
-        text albumId FK "album_id"
-        text driveFileId "drive_file_id"
-        integer bytes "bytes"
-        text flamekeeperUserId "flamekeeper_user_id"
+        text album_id FK "album.id"
+        text drive_file_id "file in a flamekeeper Drive"
+        text name "file name"
+        text mime_type "file type"
+        integer bytes "file size"
+        text flamekeeper_user_id "who stores it, no FK"
         text state "live, moving, deleted, dropped"
     }
     album {
         text id PK
-        text driveFolderId "drive_folder_id"
-        text coverFileId "cover_file_id"
-        integer deletedAt "deleted_at"
+        text drive_folder_id "master Drive folder"
+        text cover_file_id "cover photo file"
+        integer deleted_at "set when deleted"
     }
     settings {
         text id PK "global"
-        integer flamekeeperCapBytes "flamekeeper_cap_bytes"
+        integer flamekeeper_cap_bytes "default 21474836480"
     }
 ```

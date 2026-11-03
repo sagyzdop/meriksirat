@@ -5,7 +5,7 @@
 >
 > **Answer:** A year after they last confirmed the date (or
 > after they became a flamekeeper, if they never confirmed),
-> graduateFlamekeepers emails them once to ask whether the
+> graduateFlamekeepers emails them once to ask if the
 > expected graduation date is still right. Up to 2 such emails
 > go out per run, 1 request each. Flamekeepers who are draining,
 > drained or lost get none, and nobody who just had a drain
@@ -14,10 +14,11 @@
 >
 > **Notes:**
 > - The year is 365 days from graduationConfirmedAt, which is
->   set when the flamekeeper saves their pledge and date in the
->   app.
-> - Only one email is sent per year: the send time is stored and
->   a new one is due only after the next anniversary.
+>   set when the flamekeeper connects Drive or saves changes to
+>   their pledge and date in the app.
+> - Only one email is sent per confirmation: the send time is
+>   stored, and another is due only after the flamekeeper
+>   confirms again and a further year passes.
 > - Subject: #savenuimg: is your graduation date still right?
 >   Body: the saved date, a note that photos are moved 60 days
 >   before it, a request to confirm or change it, and a link to

@@ -43,10 +43,12 @@ sequenceDiagram
     Member->>Worker: taps "Booking #35;id — equipment"<br/>handleFlowText then renderStartConfirm
     alt text has no Booking #35;number
         Worker->>Telegram: "Please tap one of the buttons above."
+    else chat no longer linked
+        Worker->>Telegram: showMainMenu(ctx)
     else booking not owned or missing
         Worker->>Telegram: "Booking not found."<br/>+ "🏠 Main Menu" button
     else found
-        Worker->>KV: session step awaiting_start_confirm, startBookingId
         Worker->>Telegram: "Start booking #35;id now?" with equipment and<br/>time range, "Tap Confirm to start, or Cancel."<br/>buttons "✅ Confirm", "Cancel", "🏠 Main Menu"
+        Worker->>KV: session step awaiting_start_confirm, startBookingId
     end
 ```

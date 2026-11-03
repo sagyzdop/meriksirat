@@ -6,8 +6,8 @@
 > **Answer:** Confirm starts the booking: its items become active,
 > the calendar events are updated, the club channel gets a "Picked
 > up" log, and the member sees "✅ Booking #35;id has been started."
-> If the booking cannot be started, the bot replies with the reason
-> and a full stop. Cancel replies "Start cancelled."
+> If the booking cannot be started, the bot replies with the reason.
+> Cancel replies "Start cancelled."
 >
 > **Notes:**
 > - Starting uses the same `startBooking` as the web "Start pickup".

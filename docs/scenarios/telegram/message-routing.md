@@ -16,9 +16,13 @@
 >   Any text beginning with `/start`, `/start_booking`,
 >   `/return_equipment`, `/my_bookings` or `/cancel_booking`
 >   counts, even with extra characters after it.
-> - Commands and buttons run the same list handlers. The emoji
->   label and a plain label are both accepted for each action.
->   See `main-menu.md` for the exact table.
+> - Commands and buttons run the same list handlers. A button
+>   must match the whole text exactly. Each of the four actions
+>   has an emoji label and a plain label. The plain label for
+>   return is "End Booking", and "Return Equipment" without the
+>   emoji is not recognised. See `main-menu.md`.
+> - Slash commands and buttons are checked before the saved step,
+>   so they work in the middle of a flow.
 > - Handler errors in the four list handlers are caught and answer
 >   "Error fetching bookings. Please try again."
 > - Step handling is in `flow-text.md`. Photo handling is in

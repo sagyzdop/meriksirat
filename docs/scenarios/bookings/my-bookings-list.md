@@ -12,11 +12,18 @@
 > fails the page opens with an empty list.
 >
 > **Notes:**
-> - Sort choices: start time (default, oldest first), end time,
->   status, created time, first equipment name. Page size at most
+> - The page has one sort button, Booking Time, which flips the
+>   start time between oldest first (default) and newest first. The
+>   address can also carry end time, status, created time or
+>   equipment name (alphabetically first item). Page size at most
 >   100 per request.
+> - Only club members reach this page. Anyone else is sent to
+>   their profile page.
+> - Each row can be ticked, and "Cancel Selected" cancels the
+>   ticked bookings, see cancel-booking.md.
 > - Date filter: start date keeps bookings starting on or after it.
->   End date keeps bookings finishing by the end of that day.
+>   End date keeps bookings finishing by the end of that day. The
+>   day boundaries come from the browser's own time zone.
 > - The server can also filter by one equipment id, but this page
 >   has no control for it.
 > - A visitor without a session gets null from the list call and
@@ -51,7 +58,7 @@ sequenceDiagram
         B->>B: Log the error and carry on with empty values
     end
     B-->>M: "My Bookings", "You have N bookings"
-    M->>B: Change sort, status, dates or page
+    M->>B: Tap Booking Time, change status, dates or page
     B->>B: Update the web address and load the list again
     M->>B: Tap Reset (shown only while a filter is set)
     B->>B: Page 1, start time ascending, default status filter

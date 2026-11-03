@@ -6,7 +6,7 @@
 >
 > **Notes:**
 > - Managers do not see the club code card, and the server refuses them.
-> - The alphabet leaves out look-alike characters (0, 1, I, O). The code is compared without regard to capital letters or surrounding spaces when a new member types it, see [../account/](../account/).
+> - The alphabet leaves out look-alike characters (0, 1, I, O). The code is compared without regard to capital letters or surrounding spaces when a new member types it, see [../account/join-club.md](../account/join-club.md).
 > - There is one code for the whole club, kept in the shared settings row. Rotating does not tell anyone.
 
 ```mermaid

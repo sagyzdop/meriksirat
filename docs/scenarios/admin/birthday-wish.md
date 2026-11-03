@@ -8,8 +8,8 @@
 > - This is the one function in this folder that is not limited to admins and managers. Every signed-in member needs it, so it only requires a session. Without a session it returns nothing.
 > - The result is kept for the whole visit and not asked again, and is stored per user so two people sharing a browser do not see each other's result.
 > - The once-per-session flag is kept in the browser's session storage. If that is unavailable the pop-up can show again.
-> - The pop-up is a dialog on desktop and a drawer on mobile.
-> - Today means the server's date, not the member's local date.
+> - The pop-up is a dialog on desktop and a drawer on mobile. Both have a Dismiss button.
+> - Today means the server's date, not the member's local date. Names are first name plus last name, in the order the database returns them.
 
 ```mermaid
 sequenceDiagram
