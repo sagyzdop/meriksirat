@@ -6,7 +6,7 @@
 >
 > **Notes:**
 > - Choosing both violation types is the same as choosing none, because the list already shows users with either one.
-> - The counters are raised when a booking is auto-cancelled for not starting or goes overdue, see [../cron/bookings/](../cron/bookings/).
+> - The counters are raised when a booking is auto-cancelled for not starting or goes overdue, see [../cron/bookings/cancel-unstarted.md](../cron/bookings/cancel-unstarted.md) and [../cron/bookings/mark-overdue.md](../cron/bookings/mark-overdue.md).
 > - The bell alert "N users with 2+ violations" counts users with either counter above 1, a stricter test than this list.
 > - Default sort is auto-cancelled count, highest first, 10 rows per page.
 > - Clearing counters is in [member-detail.md](member-detail.md).

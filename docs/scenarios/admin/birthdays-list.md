@@ -2,12 +2,12 @@
 
 > **Question:** How does an admin or manager see whose birthday is coming up?
 >
-> **Answer:** The Birthdays page lists every Active or Board member with a birthday on file, with the date of their next birthday and the age they turn. It can be searched by name or email, filtered by whether the member wants to be congratulated, sorted and paged, 50 rows per page. By default the nearest birthday comes first, and dates wrap around the end of the year.
+> **Answer:** The Birthdays page lists every Active or Board member with a birthday on file, with the date of their next birthday and the age they turn. It can be searched by name or email, filtered by the Congratulate column (yes or no), sorted and paged, 50 rows per page. By default the nearest birthday comes first, and dates wrap around the end of the year.
 >
 > **Notes:**
-> - Only the statuses Active and Board count. A member whose stored birthday cannot be read as a date is left out.
+> - Only the statuses Active and Board count. A member whose stored birthday does not contain a full year-month-day date is left out.
 > - Today's birthday counts as upcoming and shows today's date.
-> - The age is blank when the stored birthday has no year.
+> - The age is the year of the next birthday minus the birth year.
 > - Sorting and paging happen after the dates are worked out, because the next-birthday date is not stored.
 > - Copying the list to the shared calendar is in [sync-birthdays.md](sync-birthdays.md). The message members see on the day is in [birthday-wish.md](birthday-wish.md).
 

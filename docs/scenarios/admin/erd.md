@@ -2,7 +2,7 @@
 
 > **Question:** Which tables and stored values do the admin scenarios read or write?
 >
-> **Answer:** The admin console works mostly on the user, settings, category and equipment tables. It reads bookings, albums and flamekeeper rows for counts, lists and ban follow-up work, and deletes sessions when a person is banned or set to Inactive. Banning also changes the flamekeeper and volume rows through the drain steps described in the flamekeepers folder.
+> **Answer:** The admin console works mostly on the user, settings, category and equipment tables. It reads bookings, albums, photos, favorites and flamekeeper rows for counts, lists, the Free up space list and ban follow-up work, and deletes sessions when a person is banned or set to Inactive. Banning also changes the flamekeeper and volume rows through the drain steps described in [../flamekeepers/](../flamekeepers/).
 >
 > **Notes:**
 > - KV: the key album:list:{driveFolderId} holds a folder listing and its state (ok, trashed or missing) with a TTL of 300 seconds. The dashboard only reads it, and never writes it.
@@ -46,6 +46,7 @@ erDiagram
         text id PK "always global"
         text global_booking_note
         text club_code
+        integer flamekeeper_cap_bytes
         text birthdays_calendar_id
         integer operating_hours_start "minutes 0 to 1439"
         integer operating_hours_end "minutes 0 to 1439"
@@ -85,6 +86,7 @@ erDiagram
         text title
         text event
         integer event_date
+        text cover_file_id
         text drive_folder_id
         integer photo_count
         integer photo_bytes
@@ -103,14 +105,24 @@ erDiagram
         text user_id FK
     }
     flamekeeper {
-        text user_id PK
+        text user_id PK,FK
         text state "active, full, draining, lost, drained"
         text drain_reason "opt_out, pledge, graduation, domain, ban"
         integer draining_deadline
     }
     volume {
+        text album_id PK,FK
+        text flamekeeper_user_id PK,FK
+        text drive_folder_id
+    }
+    photo {
+        text id PK
         text album_id FK
-        text flamekeeper_user_id FK
+        text state "live, moving, deleted, dropped"
+    }
+    favorite {
+        text user_id PK,FK
+        text photo_id PK,FK
     }
     user ||--o{ session : has
     user ||--o{ booking : makes
@@ -122,5 +134,8 @@ erDiagram
     user ||--o{ album_member : co_authors
     user ||--o| flamekeeper : may_be
     user ||--o{ volume : holds
+    album ||--o{ photo : has
+    photo ||--o{ favorite : favorited_as
+    user ||--o{ favorite : makes
     album ||--o{ volume : stored_in
 ```

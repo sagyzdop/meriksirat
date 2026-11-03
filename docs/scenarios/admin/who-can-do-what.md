@@ -7,7 +7,7 @@
 > **Notes:**
 > - Only club members can hold the manager or admin role. The check applies to admins as well.
 > - Setting someone's role back to user is allowed for managers. Only the two elevated roles are blocked.
-> - The flamekeeper pool cap is admin only. Its screen is in [../flamekeepers/](../flamekeepers/) and booking oversight is in [../bookings/](../bookings/).
+> - The flamekeeper pool cap is admin only. Its screen is in [../flamekeepers/admin-pool.md](../flamekeepers/admin-pool.md) and booking oversight is in [../bookings/admin-bookings-list.md](../bookings/admin-bookings-list.md).
 > - The gate that runs before all of this is in [route-gate.md](route-gate.md).
 
 ```mermaid

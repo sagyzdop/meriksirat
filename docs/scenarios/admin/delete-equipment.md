@@ -7,7 +7,7 @@
 > **Notes:**
 > - The confirm dialog already warns about this: "If this equipment has active bookings, it will be marked as inactive instead of being deleted to preserve booking history."
 > - After the inactive result the page waits 2 seconds before leaving, and after a real delete 1.5 seconds.
-> - Only the booking statuses listed above count as active. Returned and cancelled bookings do not stop a delete.
+> - Only the booking statuses listed above count as active. Returned and cancelled bookings do not trigger the switch-off, so the code then tries a real delete. Every booking item keeps a link to its equipment with no automatic clean-up, so the database may refuse that delete for equipment that was ever booked. The person would then see the red message with the database error.
 > - Switching an item on again is done in [edit-equipment.md](edit-equipment.md).
 
 ```mermaid

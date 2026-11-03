@@ -7,9 +7,9 @@
 > **Notes:**
 > - The calendar is the ID saved in the dashboard Settings, or a built-in default when that field is empty, see [dashboard-settings.md](dashboard-settings.md).
 > - Events are matched to members by an id kept in each event's description. Events without it are left alone. The event year is always 2000 and repeats every year.
-> - Calls to Google use the club master account. One failed event is logged, counted as skipped and does not stop the others. The toast does not show the skipped count.
+> - The calendar is read in one request of up to 2500 events. Calls to Google use the club master account. One failed event is logged, counted as skipped and does not stop the others. Members whose birthday cannot be read are also counted as skipped. The toast does not show the skipped count.
 > - If the calendar cannot be listed at all, the whole sync fails and the toast says "Failed to sync birthdays to the calendar" or the server's message.
-> - The same reconcile also runs after onboarding and after a member edits their own profile, see [../account/](../account/).
+> - The same reconcile also runs after onboarding and after a member edits their own profile, see [../account/onboarding-profile.md](../account/onboarding-profile.md) and [../account/profile-edit.md](../account/profile-edit.md).
 
 ```mermaid
 sequenceDiagram

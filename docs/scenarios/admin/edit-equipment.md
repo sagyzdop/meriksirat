@@ -2,13 +2,14 @@
 
 > **Question:** What happens when an admin or manager edits a piece of equipment, switches it off or replaces its photo?
 >
-> **Answer:** The Edit page loads the item and the category list, and the person changes any field, the Active switch or the image, then presses Save Changes. The server checks that the item exists, that a changed calendar ID is not used by another item and that the category exists, then saves. A green message says the item was updated, and after 1.5 seconds the page goes to the equipment list. Inactive equipment cannot be booked by members.
+> **Answer:** The person clicks a row in the equipment list. The Edit page loads the item and the category list, and the person changes any field, the Active switch or the image, then presses Save Changes. The server checks that the item exists, that a changed calendar ID is not used by another item and that the category exists, then saves. A green message says the item was updated, and after 1.5 seconds the page goes to the equipment list. Inactive equipment cannot be booked by members.
 >
 > **Notes:**
 > - The text of the green message tells the outcome: updated, updated with new image, or updated but the image upload failed (the person can try the image again).
 > - Changing the image uploads a new file to R2 and points the item at it. The previous file stays in R2.
 > - The page does not refresh any list. The list page loads its own data when opened.
-> - If the item is missing when the page opens, the page shows "Failed to load equipment data".
+> - If the item is missing, or either load fails, when the page opens, the page shows "Failed to load equipment data".
+> - If the image upload fails, the item changes are already saved. The Active switch is saved with the other fields.
 > - Deleting from this page is in [delete-equipment.md](delete-equipment.md).
 
 ```mermaid
@@ -20,11 +21,11 @@ sequenceDiagram
     participant D1
     participant R2
 
-    Person->>Browser: click Edit on a row
+    Person->>Browser: click a row in the equipment list
     Browser->>Worker: getAdminEquipmentByIdFn(equipmentId)
     Worker->>D1: read equipment with its category
     Browser->>Worker: getCategoriesFn()
-    Note over Browser,Worker: category choices, see ../equipment/
+    Note over Browser,Worker: category choices, see equipment/load-equipment-page.md
     alt equipment not found
         Browser-->>Person: error "Failed to load equipment data"
     else loaded

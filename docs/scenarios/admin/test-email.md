@@ -6,7 +6,7 @@
 >
 > **Notes:**
 > - The button is shown to admins only. A manager who calls the function gets "Insufficient permissions".
-> - The message goes only to the person who pressed the button, never to other members.
+> - The message goes only to the person who pressed the button, never to other members. It is sent through Gmail from the club master account.
 > - The subject is "nu_image test email" and the body states the time it was sent.
 
 ```mermaid

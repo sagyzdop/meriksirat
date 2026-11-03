@@ -2,7 +2,7 @@
 
 > **Question:** How does an admin or manager change the booking note, the birthdays calendar or the daily opening hours?
 >
-> **Answer:** On the dashboard Settings tab the person edits the global booking note, the birthdays calendar ID and the start and end of the daily booking window, then presses Save Settings. The form refuses to save when either time is empty or the start is not before the end. On success a toast says "Settings updated successfully" and the dashboard and booking data reload.
+> **Answer:** On the dashboard Settings tab the person edits the global booking note, the birthdays calendar ID and the start and end of the daily booking window, then presses Save Settings. The Save Settings button is disabled when either time is empty or the start is not before the end, and a red box says why. On success a toast says "Settings updated successfully" and the dashboard and booking data reload.
 >
 > **Notes:**
 > - The settings are one shared row. If it does not exist yet, opening the tab creates it with an empty note and hours 00:00 to 23:59.
@@ -28,9 +28,9 @@ sequenceDiagram
     Worker-->>Browser: settings without the club code
     Person->>Browser: edit fields and click Save Settings
     alt a time is empty
-        Browser-->>Person: "Both operating hours times are required"
+        Browser-->>Person: red box "Both operating hours times<br/>are required", Save disabled
     else start is not before end
-        Browser-->>Person: "Start time must be before end time"
+        Browser-->>Person: red box "Start time must be before<br/>end time", Save disabled
     else form is valid
         Browser->>Worker: updateSettingsFn(note, calendarId, start, end)
         alt start is not before end on the server
