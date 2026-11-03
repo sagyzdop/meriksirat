@@ -18,6 +18,8 @@
 >   be cancelled alone.
 > - Text that is not a booking button gets "Please tap one of the
 >   buttons above."
+> - If the chat is no longer linked, picking a booking gets "Please
+>   link your account via /start first."
 
 ```mermaid
 sequenceDiagram

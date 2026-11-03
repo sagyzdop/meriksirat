@@ -20,6 +20,8 @@
 >   allowed through.
 > - Updates with no message (for example edited messages) skip the
 >   rate limit and are answered 200 by the router doing nothing.
+> - A body that is not valid JSON, or any error in the router,
+>   gives 500 "Internal Server Error".
 > - Routing continues in `message-routing.md`.
 
 ```mermaid
@@ -42,7 +44,7 @@ sequenceDiagram
         end
         Worker->>Worker: build bot context with reply helper<br/>that sends to the same chat
         Worker->>Worker: routeMessage(ctx)<br/>see message-routing.md
-        alt routeMessage throws
+        alt bad JSON or routeMessage throws
             Worker-->>Telegram: 500 "Internal Server Error"
         else done
             Worker-->>Telegram: 200 "OK"

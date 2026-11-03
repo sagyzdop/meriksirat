@@ -18,6 +18,9 @@
 >   expires after 1 hour in KV.
 > - A choice that is not a button gets "Please tap one of the
 >   buttons above."
+> - If the chat is no longer linked, picking a booking gets "Please
+>   link your account via /start first." and picking an item
+>   shows the main menu.
 > - Item numbers are positions in the list (1, 2, 3 ...), read back
 >   against the current list of returnable items.
 

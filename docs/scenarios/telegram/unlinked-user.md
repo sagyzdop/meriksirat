@@ -12,8 +12,9 @@
 > - Typed text that is not a command or button shows the main menu
 >   when the chat has no saved step. That menu is shown even to an
 >   unlinked chat, but its buttons then give the message above.
-> - In the middle of a flow a lost link makes the step handlers
->   show the main menu instead of the message.
+> - If the link is lost in the middle of a flow, most steps show
+>   the main menu. Picking a booking to return or cancel gets the
+>   message above instead. See `flow-text.md`.
 > - A photo from an unlinked chat is ignored (see `return-photo.md`).
 > - Linking is explained in `link-account.md`.
 

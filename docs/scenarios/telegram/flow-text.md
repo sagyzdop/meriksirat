@@ -7,7 +7,7 @@
 > (`session:CHATID`, expires after 1 hour). `handleFlowText` reads
 > it and sends the text to the matching step. With no saved step
 > the text shows the main menu. If the member is no longer linked
-> in a step that needs an account, the main menu is shown.
+> in a step that needs an account, the main menu is usually shown.
 >
 > **Notes:**
 > - The 8 steps are `awaiting_booking_selection`,
@@ -15,6 +15,13 @@
 >   `awaiting_start_selection`, `awaiting_start_confirm`,
 >   `awaiting_cancel_selection`, `awaiting_cancel_items` and
 >   `awaiting_cancel_confirm`.
+> - Steps that show the main menu when the chat is not linked:
+>   `awaiting_start_selection` (after a valid booking button),
+>   `awaiting_start_confirm`, `awaiting_item_selection`,
+>   `awaiting_cancel_items` and `awaiting_cancel_confirm`. Picking
+>   a booking at `awaiting_booking_selection` or
+>   `awaiting_cancel_selection` gives "Please link your account
+>   via /start first." instead.
 > - `awaiting_photo` has no text handling. Text sent then falls to
 >   the main menu (default branch). Only a photo moves it on.
 > - Saving a step again restarts the 1 hour expiry. Nothing deletes

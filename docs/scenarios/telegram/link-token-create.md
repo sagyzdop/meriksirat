@@ -14,7 +14,9 @@
 > - `createTelegramLinkToken` is a plain helper, not a server
 >   function. `getTelegramLinkUrlFn` (onboarding) and
 >   `getTelegramUpdateLinkUrlFn` (changing the linked chat) both
->   call it. The pages that show the link belong to `../account/`.
+>   call it. The pages that show the link are in
+>   `../account/onboarding-telegram.md` and
+>   `../account/update-telegram.md`.
 > - `getTelegramLinkUrlFn` returns no link when the account already
 >   has a chat linked (`alreadyLinked`), and returns no link when
 >   the server runs with `DEV=true`. `getTelegramUpdateLinkUrlFn`
@@ -35,17 +37,18 @@ sequenceDiagram
     Browser->>Worker: getTelegramLinkUrlFn()<br/>or getTelegramUpdateLinkUrlFn()
     opt getTelegramLinkUrlFn only
         Worker->>D1: read user.telegram_chat_id
-        alt chat already linked
-            Worker-->>Browser: alreadyLinked true, url null
-        else DEV is true
-            Worker-->>Browser: url null
-        end
     end
-    Worker->>D1: createTelegramLinkToken(userId)<br/>find unexpired telegram_link_token
-    alt unexpired token exists
-        Worker-->>Browser: url with the existing token
-    else none
-        Worker->>D1: insert token, expires_at = now + 10 minutes
-        Worker-->>Browser: url with the new token
+    alt getTelegramLinkUrlFn and chat already linked
+        Worker-->>Browser: alreadyLinked true, url null
+    else getTelegramLinkUrlFn and DEV is true
+        Worker-->>Browser: url null
+    else make a link
+        Worker->>D1: createTelegramLinkToken(userId)<br/>find unexpired telegram_link_token
+        alt unexpired token exists
+            Worker-->>Browser: url with the existing token
+        else none
+            Worker->>D1: insert token, expires_at = now + 10 minutes
+            Worker-->>Browser: url with the new token
+        end
     end
 ```
