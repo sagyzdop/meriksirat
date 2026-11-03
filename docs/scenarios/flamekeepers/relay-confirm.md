@@ -2,7 +2,7 @@
 
 > **Question:** What does the server do once the browser says a photo has been copied to the new Drive?
 >
-> **Answer:** It checks the reservation, looks up the copy in the destination Drive, and checks it sits in the right album folder and has the same size as the original. If so, the photo record now points to the new file and the new flamekeeper, the destination's used space goes up, the old file is deleted from the source Drive, and the source's used space goes down. If the photo changed in the meantime or the copy is wrong, the copy is deleted instead. The reply tells the browser how much is left to move.
+> **Answer:** It checks the reservation, looks up the copy in the destination Drive, and checks it sits in the right album folder and has the same size as the original. If so, the photo record now points to the new file and the new flamekeeper, the destination's used space goes up, the old file is deleted from the source Drive, and the source's used space goes down. If the photo changed in the meantime or the copy has the wrong size, the copy is deleted instead. A copy that is not in the album folder is refused and left alone. The reply tells the browser how much is left to move.
 >
 > **Notes:**
 > - Which token is used. The destination flamekeeper's token reads
@@ -17,9 +17,13 @@
 >   then stays in the source Drive.
 > - If the photo was the album cover, the cover is repointed to
 >   the new file.
-> - When the source holds nothing more, empty album folders are
->   released and the drain is finished: state becomes drained and
->   the Drive access is deleted.
+> - The source's folder for this album is released once it is
+>   empty. When the source holds nothing more, the drain is
+>   finished: state becomes drained and the Drive access is
+>   deleted. A pledge drain ends instead when usage is within the
+>   pledge, and the state goes back to active.
+> - If another move or a delete changed the photo at the same
+>   moment, the copy is discarded and the call still succeeds.
 > - The cached album page is dropped so viewers get the new file.
 > - Admin callers pass the source person's id, as in
 >   relay-hand-out.md.
@@ -37,6 +41,8 @@ sequenceDiagram
         Worker-->>Browser: error "Move session expired, try again"
     else Destination is the source
         Worker-->>Browser: error "Invalid move session"
+    else Album not found
+        Worker-->>Browser: error "Album not found"
     else Reservation found
         Worker->>Drive: destination token reads the copy
         alt Copy is not in the destination album folder
@@ -51,10 +57,14 @@ sequenceDiagram
             end
         else Copy is good
             Worker->>D1: photo = new file id and destination,<br/>only if still with the source
+            opt Photo was changed by someone else just now
+                Worker->>Drive: destination token deletes the copy
+                Worker-->>Browser: current drain status
+            end
             Worker->>D1: destination used bytes plus size,<br/>delete reservation, fix album cover
             Worker->>Drive: source token deletes the old file
             Worker->>D1: source used bytes minus size,<br/>release empty album folders
-            Worker->>D1: finish the drain if nothing is left
+            Worker->>D1: drop the cached album page,<br/>finish the drain if nothing is left
             Worker-->>Browser: status with bytes left
         end
     end

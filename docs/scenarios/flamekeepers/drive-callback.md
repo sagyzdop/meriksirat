@@ -20,8 +20,10 @@
 >   authorization. Please try again." master: "The club account
 >   owns the album folders and cannot be a flamekeeper."
 > - A returning flamekeeper (drained or lost) is set back to
->   active with the new pledge, date and terms time. Drain and
->   lost markers are cleared. Used bytes are left as they were.
+>   active with the new pledge, date and terms time. The deadline
+>   and lost markers are cleared. Used bytes and the drain reason
+>   are left as they were, and the graduation confirmation time is
+>   only set for a brand new row.
 > - The code is exchanged on the server with the client secret.
 >   The cached access token for this user is dropped afterwards.
 

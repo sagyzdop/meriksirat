@@ -2,7 +2,7 @@
 
 > **Question:** What happens when a flamekeeper answers the yearly "is this still your graduation date?" question?
 >
-> **Answer:** Pressing "Yes, it is right" saves the same pledge and date again and records the confirmation time, which starts a new 365-day wait. Pressing "Change date" opens the edit dialog instead. If the confirmed date is already under 60 days away, the same save that confirms it also starts the drain of all photos.
+> **Answer:** Pressing "Yes, it is right" saves the same pledge and date again and records the confirmation time, which starts a new 365-day wait. Pressing "Change date" opens the edit dialog instead. If the confirmed date is already under 60 days away (or past), the same save also starts the drain of all photos, or ends flamekeeping at once if none are held.
 >
 > **Notes:**
 > - The question appears on the profile card once 365 days have
@@ -10,12 +10,12 @@
 >   there was none). It never appears for drained or lost
 >   flamekeepers.
 > - A reminder email for the same question is sent by the clock,
->   see cron/flamekeepers/ for when and how often.
+>   see ../cron/flamekeepers/graduation-prompt.md.
 > - Confirming sends the date stored in the row. A new date can
 >   also be passed, but the button on the card does not send one.
 > - Change date is the same flow as change-pledge.md.
-> - The server only needs a signed-in flamekeeper row, so the call
->   also works for a draining flamekeeper.
+> - The server only needs a flamekeeper row, so the call also
+>   works in any state, including draining.
 
 ```mermaid
 sequenceDiagram
@@ -24,8 +24,7 @@ sequenceDiagram
     participant Browser
     participant Worker
     participant D1
-    participant Cron
-    Cron-->>F: see cron/flamekeepers/ for the<br/>reminder email
+    Note over F,D1: Reminder email, see<br/>cron/flamekeepers/graduation-prompt.md
     F->>Browser: Press Yes, it is right
     Browser->>Worker: confirmGraduationFn()
     Worker->>D1: read flamekeeper row
@@ -33,7 +32,7 @@ sequenceDiagram
         Worker-->>Browser: error "You are not a flamekeeper"
     else Row found
         Worker->>D1: save same pledge and date,<br/>graduationConfirmedAt = now
-        opt Date is under 60 days away
+        opt Date is under 60 days away or past
             Worker->>D1: state = draining, deadline = now + 14 days<br/>(or drained at once if no photos)
         end
         Worker-->>Browser: success

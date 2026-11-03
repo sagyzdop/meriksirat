@@ -2,12 +2,15 @@
 
 > **Question:** What does a person see in the flamekeeper card on /profile for each flamekeeper state?
 >
-> **Answer:** The profile page loads the person's flamekeeper record. A person without a record, or whose record is drained, sees the signup form (or a note that only @nu.edu.kz accounts can join). An active or full flamekeeper sees pledge, usage and buttons to edit the pledge or stop. A draining flamekeeper also sees why their photos are moving and a Move photos now panel. A lost flamekeeper sees a red warning with a Reconnect Drive button. When a yearly graduation question is due, it shows above the numbers.
+> **Answer:** The profile page loads the person's flamekeeper record. The card only appears for people who have a record or who could sign up (an @nu.edu.kz account that is not flamekeeping). Someone without a record sees the signup form. Someone whose record is drained sees a Become a flamekeeper switch that opens the same form. An active or full flamekeeper sees pledge, usage and buttons to edit the pledge or stop. A draining flamekeeper also sees why their photos are moving and a Move photos now panel. A lost flamekeeper sees a red warning with a Reconnect Drive button. When the yearly graduation question is due, it shows above the numbers.
 >
 > **Notes:**
 > - A draining record is checked on every load. If nothing is
 >   left to move, the drain is finished right there (state becomes
 >   drained, usage is zeroed and the app's Drive access is deleted).
+> - A drained person who is not on an @nu.edu.kz account sees the
+>   card with the text "Only @nu.edu.kz accounts can become
+>   flamekeepers." and no form.
 > - Drain messages by reason. opt_out: "You stopped flamekeeping,
 >   so your photos are moving to other flamekeepers." pledge: "Your
 >   pledge is below what you hold, so the excess is moving..."
@@ -19,11 +22,15 @@
 >   Stop flamekeeping is hidden when lost or already opted out.
 > - The graduation question appears 365 days after the last
 >   confirmation (or after signing up), see confirm-graduation.md.
+>   It is not shown to lost or drained flamekeepers.
 > - The Move photos now panel is explained in relay-hand-out.md.
 > - Albums hosted counts the albums where the person holds a
 >   folder that was not dropped and whose album is not deleted.
 > - Connection errors from Google are shown in the card, see
 >   drive-callback.md for the messages.
+> - The reconnect toast shows the server message when there is
+>   one, and "Could not reconnect Drive" otherwise.
+> - Stopping and editing are in opt-out.md and change-pledge.md.
 
 ```mermaid
 sequenceDiagram
@@ -40,15 +47,17 @@ sequenceDiagram
         Worker->>D1: finishDrainIfEmpty, mark drained if no<br/>photos are left
     end
     Worker-->>Browser: state, pledge, used, date, drain info,<br/>albumsHosted
-    alt No row, or state drained
-        Browser-->>F: Signup form, or "Only @nu.edu.kz accounts<br/>can become flamekeepers."
+    alt No row
+        Browser-->>F: Signup form, see connect-drive.md
+    else State drained
+        Browser-->>F: Switch "Become a flamekeeper" for the form,<br/>or "Only @nu.edu.kz accounts can become<br/>flamekeepers."
     else State lost
         Browser-->>F: Red box "We can no longer reach your Drive.<br/>Reconnect within 7 days or your photos will<br/>drop out of the app."
         F->>Browser: Press Reconnect Drive
         Browser->>Worker: startDriveConnectFn(mode reconnect)
         alt Row is not lost
             Worker-->>Browser: error "Only a lost flamekeeper can<br/>reconnect Drive"
-            Browser-->>F: Toast "Could not reconnect Drive"
+            Browser-->>F: Toast with that message
         else Row is lost
             Worker-->>Browser: Google consent url, pledge and date kept<br/>from the existing row
             Browser->>GO: Redirect (button "Redirecting...")
@@ -59,6 +68,6 @@ sequenceDiagram
         Browser-->>F: Badge, usage bar, pledge, date, albums hosted
     end
     opt Graduation question is due
-        Browser-->>F: "Is the date still your expected graduation<br/>date?" with two buttons
+        Browser-->>F: "Is the stored date still your expected<br/>graduation date?" with two buttons
     end
 ```

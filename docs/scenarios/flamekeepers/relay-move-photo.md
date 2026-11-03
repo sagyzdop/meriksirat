@@ -10,7 +10,13 @@
 >   while moving, and the loop stops if the page is left.
 > - Waits between retries are 1 s, then 2 s. The third failure in
 >   a row stops with "Moving stopped: " followed by the error.
->   Any success resets the count.
+>   Any success resets the count. Errors from the server calls
+>   (hand-out or confirm) count as failures too, and so does an
+>   error that has no message ("Moving stopped after repeated
+>   errors").
+> - After a success the next photo is requested at once. The loop
+>   ends when the server says the drain is over or nothing is
+>   left, or when Pause is pressed.
 > - The release call is sent without waiting and its own failure
 >   is ignored. The reservation also expires by itself after 2
 >   hours.
@@ -19,7 +25,7 @@
 >   are placed there.
 > - The server side of a successful copy is in relay-confirm.md.
 > - Progress text: "Preparing the next photo...", then "Moved
->   name", with "N photos moved so far" and a progress bar.
+>   photo name", with "N photos moved so far" and a progress bar.
 
 ```mermaid
 sequenceDiagram
@@ -32,7 +38,7 @@ sequenceDiagram
     Browser->>Drive: GET file alt=media<br/>(source flamekeeper token)
     alt Download fails
         Browser->>Worker: releaseRelayFn(albumId, reservationId,<br/>quotaExceeded false)
-        Note over Browser: error "Could not download name (status)"
+        Note over Browser: error: Could not download "photo name" (status)
     else Download ok
         Browser->>Drive: PUT bytes to the upload link<br/>(no token needed)
         alt Destination storage exceeded (403)
@@ -41,7 +47,7 @@ sequenceDiagram
             Note over Browser: error "Destination Drive is full"
         else Any other upload failure
             Browser->>Worker: releaseRelayFn(..., quotaExceeded false)
-            Note over Browser: error "Could not upload name (status)"
+            Note over Browser: error: Could not upload "photo name" (status)
         else Upload ok but no file id returned
             Browser->>Worker: releaseRelayFn(..., quotaExceeded false)
             Note over Browser: error "Google did not return the<br/>moved file"
@@ -51,10 +57,12 @@ sequenceDiagram
             Browser-->>P: "Moved name" and the new GB left
         end
     end
-    alt Third failure in a row
-        Browser-->>P: "Moving stopped: error message"
-    else Fewer than 3 failures
-        Browser->>Browser: wait 1 s times failures, ask again
+    opt Any step above failed, including the server calls
+        alt Third failure in a row
+            Browser-->>P: "Moving stopped: error message"
+        else Fewer than 3 failures
+            Browser->>Browser: wait 1 s times failures, ask again
+        end
     end
     opt Status is no longer draining
         Browser-->>P: "All photos have moved. Thank you!"
