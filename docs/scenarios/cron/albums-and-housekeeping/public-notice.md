@@ -14,18 +14,23 @@
 > **Notes:**
 > - One album: Your album "TITLE" is now public and listed in the
 >   gallery. Anyone with the link could already open its Drive
->   folder, so nothing else changes. A link follows.
+>   folder, so nothing else changes. A link to the album follows
+>   if the site address is configured.
 > - Several albums: N of your albums are now public and listed in
 >   the gallery, then up to 10 titles, "and N more" if over 10,
->   then the same Drive sentence in plural.
-> - At most 5 owners are messaged per tick, 1 request each. Owners
->   are taken oldest mark first. Owners with no Telegram cost
->   nothing and do not count toward the 5.
+>   then the same Drive sentence in plural, then a link to the
+>   albums gallery page.
+> - At most 5 owners are messaged per tick, 1 request each, and a
+>   failed send counts too. Owners are taken oldest mark first.
+>   Owners with no Telegram cost nothing and do not count toward
+>   the 5, but one listed after the cut-off waits for the next
+>   tick like everyone else.
 > - Without a bot token nothing is cleared and the step logs
 >   "TELEGRAM_BOT_TOKEN not configured, leaving public album
 >   notices pending".
 > - The migration also removed the old is_shared column.
 > - After every pending album is cleared, the step does nothing.
+>   Deleted albums are never messaged about.
 
 ```mermaid
 sequenceDiagram
@@ -34,7 +39,7 @@ sequenceDiagram
     participant Worker
     participant D1
     participant Telegram
-    Cron->>Worker: notifyPublicAlbums, runPublicAlbumNotices(env, budget)
+    Cron->>Worker: notifyPublicAlbums (runPublicAlbumNotices)
     Worker->>D1: albums where publicNoticePendingAt is set<br/>and deletedAt is null, oldest first
     alt none pending
         Worker-->>Cron: step ends
@@ -43,7 +48,7 @@ sequenceDiagram
     else pending albums
         Worker->>Worker: group albums by owner
         loop each owner
-            alt owner has no telegramChatId
+            alt owner has no telegram_chat_id
                 Worker->>D1: publicNoticePendingAt = null for their albums
             else 5 owners done, or budget cannot afford 1
                 Worker->>Worker: stop for this tick

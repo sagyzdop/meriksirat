@@ -13,11 +13,14 @@
 >
 > **Notes:**
 > - Cloudflare allows 50 outside requests per run. The counter is
->   set to 40, which leaves room for the requests it does not count.
+>   set to 40. The code does not say why 40, and I could not
+>   confirm from it which calls Cloudflare itself counts.
 > - The steps before these five are in `../overview.md`. They use
 >   the same counter, so what is left for the five depends on them.
-> - D1 reads and writes, KV and R2 are not counted. Telegram sends,
->   Google token refreshes and Drive calls are.
+> - The counter does not include D1, KV or R2 calls. It does
+>   include Telegram sends, Google token refreshes and Drive calls
+>   made by the cron. Messages sent from the website, such as the
+>   early expiry notice, are not part of it.
 > - Each step is in its own file here: expiry in
 >   `expiry-plan.md`, public notice in `public-notice.md`, backfill
 >   in `photo-backfill.md`, bot menu in `bot-menu.md`, stale signups
@@ -37,12 +40,12 @@ sequenceDiagram
     Note right of Worker: Messages at most 5 owners, 1 request each
     Worker->>Worker: backfillAlbumPhotos (runPhotoBackfill)
     Note right of Worker: At most 5 albums and 500 photos.<br/>Also capped by a daily write budget
-    Worker->>Worker: configureTelegramBot (configureTelegramBot)
+    Worker->>Worker: configureTelegramBot
     Note right of Worker: 1 request, every tick
     Worker->>Worker: cleanupStaleSignups (runStaleSignupCleanup)
     Note right of Worker: Uses no outside requests. Deletes up to 20
     alt a step throws
-        Worker->>Worker: log "Error in NAME" and go on to the next step
+        Worker->>Worker: log "Error in STEP NAME", go on to next step
     end
     Worker->>Worker: log "[cron] outside requests SPENT/40"
 ```

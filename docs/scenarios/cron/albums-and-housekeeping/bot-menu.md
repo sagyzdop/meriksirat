@@ -26,7 +26,7 @@ sequenceDiagram
     participant Cron
     participant Worker
     participant Telegram
-    Cron->>Worker: configureTelegramBot(env, budget)
+    Cron->>Worker: configureTelegramBot
     alt no TELEGRAM_BOT_TOKEN
         Worker-->>Cron: step ends, no call
     else budget cannot afford 1 request

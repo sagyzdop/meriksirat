@@ -22,9 +22,11 @@
 > - A photo costs 3 writes and each album that gets photos costs 1
 >   more. An album with no new photos, a trashed folder or a missing
 >   folder costs 1. One run adds at most 500 photos. 1 write of the
->   day's budget is always kept in reserve.
-> - Albums asked for by `requestAlbumIndex` go first, oldest
->   request first. The rest go newest event first (creation date if
+>   day's budget is always kept in reserve, so the step stops when
+>   fewer than 4 writes are left.
+> - Albums asked for by `requestAlbumIndex` (set the first time
+>   someone opens an album whose photo list is still read from
+>   Drive) go first, oldest request first. The rest go newest event first (creation date if
 >   there is no event date). Deleted albums and skipped ones are
 >   never chosen.
 > - Photo rows get no flamekeeper, and are inserted 6 rows at a
@@ -33,8 +35,11 @@
 >   (folder check and first page of files), plus 1 for every extra
 >   page of 1000 files. The step stops when it cannot afford the
 >   next album.
-> - Other Drive errors are logged. Nothing is spent and the album
->   is not tried again in the same tick.
+> - Other Drive errors are logged. No daily writes are counted and
+>   the album is not tried again in the same tick, only on a later
+>   one. A folder that disappears while its files are being listed
+>   is marked missing.
+> - Only the master token is used. Nothing is deleted from Drive.
 
 ```mermaid
 sequenceDiagram
@@ -45,12 +50,15 @@ sequenceDiagram
     participant D1
     participant Google OAuth
     participant Drive
-    Cron->>Worker: backfillAlbumPhotos, runPhotoBackfill(env, budget)
+    Cron->>Worker: backfillAlbumPhotos (runPhotoBackfill)
     Worker->>KV: get photo-backfill:budget, reset if the UTC day changed
-    alt fewer than 3 writes left in the daily budget
+    alt fewer than 4 writes left in the daily budget
         Worker-->>Cron: step ends
     else writes left
         Worker->>D1: albums not indexed, not skipped, not deleted
+        alt no such albums, or no request left
+            Worker-->>Cron: step ends
+        end
         Worker->>Worker: spend 1 request, master token
         Worker->>Google OAuth: getGoogleAccessToken
         loop up to 5 albums, 500 photos in total
@@ -60,12 +68,12 @@ sequenceDiagram
                 Worker->>D1: photosIndexSkipped = trashed or missing
             else folder ok
                 Worker->>Drive: listDriveFolderFiles, 1000 per page
-                Worker->>D1: read known driveFileId of the album
+                Worker->>D1: read known drive_file_id of the album
                 Worker->>D1: registerDrivePhotos, insert missing images,<br/>6 rows per statement
                 Worker->>D1: update photoCount and photoBytes,<br/>set photosIndexedAt only if all were added
             end
             Worker->>Worker: add the writes to the day's total
         end
-        Worker->>KV: put photo-backfill:budget, expires in 2 days
+        Worker->>KV: put photo-backfill:budget, expires in 2 days,<br/>only if any writes were counted
     end
 ```

@@ -14,6 +14,11 @@
 >
 > **Notes:**
 > - A new album's expiry date is the event date plus 2 years.
+>   Changing the event date of an unpinned album sets a new expiry
+>   date and clears both reminder marks, see
+>   `../../albums/edit-album-and-pin.md`.
+> - An album that is pinned when its date passes is not deleted.
+>   Once it is unpinned it is picked up on the next tick.
 > - An album that first shows up with 5 days left only gets the
 >   7-day reminder. It never gets the 30-day one.
 > - If nothing is queued, the step ends without any outside call.
@@ -27,7 +32,7 @@ sequenceDiagram
     participant Cron
     participant Worker
     participant D1
-    Cron->>Worker: expireAlbums, runAlbumExpiry(env, budget)
+    Cron->>Worker: expireAlbums (runAlbumExpiry)
     Worker->>D1: read albums where deletedAt is null<br/>and pinned is false
     D1-->>Worker: id, title, expiresAt, reminder times
     Worker->>Worker: planExpiry(rows, now)

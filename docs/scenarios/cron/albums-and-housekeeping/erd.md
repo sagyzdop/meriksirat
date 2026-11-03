@@ -6,19 +6,24 @@
 >
 > **Answer:** They work on the album, photo and volume tables, the
 > owners and co-authors in user and album_member, and the sign-in
-> tables when deleting stale signups. The bot menu step touches no
-> table. Only listed columns are used by these steps.
+> tables when deleting stale signups. Early expiry also reads
+> favorite, and the Drive cleanup reads upload_reservation and
+> flamekeeper_grant. The bot menu step touches no table. Only the
+> columns these steps use are listed.
 >
 > **Notes:**
 > - KV `photo-backfill:budget` holds JSON with the UTC day and the
 >   writes spent that day. It expires after 2 days.
 > - KV `album:list:DRIVE_FOLDER_ID` and `album:detail:ALBUM_ID` are
 >   album page caches. Expiry deletes both keys when it removes an
->   album.
+>   album. Their own lifetimes are set in the albums folder, not by
+>   these steps.
 > - R2 is not used by these steps.
-> - Tables booking, favorite, flamekeeper and flamekeeper_grant are
->   only checked to see if a stale signup owns something, so only
->   their user link is shown.
+> - Tables booking, flamekeeper and flamekeeper_grant are only
+>   checked to see if a stale signup owns something, so only their
+>   user link is shown. Column names are the database names.
+> - album_member also has its own id and created_at, not used here.
+> - The photo state is read, not changed, by these steps.
 
 ```mermaid
 erDiagram
@@ -27,7 +32,10 @@ erDiagram
     album ||--o{ album_member : has
     album ||--o{ photo : holds
     album ||--o{ volume : has
+    album ||--o{ upload_reservation : has
+    photo ||--o{ favorite : "is favorited by"
     user ||--o{ volume : stores
+    user ||--o{ upload_reservation : makes
     user ||--o{ session : has
     user ||--o{ account : has
     user ||--o{ booking : makes
@@ -37,70 +45,79 @@ erDiagram
     user {
         text id PK
         text email
-        text telegramChatId "null means no Telegram"
+        text telegram_chat_id "null means no Telegram"
         text role "user, manager, admin"
-        boolean isMember
-        timestamp bannedAt
-        timestamp createdAt
-        integer albumCount
+        integer is_member "boolean"
+        integer banned_at
+        integer created_at
+        integer album_count
     }
     album {
         text id PK
-        text ownerUserId FK
+        text owner_user_id FK
         text title
-        text driveFolderId
-        text coverFileId
-        integer photoCount
-        integer photoBytes
-        integer favoriteCount
-        timestamp photosIndexedAt
-        timestamp photosIndexRequestedAt
-        text photosIndexSkipped "trashed, missing"
-        timestamp expiresAt
-        boolean pinned
-        text tombstoneReason "expired, flamekeeper_left, flamekeeper_lost, no_space"
-        timestamp deletedAt
-        timestamp expiryReminder30SentAt
-        timestamp expiryReminder7SentAt
-        timestamp publicNoticePendingAt
-        timestamp eventDate
-        timestamp createdAt
+        text drive_folder_id
+        text cover_file_id
+        integer photo_count
+        integer photo_bytes
+        integer favorite_count
+        integer photos_indexed_at
+        integer photos_index_requested_at
+        text photos_index_skipped "trashed, missing"
+        integer expires_at
+        integer pinned "boolean"
+        text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space"
+        integer deleted_at
+        integer expiry_reminder_30_sent_at
+        integer expiry_reminder_7_sent_at
+        integer public_notice_pending_at
+        integer event_date
+        integer created_at
+        integer updated_at
     }
     album_member {
-        text albumId FK
-        text userId FK
+        text album_id FK
+        text user_id FK
     }
     photo {
         text id PK
-        text albumId FK
-        text driveFileId
+        text album_id FK
+        text drive_file_id
         integer bytes
-        text flamekeeperUserId "null means master account"
+        text flamekeeper_user_id "null means master account"
         text state "live, moving, deleted, dropped"
     }
+    favorite {
+        text user_id PK
+        text photo_id PK
+    }
     volume {
-        text albumId PK
-        text flamekeeperUserId PK
-        text driveFolderId
+        text album_id PK
+        text flamekeeper_user_id PK
+        text drive_folder_id
+    }
+    upload_reservation {
+        text id PK
+        text album_id FK
+        text flamekeeper_user_id FK
+        integer expires_at
     }
     session {
         text id PK
-        text userId FK
+        text user_id FK
     }
     account {
         text id PK
-        text userId FK
+        text user_id FK
     }
     booking {
-        text userId FK
-    }
-    favorite {
-        text userId FK
+        integer id PK
+        text user_id FK
     }
     flamekeeper {
-        text userId PK
+        text user_id PK
     }
     flamekeeper_grant {
-        text userId PK
+        text user_id PK
     }
 ```
