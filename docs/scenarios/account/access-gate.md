@@ -5,24 +5,26 @@
 >
 > **Answer:** Every page in the signed-in area first asks the
 > server who the person is. No session means `/login`. A member
-> who has not finished onboarding, or a new non-member who has not
-> accepted the terms or connected Drive, goes to `/onboarding`.
-> A non-member may only open `/profile` and `/favorites`, and is
+> who has not finished onboarding, or a non-member who has neither
+> accepted the terms nor connected Drive, goes to `/onboarding`.
+> A non-member can only open `/profile` and `/favorites`, and is
 > sent to `/profile` for anything else.
 >
 > **Notes:**
-> - Member: isMember is true. Onboarding is unfinished until
->   onboardingComplete is true.
-> - Non-member: onboarding is unfinished until terms are accepted
->   or a flamekeeper record exists. The Google master account is
->   never sent to onboarding.
+> - Member: the account has isMember set. Their onboarding is
+>   unfinished until onboardingComplete is set.
+> - Non-member: onboarding is unfinished until the terms are
+>   accepted or a flamekeeper row exists. A non-member that is the
+>   Google master account is never sent to onboarding.
 > - `/profile` and `/favorites` count along with any sub-path.
 >   Trailing slashes are ignored.
+> - The `/albums` pages are outside the signed-in area. Anyone
+>   can open them, signed in or not. `/` redirects to `/albums`.
 > - getUserFn also deletes the sessions of a banned user and then
->   reports no session.
-> - These pages are drawn in the browser only. The server still
->   runs the check and the data loaders.
-> - `/` redirects to `/albums`.
+>   reports no session. Inactive accounts are not checked here,
+>   see sign-in.md.
+> - These pages draw in the browser only. The server still runs
+>   the check and the data loaders.
 
 ```mermaid
 sequenceDiagram

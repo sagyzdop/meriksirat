@@ -15,6 +15,10 @@
 >   flamekeeping and may delete. Any other state blocks it.
 > - The card is hidden when the rule says no, and the server
 >   checks the same rule again.
+> - Opening `/profile` also loads the flamekeeper record. For a
+>   flamekeeper whose photos are still moving away, that load
+>   finishes the move if no photos are left, which can make the
+>   card appear.
 > - Deleting the user row also removes sessions, linked Google
 >   accounts, Telegram tokens, favorites and the flamekeeper row
 >   through database cascades.
@@ -31,7 +35,9 @@ sequenceDiagram
     participant D as D1
     P->>B: Open /profile
     B->>W: getUserFn()
-    W-->>B: User, plus flamekeeper state through the loader
+    W-->>B: User
+    B->>W: getMyFlamekeeperFn()
+    W-->>B: Flamekeeper record or none
     opt canDeleteAccount is true
         B-->>P: Delete account card
         P->>B: Click Delete my account
@@ -43,10 +49,10 @@ sequenceDiagram
             P->>B: Click Delete account
             B-->>P: Button reads Deleting...
             B->>W: deleteMyAccountFn()
-            W->>D: Read isMember, role, email, flamekeeper.state
+            W->>D: Read isMember, email, flamekeeper.state
             alt Member or still flamekeeping
                 W-->>B: Error Club members keep their account.<br/>Other accounts can be deleted once any flamekeeping<br/>has stopped and the photos have moved.
-                B-->>P: Error toast Could not delete the account<br/>or the server message
+                B-->>P: Error toast with that message, or Could not<br/>delete the account
             else Allowed
                 W->>D: Delete the user row (cascades)
                 W-->>B: success

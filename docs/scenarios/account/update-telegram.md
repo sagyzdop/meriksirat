@@ -14,10 +14,15 @@
 >   Otherwise it creates one that lasts 10 minutes.
 > - Unlike the onboarding call, this one does not check whether
 >   Telegram is already linked.
+> - The bot also sets onboardingComplete when it links the chat.
 > - The profile page does not refresh by itself after the bot
 >   finishes. The new username shows after the next reload.
-> - The bot side is in the telegram/ folder, see
->   src/lib/telegram/commands/start.ts.
+> - If the Telegram account has no username, the saved username
+>   is left as it was.
+> - The new tab is opened after the server answers. The browser
+>   may block it, which this code does not handle.
+> - The bot side is in telegram/link-account.md. Where the link
+>   is created is in telegram/link-token-create.md.
 > - Onboarding uses a different function for the first link, see
 >   onboarding-telegram.md.
 
@@ -40,8 +45,8 @@ sequenceDiagram
         W-->>B: t.me bot link url
         B-->>P: New tab opens, toast Open Telegram and tap Start<br/>to update your linked username
         P->>T: Tap Start
-        T->>W: /start token (webhook), see telegram/ folder
-        W->>D: Set telegramChatId, telegramUsername, delete token
+        T->>W: /start token (webhook), see telegram/link-account.md
+        W->>D: Set telegramChatId, telegramUsername,<br/>onboardingComplete, delete token
         W-->>T: Telegram linked ✅ and main menu
     end
 ```

@@ -5,21 +5,24 @@
 >
 > **Answer:** They land on `/onboarding` and see "Create your
 > account". They tick that they accept the terms of service and
-> press "Create account". The terms date is saved and they go to
+> click "Create account". The terms date is saved and they go to
 > `/profile` as a non-member. They can browse albums and favorite
 > photos, and can enter the club code there to become a member.
 >
 > **Notes:**
-> - There is no Drive step for these accounts. The page says
->   the account has too little Drive storage to keep club photos.
+> - There is no Drive step for these accounts. The page says the
+>   account has too little Drive storage to keep club photos.
 > - The server refuses this call for @nu.edu.kz addresses, with
 >   the error "NU accounts finish signup by connecting Drive".
+>   The person only sees "Could not create the account. Please
+>   try again."
 > - Only an @alumni.nu.edu.kz or @nu.edu.kz address can create a
 >   new account, see sign-in.md. Other domains reach this page
 >   only if their account already existed.
-> - Alumni accounts are skipped by the scheduled cleanup of
->   unfinished signups.
-> - Leaving this page before pressing the button shows the same
+> - The scheduled cleanup of unfinished signups skips alumni
+>   addresses, see
+>   cron/albums-and-housekeeping/stale-signups.md.
+> - Leaving this page before clicking the button shows the same
 >   leave prompt as for NU users, see leave-signup.md.
 
 ```mermaid

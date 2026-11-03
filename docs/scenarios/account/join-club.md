@@ -9,14 +9,15 @@
 >
 > **Notes:**
 > - The code is compared ignoring capital letters and spaces at
->   the ends. It is stored in the global settings row.
+>   the ends. It is stored in the global settings row. The server
+>   accepts at most 64 characters.
 > - If no code exists yet, the first check creates a random one
->   and saves it, so the first attempt then fails.
+>   and saves it, so that first attempt fails.
 > - The pledge and photos of a flamekeeper stay as they are.
 > - The profile step and Telegram step that follow are in
 >   onboarding-profile.md and onboarding-telegram.md.
-> - Only non-members see this card. Deleting is offered next to
->   it, see delete-account.md.
+> - Only non-members see this card. Deleting the account is
+>   offered below it, see delete-account.md.
 
 ```mermaid
 sequenceDiagram
@@ -25,7 +26,7 @@ sequenceDiagram
     participant B as Browser
     participant W as Worker
     participant D as D1
-    P->>B: Open /profile, type the code, click Continue
+    P->>B: Open /profile, type the code in Enter the club code,<br/>click Continue
     Note over B: Continue is disabled while the box is empty
     B->>W: submitClubCodeFn(code)
     W->>D: Read settings.clubCode (create one if missing)
@@ -41,6 +42,6 @@ sequenceDiagram
         B->>B: router.invalidate()
         B->>W: getUserFn()
         W-->>B: Member with onboardingComplete false
-        B-->>P: Navigate to /onboarding, profile step
+        B-->>P: Navigate to /onboarding, profile step, see<br/>onboarding-profile.md
     end
 ```

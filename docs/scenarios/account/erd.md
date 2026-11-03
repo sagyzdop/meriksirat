@@ -6,13 +6,20 @@
 > **Answer:** Sign-in, onboarding, profile and deletion work on
 > the user table and its sign-in helpers (session and account).
 > Telegram linking uses telegram_link_token, joining the club
-> reads settings.clubCode, and a flamekeeper row decides whether
+> reads settings.club_code, and a flamekeeper row decides whether
 > a non-member has finished signup or may delete the account.
 >
 > **Notes:**
 > - Deleting a user cascades to session, account, favorite,
->   telegram_link_token and flamekeeper.
-> - No KV or R2 data is used by these scenarios.
+>   telegram_link_token, flamekeeper and flamekeeper_grant. It
+>   also removes the user's albums, album memberships, upload
+>   reservations and flamekeeper volumes, which these scenarios
+>   do not use.
+> - KV: the key `flamekeeper-oauth:{random id}` holds the pledge,
+>   graduation date and terms time while a new NU user is at
+>   Google. It lasts 10 minutes and is deleted when the person
+>   returns. See signup-nu.md.
+> - No R2 data is used by these scenarios.
 > - Telegram link tokens are random 32-character ids that last
 >   10 minutes.
 
@@ -22,6 +29,8 @@ erDiagram
     user ||--o{ account : has
     user ||--o{ telegram_link_token : gets
     user ||--o| flamekeeper : may_be
+    user ||--o| flamekeeper_grant : may_have
+    user ||--o{ favorite : saves
     user {
         text id PK
         text email
@@ -62,6 +71,13 @@ erDiagram
     flamekeeper {
         text user_id PK
         text state "active, full, draining, lost, drained"
+    }
+    flamekeeper_grant {
+        text user_id PK
+    }
+    favorite {
+        text user_id PK
+        text photo_id PK
     }
     settings {
         text id PK "global"
