@@ -8,6 +8,7 @@
 > - Role per viewer is always checked fresh against the album row. The cover and expiry also come from the fresh row.
 > - Core cache: 30 second memory copy per Worker instance in front of KV `album:detail:ALBUM_ID` with a 1 hour TTL. It is cleared by editing details, Refresh, deleting a photo, choosing a cover, joining or leaving as co-author, and deleting a gone album (see deleted-folder-warning.md). It no longer holds photos or folder health.
 > - Photos and folder health (ok, trashed, missing) come from KV `album:list:FOLDER_ID`. A fresh entry means no Drive call. How long an entry stays fresh, and what happens when listing fails, is in [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md).
+> - Owners and admins also get a fewer-photos warning when a buffer Volume lists less than expected, built per viewer, see fewer-photos-warning.md.
 > - A listing that fails never stops the page: the last listing is shown, or no photos if there is none yet.
 > - If the album has no cover yet, the earliest uploaded photo becomes the cover. It is saved on the album only when the listing is complete.
 > - The header always shows "Expires on DATE" for an unpinned album with an expiry (pinned albums show the Pinned badge instead). The page also shows a banner "Will be deleted on DATE" with "There is no backup. Download the photos you want to keep before then." once the expiry is within 30 days and the album is not pinned.

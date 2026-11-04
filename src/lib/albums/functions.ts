@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
   ALBUM_CREATE_MIN_CLEARANCE,
+  AcceptFewerPhotosSchema,
   AlbumIdSchema,
   AlbumListQuerySchema,
   ClaimEditAccessSchema,
@@ -338,6 +339,47 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
     return loadAlbumDetail(database, core, row, access, currentUser, {
       force: true,
     })
+  })
+
+export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
+  .validator(AcceptFewerPhotosSchema)
+  .handler(async ({ data }) => {
+    const { bufferVolume } = await import('@/db/schema')
+    const { eq, sql } = await import('drizzle-orm')
+    const { planAccept } = await import('./count-warning')
+    const { loadAlbumListing } = await import('./listing-server')
+
+    const {
+      database,
+      row,
+      user: currentUser,
+    } = await albumContext(data.albumId, ['owner', 'manager'])
+
+    const isAdmin = currentUser?.role === 'admin'
+    if (!currentUser || (!isAdmin && row.ownerUserId !== currentUser.id)) {
+      throw new Error('Only the album owner or an admin can accept this.')
+    }
+    if (data.volumeKey !== 'buffer') {
+      throw new Error('This volume has no fewer-photos warning to accept.')
+    }
+
+    const listing = await loadAlbumListing(database, row, { force: true })
+    const plan = planAccept({
+      listing,
+      volumeKey: data.volumeKey,
+      now: Date.now(),
+    })
+    if (!plan.ok) throw new Error(plan.message)
+
+    await database
+      .update(bufferVolume)
+      .set({
+        expectedCount: sql`MIN(${bufferVolume.expectedCount}, ${plan.expected.count})`,
+        expectedBytes: sql`MIN(${bufferVolume.expectedBytes}, ${plan.expected.bytes})`,
+      })
+      .where(eq(bufferVolume.albumId, row.id))
+
+    return { success: true }
   })
 
 export const deleteGoneAlbumFn = createServerFn({ method: 'POST' })

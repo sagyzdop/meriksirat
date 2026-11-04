@@ -97,7 +97,7 @@ Album pages read this way since #18. Not built yet (Stage 1, #15): the photo tab
 _Avoid_: Image, file, picture
 
 **Volume**:
-The photos of one album held by one account: the buffer, or a flamekeeper after an offload. One volume per album per account. Stores the expected count and bytes, which the count warning checks against.
+The photos of one album held by one account: the buffer, or a flamekeeper after an offload. One volume per album per account. Stores the expected count and bytes, which the count warning checks against (see `docs/scenarios/albums/fewer-photos-warning.md`).
 The buffer's volumes are built (#17) and live in `buffer_volume`, one row per album. Flamekeeper volumes still sit in the older `volume` table, which has no expected count and bytes. Offload (Stage 2) is the only thing that will create them again.
 _Avoid_: Chunk, shard, part
 

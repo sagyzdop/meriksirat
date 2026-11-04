@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { album, albumMember, user } from '@/db/schema'
+import { planCountWarning } from './count-warning'
 import { listingPhotos } from './listing'
 import { loadAlbumListing } from './listing-server'
 import type {
@@ -78,7 +79,7 @@ export async function loadAlbumDetail(
   core: Record<string, unknown>,
   row: AlbumRecord,
   access: AlbumAccessLevel,
-  currentUser: { id: string } | null,
+  currentUser: { id: string; role?: string } | null,
   options: { force?: boolean } = {}
 ): Promise<AlbumDetail> {
   const listing = await loadAlbumListing(database, row, options)
@@ -104,6 +105,7 @@ export async function loadAlbumDetail(
       | 'folderState'
       | 'coverFileId'
       | 'coverUrl'
+      | 'countWarning'
     >),
     coverFileId,
     coverUrl: coverFileId ? albumCoverUrl(coverFileId) : null,
@@ -115,6 +117,16 @@ export async function loadAlbumDetail(
     expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
     pinned: !!row.pinned,
     tombstone: null,
+    countWarning: currentUser
+      ? planCountWarning({
+          listing,
+          viewer: {
+            isOwner: row.ownerUserId === currentUser.id,
+            isAdmin: currentUser.role === 'admin',
+          },
+          now: Date.now(),
+        })
+      : null,
   }
 }
 
@@ -144,5 +156,6 @@ export function buildTombstoneDetail(row: AlbumRecord): AlbumDetail {
       reason: row.tombstoneReason ?? 'expired',
       deletedAt: (row.deletedAt ?? row.updatedAt).toISOString(),
     },
+    countWarning: null,
   }
 }

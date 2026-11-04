@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
 import type { TombstoneReason } from '@/lib/pool/expiry'
+import type { CountWarning } from './count-warning'
 
 export const ALBUM_CREATE_MIN_CLEARANCE = 3
 
@@ -66,6 +67,11 @@ export const DeletePhotoSchema = z.object({
 export const ConfirmPhotoUploadSchema = z.object({
   albumId: z.string(),
   fileId: z.string().min(1).max(200),
+})
+
+export const AcceptFewerPhotosSchema = z.object({
+  albumId: z.string(),
+  volumeKey: z.string().min(1).max(100),
 })
 
 export const SetCoverPhotoSchema = z.object({
@@ -171,6 +177,11 @@ export interface AlbumDetail extends AlbumSummary {
   expiresAt: string | null
   pinned: boolean
   tombstone: { reason: TombstoneReason; deletedAt: string } | null
+  /**
+   * Fewer photos listed than a volume expects. Only set for the album owner
+   * and admins; the volume link and holder inside only for admins.
+   */
+  countWarning: CountWarning | null
 }
 
 export interface UploadSession {

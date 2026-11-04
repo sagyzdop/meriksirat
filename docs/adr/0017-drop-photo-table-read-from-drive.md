@@ -15,7 +15,8 @@ drain. Listed files are the source of truth, so files added by hand in Drive
 don't appear.
 
 The count warning replaces the table's bookkeeping. It compares each listing with
-the volume's expected count and bytes, on listing and on the health check. Owners
+the volume's expected count and bytes, on listing. No Stage 1 health check reads
+buffer volumes, so the health check does not raise it yet. Owners
 and admins see it. Admins also see the volume link and flamekeeper. An Accept
 action sets the new expected values, so a deliberate removal stops raising it.
 
