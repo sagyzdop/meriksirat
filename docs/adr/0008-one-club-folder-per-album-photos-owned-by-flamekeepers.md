@@ -10,10 +10,8 @@
 > album folder, the volume subfolders and the sharing rule stay. The rescue of a
 > lost flamekeeper's photos is pending its live test. The text below is the
 > original decision, kept for history. Uploads follow ADR-0015 since
-> [#17](https://github.com/sagyzdop/meriksirat/issues/17). The photo table and the
-> older flamekeeper volumes still follow this ADR until
-> [#24](https://github.com/sagyzdop/meriksirat/issues/24) and
-> [#25](https://github.com/sagyzdop/meriksirat/issues/25).
+> [#17](https://github.com/sagyzdop/meriksirat/issues/17). The photo table was
+> removed in [#25](https://github.com/sagyzdop/meriksirat/issues/25).
 
 The university capped every account at 20GB, so the club's master account can no
 longer pay for album photos. Each album is still a single public folder in the

@@ -5,7 +5,7 @@ import {
   driveFileToAlbumPhoto,
   isImage,
   sortPhotosByCapture,
-} from './photo-backfill'
+} from './drive-photo'
 import type { AlbumPhoto } from './types'
 
 export const LISTING_FRESH_MS = 12 * 60 * 60 * 1000
@@ -13,6 +13,8 @@ export const LISTING_RETRY_MS = 15 * 60 * 1000
 export const LISTING_STALE_LIMIT_MS = 7 * 24 * 60 * 60 * 1000
 export const LISTING_KV_TTL_SECONDS = 8 * 24 * 60 * 60
 export const LISTING_DRIVE_BUDGET = RUN_SUBREQUEST_BUDGET
+
+export const BUFFER_SOURCE_KEY = 'buffer'
 
 export type ListingFile = DriveFileMeta
 
@@ -53,7 +55,7 @@ export function planListingSources(
   const buffer = input.bufferVolume
   if (buffer?.driveFolderId) {
     sources.push({
-      key: 'buffer',
+      key: BUFFER_SOURCE_KEY,
       owner: { kind: 'buffer' },
       folderId: buffer.driveFolderId,
       stamp: `${buffer.expectedCount}:${buffer.expectedBytes}`,
@@ -327,14 +329,37 @@ export function listingPhotos(listing: AlbumListing): AlbumPhoto[] {
   return sortPhotosByCapture(listing.files.map(driveFileToAlbumPhoto))
 }
 
+export function findListedFile(
+  listing: AlbumListing,
+  fileId: string
+): { owner: ListingOwner; file: ListingFile } | null {
+  for (const volume of listing.volumes) {
+    const file = volume.files.find((f) => f.id === fileId)
+    if (file) return { owner: volume.owner, file }
+  }
+  return null
+}
+
 export function findListedFileOwner(
   listing: AlbumListing,
   fileId: string
 ): ListingOwner | null {
-  for (const volume of listing.volumes) {
-    if (volume.files.some((f) => f.id === fileId)) return volume.owner
+  return findListedFile(listing, fileId)?.owner ?? null
+}
+
+export function listingTotals(
+  listing: AlbumListing
+): { count: number; bytes: number } | null {
+  if (
+    listing.folderState !== 'ok' ||
+    !listing.volumes.every((v) => v.status === 'ok')
+  ) {
+    return null
   }
-  return null
+  return {
+    count: listing.files.length,
+    bytes: listing.files.reduce((sum, f) => sum + fileBytes(f), 0),
+  }
 }
 
 export function listedMasterFiles(

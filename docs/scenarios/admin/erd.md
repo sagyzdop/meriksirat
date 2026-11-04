@@ -2,7 +2,7 @@
 
 > **Question:** Which tables and stored values do the admin scenarios read or write?
 >
-> **Answer:** The admin console works mostly on the user, settings, category and equipment tables. It reads bookings, albums, photos, favorites and flamekeeper rows for counts, lists, the Free up space list and ban follow-up work, and deletes sessions when a person is banned or set to Inactive. Banning also changes the flamekeeper and volume rows through the steps in [ban-member.md](ban-member.md) and [../cron/flamekeepers/ban-cleanup.md](../cron/flamekeepers/ban-cleanup.md).
+> **Answer:** The admin console works mostly on the user, settings, category and equipment tables. It reads bookings, albums, favorites and flamekeeper rows for counts, lists, the Free up space list and ban follow-up work, and deletes sessions when a person is banned or set to Inactive. Banning also changes the flamekeeper and volume rows through the steps in [ban-member.md](ban-member.md) and [../cron/flamekeepers/ban-cleanup.md](../cron/flamekeepers/ban-cleanup.md).
 >
 > **Notes:**
 > - KV: the key album:list:{driveFolderId} holds the album's listings and folder state (ok, trashed or missing) with a TTL of 8 days. The dashboard only reads it, and never writes it.
@@ -91,7 +91,6 @@ erDiagram
         integer photo_count
         integer photo_bytes
         integer favorite_count
-        integer photos_indexed_at
         integer expires_at
         integer pinned
         integer expiry_reminder_30_sent_at
@@ -107,18 +106,11 @@ erDiagram
     flamekeeper {
         text user_id PK,FK
         text state "active, full, draining, lost, drained"
-        text drain_reason "unused since #24"
-        integer draining_deadline "unused since #24"
     }
     volume {
         text album_id PK,FK
         text flamekeeper_user_id PK,FK
         text drive_folder_id
-    }
-    photo {
-        text id PK
-        text album_id FK
-        text state "live, moving, deleted, dropped"
     }
     favorite {
         text user_id PK,FK
@@ -135,7 +127,6 @@ erDiagram
     user ||--o{ album_member : co_authors
     user ||--o| flamekeeper : may_be
     user ||--o{ volume : holds
-    album ||--o{ photo : has
     album ||--o{ favorite : favorited_as
     user ||--o{ favorite : makes
     album ||--o{ volume : stored_in

@@ -137,8 +137,6 @@ const STEPS: Record<CronStepName, () => Promise<Step>> = {
     import('./src/lib/booking/cron').then((m) => m.updateOverdueBookings),
   sendBookingReminders: () =>
     import('./src/lib/booking/cron').then((m) => m.sendBookingReminders),
-  backfillAlbumPhotos: () =>
-    import('./src/lib/albums/photo-index').then((m) => m.runPhotoBackfill),
   checkFlamekeeperHealth: () =>
     import('./src/lib/pool/health-server').then((m) => m.runFlamekeeperHealth),
   maintainPool: () =>

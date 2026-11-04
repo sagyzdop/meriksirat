@@ -2,7 +2,7 @@
 
 > **Question:** Which tables do the flamekeeper scenarios read and write?
 >
-> **Answer:** A flamekeeper has one row with pledge, usage and state, one saved Google refresh token. Older code also gave it one folder (volume) per album and temporary upload reservations; nothing creates either any more. Photos uploaded before the buffer still point at the flamekeeper that stores them. The cap lives in the global settings row.
+> **Answer:** A flamekeeper has one row with pledge, usage and state, one saved Google refresh token. Older code also gave it one folder (volume) per album; nothing creates those any more, and a volume row still names the flamekeeper whose Drive holds that album's older photos. There is no photo table and no upload reservation table (both removed in #25). The cap lives in the global settings row.
 >
 > **Notes:**
 > - KV key flamekeeper-oauth:nonce holds user id, pledged bytes,
@@ -13,9 +13,8 @@
 >   member profile, see ../account/erd.md.
 > - R2 is not used by these scenarios.
 > - The flamekeeper and flamekeeper_grant rows are deleted with
->   the user. Photos keep flamekeeper_user_id as plain text with
->   no link to the user table.
-> - Unused since #24 (columns and tables go in #25): draining_deadline, drain_reason, the drain_* stamps, health_cursor and the upload_reservation table.
+>   the user.
+> - The drain columns (deadline, reason, reminder stamps), health_cursor and leaderboard_anonymous were removed in #25. The drain tickets add back what they need.
 > - Used and pledged sizes are in bytes. The default cap is
 >   21474836480 bytes (20 GB).
 > - The access token cache lives in Worker memory for 50 minutes
@@ -27,7 +26,6 @@ erDiagram
     user ||--o| flamekeeper_grant : "has"
     user ||--o{ volume : "holds"
     album ||--o{ volume : "stored in"
-    album ||--o{ photo : "contains"
     user {
         text id PK
         text name "account name"
@@ -47,8 +45,6 @@ erDiagram
         integer drive_usage_bytes "whole Drive usage"
         text state "active, full, draining, lost, drained"
         integer graduation_confirmed_at "last confirmation"
-        integer draining_deadline "unused since #24"
-        text drain_reason "unused since #24"
         integer lost_since "set when Drive is lost"
         integer terms_accepted_at "terms time"
         integer created_at "signup time"
@@ -65,16 +61,6 @@ erDiagram
         text drive_folder_id "folder in the flamekeeper Drive"
         text permission_id "share permission"
         integer dropped_at "set when the folder is dropped"
-    }
-    photo {
-        text id PK
-        text album_id FK "album.id"
-        text drive_file_id "file in a flamekeeper Drive"
-        text name "file name"
-        text mime_type "file type"
-        integer bytes "file size"
-        text flamekeeper_user_id "who stores it, no FK"
-        text state "live, moving, deleted, dropped"
     }
     album {
         text id PK

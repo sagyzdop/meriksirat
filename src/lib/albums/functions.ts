@@ -22,7 +22,6 @@ import type {
 } from './types'
 import { NEEDS_HASH_MESSAGE, planDuplicateCheck } from './upload-dedupe'
 import { defaultExpiry } from '@/lib/pool/expiry'
-import { BUFFER_OWNER_ID } from '@/lib/buffer/plan'
 
 type Database = ReturnType<(typeof import('@/db'))['db']>
 
@@ -124,7 +123,6 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       expiresAt: defaultExpiry(new Date(data.eventDate)),
       driveFolderId: folder.id,
       editShareToken: newShareToken(),
-      photosIndexedAt: new Date(),
     })
 
     await database
@@ -706,13 +704,13 @@ export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
 export const deletePhotoFn = createServerFn({ method: 'POST' })
   .validator(DeletePhotoSchema)
   .handler(async ({ data }) => {
-    const { album, photo } = await import('@/db/schema')
+    const { album, favorite, flamekeeper } = await import('@/db/schema')
     const { and, eq, sql } = await import('drizzle-orm')
     const { invalidateCachedListing, invalidateCachedDetailCore } =
       await import('./server')
-    const { getGoogleAccessToken } =
-      await import('@/lib/google/google-calendar-auth')
     const { deleteDriveFile } = await import('@/lib/google/google-drive')
+    const { findAlbumFile, withListingOwnerToken } =
+      await import('./listing-server')
 
     const {
       database,
@@ -720,51 +718,33 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
       user: currentUser,
     } = await albumContext(data.albumId, ['owner', 'editor', 'manager'])
 
-    const registered = await database
-      .select({
-        id: photo.id,
-        driveFileId: photo.driveFileId,
-        bytes: photo.bytes,
-        flamekeeperUserId: photo.flamekeeperUserId,
-      })
-      .from(photo)
-      .where(and(eq(photo.driveFileId, data.fileId), eq(photo.albumId, row.id)))
-      .get()
-    // A listed upload whose confirm never landed has no row, so the listing
-    // says whose token can delete it.
-    const { findAlbumFileOwner, withListingOwnerToken } =
-      await import('./listing-server')
-    const listedOwner = registered
-      ? null
-      : await findAlbumFileOwner(database, row, data.fileId)
-    if (!registered && !listedOwner && row.photosIndexedAt) {
-      throw new Error('Photo not found in this album')
-    }
+    // Only a file this album's own folders list can be deleted, and only with
+    // the token of whoever the listing says owns it.
+    const listed = await findAlbumFile(database, row, data.fileId)
+    if (!listed) throw new Error('Photo not found in this album')
+    const bytes = Number(listed.file.size ?? 0) || 0
 
-    if (registered?.flamekeeperUserId) {
-      const { deleteOwnedPhotos } = await import('@/lib/pool/server')
-      const { error } = await deleteOwnedPhotos(database, [registered])
-      if (error) throw error
-    } else if (listedOwner) {
-      await withListingOwnerToken(database, listedOwner, (token) =>
-        deleteDriveFile(token, data.fileId)
-      )
-    } else {
-      await deleteDriveFile(await getGoogleAccessToken(), data.fileId)
-    }
-    if (registered?.flamekeeperUserId === BUFFER_OWNER_ID) {
+    await withListingOwnerToken(database, listed.owner, (token) =>
+      deleteDriveFile(token, data.fileId)
+    )
+    if (listed.owner.kind === 'buffer') {
       const { adjustExpected } = await import('@/lib/buffer/server')
-      await adjustExpected(database, row.id, -1, -registered.bytes)
+      await adjustExpected(database, row.id, -1, -bytes)
+    } else if (listed.owner.kind === 'flamekeeper') {
+      await database
+        .update(flamekeeper)
+        .set({
+          usedBytes: sql`MAX(${flamekeeper.usedBytes} - ${bytes}, 0)`,
+          driveUsageBytes: sql`MAX(${flamekeeper.driveUsageBytes} - ${bytes}, 0)`,
+        })
+        .where(eq(flamekeeper.userId, listed.owner.userId))
     }
-    const { favorite } = await import('@/db/schema')
     await database.batch([
       database
         .update(album)
         .set({
-          ...(registered && {
-            photoCount: sql`MAX(${album.photoCount} - 1, 0)`,
-            photoBytes: sql`MAX(${album.photoBytes} - ${registered.bytes}, 0)`,
-          }),
+          photoCount: sql`MAX(${album.photoCount} - 1, 0)`,
+          photoBytes: sql`MAX(${album.photoBytes} - ${bytes}, 0)`,
           favoriteCount: sql`MAX(${album.favoriteCount} - (SELECT COUNT(*) FROM ${favorite} WHERE ${favorite.albumId} = ${row.id} AND ${favorite.driveFileId} = ${data.fileId}), 0)`,
         })
         .where(eq(album.id, row.id)),
@@ -776,9 +756,6 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
             eq(favorite.driveFileId, data.fileId)
           )
         ),
-      ...(registered
-        ? [database.delete(photo).where(eq(photo.id, registered.id))]
-        : []),
     ])
     await invalidateCachedListing(row.driveFolderId)
 
@@ -805,9 +782,10 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
 export const setCoverPhotoFn = createServerFn({ method: 'POST' })
   .validator(SetCoverPhotoSchema)
   .handler(async ({ data }) => {
-    const { album, photo } = await import('@/db/schema')
-    const { and, eq } = await import('drizzle-orm')
+    const { album } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
     const { invalidateCachedDetailCore } = await import('./server')
+    const { findAlbumFile } = await import('./listing-server')
 
     const { database, row } = await albumContext(data.albumId, [
       'owner',
@@ -815,19 +793,8 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
       'manager',
     ])
 
-    if (row.photosIndexedAt) {
-      const registered = await database
-        .select({ id: photo.id })
-        .from(photo)
-        .where(
-          and(eq(photo.driveFileId, data.fileId), eq(photo.albumId, row.id))
-        )
-        .get()
-      if (!registered) {
-        const { findAlbumFileOwner } = await import('./listing-server')
-        const owner = await findAlbumFileOwner(database, row, data.fileId)
-        if (!owner) throw new Error('Photo not found in this album')
-      }
+    if (!(await findAlbumFile(database, row, data.fileId))) {
+      throw new Error('Photo not found in this album')
     }
 
     await database

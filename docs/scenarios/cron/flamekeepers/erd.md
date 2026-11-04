@@ -4,8 +4,8 @@
 > steps read and write?
 >
 > **Answer:** The steps work on the flamekeeper, its Drive
-> grant, and the global settings row. The volume, photo and upload
-> reservation tables are no longer read by these steps (#24). They
+> grant, and the global settings row. The volume table is no longer read by these steps (#24), and
+> the photo and upload reservation tables no longer exist (#25). They
 > also read users (email, Telegram chat, ban) and, for banned
 > members, bookings, booking items and the equipment calendar
 > each item was booked on.
@@ -15,9 +15,8 @@
 >   seconds, and album:detail:(album id), TTL 3600 seconds,
 >   are only deleted by these steps, never written.
 > - R2 is not used by these steps.
-> - Unused since #24 (columns go in #25): draining_deadline,
->   drain_reason, drain_reminder_sent_at, drain_admin_started_at,
->   drain_admin_reminded_at and health_cursor.
+> - The drain deadline, reason and reminder columns and health_cursor
+>   were removed in #25.
 
 ```mermaid
 erDiagram
@@ -29,9 +28,6 @@ erDiagram
     equipment ||--o{ booking_item : booked_as
     album ||--o{ volume : stored_in
     flamekeeper ||--o{ volume : hosts
-    album ||--o{ photo : has
-    flamekeeper ||--o{ photo : holds
-    flamekeeper ||--o{ upload_reservation : reserves
 
     user {
         text id PK
@@ -52,12 +48,6 @@ erDiagram
         text state "active, full, draining, lost, drained"
         integer graduation_confirmed_at
         integer graduation_prompt_sent_at
-        integer draining_deadline
-        text drain_reason "opt_out, pledge, graduation, domain, ban"
-        integer drain_reminder_sent_at
-        integer drain_admin_started_at
-        integer drain_admin_reminded_at
-        text health_cursor
         integer lost_since
         integer lost_notified_at
         integer lost_finalized_at
@@ -74,19 +64,7 @@ erDiagram
         text flamekeeper_user_id PK "FK user"
         text permission_id
         text drive_folder_id
-        integer release_blocked_at
-        integer release_blocked_since
-        integer release_alerted_at
         integer dropped_at
-    }
-    photo {
-        text id PK
-        text album_id FK
-        text drive_file_id
-        integer bytes
-        text flamekeeper_user_id
-        text state "live, moving, deleted, dropped"
-        integer created_at
     }
     album {
         text id PK
@@ -97,18 +75,10 @@ erDiagram
         integer photo_count
         integer photo_bytes
         integer favorite_count
-        integer photos_indexed_at
         integer expires_at
         integer pinned
         text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space, folder_deleted"
         integer deleted_at
-    }
-    upload_reservation {
-        text id PK
-        text flamekeeper_user_id FK
-        text album_id FK
-        integer bytes
-        integer expires_at
     }
     settings {
         text id PK

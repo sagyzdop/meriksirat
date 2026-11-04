@@ -1,14 +1,6 @@
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull } from 'drizzle-orm'
 import { db, type Database } from '@/db'
-import { flamekeeper, photo, settings, user } from '@/db/schema'
-import { batchDeleteDriveFiles } from '@/lib/google/google-drive'
-import {
-  FlamekeeperGrantError,
-  forgetFlamekeeperAccessToken,
-  withFlamekeeperToken,
-} from '@/lib/flamekeeper/tokens'
-import { BUFFER_OWNER_ID } from '@/lib/buffer/plan'
-import { withBufferToken } from '@/lib/buffer/tokens'
+import { flamekeeper, settings, user } from '@/db/schema'
 import { type Budget } from '@/lib/cron/budget'
 import {
   DEFAULT_FLAMEKEEPER_CAP_BYTES,
@@ -16,8 +8,6 @@ import {
   poolStats,
   type PoolFlamekeeper,
 } from './placement'
-
-export const MAX_PHOTO_DELETES_PER_CALL = 2000
 
 export async function loadCapBytes(database: Database): Promise<number> {
   const row = await database
@@ -41,120 +31,6 @@ export async function loadPoolFlamekeepers(
     })
     .from(flamekeeper)
     .where(inArray(flamekeeper.state, ['active', 'full']))
-    .all()
-}
-
-export interface OwnedPhoto {
-  id: string
-  driveFileId: string
-  bytes: number
-  flamekeeperUserId: string | null
-}
-
-export async function deleteOwnedPhotos(
-  database: Database,
-  photos: OwnedPhoto[],
-  budget?: Budget
-): Promise<{ deleted: OwnedPhoto[]; lost: OwnedPhoto[]; error: unknown }> {
-  const byOwner = new Map<string, OwnedPhoto[]>()
-  for (const p of photos) {
-    if (!p.flamekeeperUserId) continue
-    const list = byOwner.get(p.flamekeeperUserId) ?? []
-    list.push(p)
-    byOwner.set(p.flamekeeperUserId, list)
-  }
-
-  const deleted: OwnedPhoto[] = []
-  const lost: OwnedPhoto[] = []
-  let failure: unknown = null
-
-  for (const [ownerId, owned] of byOwner) {
-    try {
-      const deleteAll = (token: string) =>
-        batchDeleteDriveFiles(
-          token,
-          owned.map((p) => p.driveFileId)
-        )
-      const failedIds = new Set(
-        ownerId === BUFFER_OWNER_ID
-          ? await withBufferToken(deleteAll, budget)
-          : await withFlamekeeperToken(database, ownerId, deleteAll, budget)
-      )
-      for (const p of owned) {
-        if (failedIds.has(p.driveFileId)) {
-          failure ??= new Error('Some photos could not be deleted from Drive')
-        } else {
-          deleted.push(p)
-        }
-      }
-    } catch (error) {
-      const owner = await database
-        .select({ state: flamekeeper.state })
-        .from(flamekeeper)
-        .where(eq(flamekeeper.userId, ownerId))
-        .get()
-      if (
-        error instanceof FlamekeeperGrantError &&
-        (!owner || owner.state === 'lost' || owner.state === 'drained')
-      ) {
-        lost.push(...owned)
-      } else {
-        forgetFlamekeeperAccessToken(ownerId)
-        failure ??= error
-      }
-    }
-  }
-
-  await releaseOwnedBytes(database, deleted)
-  return { deleted, lost, error: failure }
-}
-
-export function releaseOwnedBytesStatements(
-  database: Database,
-  photos: OwnedPhoto[]
-) {
-  const totals = new Map<string, number>()
-  for (const p of photos) {
-    if (!p.flamekeeperUserId) continue
-    totals.set(
-      p.flamekeeperUserId,
-      (totals.get(p.flamekeeperUserId) ?? 0) + p.bytes
-    )
-  }
-  return [...totals].map(([userId, bytes]) =>
-    database
-      .update(flamekeeper)
-      .set({
-        usedBytes: sql`MAX(${flamekeeper.usedBytes} - ${bytes}, 0)`,
-        driveUsageBytes: sql`MAX(${flamekeeper.driveUsageBytes} - ${bytes}, 0)`,
-      })
-      .where(eq(flamekeeper.userId, userId))
-  )
-}
-
-export async function releaseOwnedBytes(
-  database: Database,
-  photos: OwnedPhoto[]
-): Promise<void> {
-  const statements = releaseOwnedBytesStatements(database, photos)
-  if (statements.length === 0) return
-  await database.batch(statements as unknown as [(typeof statements)[0]])
-}
-
-export async function loadOwnedPhotos(
-  database: Database,
-  albumId: string
-): Promise<OwnedPhoto[]> {
-  return database
-    .select({
-      id: photo.id,
-      driveFileId: photo.driveFileId,
-      bytes: photo.bytes,
-      flamekeeperUserId: photo.flamekeeperUserId,
-    })
-    .from(photo)
-    .where(and(eq(photo.albumId, albumId), isNotNull(photo.flamekeeperUserId)))
-    .limit(MAX_PHOTO_DELETES_PER_CALL + 1)
     .all()
 }
 

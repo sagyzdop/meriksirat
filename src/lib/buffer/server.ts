@@ -1,6 +1,6 @@
-import { and, eq, ne, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { bufferVolume, photo } from '@/db/schema'
+import { album, bufferVolume } from '@/db/schema'
 import {
   DriveNotFoundError,
   createDriveFolder,
@@ -10,12 +10,12 @@ import {
   shareWithWriter,
 } from '@/lib/google/google-drive'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
-import { isImage } from '@/lib/albums/photo-backfill'
-import { registerDrivePhotos } from '@/lib/albums/photo-index'
+import { isImage } from '@/lib/albums/drive-photo'
+import { getCachedListing } from '@/lib/albums/server'
 import { newId } from '@/lib/albums/ids'
+import { BUFFER_SOURCE_KEY } from '@/lib/albums/listing'
 import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
 import {
-  BUFFER_OWNER_ID,
   bufferUploadMessage,
   decideMissingVolumeFolder,
   planBufferUpload,
@@ -111,18 +111,11 @@ async function volumeHasPhotos(
   albumId: string
 ): Promise<boolean> {
   const row = await database
-    .select({ id: photo.id })
-    .from(photo)
-    .where(
-      and(
-        eq(photo.albumId, albumId),
-        eq(photo.flamekeeperUserId, BUFFER_OWNER_ID),
-        ne(photo.state, 'deleted')
-      )
-    )
-    .limit(1)
+    .select({ expectedCount: bufferVolume.expectedCount })
+    .from(bufferVolume)
+    .where(key(albumId))
     .get()
-  return !!row
+  return (row?.expectedCount ?? 0) > 0
 }
 
 export async function startBufferUpload(
@@ -205,17 +198,21 @@ export async function confirmBufferUpload(
     return false
   }
 
-  const inserted = await registerDrivePhotos(
-    database,
-    albumRow.id,
-    [file],
-    false,
-    BUFFER_OWNER_ID
-  )
-  if (inserted > 0) {
-    await adjustExpected(database, albumRow.id, 1, Number(file.size ?? 0) || 0)
-  }
-  return inserted > 0
+  const counted = (await getCachedListing(albumRow.driveFolderId))?.sources[
+    BUFFER_SOURCE_KEY
+  ]?.files.some((f) => f.id === fileId)
+  if (counted) return true
+
+  const bytes = Number(file.size ?? 0) || 0
+  await adjustExpected(database, albumRow.id, 1, bytes)
+  await database
+    .update(album)
+    .set({
+      photoCount: sql`${album.photoCount} + 1`,
+      photoBytes: sql`${album.photoBytes} + ${bytes}`,
+    })
+    .where(eq(album.id, albumRow.id))
+  return true
 }
 
 export async function adjustExpected(

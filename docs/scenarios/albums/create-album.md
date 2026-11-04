@@ -2,13 +2,13 @@
 
 > **Question:** What happens when a member creates a new album, and whose Google Drive holds it?
 >
-> **Answer:** A club member with clearance level 3 or higher fills in title, event, event date and an optional description. The Worker uses the club's master Google account to create the folder Albums / year / month / title in the master's Drive and makes it readable by anyone with the link. It saves the album with an expiry 2 years after the event date and a fresh edit token, then the member lands on My Albums with the toast "Album created". The empty folder lives in the master account, and no photos are stored there. Each photo goes to a flamekeeper's Drive later, when it is uploaded.
+> **Answer:** A club member with clearance level 3 or higher fills in title, event, event date and an optional description. The Worker uses the club's master Google account to create the folder Albums / year / month / title in the master's Drive and makes it readable by anyone with the link. It saves the album with an expiry 2 years after the event date and a fresh edit token, then the member lands on My Albums with the toast "Album created". The empty folder lives in the master account, and no photos are stored there. Each photo goes to the buffer's Drive later, when it is uploaded, see upload-to-buffer.md.
 >
 > **Notes:**
 > - The master account `nu_image` never holds uploaded photos. It only owns the album folder and the "Volume" sub-folders that the buffer uploads into, see upload-start.md.
 > - No Volume folder is made at creation. It is made on the first upload, see upload-to-buffer.md.
 > - The month folder uses the current UTC date, not the event date.
-> - The album is saved as already indexed, so it is read from the photo table from the start. Older albums are not, see legacy-albums.md.
+> - The album starts with a photo count and size of 0. Photos are read from Drive listings (there is no photo table), see legacy-albums.md for older albums.
 > - If the database save fails after the Drive folder was made, the empty folder stays in Drive and no album row exists.
 > - Expiry and reminders are handled by cron, see ../cron/albums-and-housekeeping/expiry-plan.md and ../cron/albums-and-housekeeping/expiry-reminders.md.
 > - The Telegram log line is only sent when channel logging is enabled.

@@ -50,8 +50,8 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 
 `server.ts` handles three Cron Triggers and picks the steps from `controller.cron`. The schedule strings, step groups and per-trigger budgets live in `src/lib/cron/schedule.ts` and must match `crons` in `wrangler.jsonc` character for character (a test checks this). Each trigger gets its own budget. Overview: `docs/scenarios/cron/overview.md`.
 
-- `*/5 * * * *`: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders` (4 idempotent Telegram reminders, each tracks a `*_sent_at` column), plus `backfillAlbumPhotos` until it is removed.
-- `0 * * * *`: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `expireAlbums`, then the Telegram bot configuration, which calls Telegram only when the deployed version (`CF_VERSION_METADATA.id`) differs from the KV marker `telegram-bot:configured-version`.
+- `*/5 * * * *`: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders` (4 idempotent Telegram reminders, each tracks a `*_sent_at` column).
+- `0 * * * *`: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `expireAlbums`, `checkBufferUsage`, then the Telegram bot configuration, which calls Telegram only when the deployed version (`CF_VERSION_METADATA.id`) differs from the KV marker `telegram-bot:configured-version`.
 - `0 3 * * *`: `graduateFlamekeepers`.
 
 Nobody holds photos on a flamekeeper until Stage 2 of #15: `maintainPool` only resets old `full` rows and sends the pool-low alert, and `drainFlamekeepers` only ends rows left in the old `draining` state. Stop, graduation, domain change and ban end flamekeeping at once (`src/lib/pool/stop-server.ts`). The old placement, drain and relay code is at `dev` commit `2565826`.

@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, or, ne } from 'drizzle-orm'
 import type { Database } from '@/db'
 import {
+  album,
   bufferVolume,
   flamekeeper,
   flamekeeperGrant,
@@ -20,13 +21,15 @@ import {
   LISTING_DRIVE_BUDGET,
   applyListingOutcomes,
   classifyListingError,
-  findListedFileOwner,
+  findListedFile,
+  listingTotals,
   planListingRefresh,
   planListingSources,
   readAlbumListing,
 } from './listing'
 import type {
   AlbumListing,
+  ListingFile,
   ListingOutcome,
   ListingOwner,
   ListingSource,
@@ -175,14 +178,51 @@ export async function loadAlbumListing(
     outcomes,
   })
   await setCachedListing(row.driveFolderId, next)
-  return readAlbumListing({ entry: next, sources, now })
+  const listing = readAlbumListing({ entry: next, sources, now })
+  await syncAlbumTotals(database, row.id, listing)
+  return listing
 }
 
-export async function findAlbumFileOwner(
+async function syncAlbumTotals(
+  database: Database,
+  albumId: string,
+  listing: AlbumListing
+): Promise<void> {
+  const totals = listingTotals(listing)
+  if (!totals) return
+  try {
+    await database
+      .update(album)
+      .set({ photoCount: totals.count, photoBytes: totals.bytes })
+      .where(
+        and(
+          eq(album.id, albumId),
+          or(
+            ne(album.photoCount, totals.count),
+            ne(album.photoBytes, totals.bytes)
+          )
+        )
+      )
+  } catch (error) {
+    console.warn(`Could not store the photo totals of album ${albumId}:`, error)
+  }
+}
+
+/**
+ * Authorizes an action on one file of an album. A file counts only when a
+ * listing of this album's own folders (each read with its owner's token) shows
+ * it, so a client cannot aim a privileged token at any other Drive file. A
+ * cached listing that misses the file is refreshed once before giving up.
+ */
+export async function findAlbumFile(
   database: Database,
   row: { id: string; driveFolderId: string },
   fileId: string
-): Promise<ListingOwner | null> {
-  const listing = await loadAlbumListing(database, row)
-  return findListedFileOwner(listing, fileId)
+): Promise<{ owner: ListingOwner; file: ListingFile } | null> {
+  const cached = findListedFile(await loadAlbumListing(database, row), fileId)
+  if (cached) return cached
+  return findListedFile(
+    await loadAlbumListing(database, row, { force: true }),
+    fileId
+  )
 }
