@@ -17,8 +17,9 @@
 >   telling an unlinked person to link remove it.
 > - The bot's command list (set with Telegram `setMyCommands`) has
 >   only `/start`, described as "Open the main menu". It is
->   refreshed by `configureTelegramBot` in the scheduled run, which
->   spends 1 unit of the run budget. See `../cron/overview.md`.
+>   set once per deploy by `configureTelegramBot` in the hourly
+>   scheduled run, which spends 1 unit of that run's budget. See
+>   `../cron/albums-and-housekeeping/bot-menu.md`.
 > - Each list is detailed in `my-bookings.md`, `start-booking.md`,
 >   `return-equipment.md` and `cancel-booking.md`.
 

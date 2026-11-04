@@ -1,14 +1,14 @@
 # The five flamekeeper steps of the cron and their limits
 
 > **Question:** Which cron steps look after flamekeepers, in
-> what order, and how much can each one do in a single 5-minute
-> run?
+> what order, and how much can each one do in a single run?
 >
-> **Answer:** Five steps run one after another in every 5-minute
-> run: checkFlamekeeperHealth, maintainPool, drainFlamekeepers,
-> finishBans and graduateFlamekeepers. They come after the three
-> booking steps and before the album steps. All steps share one
-> budget of 40 outgoing requests per run, and each step also has
+> **Answer:** Four steps run one after another in every hourly
+> run: checkFlamekeeperHealth, maintainPool, drainFlamekeepers
+> and finishBans, followed by expireAlbums. graduateFlamekeepers
+> runs alone in the daily run at 03:00 UTC. The steps of one run
+> share one budget of 40 outgoing requests, and each run has its
+> own budget. Each step also has
 > its own caps on how many people, emails or photos it handles.
 > If a step throws, the error is only logged and the next step
 > still runs. A step that runs out of budget stops early and
@@ -40,13 +40,14 @@ sequenceDiagram
     participant Cron
     participant Worker
 
-    Cron->>Worker: scheduled() every 5 minutes<br/>create one budget of 40 requests
-    Note over Worker: Steps 1 to 3 are booking steps,<br/>see ../bookings/
+    Cron->>Worker: scheduled() every hour<br/>create one budget of 40 requests
     Worker->>Worker: checkFlamekeeperHealth<br/>probes and photo checks share 24 requests<br/>at most 3 reconnect emails<br/>finalizes at most 1 lost flamekeeper<br/>restores at most 2 dropped volumes<br/>see health-probe.md
     Worker->>Worker: maintainPool<br/>no request cap of its own<br/>only the admin alert spends budget<br/>see pool-top-up.md
     Worker->>Worker: drainFlamekeepers<br/>at most 2 stuck-folder alerts, 2 drain alerts<br/>at most 2 reminder emails<br/>deletes for 1 overdue flamekeeper only<br/>at most 2 drains finished<br/>see drain-notices.md
     Worker->>Worker: finishBans<br/>at most 3 booking cancellations<br/>at most 10 volume folders released<br/>see ban-cleanup.md
+    Note over Worker: Then expireAlbums,<br/>see ../albums-and-housekeeping/
+    Worker->>Worker: log outside requests spent out of 40
+    Cron->>Worker: scheduled() every day at 03:00 UTC<br/>create a separate budget of 40 requests
     Worker->>Worker: graduateFlamekeepers<br/>at most 3 drains started, 2 prompt emails<br/>see graduation-trigger.md
-    Note over Worker: Then the album and housekeeping steps,<br/>see ../albums-and-housekeeping/
     Worker->>Worker: log outside requests spent out of 40
 ```

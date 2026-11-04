@@ -48,7 +48,13 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 
 ## Cron / scheduled work
 
-`server.ts` handles the `*/5 * * * *` cron: auto-cancel unstarted bookings, mark overdue, send 4 idempotent Telegram reminders (each tracks a `*_sent_at` column). Test with `wrangler dev --test-scheduled`.
+`server.ts` handles three Cron Triggers and picks the steps from `controller.cron`. The schedule strings, step groups and per-trigger budgets live in `src/lib/cron/schedule.ts` and must match `crons` in `wrangler.jsonc` character for character (a test checks this). Each trigger gets its own budget. Overview: `docs/scenarios/cron/overview.md`.
+
+- `*/5 * * * *`: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders` (4 idempotent Telegram reminders, each tracks a `*_sent_at` column), plus `backfillAlbumPhotos` until it is removed.
+- `0 * * * *`: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `expireAlbums`, then the Telegram bot configuration, which calls Telegram only when the deployed version (`CF_VERSION_METADATA.id`) differs from the KV marker `telegram-bot:configured-version`.
+- `0 3 * * *`: `graduateFlamekeepers`.
+
+Test with `wrangler dev --test-scheduled`, then `curl "http://localhost:3000/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"` (swap in each schedule, spaces as `+`).
 
 ## Docs
 

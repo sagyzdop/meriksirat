@@ -4,7 +4,7 @@
 > from Drive into the database without using too many database
 > writes?
 >
-> **Answer:** Each tick the backfillAlbumPhotos step picks up to 5
+> **Answer:** Each 5-minute run the backfillAlbumPhotos step picks up to 5
 > albums that have never been indexed and reads their Drive
 > folders with the master token. For each album it adds rows for
 > photos not yet in the table. A shared daily budget of database

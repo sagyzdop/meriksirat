@@ -80,12 +80,23 @@
   ],
   /**
    * Cron Triggers
-   * Scheduled tasks that run at specified intervals
-   * Runs every 5 minutes to check for bookings that need status updates
+   * Three triggers, each with its own budget. server.ts picks the steps by
+   * matching controller.cron to these strings character for character, so
+   * keep them equal to CRON_SCHEDULES in src/lib/cron/schedule.ts.
+   * Every 5 minutes: bookings (and photo backfill until it is removed). Hourly: flamekeepers and albums. Daily 03:00 UTC: graduation.
    * https://developers.cloudflare.com/workers/configuration/cron-triggers/
    */
   "triggers": {
-    "crons": ["*/5 * * * *"],
+    "crons": ["*/5 * * * *", "0 * * * *", "0 3 * * *"],
+  },
+  /**
+   * Version metadata
+   * Gives the Worker its deployed version id, which marks the once-per-deploy
+   * Telegram bot configuration.
+   * https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/
+   */
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA",
   },
   /**
    * Smart Placement

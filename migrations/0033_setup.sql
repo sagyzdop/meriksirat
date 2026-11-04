@@ -1,0 +1,1 @@
+ALTER TABLE `album` DROP COLUMN `public_notice_pending_at`;

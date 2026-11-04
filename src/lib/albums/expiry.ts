@@ -340,7 +340,7 @@ export async function runAlbumExpiry(
     let accessToken: string | null = null
     let removed = 0
     const { rotateIds } = await import('@/lib/pool/volumes')
-    const turn = Math.floor(now.getTime() / (5 * 60 * 1000))
+    const turn = Math.floor(now.getTime() / (60 * 60 * 1000))
     for (const id of rotateIds(plan.expire, turn)) {
       if (removed >= EXPIRES_PER_RUN) break
       try {

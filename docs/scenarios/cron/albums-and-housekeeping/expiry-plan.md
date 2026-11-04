@@ -3,7 +3,7 @@
 > **Question:** How does the cron decide which albums to delete and
 > which owners to warn?
 >
-> **Answer:** Every tick the expireAlbums step reads all albums that
+> **Answer:** Every hour the expireAlbums step reads all albums that
 > are not deleted and not pinned. An album whose expiry date has
 > passed is queued for deletion. An album with 7 days or less left
 > is queued for the 7-day reminder if that reminder was never sent.

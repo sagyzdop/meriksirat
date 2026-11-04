@@ -3,7 +3,7 @@
 > **Question:** What exactly is deleted when an album expires, and
 > whose Google account does the deleting?
 >
-> **Answer:** Each tick the cron deletes at most 3 expired albums.
+> **Answer:** Each hourly run the cron deletes at most 3 expired albums.
 > Photos stored in a flamekeeper's Drive are deleted first, using
 > that flamekeeper's own token, in batches of 100 files per request.
 > Then the album's Drive folder in the club master account is
@@ -19,7 +19,7 @@
 >   photos 1 plus 1 per 100 photos (rounded up), plus 1 for the
 >   master token on the first album of the tick. If the tick cannot
 >   afford an album it is skipped and the next one is tried.
-> - The list is rotated by the current 5-minute slot, so the same
+> - The list is rotated by the current hour, so the same
 >   album is not always first. The limit of 3 counts every album
 >   attempted, including ones that then fail or are put off.
 > - At most 2000 flamekeeper photos are removed per attempt. A
