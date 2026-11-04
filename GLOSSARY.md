@@ -88,19 +88,22 @@ _Avoid_: User state
 ### Albums
 
 **Album**:
-A photo gallery: one public folder in the club's master Google Drive account, whose photos are owned by flamekeepers.
+A photo gallery: one public folder in the club's master Google Drive account, whose photos are held in volumes on the buffer, and on flamekeepers only after an offload.
 _Avoid_: Gallery, collection
 
 **Photo**:
-One image in an album, with a stable ID of its own and a current Drive file ID that changes when the photo moves.
+One image in an album, identified by its current Drive file ID, which changes when the photo moves to another account. Listed from Drive and cached, with no photo record of its own.
+Not built yet (Stage 1, #15): today's code still keeps a photo table with a stable photo ID (ADR-0008). ADR-0017 removes it.
 _Avoid_: Image, file, picture
 
 **Volume**:
-The photos of one album held by one flamekeeper.
+The photos of one album held by one account: the buffer, or a flamekeeper after an offload. One volume per album per account. Stores the expected count and bytes, which the count warning checks against.
+Not built yet (Stage 1): the 256 MB unit is removed, so one volume per album per account replaces it.
 _Avoid_: Chunk, shard, part
 
 **Favorite**:
-A photo a user has saved. Albums with favorites come after albums without them in the deletion suggestions.
+A photo a user has saved, keyed by user, album and Drive file ID. Moving a photo remaps its favorites to the new file ID. Albums with favorites come after albums without them in the deletion suggestions.
+Not built yet (Stage 1): today's favorites point at the stable photo ID that the photo table provides (ADR-0017).
 _Avoid_: Bookmark, like, star
 
 **Expiry**:
@@ -145,28 +148,40 @@ _Avoid_: Graduate, when the account rather than the member status is meant
 The single, rotatable code a user enters to become a member.
 _Avoid_: Invite code, password
 
+**Buffer**:
+The club-run Google account, `nuimage.storage@gmail.com`, on a 5 TB plan. New album photos are uploaded to it, and photos leaving a flamekeeper are copied back to it. It holds a `drive.file` token for uploads and a full-scope token that only the server uses, for drains. It is not a flamekeeper.
+Not built yet (Stage 1, #15): uploads still go to flamekeepers in today's code (ADR-0008). Copying photos onto the buffer from flamekeepers is Stage 2.
+_Avoid_: Storage account, main account, master
+
 **Flamekeeper**:
-An `@nu.edu.kz` user who lends part of their Google Drive storage to hold volumes. May also be a member.
+An `@nu.edu.kz` user who pledges optional reserve storage from their Google Drive to the club. Holds no photos when they sign up, since new uploads go to the buffer; they hold photos only after an admin offloads some to them. May also be a member.
+Not built yet: offload is Stage 2 (#15), so until then a flamekeeper's Drive grant sits unused. Today's code still uploads photos to flamekeepers.
 _Avoid_: Donor, contributor, host
 
 **Pledge**:
-The maximum GB a flamekeeper lets the app use, at least 1 GB. A cap on what the app uses, not space set aside in Google.
+The maximum GB a flamekeeper lets the app use, at least 512 MB. A cap on what the app uses, not space set aside in Google.
+Not built yet (Stage 1): the minimum is 1 GB in today's code.
 _Avoid_: Allocation, quota
 
 **Pool**:
-The total free space across all active flamekeepers.
+The total free pledged space across all active flamekeepers, used only to pick offload destinations. Uploads never use the pool; they go to the buffer, and stop when the buffer is full.
+Not built yet (Stage 2): offload is the only user of the pool.
 _Avoid_: Storage, capacity
 
 **Draining**:
-A flamekeeper state in which their photos are being moved to other flamekeepers, through the browser, before they leave or graduate.
+A flamekeeper state in which the server copies their photos to the buffer, before they leave or graduate. The flamekeeper's own token then deletes the originals, and the drain is one-way.
+Not built yet (Stage 2, #15): today's code drains through the browser relay and moves photos to other flamekeepers (ADR-0009). ADR-0016 replaces that.
 _Avoid_: Evacuating, migrating
 
 **Relay**:
-Moving one photo through a browser: downloaded with the source flamekeeper's token and uploaded into the same album folder for the destination, keeping the photo's ID (ADR-0009).
+Moving one photo through a browser: downloaded with a short-lived `drive.file` token and uploaded into the album's volume for the destination. The photo gets a new Drive file ID (ADR-0009, amended by ADR-0016).
+Under the new design, relay is used only by an admin-started offload, from the buffer to a flamekeeper, in the admin's browser. Drains no longer use it.
+Not built yet (Stage 2): today's code relays drains from flamekeeper pages.
 _Avoid_: Transfer, copy
 
 **Lost flamekeeper**:
-A flamekeeper whose Drive access can no longer be refreshed; their photos drop out of the app after 7 days and return if they reconnect, however late.
+A flamekeeper whose Drive access can no longer be refreshed; their photos drop out of the app after 7 days and return if they reconnect, however late. If the rescue test passes, the buffer copies their photos during those 7 days. Their original files stay in their Drive either way.
+Not built yet (Stage 2): the rescue test has not been run (#15).
 _Avoid_: Revoked, disconnected
 
 **Banned user**:

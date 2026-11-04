@@ -1,5 +1,15 @@
 # Signup is NU-only, and NU accounts start by connecting Drive
 
+> **Amended: the signup part is superseded by [#15](https://github.com/sagyzdop/meriksirat/issues/15).**
+> Still in force: the `@nu.edu.kz` and `@alumni.nu.edu.kz` domain limit, checked
+> when the account is created, and the club code at any time. Superseded: signup
+> is Google sign-in with terms on the login page, saved when the account is
+> created. Drive and the club code are optional later steps, so nothing needs
+> Drive connected at signup. Unfinished accounts are never deleted: the 7-day
+> cleanup and the leave dialog are removed. The minimum pledge is 512 MB, not
+> 1 GB. No ADR records the new signup flow yet; #15 is its reference. The text
+> below is the original decision, kept for history.
+
 The club needs storage more than it needs open signup, so there is now one
 signup flow instead of a choice between "member" and "flamekeeper". New accounts
 must be `@nu.edu.kz` or `@alumni.nu.edu.kz`; every other domain is refused before
