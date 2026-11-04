@@ -1,5 +1,15 @@
 # The flamekeeper Drive grant is stored apart from the login account
 
+> **Amended by [ADR-0016](0016-drains-run-on-server-with-buffer-full-token.md).**
+> The flamekeeper grant rules still hold: `drive.file` only, stored apart from
+> login, and never on the master. Changes: the buffer's full-scope token is a
+> separate server-side credential, not a flamekeeper grant. The daily health check
+> becomes hourly, as `checkFlamekeeperHealth` in the hourly cron. Flamekeeper
+> grants sit unused until offload (Stage 2) of
+> [#15](https://github.com/sagyzdop/meriksirat/issues/15). The rescue of a lost
+> flamekeeper's photos is pending its live test. The text below is the original
+> decision, kept for history.
+
 The flamekeeper's offline `drive.file` refresh token lives in its own table,
 written only by the "Connect Drive" consent flow (`access_type=offline`,
 `prompt=consent`), never in better-auth's `account` row. Ordinary logins rewrite

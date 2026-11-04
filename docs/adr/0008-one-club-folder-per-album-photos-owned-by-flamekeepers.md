@@ -1,5 +1,16 @@
 # One club folder per album; photos are owned by flamekeepers in volume subfolders
 
+> **Amended by [ADR-0015](0015-buffer-is-stable-photo-storage.md) and [ADR-0017](0017-drop-photo-table-read-from-drive.md).**
+> New uploads go to the buffer, not to flamekeepers, so flamekeepers hold photos
+> only after an offload (Stage 2). The photo table, its backfill and the
+> `dropped` state are removed, and favorites and covers follow the Drive file ID.
+> The 256 MB unit is removed in favour of one volume per album per account. The
+> album folder, the volume subfolders and the sharing rule stay. The rescue of a
+> lost flamekeeper's photos is pending its live test. The text below is the
+> original decision, kept for history. Until Stage 1 of
+> [#15](https://github.com/sagyzdop/meriksirat/issues/15) ships, the running code
+> still follows it.
+
 The university capped every account at 20GB, so the club's master account can no
 longer pay for album photos. Each album is still a single public folder in the
 master account (ADR-0005 holds unchanged), but every photo in it is uploaded

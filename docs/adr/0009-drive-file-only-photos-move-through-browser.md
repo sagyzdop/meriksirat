@@ -1,5 +1,15 @@
 # Flamekeepers grant only drive.file; photos move through the browser
 
+> **Amended by [ADR-0016](0016-drains-run-on-server-with-buffer-full-token.md).**
+> The `drive.file`-only rule for flamekeepers and the master still holds. Drains
+> no longer go through the browser: the server copies photos to the buffer with
+> the buffer's full-scope token. The browser relay stays only for an admin-started
+> offload from the buffer to a flamekeeper (Stage 2, not built). The rule that
+> photos are deleted when no browser relays them is removed. The 14-day deletion
+> now applies only when a flamekeeper's own access blocks the drain
+> ([ADR-0012](0012-no-backup-albums-expire.md)). The text below is the original
+> decision, kept for history.
+
 Flamekeepers grant the non-sensitive `drive.file` scope and nothing broader. The
 full `drive` scope is restricted, which means a restricted-scope review and a
 paid CASA security assessment every year, a cost a student club can't carry.
