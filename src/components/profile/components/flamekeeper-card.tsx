@@ -294,7 +294,10 @@ export function FlamekeeperCard({
               </div>
             )}
             {(flamekeeper === null || showSignup) && (
-              <FlamekeeperSignupForm error={connectError ?? null} />
+              <FlamekeeperSignupForm
+                initialGraduationDate={user.graduationDate}
+                error={connectError ?? null}
+              />
             )}
           </>
         )}

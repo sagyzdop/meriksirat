@@ -5,7 +5,7 @@
 >
 > **Answer:** They land on `/onboarding` and see "Lend some Drive
 > storage". They must pledge between 1 and 1024 GB, give an
-> expected graduation date in the future, accept the terms and
+> expected graduation month in the future, accept the terms and
 > then connect their Google Drive. Connecting Drive finishes the
 > signup. They then arrive on `/profile` as a non-member and can
 > browse albums and favorite photos.
@@ -43,7 +43,7 @@ sequenceDiagram
     alt Pledge below 1 GB or above 1024 GB
         B-->>P: Pledge at least 1 GB.
     else Graduation date not in the future
-        B-->>P: Enter an expected graduation date in the future.
+        B-->>P: Enter an expected graduation month in the future.
     else Terms not ticked
         B-->>P: Accept the terms to continue.
     else Form valid

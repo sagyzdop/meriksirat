@@ -59,7 +59,17 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
       throw new Error('No valid fields provided for update')
     }
 
-    await database.update(user).set(data).where(eq(user.id, session.user.id))
+    const { graduationDate, ...fields } = data
+    if (graduationDate !== undefined) {
+      const { saveGraduationDate } = await import('@/lib/pool/drain-server')
+      await saveGraduationDate(database, session.user.id, graduationDate)
+    }
+    if (Object.values(fields).some((value) => value !== undefined)) {
+      await database
+        .update(user)
+        .set(fields)
+        .where(eq(user.id, session.user.id))
+    }
 
     if (data.birthday !== undefined) {
       try {

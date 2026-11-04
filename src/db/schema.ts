@@ -32,7 +32,7 @@ export const user = sqliteTable(
       mode: 'boolean',
     }).default(true),
     major: text('major'),
-    graduationYear: integer('graduation_year'),
+    graduationDate: text('graduation_date'),
     status: text('status', {
       enum: [
         'Active',
@@ -522,7 +522,6 @@ export const flamekeeper = sqliteTable(
     })
       .default('active')
       .notNull(),
-    graduationDate: text('graduation_date').notNull(),
     graduationConfirmedAt: integer('graduation_confirmed_at', {
       mode: 'timestamp_ms',
     }),

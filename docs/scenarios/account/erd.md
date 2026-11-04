@@ -16,7 +16,7 @@
 >   reservations and flamekeeper volumes, which these scenarios
 >   do not use.
 > - KV: the key `flamekeeper-oauth:{random id}` holds the pledge,
->   graduation date and terms time while a new NU user is at
+>   graduation month and terms time while a new NU user is at
 >   Google. It lasts 10 minutes and is deleted when the person
 >   returns. See signup-nu.md.
 > - No R2 data is used by these scenarios.
@@ -41,7 +41,7 @@ erDiagram
         text instagram_username
         integer nu_id
         text major
-        integer graduation_year
+        text graduation_date "YYYY-MM-01, month precision"
         text status "Active, Inactive, On Probation, Board, Ex-Board, Roommate, Ex-Roommate, Graduated"
         text role "user, manager, admin"
         integer is_member

@@ -49,7 +49,6 @@ erDiagram
         integer drive_usage_bytes
         integer drive_usage_checked_at
         text state "active, full, draining, lost, drained"
-        text graduation_date
         integer graduation_confirmed_at
         integer graduation_prompt_sent_at
         integer draining_deadline

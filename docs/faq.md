@@ -8,14 +8,14 @@ New accounts need an `@nu.edu.kz` or `@alumni.nu.edu.kz` Google account. Sign
 in with it and you'll be guided through signup.
 
 - **`@nu.edu.kz`:** accept the terms, pledge at least 1 GB of your NU Drive,
-  give your expected graduation date and connect Drive. Then you land on your
+  give your expected graduation month and connect Drive. Then you land on your
   profile.
 - **`@alumni.nu.edu.kz`:** accept the terms. There is no Drive step. You get an
   account that can browse albums and favorite photos.
 
 To book equipment and create albums you must be a club member. Enter the club
 code on your profile (any time) and you'll be asked for your name, date of
-birth, NU ID, major and graduation year, then to link your Telegram account.
+birth, NU ID, major and graduation month, then to link your Telegram account.
 If you sign up and do nothing for 7 days, the account is removed and you can
 sign in again. This does not apply to `@alumni.nu.edu.kz` accounts, which are
 kept.

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { GraduationMonthInput } from '@/components/shared/graduation-month-input'
 import { Label } from '@/components/ui/label'
 import { startDriveConnectFn } from '@/lib/flamekeeper/functions'
 import {
@@ -14,23 +15,23 @@ import {
 import { errorMessage } from '@/lib/utils'
 
 interface FlamekeeperSignupFormProps {
+  initialGraduationDate?: string | null
   error?: string | null
   onBeforeRedirect?: () => void
 }
 
 export function FlamekeeperSignupForm({
+  initialGraduationDate,
   error,
   onBeforeRedirect,
 }: FlamekeeperSignupFormProps) {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [pledge, setPledge] = useState(String(MIN_PLEDGE_GB))
-  const [graduationDate, setGraduationDate] = useState('')
+  const [graduationDate, setGraduationDate] = useState(
+    initialGraduationDate ?? ''
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +43,7 @@ export function FlamekeeperSignupForm({
       return
     }
     if (!isValidGraduationDate(graduationDate)) {
-      setFormError('Enter an expected graduation date in the future.')
+      setFormError('Enter an expected graduation month in the future.')
       return
     }
     if (!termsAccepted) {
@@ -84,13 +85,11 @@ export function FlamekeeperSignupForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="fkGraduation">Expected graduation date</Label>
-        <Input
+        <Label htmlFor="fkGraduation">Expected graduation month</Label>
+        <GraduationMonthInput
           id="fkGraduation"
-          type="date"
-          min={tomorrow}
           value={graduationDate}
-          onChange={(e) => setGraduationDate(e.target.value)}
+          onValueChange={setGraduationDate}
         />
         <p className="text-xs text-muted-foreground">
           Your photos are moved to other flamekeepers before your account moves

@@ -27,11 +27,11 @@ membership with the club code. Your account is non-transferable.
 ### 3.1 Account Creation
 
 To sign up with an `@nu.edu.kz` account, you must accept these Terms, pledge
-at least 1 GB of Drive storage, give your expected graduation date and connect
+at least 1 GB of Drive storage, give your expected graduation month and connect
 your Drive (see Section 14). To sign up with an `@alumni.nu.edu.kz` account,
 you only need to accept these Terms. Club members must also provide accurate
 personal information including their full name, date of birth, university ID,
-major, and graduation year.
+major, and graduation month.
 
 An account that is not a club member, has no flamekeeper record or Drive
 connection, owns nothing on the Platform and is 7 days old is deleted. You can
@@ -128,7 +128,7 @@ situations on a case-by-case basis.
 
 The Platform collects and stores the following personal data:
 
-- Account information (name, email, university ID, major, graduation year,
+- Account information (name, email, university ID, major, graduation month,
   date of birth)
 - Booking history and equipment usage records
 - Telegram account linkage

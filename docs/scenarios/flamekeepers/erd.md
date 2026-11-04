@@ -8,6 +8,9 @@
 > - KV key flamekeeper-oauth:nonce holds user id, pledged bytes,
 >   graduation date and terms time as JSON, for 600 seconds. It is
 >   deleted when read, see connect-drive.md and drive-callback.md.
+> - The expected graduation date is not on the flamekeeper row. It is
+>   `user.graduation_date` (first day of the month), shared with the
+>   member profile, see ../account/erd.md.
 > - R2 is not used by these scenarios.
 > - The flamekeeper and flamekeeper_grant rows are deleted with
 >   the user. Photos keep flamekeeper_user_id as plain text with
@@ -45,7 +48,6 @@ erDiagram
         integer used_bytes "bytes stored"
         integer drive_usage_bytes "whole Drive usage"
         text state "active, full, draining, lost, drained"
-        text graduation_date "YYYY-MM-DD"
         integer graduation_confirmed_at "last confirmation"
         integer draining_deadline "14 days after drain start"
         text drain_reason "opt_out, pledge, graduation, domain, ban"

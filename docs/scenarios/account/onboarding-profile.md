@@ -4,7 +4,8 @@
 > profile on `/onboarding`?
 >
 > **Answer:** The member fills in name, birthday, NU ID, major
-> and graduation year and clicks "Complete Onboarding". A Terms
+> and graduation month (prefilled when already known, for example
+> from the flamekeeper form) and clicks "Complete Onboarding". A Terms
 > of Service pop-up asks for "I Agree". The details are then
 > saved and the app looks at Telegram. In local development with
 > DEV=true, or if Telegram is already linked, onboarding finishes
@@ -13,10 +14,11 @@
 >
 > **Notes:**
 > - Required in the form: first name, last name, birthday, NU ID,
->   major and graduation year. Instagram is optional. The
+>   major and graduation month. Instagram is optional. The
 >   birthday greeting box starts ticked.
 > - The server also requires a positive whole NU ID and a
->   graduation year from 2010 to 3000.
+>   graduation month as a date. A past month is accepted unless the
+>   member is a flamekeeper, who needs a future one.
 > - Saving the details does not mark onboarding complete. That
 >   happens when Telegram is linked, or as drawn here when it is
 >   already linked or skipped.
