@@ -8,7 +8,7 @@
 > - Only users with role admin can delete a gone album. Managers see the warning but not the button.
 > - The check must come back "deleted". A folder that exists, is in the bin, or a Drive error while checking is refused, so doubt never removes an album.
 > - Nothing is deleted in Drive. Rows in the photo and volume tables for the album are dropped and the flamekeepers' used bytes are lowered by what the album held.
-> - The folder state is noticed the next time the album core is rebuilt, up to an hour unless Refresh is used, see refresh-album.md.
+> - The folder state is noticed the next time any section of the album's listing is due, up to 12 hours unless Refresh is used, see refresh-album.md. While the folder is in the bin the last listing keeps showing.
 > - The tombstone page text comes from tombstoneCopy in `src/lib/pool/expiry.ts`. The ordinary owner delete in delete-album.md still deletes photos, it is not used for gone folders.
 
 ```mermaid

@@ -2,7 +2,7 @@
 
 > **Question:** How does someone pick a photo as the album's cover?
 >
-> **Answer:** The owner, co-authors and admins or managers open a photo and click "Set as cover", which is greyed out for the photo that is already the cover. The Worker checks that the photo belongs to this album and saves it as the cover, and the page shows "Cover photo updated". If nobody picks one, the earliest uploaded photo is used and saved the first time the album page is built.
+> **Answer:** The owner, co-authors and admins or managers open a photo and click "Set as cover", which is greyed out for the photo that is already the cover. The Worker checks that the photo belongs to this album, as a row or a listed file, and saves it as the cover, and the page shows "Cover photo updated". If nobody picks one, the earliest uploaded photo is used and saved the first time the album page has a complete listing.
 >
 > **Notes:**
 > - For a legacy album that is not indexed, the photo check is skipped, see legacy-albums.md.
@@ -25,7 +25,8 @@ sequenceDiagram
     else Allowed
         opt Album is indexed
             W->>D: Is there a photo with this file id in this album
-            W-->>B: Error Photo not found in this album, if not
+            W->>K: If not, look for it in the album's listing
+            W-->>B: Error Photo not found in this album, if neither
         end
         W->>D: Set coverFileId
         W->>K: Delete album:detail:albumId

@@ -13,6 +13,7 @@ export interface DriveFileMeta {
   name: string
   mimeType: string
   size?: string
+  md5Checksum?: string
   createdTime?: string
   imageMediaMetadata?: {
     time?: string
@@ -139,28 +140,31 @@ export async function getOrCreateDriveFolder(
   return createDriveFolder(accessToken, name, parentId)
 }
 
+const LISTING_FIELDS =
+  'nextPageToken, files(id, name, mimeType, size, md5Checksum, createdTime, imageMediaMetadata(time, cameraMake, cameraModel, exposureTime, aperture, focalLength, isoSpeed, width, height, whiteBalance))'
+
 /**
- * List the files directly inside a folder, paging through all results.
+ * List the files directly inside a folder, page by page, until the folder is
+ * done or `mayRequest` refuses another page. `complete` says which it was.
  */
-export async function listDriveFolderFiles(
+export async function listDriveFolderUpTo(
   accessToken: string,
   folderId: string,
-  beforeRequest?: () => void
-): Promise<DriveFileMeta[]> {
+  mayRequest: () => boolean
+): Promise<{ files: DriveFileMeta[]; complete: boolean }> {
   const files: DriveFileMeta[] = []
   let pageToken: string | undefined
 
   do {
+    if (!mayRequest()) return { files, complete: false }
     const params = new URLSearchParams({
       q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
-      fields:
-        'nextPageToken, files(id, name, mimeType, size, createdTime, imageMediaMetadata)',
+      fields: LISTING_FIELDS,
       pageSize: '1000',
       orderBy: 'createdTime',
     })
     if (pageToken) params.set('pageToken', pageToken)
 
-    beforeRequest?.()
     const response = await driveFetch(
       accessToken,
       `${API}/files?${params.toString()}`
@@ -173,6 +177,18 @@ export async function listDriveFolderFiles(
     pageToken = data.nextPageToken
   } while (pageToken)
 
+  return { files, complete: true }
+}
+
+export async function listDriveFolderFiles(
+  accessToken: string,
+  folderId: string,
+  beforeRequest?: () => void
+): Promise<DriveFileMeta[]> {
+  const { files } = await listDriveFolderUpTo(accessToken, folderId, () => {
+    beforeRequest?.()
+    return true
+  })
   return files
 }
 

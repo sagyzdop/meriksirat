@@ -2,8 +2,9 @@ import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { albumMember, user } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
-import type { AlbumAccessLevel, AlbumFolderState } from './types'
-import type { DriveFileMeta } from '@/lib/google/google-drive'
+import { LISTING_KV_TTL_SECONDS, parseListingEntry } from './listing'
+import type { AlbumListingEntry } from './listing'
+import type { AlbumAccessLevel } from './types'
 
 export interface SessionUser {
   id: string
@@ -102,39 +103,19 @@ export function requireAccess(
   }
 }
 
-const LISTING_TTL_SECONDS = 300
-
-export interface CachedListing {
-  folderState: AlbumFolderState
-  files: DriveFileMeta[]
-}
-
 function listingKey(folderId: string): string {
   return `album:list:${folderId}`
 }
 
 export async function getCachedListing(
   folderId: string
-): Promise<CachedListing | null> {
+): Promise<AlbumListingEntry | null> {
   try {
     const { env } = await import('cloudflare:workers')
     const raw = await (env.meriksirat_kv as KVNamespace).get(
       listingKey(folderId)
     )
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    if (Array.isArray(parsed)) return null // pre-folderState cache shape
-    if (typeof parsed !== 'object' || parsed === null) return null
-    const { folderState, files } = parsed as Partial<CachedListing>
-    if (
-      folderState !== 'ok' &&
-      folderState !== 'trashed' &&
-      folderState !== 'missing'
-    ) {
-      return null
-    }
-    if (!Array.isArray(files)) return null
-    return { folderState, files }
+    return parseListingEntry(raw)
   } catch (error) {
     console.warn('Failed to read album listing cache:', error)
     return null
@@ -143,17 +124,14 @@ export async function getCachedListing(
 
 export async function setCachedListing(
   folderId: string,
-  files: DriveFileMeta[],
-  folderState: AlbumFolderState = 'ok'
+  entry: AlbumListingEntry
 ): Promise<void> {
   try {
     const { env } = await import('cloudflare:workers')
     await (env.meriksirat_kv as KVNamespace).put(
       listingKey(folderId),
-      JSON.stringify({ files, folderState }),
-      {
-        expirationTtl: LISTING_TTL_SECONDS,
-      }
+      JSON.stringify(entry),
+      { expirationTtl: LISTING_KV_TTL_SECONDS }
     )
   } catch (error) {
     console.warn('Failed to write album listing cache:', error)
