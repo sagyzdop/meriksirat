@@ -28,7 +28,7 @@
 >   only requests made before #18 still go first, oldest first. The
 >   rest go newest event first (creation date if there is no event
 >   date). Deleted albums and skipped ones are never chosen. The
->   table still serves favorites and expiry until #25.
+>   table still serves expiry until #25.
 > - Photo rows get no flamekeeper, and are inserted 6 rows at a
 >   time. Only files whose type starts with image/ are added.
 > - Outside requests: 1 for the master token, then 2 per album

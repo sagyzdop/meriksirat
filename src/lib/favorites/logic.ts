@@ -1,24 +1,16 @@
 export interface FavoriteRef {
-  photoId: string
   driveFileId: string
 }
 
 export interface FavoritablePhoto {
   id: string
-  photoId?: string | null
-}
-
-function matches(photo: FavoritablePhoto, ref: FavoriteRef): boolean {
-  return photo.photoId
-    ? ref.photoId === photo.photoId
-    : ref.driveFileId === photo.id
 }
 
 export function isPhotoFavorited(
   photo: FavoritablePhoto,
   refs: FavoriteRef[]
 ): boolean {
-  return refs.some((r) => matches(photo, r))
+  return refs.some((r) => r.driveFileId === photo.id)
 }
 
 export function applyFavoriteToggle(
@@ -26,7 +18,7 @@ export function applyFavoriteToggle(
   photo: FavoritablePhoto,
   favorite: boolean
 ): FavoriteRef[] {
-  const without = refs.filter((r) => !matches(photo, r))
+  const without = refs.filter((r) => r.driveFileId !== photo.id)
   if (!favorite) return without
-  return [...without, { photoId: photo.photoId ?? '', driveFileId: photo.id }]
+  return [...without, { driveFileId: photo.id }]
 }

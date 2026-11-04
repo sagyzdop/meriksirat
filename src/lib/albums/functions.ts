@@ -714,20 +714,30 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
       const { adjustExpected } = await import('@/lib/buffer/server')
       await adjustExpected(database, row.id, -1, -registered.bytes)
     }
-    if (registered) {
-      const { favorite } = await import('@/db/schema')
-      await database.batch([
-        database
-          .update(album)
-          .set({
+    const { favorite } = await import('@/db/schema')
+    await database.batch([
+      database
+        .update(album)
+        .set({
+          ...(registered && {
             photoCount: sql`MAX(${album.photoCount} - 1, 0)`,
             photoBytes: sql`MAX(${album.photoBytes} - ${registered.bytes}, 0)`,
-            favoriteCount: sql`MAX(${album.favoriteCount} - (SELECT COUNT(*) FROM ${favorite} WHERE ${favorite.photoId} = ${registered.id}), 0)`,
-          })
-          .where(eq(album.id, row.id)),
-        database.delete(photo).where(eq(photo.id, registered.id)),
-      ])
-    }
+          }),
+          favoriteCount: sql`MAX(${album.favoriteCount} - (SELECT COUNT(*) FROM ${favorite} WHERE ${favorite.albumId} = ${row.id} AND ${favorite.driveFileId} = ${data.fileId}), 0)`,
+        })
+        .where(eq(album.id, row.id)),
+      database
+        .delete(favorite)
+        .where(
+          and(
+            eq(favorite.albumId, row.id),
+            eq(favorite.driveFileId, data.fileId)
+          )
+        ),
+      ...(registered
+        ? [database.delete(photo).where(eq(photo.id, registered.id))]
+        : []),
+    ])
     await invalidateCachedListing(row.driveFolderId)
 
     if (row.coverFileId === data.fileId) {

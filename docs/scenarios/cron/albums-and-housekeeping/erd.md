@@ -30,7 +30,7 @@ erDiagram
     album ||--o{ photo : holds
     album ||--o{ volume : has
     album ||--o{ upload_reservation : has
-    photo ||--o{ favorite : "is favorited by"
+    album ||--o{ favorite : "is favorited by"
     user ||--o{ volume : stores
     user ||--o{ upload_reservation : makes
     user ||--o{ session : has
@@ -85,7 +85,8 @@ erDiagram
     }
     favorite {
         text user_id PK
-        text photo_id PK
+        text album_id PK
+        text drive_file_id PK
     }
     volume {
         text album_id PK

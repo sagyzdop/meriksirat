@@ -4,6 +4,7 @@ import {
   album,
   albumMember,
   bufferVolume,
+  favorite,
   flamekeeper,
   photo,
   user,
@@ -115,6 +116,7 @@ export async function removeAlbum(
 
   if (options.tombstone) {
     await database.delete(photo).where(eq(photo.albumId, row.id))
+    await database.delete(favorite).where(eq(favorite.albumId, row.id))
     await database.delete(volume).where(eq(volume.albumId, row.id))
     await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
     await database
@@ -164,6 +166,7 @@ export async function tombstoneGoneAlbum(
       .where(eq(flamekeeper.userId, userId))
   }
   await database.delete(photo).where(eq(photo.albumId, row.id))
+  await database.delete(favorite).where(eq(favorite.albumId, row.id))
   await database.delete(volume).where(eq(volume.albumId, row.id))
   await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
   await database

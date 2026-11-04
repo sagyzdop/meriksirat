@@ -16,22 +16,22 @@
 >   large screens and always visible on phones. The enlarged photo
 >   view uses the same control.
 > - The list of hearted photos in an album is loaded once per album
->   and reused for 30 seconds. It holds only live photos and is empty
+>   and reused for 30 seconds. It holds Drive file ids, and is empty
 >   for a user who is not signed in.
-> - A photo that is not yet in the database is looked up in the
->   album's Drive folder with the master account and added. This
->   happens only when favoriting, only when the album has never
->   been fully indexed, and only when the page did not send a photo
->   id. A file that is not an image is not added, and the user sees
->   "Photo not found in this album".
+> - A favorite is stored as user, album and Drive file id, so any
+>   listed photo can be favorited, including an upload with no photo
+>   row. When favoriting, the file is checked against the album's
+>   cached Drive listing. Only a complete listing that lacks the file
+>   gives "Photo not found in this album". Unfavoriting never checks.
+> - When a photo moves to a new Drive file, a shared remap re-points
+>   favorites and the album cover. See ADR-0017.
 > - The count goes up only if the user had not already favorited
 >   the photo, and down only if they had, so repeated taps do not
 >   drift the count. It never goes below 0.
 > - The toast shows the text of whatever error the server raised.
 >   Examples are "Sign in to favorite photos", "You cannot favorite
 >   photos", "Album not found", "Photo not found in this album",
->   "Uploaded file not found in the album folder", or an error text
->   from Drive. "Could not update favorite" shows only when the
+>   or an error text from Drive. "Could not update favorite" shows only when the
 >   error has no text of its own.
 > - The favorites page is described in `favorites-page.md`.
 > - Loading an album page is described in `../albums/view-album.md`.
@@ -43,39 +43,34 @@ sequenceDiagram
     participant B as Browser
     participant W as Worker
     participant D as D1
-    participant G as Drive
+    participant K as KV
     B->>W: getAlbumFavoritesFn(albumId)
-    W->>D: read this user's favorites for live photos<br/>in the album
-    W-->>B: list of photo ids (empty if not signed in)
+    W->>D: read this user's favorites in the album
+    W-->>B: list of Drive file ids (empty if not signed in)
     B-->>U: Hearts drawn on favorited photos
     U->>B: Tap the heart
     B-->>U: Heart flips at once
-    B->>W: setFavoriteFn(albumId, photoId,<br/>driveFileId, favorite)
+    B->>W: setFavoriteFn(albumId, driveFileId,<br/>favorite)
     W->>D: load session, check user may favorite
     alt Not signed in or not allowed
         W-->>B: error "Sign in to favorite photos"<br/>or "You cannot favorite photos"
     else Allowed
-        W->>D: read the album, then the live photo in it
-    end
-    opt Album found, photo unknown, no photo id,<br/>album never indexed, favoriting
-        W->>G: read file info (master account token)
-        alt File not in the album folder or in trash
-            W-->>B: error "Uploaded file not found in the album folder"
-        else Image file
-            W->>D: add photo row, then look it up again
+        W->>D: read the album
+        opt Favoriting
+            W->>K: read the cached listing<br/>(Drive only if it needs a refresh)
         end
     end
     alt Album or photo missing
-        W-->>B: error "Album not found" or<br/>"Photo not found in this album"
+        W-->>B: error "Album not found", or<br/>"Photo not found in this album" when a complete<br/>listing lacks the file
     end
     alt Server returned an error
         B-->>U: Heart flips back, error toast
     else Favoriting
         W->>D: batch: add 1 to album favorite_count if not yet<br/>favorited, insert favorite (ignore duplicate)
-        W-->>B: photoId and favorite true
+        W-->>B: driveFileId and favorite true
     else Unfavoriting
         W->>D: batch: subtract 1 (not below 0) if favorited,<br/>delete favorite
-        W-->>B: photoId and favorite false
+        W-->>B: driveFileId and favorite false
     end
     B->>B: invalidate all queries starting with favorites
     B->>W: getAlbumFavoritesFn(albumId) again

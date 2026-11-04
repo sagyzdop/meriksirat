@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { env } from 'cloudflare:workers'
 import type { Database } from '@/db'
-import { album, favorite, photo, user } from '@/db/schema'
+import { album, favorite, user } from '@/db/schema'
 import { sendEmail } from '@/lib/google/email'
 import {
   canExpireEarly,
@@ -85,9 +85,8 @@ export async function expireAlbumEarly(
       telegramChatId: user.telegramChatId,
     })
     .from(favorite)
-    .innerJoin(photo, eq(photo.id, favorite.photoId))
     .innerJoin(user, eq(user.id, favorite.userId))
-    .where(and(eq(photo.albumId, albumId), eq(photo.state, 'live')))
+    .where(eq(favorite.albumId, albumId))
     .all()
   const owner = await database
     .select({

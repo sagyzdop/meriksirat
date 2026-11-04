@@ -2,7 +2,7 @@
 
 > **Question:** Which tables, KV keys and Drive folders do the album scenarios read and write?
 >
-> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in photo, which album pages no longer read. Favorites point at photos, and the settings row holds the per-flamekeeper storage cap. Photos held by the buffer carry the owner value `buffer`, and each album has one buffer_volume row with the expected photo count and bytes. Photos stored by flamekeepers before the buffer carry the flamekeeper's user id, with one volume row per flamekeeper. Upload reservations are no longer used (removed in #24; the table goes in #25). Copies of album pages and Drive listings sit in KV. No R2 storage is used for albums.
+> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in photo, which album pages no longer read. Favorites are keyed by album and Drive file id, and the settings row holds the per-flamekeeper storage cap. Photos held by the buffer carry the owner value `buffer`, and each album has one buffer_volume row with the expected photo count and bytes. Photos stored by flamekeepers before the buffer carry the flamekeeper's user id, with one volume row per flamekeeper. Upload reservations are no longer used (removed in #24; the table goes in #25). Copies of album pages and Drive listings sit in KV. No R2 storage is used for albums.
 >
 > **Notes:**
 > - KV `album:detail:ALBUM_ID`: shared album page core (title, event, authors), TTL 3600 s, plus a 30 s per-Worker memory copy.
@@ -24,7 +24,7 @@ erDiagram
     album ||--o{ volume : has
     album ||--o| buffer_volume : has
     album ||--o{ upload_reservation : holds
-    photo ||--o{ favorite : has
+    album ||--o{ favorite : has
     user ||--o{ favorite : makes
     user ||--o{ volume : stores
     user ||--o{ upload_reservation : reserves
@@ -79,7 +79,8 @@ erDiagram
     }
     favorite {
         text user_id PK, FK
-        text photo_id PK, FK
+        text album_id PK, FK
+        text drive_file_id PK
     }
     buffer_volume {
         text album_id PK, FK

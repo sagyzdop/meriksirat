@@ -30,20 +30,18 @@ export const getAlbumFavoritesFn = createServerFn({ method: 'GET' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<FavoriteRef[]> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { favorite, photo } = await import('@/db/schema')
+    const { favorite } = await import('@/db/schema')
     const { and, eq } = await import('drizzle-orm')
 
     const { database, sessionUser } = await sessionAndDb(getRequestHeaders())
     if (!sessionUser) return []
     return database
-      .select({ photoId: photo.id, driveFileId: photo.driveFileId })
+      .select({ driveFileId: favorite.driveFileId })
       .from(favorite)
-      .innerJoin(photo, eq(photo.id, favorite.photoId))
       .where(
         and(
           eq(favorite.userId, sessionUser.id),
-          eq(photo.albumId, data.albumId),
-          eq(photo.state, 'live')
+          eq(favorite.albumId, data.albumId)
         )
       )
       .all()
@@ -53,7 +51,7 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
   .validator(SetFavoriteSchema)
   .handler(async ({ data }) => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { album, favorite, photo } = await import('@/db/schema')
+    const { album, favorite } = await import('@/db/schema')
     const { and, eq, sql } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
@@ -66,42 +64,18 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
       .get()
     if (!albumRow) throw new Error('Album not found')
 
-    const findPhoto = () =>
-      database
-        .select({ id: photo.id })
-        .from(photo)
-        .where(
-          and(
-            eq(photo.albumId, albumRow.id),
-            eq(photo.state, 'live'),
-            data.photoId
-              ? eq(photo.id, data.photoId)
-              : eq(photo.driveFileId, data.driveFileId)
-          )
-        )
-        .get()
-
-    let photoRow = await findPhoto()
-    if (
-      !photoRow &&
-      !data.photoId &&
-      !albumRow.photosIndexedAt &&
-      data.favorite
-    ) {
-      const { registerDriveFileById } = await import('@/lib/albums/photo-index')
-      const { getGoogleAccessToken } =
-        await import('@/lib/google/google-calendar-auth')
-      await registerDriveFileById(
-        database,
-        await getGoogleAccessToken(),
-        albumRow,
-        data.driveFileId
-      )
-      photoRow = await findPhoto()
+    if (data.favorite) {
+      const { loadAlbumListing } = await import('@/lib/albums/listing-server')
+      const listing = await loadAlbumListing(database, albumRow)
+      if (
+        listing.complete &&
+        !listing.files.some((f) => f.id === data.driveFileId)
+      ) {
+        throw new Error('Photo not found in this album')
+      }
     }
-    if (!photoRow) throw new Error('Photo not found in this album')
 
-    const isFavorited = sql`EXISTS (SELECT 1 FROM ${favorite} WHERE ${favorite.userId} = ${sessionUser.id} AND ${favorite.photoId} = ${photoRow.id})`
+    const isFavorited = sql`EXISTS (SELECT 1 FROM ${favorite} WHERE ${favorite.userId} = ${sessionUser.id} AND ${favorite.albumId} = ${albumRow.id} AND ${favorite.driveFileId} = ${data.driveFileId})`
 
     if (data.favorite) {
       await database.batch([
@@ -111,7 +85,11 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
           .where(and(eq(album.id, albumRow.id), sql`NOT ${isFavorited}`)),
         database
           .insert(favorite)
-          .values({ userId: sessionUser.id, photoId: photoRow.id })
+          .values({
+            userId: sessionUser.id,
+            albumId: albumRow.id,
+            driveFileId: data.driveFileId,
+          })
           .onConflictDoNothing(),
       ])
     } else {
@@ -125,44 +103,60 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
           .where(
             and(
               eq(favorite.userId, sessionUser.id),
-              eq(favorite.photoId, photoRow.id)
+              eq(favorite.albumId, albumRow.id),
+              eq(favorite.driveFileId, data.driveFileId)
             )
           ),
       ])
     }
-    return { photoId: photoRow.id, favorite: data.favorite }
+    return { driveFileId: data.driveFileId, favorite: data.favorite }
   })
+
+const FAVORITE_LIST_LIMIT = 1000
+const FAVORITE_ALBUM_READS = 20
 
 export const listMyFavoritesFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<FavoritePhoto[]> => {
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { album, favorite, photo } = await import('@/db/schema')
-    const { and, desc, eq } = await import('drizzle-orm')
-    const { photoRowToAlbumPhoto } = await import('@/lib/albums/photo-backfill')
+    const { album, favorite } = await import('@/db/schema')
+    const { and, desc, eq, isNull } = await import('drizzle-orm')
+    const { getCachedListing } = await import('@/lib/albums/server')
+    const { albumsToRead, planFavoriteList } = await import('./remap')
 
     const { database, sessionUser } =
       await requireFavoriter(getRequestHeaders())
 
     const rows = await database
       .select({
-        photo,
         albumId: album.id,
         albumTitle: album.title,
+        driveFolderId: album.driveFolderId,
+        driveFileId: favorite.driveFileId,
         favoritedAt: favorite.createdAt,
       })
       .from(favorite)
-      .innerJoin(photo, eq(photo.id, favorite.photoId))
-      .innerJoin(album, eq(album.id, photo.albumId))
-      .where(and(eq(favorite.userId, sessionUser.id), eq(photo.state, 'live')))
+      .innerJoin(album, eq(album.id, favorite.albumId))
+      .where(and(eq(favorite.userId, sessionUser.id), isNull(album.deletedAt)))
       .orderBy(desc(favorite.createdAt))
-      .limit(1000)
+      .limit(FAVORITE_LIST_LIMIT)
       .all()
 
-    return rows.map((r) => ({
-      ...photoRowToAlbumPhoto(r.photo),
-      albumId: r.albumId,
-      albumTitle: r.albumTitle,
-      favoritedAt: r.favoritedAt.toISOString(),
-    }))
+    const folderByAlbum = new Map(rows.map((r) => [r.albumId, r.driveFolderId]))
+    const listings: Parameters<typeof planFavoriteList>[0]['listings'] = {}
+    await Promise.all(
+      albumsToRead(rows, FAVORITE_ALBUM_READS).map(async (albumId) => {
+        const entry = await getCachedListing(folderByAlbum.get(albumId)!)
+        if (!entry) return
+        const sources = Object.values(entry.sources)
+        listings[albumId] = {
+          complete:
+            entry.folderState === 'ok' &&
+            sources.length > 0 &&
+            sources.every((s) => s.status === 'ok' || s.status === 'missing'),
+          files: sources.flatMap((s) => s.files),
+        }
+      })
+    )
+    return planFavoriteList({ favorites: rows, listings })
   }
 )

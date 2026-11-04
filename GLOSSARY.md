@@ -93,7 +93,7 @@ _Avoid_: Gallery, collection
 
 **Photo**:
 One image in an album, identified by its current Drive file ID, which changes when the photo moves to another account. Listed from Drive and cached, with no photo record of its own.
-Album pages read this way since #18. Not built yet (Stage 1, #15): the photo table still exists with a stable photo ID (ADR-0008) and still serves favorites and flamekeeper moves (expiry stopped using it in #21). ADR-0017 removes it.
+Album pages read this way since #18. Not built yet (Stage 1, #15): the photo table still exists and still serves flamekeeper moves (expiry stopped using it in #21, favorites in #19). ADR-0017 removes it.
 _Avoid_: Image, file, picture
 
 **Volume**:
@@ -102,8 +102,7 @@ The buffer's volumes are built (#17) and live in `buffer_volume`, one row per al
 _Avoid_: Chunk, shard, part
 
 **Favorite**:
-A photo a user has saved, keyed by user, album and Drive file ID. Moving a photo remaps its favorites to the new file ID. Albums with favorites come after albums without them in the deletion suggestions.
-Not built yet (Stage 1): today's favorites point at the stable photo ID that the photo table provides (ADR-0017).
+A photo a user has saved, keyed by user, album and Drive file ID. Moving a photo remaps its favorites and the album cover to the new file ID, through one shared remap that drains and offloads reuse. A Favorite whose photo no longer exists is left out of the lists, without an error. Albums with favorites come after albums without them in the deletion suggestions.
 _Avoid_: Bookmark, like, star
 
 **Expiry**:
