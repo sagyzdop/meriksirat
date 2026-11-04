@@ -263,7 +263,6 @@ export function AlbumManager({
         <UploadDropzone
           albumId={album.id}
           albumTitle={album.title}
-          existingNames={album.photos.map((p) => p.name)}
           onUploaded={onChanged}
         />
       )}

@@ -24,7 +24,6 @@ import { formatBytes } from '@/lib/format'
 interface UploadDropzoneProps {
   albumId: string
   albumTitle: string
-  existingNames?: string[]
   onUploaded: () => void
 }
 
@@ -61,7 +60,6 @@ function statusDot(job: UploadJob): string {
 export function UploadDropzone({
   albumId,
   albumTitle,
-  existingNames = [],
   onUploaded,
 }: UploadDropzoneProps) {
   const [dragging, setDragging] = React.useState(false)
@@ -125,8 +123,7 @@ export function UploadDropzone({
     const { accepted, skipped } = uploadManager.enqueue(
       albumId,
       albumTitle,
-      imageFiles,
-      new Set(existingNames)
+      imageFiles
     )
     setStarting(false)
     setDetailsOpen(accepted.length <= 8)
@@ -136,13 +133,13 @@ export function UploadDropzone({
       if (accepted.length === 0) {
         toast.warning(
           skipped.length === 1
-            ? `"${skipped[0]}" is already in the album`
-            : `${skipped.length} photos skipped — already in the album`
+            ? `"${skipped[0]}" is already queued`
+            : `${skipped.length} photos skipped — already queued`
         )
         return
       }
       toast.info(
-        `${skipped.length} duplicate${skipped.length > 1 ? 's' : ''} skipped — already in the album`
+        `${skipped.length} duplicate${skipped.length > 1 ? 's' : ''} skipped — already queued`
       )
     }
     onUploaded()
@@ -209,10 +206,10 @@ export function UploadDropzone({
                 <span className="font-medium text-foreground">
                   {skippedNotice[0]}
                 </span>{' '}
-                — already in the album.
+                — already queued.
               </>
             ) : (
-              <>Skipped {skippedNotice.length} photos — already in the album.</>
+              <>Skipped {skippedNotice.length} photos — already queued.</>
             )}
           </span>
           <Button
