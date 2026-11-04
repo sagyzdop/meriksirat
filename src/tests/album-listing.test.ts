@@ -10,6 +10,7 @@ import {
   findListedFileOwner,
   listingTotals,
   listingPhotos,
+  newerListingEntry,
   parseListingEntry,
   planListingRefresh,
   planListingSources,
@@ -652,5 +653,32 @@ describe('album totals from a listing', () => {
     expect(
       listingTotals(readAlbumListing({ entry, sources, now: NOW }))
     ).toBeNull()
+  })
+})
+
+describe('newerListingEntry', () => {
+  const entry = (listedAt: number) => ({
+    folderState: 'ok' as const,
+    sources: {
+      master: {
+        folderId: 'f',
+        stamp: '',
+        status: 'ok' as const,
+        listedAt,
+        failedAt: null,
+        files: [],
+      },
+    },
+  })
+
+  it('prefers the entry that was listed last', () => {
+    expect(newerListingEntry(entry(1), entry(2))).toEqual(entry(2))
+    expect(newerListingEntry(entry(5), entry(2))).toEqual(entry(5))
+  })
+
+  it('falls back to whichever entry exists', () => {
+    expect(newerListingEntry(null, entry(2))).toEqual(entry(2))
+    expect(newerListingEntry(entry(2), null)).toEqual(entry(2))
+    expect(newerListingEntry(null, null)).toBeNull()
   })
 })

@@ -28,17 +28,16 @@ export interface CountWarningViewer {
   isAdmin: boolean
 }
 
-function trustworthy(listing: AlbumListing, now: number): boolean {
+function trustworthy(
+  listing: AlbumListing,
+  volume: VolumeListing,
+  now: number
+): boolean {
   return (
     listing.folderState === 'ok' &&
-    listing.complete &&
-    listing.volumes.every(
-      (v) =>
-        v.status === 'missing' ||
-        (v.status === 'ok' &&
-          v.listedAt !== null &&
-          now - v.listedAt <= LISTING_FRESH_MS)
-    )
+    volume.status === 'ok' &&
+    volume.listedAt !== null &&
+    now - volume.listedAt <= LISTING_FRESH_MS
   )
 }
 
@@ -56,10 +55,10 @@ export function planCountWarning(input: {
 }): CountWarning | null {
   const { listing, viewer, now } = input
   if (!viewer.isOwner && !viewer.isAdmin) return null
-  if (!trustworthy(listing, now)) return null
   const volumes: CountWarningVolume[] = []
   for (const volume of listing.volumes) {
     if (!isShort(volume) || !volume.expected) continue
+    if (!trustworthy(listing, volume, now)) continue
     volumes.push({
       key: volume.key,
       listed: { count: volume.count, bytes: volume.bytes },
@@ -92,14 +91,14 @@ export function planAccept(input: {
   now: number
 }): AcceptPlan {
   const { listing, volumeKey, now } = input
-  if (!trustworthy(listing, now)) {
+  const volume = listing.volumes.find((v) => v.key === volumeKey)
+  if (volume && !trustworthy(listing, volume, now)) {
     return {
       ok: false,
       message:
         'Google Drive could not be fully read just now, so nothing was changed. Please try again later.',
     }
   }
-  const volume = listing.volumes.find((v) => v.key === volumeKey)
   if (!volume || !volume.expected || !isShort(volume)) {
     return {
       ok: false,

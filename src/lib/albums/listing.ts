@@ -369,6 +369,22 @@ export function listedMasterFiles(
   return master?.status === 'ok' ? master.files : null
 }
 
+function entryTime(entry: AlbumListingEntry): number {
+  let latest = 0
+  for (const source of Object.values(entry.sources)) {
+    latest = Math.max(latest, source.listedAt ?? 0, source.failedAt ?? 0)
+  }
+  return latest
+}
+
+export function newerListingEntry(
+  a: AlbumListingEntry | null,
+  b: AlbumListingEntry | null
+): AlbumListingEntry | null {
+  if (!a || !b) return a ?? b
+  return entryTime(b) > entryTime(a) ? b : a
+}
+
 export function parseListingEntry(
   raw: string | null
 ): AlbumListingEntry | null {

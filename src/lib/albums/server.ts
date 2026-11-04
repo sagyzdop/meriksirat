@@ -2,7 +2,11 @@ import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { albumMember, user } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { LISTING_KV_TTL_SECONDS, parseListingEntry } from './listing'
+import {
+  LISTING_KV_TTL_SECONDS,
+  newerListingEntry,
+  parseListingEntry,
+} from './listing'
 import type { AlbumListingEntry } from './listing'
 import type { AlbumAccessLevel } from './types'
 
@@ -107,18 +111,33 @@ function listingKey(folderId: string): string {
   return `album:list:${folderId}`
 }
 
+// Last entry this isolate wrote. When a KV write is refused (daily quota), the
+// next view still finds the fresh listing here instead of re-listing Drive.
+const LISTING_MEMO_MAX = 50
+const listingMemo = new Map<string, AlbumListingEntry>()
+
+function rememberListing(folderId: string, entry: AlbumListingEntry): void {
+  listingMemo.delete(folderId)
+  if (listingMemo.size >= LISTING_MEMO_MAX) {
+    const oldest = listingMemo.keys().next().value
+    if (oldest !== undefined) listingMemo.delete(oldest)
+  }
+  listingMemo.set(folderId, entry)
+}
+
 export async function getCachedListing(
   folderId: string
 ): Promise<AlbumListingEntry | null> {
+  const remembered = listingMemo.get(folderId) ?? null
   try {
     const { env } = await import('cloudflare:workers')
     const raw = await (env.meriksirat_kv as KVNamespace).get(
       listingKey(folderId)
     )
-    return parseListingEntry(raw)
+    return newerListingEntry(parseListingEntry(raw), remembered)
   } catch (error) {
     console.warn('Failed to read album listing cache:', error)
-    return null
+    return remembered
   }
 }
 
@@ -126,6 +145,7 @@ export async function setCachedListing(
   folderId: string,
   entry: AlbumListingEntry
 ): Promise<void> {
+  rememberListing(folderId, entry)
   try {
     const { env } = await import('cloudflare:workers')
     await (env.meriksirat_kv as KVNamespace).put(
@@ -139,6 +159,7 @@ export async function setCachedListing(
 }
 
 export async function invalidateCachedListing(folderId: string): Promise<void> {
+  listingMemo.delete(folderId)
   try {
     const { env } = await import('cloudflare:workers')
     await (env.meriksirat_kv as KVNamespace).delete(listingKey(folderId))
