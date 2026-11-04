@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
-import { APIError, createAuthMiddleware, getOAuthState } from 'better-auth/api'
-import { planNewAccount, readTermsAccepted } from '@/lib/auth/new-account'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
+import { planNewAccount } from '@/lib/auth/new-account'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { drizzle } from 'drizzle-orm/d1'
@@ -34,11 +34,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (newUser) => {
-          const plan = planNewAccount(
-            newUser.email,
-            readTermsAccepted(await getOAuthState()),
-            new Date()
-          )
+          const plan = planNewAccount(newUser.email, new Date())
           if (!plan.ok) {
             throw new APIError('FORBIDDEN', { message: plan.error })
           }

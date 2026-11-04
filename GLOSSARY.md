@@ -144,7 +144,7 @@ A user with an `@alumni.nu.edu.kz` account. Can favorite photos and enter the cl
 _Avoid_: Graduate, when the account rather than the member status is meant
 
 **Terms acceptance**:
-A new user ticks the terms on the login page before Google sign-in. The date is saved on the user (`termsAcceptedAt`) when the account is created, and the account is finished at once. Accounts are never removed for being unfinished. Accounts that existed before this are not asked again.
+The login page states that logging in means agreeing to the Terms of Service and Privacy Policy, with links; there is no checkbox. The date is saved on the user (`termsAcceptedAt`) when the account is created, and the account is finished at once. Accounts are never removed for being unfinished. Accounts that existed before this are not asked again.
 _Avoid_: Signup step, registration
 
 **Club code**:
