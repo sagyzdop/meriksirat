@@ -12,8 +12,8 @@
 >   `../cron/bookings/reminders.md`. The auto-cancel notice is in
 >   `../cron/bookings/cancel-unstarted.md` and the overdue notice
 >   in `../cron/bookings/mark-overdue.md`.
-> - The same cron run also refreshes the bot's command list with
->   `configureTelegramBot`. See `main-menu.md`.
+> - The bot's command list is set separately, once per deploy, by
+>   the hourly cron. See `main-menu.md`.
 > - A member who replies to a reminder is handled like any other
 >   message, see `message-routing.md`.
 

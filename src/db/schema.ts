@@ -379,9 +379,6 @@ export const album = sqliteTable(
       mode: 'timestamp_ms',
     }),
     editShareToken: text('edit_share_token').notNull().unique(),
-    publicNoticePendingAt: integer('public_notice_pending_at', {
-      mode: 'timestamp_ms',
-    }),
     event: text('event').notNull().default(''),
     eventDate: integer('event_date', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })

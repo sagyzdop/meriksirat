@@ -59,7 +59,6 @@ erDiagram
         integer expiry_reminder_30_sent_at
         integer expiry_reminder_7_sent_at
         text edit_share_token "unique"
-        integer public_notice_pending_at
         integer created_at "lists are sorted and grouped by this"
     }
     album_member {

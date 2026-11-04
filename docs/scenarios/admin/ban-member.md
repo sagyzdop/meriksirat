@@ -7,7 +7,7 @@
 > **Notes:**
 > - Admin only. A manager does not see the Ban section. An admin does not see the Ban button on their own page, and the club's master account cannot be banned.
 > - The Ban user button is disabled while the reason is blank and the box stops at 500 characters. The server checks the reason before it checks the caller's role, so a blank or too long reason is refused first with a validation error.
-> - The follow-up work runs right away but only in small amounts: 3 booked bookings and 10 flamekeeper album folders per run, counted across all banned people. If it fails or there is more, the 5-minute cron continues, see [../cron/flamekeepers/ban-cleanup.md](../cron/flamekeepers/ban-cleanup.md).
+> - The follow-up work runs right away but only in small amounts: 3 booked bookings and 10 flamekeeper album folders per run, counted across all banned people. If it fails or there is more, the hourly cron continues, see [../cron/flamekeepers/ban-cleanup.md](../cron/flamekeepers/ban-cleanup.md).
 > - Releasing a folder means deleting the person's flamekeeper folder inside the album with the master Drive token. Only folders that hold no photos and no pending upload are released.
 > - Each cancelled booking also gets a line in the club channel with the reason "Account banned".
 > - A flamekeeper with photos is put into a 14-day drain with reason ban, and one without photos is marked drained at once. A drain already running for another reason keeps its earlier deadline. Moving the photos is described in [../cron/flamekeepers/drain-deadline.md](../cron/flamekeepers/drain-deadline.md) and [../flamekeepers/relay-move-photo.md](../flamekeepers/relay-move-photo.md).

@@ -7,7 +7,7 @@
 > **Notes:**
 > - Levels: below 90 percent is fine, 90 percent up to just under 100 is a warning, 100 percent and over is full. If Google reports no plan limit the level is fine.
 > - Falling from full back to a warning does not message anyone. Climbing from a warning to full does.
-> - The marker is written only after the Telegram message was sent (or when nothing needs sending). If there are no admins with Telegram or the run's budget is short, the next 5-minute run tries again.
+> - The marker is written only after the Telegram message was sent (or when nothing needs sending). If there are no admins with Telegram or the run's budget is short, the next hourly run tries again.
 > - The step costs 4 outside requests when it refreshes the reading (token, quota, KV) and nothing when the cache is fresh. It is skipped while the buffer is not configured.
 > - The banner reads only the cached reading, never Google, and is shown only to emails ending `@nu.edu.kz`, not to alumni. It does not mention storage; it links to the profile.
 > - Nothing falls back to flamekeepers. The Free up space panel on the dashboard Albums tab is how admins make room.

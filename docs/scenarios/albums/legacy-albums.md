@@ -2,7 +2,7 @@
 
 > **Question:** How is an older album shown when its photos are not yet recorded in the database, and how does it become a normal album?
 >
-> **Answer:** An album with no indexing date (photosIndexedAt empty) has its photos read straight from its Drive folder with the master token, plus any flamekeeper-owned photos already in the database, because the master cannot see those. Opening such an album also asks the background indexer to prioritise it. A 5-minute cron job later copies the folder's image list into the photo table and stamps the album as indexed. After that the album is read from the database like any new album. If the folder is in the Drive bin or deleted, indexing is skipped and marked until the folder is back and the album is refreshed.
+> **Answer:** An album with no indexing date (photosIndexedAt empty) has its photos read straight from its Drive folder with the master token, plus any flamekeeper-owned photos already in the database, because the master cannot see those. Opening such an album also asks the background indexer to prioritise it. The 5-minute cron job later copies the folder's image list into the photo table and stamps the album as indexed. After that the album is read from the database like any new album. If the folder is in the Drive bin or deleted, indexing is skipped and marked until the folder is back and the album is refreshed.
 >
 > **Notes:**
 > - The indexer is described in ../cron/albums-and-housekeeping/photo-backfill.md and is not redrawn here. Each run handles at most 5 albums and 500 photos and respects a daily write budget (default 60000 writes, 3 per photo) kept in KV `photo-backfill:budget` with a 2 day TTL. Albums that someone opened go first (oldest request first), then the newest event date first.

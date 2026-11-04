@@ -169,7 +169,7 @@ The app uses the following Cloudflare resources:
 - **D1 Database**: `meriksirat_d1` — stores all application data
 - **R2 Bucket**: `meriksirat` — stores equipment images and return photos
 - **KV Namespace**: `meriksirat_kv` — caches album listing data
-- **Cron Triggers**: Runs every 5 minutes to check booking statuses
+- **Cron Triggers**: Three schedules (every 5 minutes, hourly, daily at 03:00 UTC), each with its own budget. See [docs/scenarios/cron/overview.md](docs/scenarios/cron/overview.md)
 
 ## Project Structure
 

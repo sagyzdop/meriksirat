@@ -7,7 +7,8 @@
  */
 
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
-import { createBudget, type Budget } from './src/lib/cron/budget'
+import { type Budget } from './src/lib/cron/budget'
+import { planScheduledRun, type CronStepName } from './src/lib/cron/schedule'
 import { guestHtmlTtlSeconds } from './src/lib/cache/guest-html'
 
 interface Env {
@@ -17,6 +18,7 @@ interface Env {
   TELEGRAM_BOT_TOKEN?: string
   TELEGRAM_CLUB_CHANNEL_ID?: string
   BETTER_AUTH_URL?: string
+  CF_VERSION_METADATA?: { id: string }
 }
 
 const serverEntry = createServerEntry({
@@ -118,101 +120,72 @@ export default {
 
   // Handle scheduled cron triggers
   async scheduled(
-    _controller: ScheduledController,
+    controller: ScheduledController,
     env: Env,
     ctx: ExecutionContext
   ): Promise<void> {
-    ctx.waitUntil(runScheduled(env))
+    ctx.waitUntil(runScheduled(controller.cron, env))
   },
 }
 
 type Step = (env: Env, budget: Budget) => Promise<unknown>
 
-const STEPS: Array<[string, () => Promise<Step>]> = [
-  [
-    'cancelUnstartedBookings',
-    () =>
-      import('./src/lib/booking/cron').then((m) => m.cancelUnstartedBookings),
-  ],
-  [
-    'updateOverdueBookings',
-    () => import('./src/lib/booking/cron').then((m) => m.updateOverdueBookings),
-  ],
-  [
-    'sendBookingReminders',
-    () => import('./src/lib/booking/cron').then((m) => m.sendBookingReminders),
-  ],
-  [
-    'checkFlamekeeperHealth',
-    () =>
-      import('./src/lib/pool/health-server').then(
-        (m) => m.runFlamekeeperHealth
-      ),
-  ],
-  [
-    'maintainPool',
-    () => import('./src/lib/pool/server').then((m) => m.runPoolMaintenance),
-  ],
-  [
-    'drainFlamekeepers',
-    () =>
-      import('./src/lib/pool/drain-cron').then((m) => m.runDrainMaintenance),
-  ],
-  [
-    'finishBans',
-    () => import('./src/lib/pool/ban-server').then((m) => m.runBanMaintenance),
-  ],
-  [
-    'graduateFlamekeepers',
-    () =>
-      import('./src/lib/pool/graduation-server').then(
-        (m) => m.runGraduationMaintenance
-      ),
-  ],
-  [
-    'expireAlbums',
-    () => import('./src/lib/albums/expiry').then((m) => m.runAlbumExpiry),
-  ],
-  [
-    'notifyPublicAlbums',
-    () =>
-      import('./src/lib/albums/public-notice-server').then(
-        (m) => m.runPublicAlbumNotices
-      ),
-  ],
-  [
-    'backfillAlbumPhotos',
-    () =>
-      import('./src/lib/albums/photo-index').then((m) => m.runPhotoBackfill),
-  ],
-  [
-    'checkBufferUsage',
-    () =>
-      import('./src/lib/buffer/usage-server').then(
-        (m) => m.runBufferUsageCheck
-      ),
-  ],
-  [
-    'configureTelegramBot',
-    () =>
-      import('./src/lib/telegram/configure').then(
-        (m) => m.configureTelegramBot
-      ),
-  ],
-]
+const STEPS: Record<CronStepName, () => Promise<Step>> = {
+  cancelUnstartedBookings: () =>
+    import('./src/lib/booking/cron').then((m) => m.cancelUnstartedBookings),
+  updateOverdueBookings: () =>
+    import('./src/lib/booking/cron').then((m) => m.updateOverdueBookings),
+  sendBookingReminders: () =>
+    import('./src/lib/booking/cron').then((m) => m.sendBookingReminders),
+  backfillAlbumPhotos: () =>
+    import('./src/lib/albums/photo-index').then((m) => m.runPhotoBackfill),
+  checkFlamekeeperHealth: () =>
+    import('./src/lib/pool/health-server').then((m) => m.runFlamekeeperHealth),
+  maintainPool: () =>
+    import('./src/lib/pool/server').then((m) => m.runPoolMaintenance),
+  drainFlamekeepers: () =>
+    import('./src/lib/pool/drain-cron').then((m) => m.runDrainMaintenance),
+  finishBans: () =>
+    import('./src/lib/pool/ban-server').then((m) => m.runBanMaintenance),
+  expireAlbums: () =>
+    import('./src/lib/albums/expiry').then((m) => m.runAlbumExpiry),
+  checkBufferUsage: () =>
+    import('./src/lib/buffer/usage-server').then((m) => m.runBufferUsageCheck),
+  graduateFlamekeepers: () =>
+    import('./src/lib/pool/graduation-server').then(
+      (m) => m.runGraduationMaintenance
+    ),
+}
 
-async function runScheduled(env: Env): Promise<void> {
-  const budget = createBudget()
+async function runScheduled(cron: string, env: Env): Promise<void> {
+  const plan = planScheduledRun(cron)
+  if (!plan) {
+    console.warn(`[cron] no steps for schedule "${cron}"`)
+    return
+  }
+  const { budget } = plan
 
-  for (const [name, load] of STEPS) {
+  for (const name of plan.steps) {
     try {
       await (
-        await load()
+        await STEPS[name]()
       )(env, budget)
     } catch (error) {
       console.error(`Error in ${name}:`, error)
     }
   }
 
-  console.log(`[cron] outside requests ${budget.spent()}/${budget.total}`)
+  if (plan.configuresBot) {
+    try {
+      const { configureTelegramBotOncePerDeploy } =
+        await import('./src/lib/telegram/configure')
+      await configureTelegramBotOncePerDeploy(env, budget)
+    } catch (error) {
+      console.error('Error in configureTelegramBot:', error)
+    }
+  }
+
+  console.log(
+    `[cron] ${cron} outside requests ${budget.spent()}/${budget.total}`
+  )
 }
