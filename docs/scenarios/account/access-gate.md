@@ -5,17 +5,17 @@
 >
 > **Answer:** Every page in the signed-in area first asks the
 > server who the person is. No session means `/login`. A member
-> who has not finished onboarding, or a non-member who has neither
-> accepted the terms nor connected Drive, goes to `/onboarding`.
-> A non-member can only open `/profile` and `/favorites`, and is
+> who has not finished onboarding goes to `/onboarding`. A
+> non-member is never sent to onboarding. A non-member can only open `/profile` and `/favorites`, and is
 > sent to `/profile` for anything else.
 >
 > **Notes:**
 > - Member: the account has isMember set. Their onboarding is
 >   unfinished until onboardingComplete is set.
-> - Non-member: onboarding is unfinished until the terms are
->   accepted or a flamekeeper row exists. A non-member that is the
->   Google master account is never sent to onboarding.
+> - Non-member: has no onboarding. Terms are accepted on the login
+>   page when the account is created, so there is no signup step
+>   left to finish, and an account is never removed for being
+>   unfinished.
 > - `/profile` and `/favorites` count along with any sub-path.
 >   Trailing slashes are ignored.
 > - The `/albums` pages are outside the signed-in area. Anyone

@@ -4,9 +4,8 @@
 > profile on `/onboarding`?
 >
 > **Answer:** The member fills in name, birthday, NU ID, major
-> and graduation year and clicks "Complete Onboarding". A Terms
-> of Service pop-up asks for "I Agree". The details are then
-> saved and the app looks at Telegram. In local development with
+> and graduation year and clicks "Complete Onboarding". The
+> details are saved and the app looks at Telegram. In local development with
 > DEV=true, or if Telegram is already linked, onboarding finishes
 > at once and the member goes to `/equipment`. Otherwise the
 > Telegram step is shown.
@@ -20,11 +19,12 @@
 > - Saving the details does not mark onboarding complete. That
 >   happens when Telegram is linked, or as drawn here when it is
 >   already linked or skipped.
-> - The pop-up agreement is not stored. Only the NU and alumni
->   signup steps save a terms date.
+> - The terms were accepted on the login page and saved when the
+>   account was created, see sign-in.md. Onboarding asks nothing
+>   about terms.
 > - Finishing also refreshes the birthdays calendar. A failure
 >   there is only logged and does not stop the member.
-> - Any failure after "I Agree" shows the one message "Failed to
+> - Any failure on save shows the one message "Failed to
 >   save profile information. Please try again." Examples are an
 >   NU ID that another account already uses, a signed-out
 >   session, or a refused membership check.

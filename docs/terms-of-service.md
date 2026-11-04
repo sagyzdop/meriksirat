@@ -10,8 +10,7 @@ agree to be bound by these Terms.
 
 ## 1. Acceptance of Terms
 
-By completing the registration process and accepting these Terms during
-signup, you acknowledge that you have read, understood, and agree to be
+By accepting these Terms on the login page when you create an account, you acknowledge that you have read, understood, and agree to be
 bound by these Terms. If you do not agree, you must not use the Platform.
 
 ## 2. Eligibility
@@ -26,17 +25,13 @@ membership with the club code. Your account is non-transferable.
 
 ### 3.1 Account Creation
 
-To sign up with an `@nu.edu.kz` account, you must accept these Terms, pledge
-at least 1 GB of Drive storage, give your expected graduation date and connect
-your Drive (see Section 14). To sign up with an `@alumni.nu.edu.kz` account,
-you only need to accept these Terms. Club members must also provide accurate
-personal information including their full name, date of birth, university ID,
-major, and graduation year.
+To sign up with an `@nu.edu.kz` or `@alumni.nu.edu.kz` account, you must accept
+these Terms on the login page. The date you accept is saved with your account.
+Connecting a Drive as a flamekeeper is optional and comes later (see Section
+14). Club members must also provide accurate personal information including
+their full name, date of birth, university ID, major, and graduation year.
 
-An account that is not a club member, has no flamekeeper record or Drive
-connection, owns nothing on the Platform and is 7 days old is deleted. You can
-sign in again and start over. Accounts with an `@alumni.nu.edu.kz` email are
-not deleted this way.
+An account that is not a club member is not deleted for being unfinished.
 
 ### 3.2 Account Retention
 

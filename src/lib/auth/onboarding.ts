@@ -42,27 +42,6 @@ export const submitClubCodeFn = createServerFn({ method: 'POST' })
     return { success: true as const }
   })
 
-export const acceptSignupTermsFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ accepted: z.literal(true) }))
-  .handler(async () => {
-    const { userContext } = await import('@/lib/auth/context')
-    const { user } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
-    const { signupKind } = await import('@/lib/auth/signup-domain')
-    const { session, database } = await userContext()
-
-    if (signupKind(session.user.email) === 'nu') {
-      throw new Error('NU accounts finish signup by connecting Drive')
-    }
-
-    await database
-      .update(user)
-      .set({ termsAcceptedAt: new Date(), updatedAt: new Date() })
-      .where(eq(user.id, session.user.id))
-
-    return { success: true as const }
-  })
-
 export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
   .validator(updateOnboardingSchema)
   .handler(async ({ data }) => {
@@ -196,45 +175,3 @@ export const getTelegramUpdateLinkUrlFn = createServerFn({
     url,
   }
 })
-
-/**
- * Deletes an account that never finished signup. Called when the user
- * confirms leaving the signup page. Only accounts that are not members, have
- * not accepted the terms and have no flamekeeper record qualify.
- *
- * Sessions, accounts and telegram link tokens cascade via foreign keys; such
- * an account can never have bookings, so nothing else references it.
- */
-export const deleteOnboardingAccountFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ confirm: z.literal(true) }))
-  .handler(async () => {
-    const { userContext } = await import('@/lib/auth/context')
-    const { user } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
-    const { session: sessionData, database } = await userContext()
-
-    // Safety: an onboarded account must never be deleted through this path.
-    const { flamekeeper } = await import('@/db/schema')
-    const record = await database
-      .select({
-        isMember: user.isMember,
-        termsAcceptedAt: user.termsAcceptedAt,
-      })
-      .from(user)
-      .where(eq(user.id, sessionData.user.id))
-      .limit(1)
-      .then((rows) => rows[0])
-    const fk = await database
-      .select({ userId: flamekeeper.userId })
-      .from(flamekeeper)
-      .where(eq(flamekeeper.userId, sessionData.user.id))
-      .get()
-
-    if (!record || record.isMember || record.termsAcceptedAt || fk) {
-      throw new Error('Account has already finished signup')
-    }
-
-    await database.delete(user).where(eq(user.id, sessionData.user.id))
-
-    return { success: true }
-  })

@@ -1,34 +1,18 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useBlocker, useNavigate, useRouter } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import {
   updateUserOnboardingFn,
   completeTelegramOnboardingFn,
   getTelegramLinkUrlFn,
-  deleteOnboardingAccountFn,
-  acceptSignupTermsFn,
 } from '@/lib/auth/onboarding'
 import { cn } from '@/lib/utils'
 import { toDateOnlyString } from '@/lib/format'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { OnboardingHeader } from '@/components/onboarding/components/onboarding-header'
-import { TermsStep } from '@/components/onboarding/components/terms-step'
 import { ProfileStep } from '@/components/onboarding/components/profile-step'
 import { TelegramStep } from '@/components/onboarding/components/telegram-step'
-import { FlamekeeperStep } from '@/components/onboarding/components/flamekeeper-step'
-import { signupKind } from '@/lib/auth/signup-domain'
-import { TosAcceptanceDialog } from '@/components/onboarding/components/tos-acceptance-dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 
 const updateOnboardingSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -43,67 +27,15 @@ const updateOnboardingSchema = z.object({
 
 type OnboardingForm = z.infer<typeof updateOnboardingSchema>
 
-type OnboardingStep = 'signup' | 'profile' | 'telegram'
+type OnboardingStep = 'profile' | 'telegram'
 
-interface PageProps extends React.ComponentProps<'div'> {
-  isMember: boolean
-  email: string
-  connectError?: string | null
-}
-
-export function Page({
-  isMember,
-  email,
-  connectError,
-  className,
-  ...props
-}: PageProps) {
+export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   const navigate = useNavigate()
   const router = useRouter()
-  const [step, setStep] = useState<OnboardingStep>(
-    isMember ? 'profile' : 'signup'
-  )
-  const [isAcceptingTerms, setIsAcceptingTerms] = useState(false)
+  const [step, setStep] = useState<OnboardingStep>('profile')
   const [telegramUrl, setTelegramUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isCheckingTelegram, setIsCheckingTelegram] = useState(false)
-  const [showTosDialog, setShowTosDialog] = useState(false)
-  const [pendingFormData, setPendingFormData] = useState<OnboardingForm | null>(
-    null
-  )
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  // While signup is unfinished, leaving the page means discarding the new
-  // account, so block navigation and confirm the deletion up front. Members
-  // finishing their profile are never deleted. The ref is flipped
-  // synchronously on completion so the finishing navigation is never blocked.
-  const completeNavigatingRef = useRef(false)
-  const blocker = useBlocker({
-    enableBeforeUnload: true,
-    withResolver: true,
-    shouldBlockFn: ({ next }) =>
-      step === 'signup' &&
-      !completeNavigatingRef.current &&
-      next.fullPath !== '/onboarding',
-  })
-
-  const handleStayOnboarding = () => {
-    if (blocker.status === 'blocked') blocker.reset()
-  }
-
-  const handleDeleteAndLeave = async () => {
-    if (blocker.status !== 'blocked') return
-    setIsDeleting(true)
-    try {
-      await deleteOnboardingAccountFn({ data: { confirm: true } })
-      blocker.proceed()
-    } catch (error) {
-      console.error('Failed to delete onboarding account:', error)
-      setError('Could not delete the account. Please close this page.')
-      setIsDeleting(false)
-      if (blocker.status === 'blocked') blocker.reset()
-    }
-  }
 
   const form = useForm<OnboardingForm>({
     resolver: zodResolver(updateOnboardingSchema),
@@ -122,18 +54,6 @@ export function Page({
   })
 
   const onSubmit = async (data: OnboardingForm) => {
-    setPendingFormData(data)
-    setShowTosDialog(true)
-  }
-
-  const handleTosAccept = async () => {
-    if (!pendingFormData) return
-
-    setShowTosDialog(false)
-    await submitOnboarding(pendingFormData)
-  }
-
-  const submitOnboarding = async (data: OnboardingForm) => {
     try {
       setError(null)
       const result = await updateUserOnboardingFn({
@@ -155,7 +75,6 @@ export function Page({
         if (tokenResult.isDevelopment) {
           await completeTelegramOnboardingFn({ data: { skipTelegram: true } })
           await router.invalidate()
-          completeNavigatingRef.current = true
           await navigate({ to: '/equipment' })
           return
         }
@@ -165,7 +84,6 @@ export function Page({
         if (tokenResult.alreadyLinked) {
           await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
           await router.invalidate()
-          completeNavigatingRef.current = true
           navigate({ to: '/equipment' })
         } else {
           setTelegramUrl(tokenResult.url)
@@ -174,21 +92,6 @@ export function Page({
     } catch (error) {
       console.error('Onboarding failed:', error)
       setError('Failed to save profile information. Please try again.')
-    }
-  }
-
-  const handleAcceptTerms = async () => {
-    setIsAcceptingTerms(true)
-    setError(null)
-    try {
-      await acceptSignupTermsFn({ data: { accepted: true } })
-      await router.invalidate()
-      completeNavigatingRef.current = true
-      await navigate({ to: '/profile' })
-    } catch (error) {
-      console.error('Accepting terms failed:', error)
-      setError('Could not create the account. Please try again.')
-      setIsAcceptingTerms(false)
     }
   }
 
@@ -204,7 +107,6 @@ export function Page({
     try {
       await completeTelegramOnboardingFn({ data: { skipTelegram: false } })
       await router.invalidate()
-      completeNavigatingRef.current = true
       navigate({ to: '/equipment' })
     } catch {
       setTimeout(checkTelegramStatus, 3000)
@@ -213,28 +115,7 @@ export function Page({
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      {step === 'signup' ? (
-        <>
-          <OnboardingHeader
-            title="Welcome"
-            description="Create your NU Image account"
-          />
-          {signupKind(email) === 'nu' ? (
-            <FlamekeeperStep
-              error={connectError ?? null}
-              onBeforeRedirect={() => {
-                completeNavigatingRef.current = true
-              }}
-            />
-          ) : (
-            <TermsStep
-              error={error}
-              isSubmitting={isAcceptingTerms}
-              onAccept={handleAcceptTerms}
-            />
-          )}
-        </>
-      ) : step === 'telegram' ? (
+      {step === 'telegram' ? (
         <>
           <OnboardingHeader
             title="Link Your Telegram"
@@ -256,48 +137,6 @@ export function Page({
           <ProfileStep form={form} error={error} onSubmit={onSubmit} />
         </>
       )}
-      <TosAcceptanceDialog
-        open={showTosDialog}
-        onOpenChange={setShowTosDialog}
-        onAccept={handleTosAccept}
-        isSubmitting={form.formState.isSubmitting}
-      />
-
-      <AlertDialog
-        open={blocker.status === 'blocked'}
-        onOpenChange={(open) => {
-          if (!open && blocker.status === 'blocked') blocker.reset()
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Leave signup?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your signup is not finished yet. If you leave now, your new
-              account will be deleted and you can sign in again later to start
-              over.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isDeleting}
-              onClick={handleStayOnboarding}
-            >
-              Stay
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleDeleteAndLeave()
-              }}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? 'Deleting account...' : 'Delete account and leave'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

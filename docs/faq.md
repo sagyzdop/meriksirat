@@ -5,24 +5,19 @@
 ### How do I create an account?
 
 New accounts need an `@nu.edu.kz` or `@alumni.nu.edu.kz` Google account. Sign
-in with it and you'll be guided through signup.
+in with it. Tick the box to accept the terms of service on the login page, then
+continue with Google. Your account is ready straight away and you can browse
+albums and favorite photos. There is no Drive step.
 
-- **`@nu.edu.kz`:** accept the terms, pledge at least 1 GB of your NU Drive,
-  give your expected graduation date and connect Drive. Then you land on your
-  profile.
-- **`@alumni.nu.edu.kz`:** accept the terms. There is no Drive step. You get an
-  account that can browse albums and favorite photos.
+`@nu.edu.kz` accounts can also become flamekeepers from their profile, which is
+optional.
 
 To book equipment and create albums you must be a club member. Enter the club
 code on your profile (any time) and you'll be asked for your name, date of
 birth, NU ID, major and graduation year, then to link your Telegram account.
-If you sign up and do nothing for 7 days, the account is removed and you can
-sign in again. This does not apply to `@alumni.nu.edu.kz` accounts, which are
-kept.
+Accounts are never removed for being unfinished.
 
-People who already had an account keep it, whatever their email. If yours is
-an `@nu.edu.kz` account without Drive connected, your profile asks you to
-connect it.
+People who already had an account keep it, whatever their email.
 
 ### Why do I need to link Telegram?
 

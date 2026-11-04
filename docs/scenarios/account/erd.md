@@ -7,7 +7,8 @@
 > the user table and its sign-in helpers (session and account).
 > Telegram linking uses telegram_link_token, joining the club
 > reads settings.club_code, and a flamekeeper row decides whether
-> a non-member has finished signup or may delete the account.
+> a non-member may delete the account. The terms date is written
+> to user.terms_accepted_at when the account is created.
 >
 > **Notes:**
 > - Deleting a user cascades to session, account, favorite,
@@ -16,9 +17,9 @@
 >   reservations and flamekeeper volumes, which these scenarios
 >   do not use.
 > - KV: the key `flamekeeper-oauth:{random id}` holds the pledge,
->   graduation date and terms time while a new NU user is at
+>   graduation date and terms time while a flamekeeper is at
 >   Google. It lasts 10 minutes and is deleted when the person
->   returns. See signup-nu.md.
+>   returns. See flamekeepers/connect-drive.md.
 > - No R2 data is used by these scenarios.
 > - Telegram link tokens are random 32-character ids that last
 >   10 minutes.

@@ -19,8 +19,8 @@
 > - The Google return check only happens after Google has handed
 >   back tokens, so a failed token exchange shows the token error
 >   first.
-> - The club account is also skipped by onboarding, so it is not
->   sent to the sign-up pages.
+> - Non-members are never sent to onboarding, so the club account
+>   is not sent to any sign-up page.
 > - Normal connection steps are in connect-drive.md and
 >   drive-callback.md.
 

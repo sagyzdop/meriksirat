@@ -7,8 +7,11 @@
 > created. Drive and the club code are optional later steps, so nothing needs
 > Drive connected at signup. Unfinished accounts are never deleted: the 7-day
 > cleanup and the leave dialog are removed. The minimum pledge is 512 MB, not
-> 1 GB. No ADR records the new signup flow yet; #15 is its reference. The text
-> below is the original decision, kept for history.
+> 1 GB. The new signup flow is built (#28): the terms box on the login page is
+> read by a Better Auth user-creation hook, which saves `termsAcceptedAt` or
+> refuses the account; see [sign-in](../scenarios/account/sign-in.md). No other
+> ADR records it; #15 is its reference. The text below is the original
+> decision, kept for history.
 
 The club needs storage more than it needs open signup, so there is now one
 signup flow instead of a choice between "member" and "flamekeeper". New accounts

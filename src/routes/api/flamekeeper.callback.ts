@@ -1,8 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
-import { eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { flamekeeper, flamekeeperGrant, user } from '@/db/schema'
+import { flamekeeper, flamekeeperGrant } from '@/db/schema'
 import { isMasterEmail } from '@/lib/flamekeeper/master'
 import { forgetFlamekeeperAccessToken } from '@/lib/flamekeeper/tokens'
 import { resolveSession } from '@/lib/auth/resolve-session'
@@ -49,18 +48,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         }
 
         const database = db(env.meriksirat_d1 as D1Database)
-        const rows = await database
-          .select({ isMember: user.isMember })
-          .from(user)
-          .where(eq(user.id, session.user.id))
-          .get()
-        const existingFk = await database
-          .select({ userId: flamekeeper.userId })
-          .from(flamekeeper)
-          .where(eq(flamekeeper.userId, session.user.id))
-          .get()
-        const failPath =
-          rows?.isMember || existingFk ? '/profile' : '/onboarding'
+        const failPath = '/profile'
 
         if (!nonce) return redirectTo(origin, failPath, 'state')
         const key = `flamekeeper-oauth:${nonce}`

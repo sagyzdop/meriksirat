@@ -144,6 +144,10 @@ _Avoid_: Club user, regular user
 A user with an `@alumni.nu.edu.kz` account. Can favorite photos and enter the club code, but can't be a flamekeeper.
 _Avoid_: Graduate, when the account rather than the member status is meant
 
+**Terms acceptance**:
+A new user ticks the terms on the login page before Google sign-in. The date is saved on the user (`termsAcceptedAt`) when the account is created, and the account is finished at once. Accounts are never removed for being unfinished. Accounts that existed before this are not asked again.
+_Avoid_: Signup step, registration
+
 **Club code**:
 The single, rotatable code a user enters to become a member.
 _Avoid_: Invite code, password
