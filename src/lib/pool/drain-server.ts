@@ -16,6 +16,7 @@ import {
 import type { DrainStatus } from '@/lib/flamekeeper/types'
 import { formatLongDate } from '@/lib/club-time'
 import { siteOrigin } from '@/lib/format'
+import { graduationDateError } from '@/lib/graduation-date'
 import { createBudget, takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import {
   drainBytesLeft,
@@ -30,7 +31,6 @@ import { releaseAbandonedCutoff } from './volumes'
 
 export interface DrainRow extends DrainFlamekeeper {
   userId: string
-  graduationDate: string
   drainAdminStartedAt: Date | null
   drainAdminRemindedAt: Date | null
 }
@@ -45,7 +45,6 @@ export const drainColumns = {
   drainReminderSentAt: flamekeeper.drainReminderSentAt,
   drainAdminStartedAt: flamekeeper.drainAdminStartedAt,
   drainAdminRemindedAt: flamekeeper.drainAdminRemindedAt,
-  graduationDate: flamekeeper.graduationDate,
 }
 
 export async function loadDrainRow(
@@ -356,15 +355,20 @@ export async function changePledge(
   }
   const hasPhotos = row.usedBytes > 0 && (await hasPhotosLeft(database, userId))
   const transition = planFlamekeeperEdit(row, input, now, hasPhotos)
-  await database
-    .update(flamekeeper)
-    .set({
-      pledgedBytes: input.pledgedBytes,
-      graduationDate: input.graduationDate,
-      graduationConfirmedAt: now,
-      updatedAt: now,
-    })
-    .where(eq(flamekeeper.userId, userId))
+  await database.batch([
+    database
+      .update(flamekeeper)
+      .set({
+        pledgedBytes: input.pledgedBytes,
+        graduationConfirmedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(flamekeeper.userId, userId)),
+    database
+      .update(user)
+      .set({ graduationDate: input.graduationDate, updatedAt: now })
+      .where(eq(user.id, userId)),
+  ])
   await applyDrainTransition(database, userId, transition, now)
   if (transition.kind === 'drain') {
     await sendDrainStartedEmail(
@@ -372,6 +376,42 @@ export async function changePledge(
       (await loadDrainRow(database, userId))!
     )
   }
+}
+
+export async function saveGraduationDate(
+  database: Database,
+  userId: string,
+  graduationDate: string,
+  now: Date = new Date()
+): Promise<void> {
+  const row = await loadDrainRow(database, userId)
+  const current = await database
+    .select({ graduationDate: user.graduationDate })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get()
+  const error = graduationDateError(
+    graduationDate,
+    {
+      isFlamekeeper: !!row && row.state !== 'drained',
+      current: current?.graduationDate,
+    },
+    now
+  )
+  if (error) throw new Error(error)
+  if (row && row.state !== 'drained') {
+    await changePledge(
+      database,
+      userId,
+      { pledgedBytes: row.pledgedBytes, graduationDate },
+      now
+    )
+    return
+  }
+  await database
+    .update(user)
+    .set({ graduationDate, updatedAt: now })
+    .where(eq(user.id, userId))
 }
 
 export async function invalidateAlbumDetailIfCached(

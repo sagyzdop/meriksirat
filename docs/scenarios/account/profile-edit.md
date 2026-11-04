@@ -11,7 +11,7 @@
 >
 > **Notes:**
 > - Editable: first name, last name, birthday, Instagram, major,
->   graduation year and NU ID. Email cannot be changed. Status,
+>   graduation month and NU ID. Email cannot be changed. Status,
 >   role, clearance level and the other account facts sit on the
 >   "Admin Managed" tab and cannot be changed here.
 > - The Telegram username box is also locked. Its "Update
@@ -20,8 +20,10 @@
 >   described in join-club.md and delete-account.md.
 > - When the form has a birthday, the birthdays calendar is
 >   refreshed after saving. A failure there is only logged.
-> - The server requires non-empty names and a graduation year
->   from 1900 to 2100. A failure shows the server's message, or
+> - The server requires non-empty names and a graduation
+>   month as a date. Anyone may enter a past month; a flamekeeper
+>   must enter a future one, and a nearer date follows the 60-day
+>   rule in change-pledge.md. A failure shows the server's message, or
 >   "Failed to update profile".
 
 ```mermaid

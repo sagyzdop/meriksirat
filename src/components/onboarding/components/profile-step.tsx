@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { GraduationMonthInput } from '@/components/shared/graduation-month-input'
 import DatePicker from '@/components/shared/date-picker'
 
 interface ProfileStepProps {
@@ -118,16 +119,16 @@ export function ProfileStep({ form, error, onSubmit }: ProfileStepProps) {
           />
           <FormField
             control={form.control}
-            name="graduationYear"
+            name="graduationDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Graduation Year</FormLabel>
+                <FormLabel>Graduation month</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="Enter your graduation year"
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value)}
+                  <GraduationMonthInput
+                    value={field.value ?? ''}
+                    onValueChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
                   />
                 </FormControl>
                 <FormMessage />

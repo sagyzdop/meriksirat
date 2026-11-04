@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
-import { useSearch } from '@tanstack/react-router'
+import { Link, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 export function Page({ className, ...props }: React.ComponentProps<'div'>) {
@@ -26,7 +26,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
     try {
       await authClient.signIn.social({
         provider: 'google',
-        additionalData: { termsAccepted: true },
+        additionalData: { termsAccepted },
         callbackURL: '/login',
         errorCallbackURL: '/login',
       })
@@ -85,7 +85,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
               htmlFor="loginTerms"
               className="text-sm font-normal leading-snug"
             >
-              I have read and accept the{' '}
+              New here? I have read and accept the{' '}
               <a
                 href={TERMS_URL}
                 target="_blank"
@@ -101,7 +101,6 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
             variant="outline"
             type="button"
             onClick={handleGoogleSignIn}
-            disabled={!termsAccepted}
             className="w-full"
           >
             <svg
@@ -120,6 +119,10 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
       </FieldGroup>
 
       <FieldDescription className="px-6 text-center">
+        <Link to="/about" className="underline hover:text-primary">
+          About NU Image
+        </Link>
+        <br />
         Made by{' '}
         <a
           href="https://sagyzdop.com"

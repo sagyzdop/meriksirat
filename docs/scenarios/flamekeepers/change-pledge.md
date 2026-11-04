@@ -1,6 +1,6 @@
 # Change the pledge or graduation date
 
-> **Question:** What happens when a flamekeeper edits their pledge or expected graduation date?
+> **Question:** What happens when a flamekeeper edits their pledge or expected graduation month?
 >
 > **Answer:** The edit dialog sends both values to the server, which saves them and then decides whether the flamekeeper must start moving photos, may go back to normal, or carries on unchanged. A new pledge below the space already used starts a 14-day drain of the excess. A graduation date under 60 days away starts a drain of all photos, or ends flamekeeping at once if none are held. Raising the pledge above usage returns a full or pledge-draining flamekeeper to normal. The dialog closes with a toast and the profile refreshes.
 >
@@ -21,6 +21,7 @@
 >   the message "Pledge at least 1 GB" or "Pledge at most 1024 GB".
 > - A drained flamekeeper cannot edit and must sign up again, see
 >   connect-drive.md. A lost flamekeeper can still edit.
+> - The date is stored once, on the user, not on the flamekeeper. Changing it from the profile form follows the same 60-day rule as this dialog.
 > - A graduation date that is unchanged is not re-checked for
 >   being in the future.
 > - After saving, profile data is reloaded, see profile-card.md.

@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { GraduationMonthInput } from '@/components/shared/graduation-month-input'
 import { Label } from '@/components/ui/label'
 import { updateFlamekeeperFn } from '@/lib/flamekeeper/functions'
 import {
@@ -37,7 +38,7 @@ export function EditPledgeDialog({
     String(Math.round(bytesToGb(flamekeeper.pledgedBytes) * 10) / 10)
   )
   const [graduationDate, setGraduationDate] = useState(
-    flamekeeper.graduationDate
+    flamekeeper.graduationDate ?? ''
   )
   const { pending: isSaving, run } = useAsyncAction()
 
@@ -45,6 +46,10 @@ export function EditPledgeDialog({
     const pledgeGb = Number(pledge)
     if (!isValidPledgeGb(pledgeGb)) {
       toast.error(`Pledge at least ${MIN_PLEDGE_GB} GB`)
+      return
+    }
+    if (!graduationDate) {
+      toast.error('Enter your expected graduation month')
       return
     }
     await run(async () => {
@@ -78,12 +83,11 @@ export function EditPledgeDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="editGraduation">Expected graduation date</Label>
-            <Input
+            <Label htmlFor="editGraduation">Expected graduation month</Label>
+            <GraduationMonthInput
               id="editGraduation"
-              type="date"
               value={graduationDate}
-              onChange={(e) => setGraduationDate(e.target.value)}
+              onValueChange={setGraduationDate}
             />
           </div>
         </div>

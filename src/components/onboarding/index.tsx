@@ -22,14 +22,18 @@ const updateOnboardingSchema = z.object({
   instagramUsername: z.string().optional(),
   nuId: z.string().min(1, 'NU ID is required'),
   major: z.string().min(1, 'Major is required'),
-  graduationYear: z.string().min(1, 'Graduation year is required'),
+  graduationDate: z.string().min(1, 'Graduation month is required'),
 })
 
 type OnboardingForm = z.infer<typeof updateOnboardingSchema>
 
 type OnboardingStep = 'profile' | 'telegram'
 
-export function Page({ className, ...props }: React.ComponentProps<'div'>) {
+interface PageProps extends React.ComponentProps<'div'> {
+  graduationDate?: string | null
+}
+
+export function Page({ graduationDate, className, ...props }: PageProps) {
   const navigate = useNavigate()
   const router = useRouter()
   const [step, setStep] = useState<OnboardingStep>('profile')
@@ -49,7 +53,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
       instagramUsername: '',
       nuId: '',
       major: '',
-      graduationYear: '',
+      graduationDate: graduationDate ?? '',
     },
   })
 
@@ -65,7 +69,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
           instagramUsername: data.instagramUsername,
           nuId: parseInt(data.nuId),
           major: data.major,
-          graduationYear: parseInt(data.graduationYear),
+          graduationDate: data.graduationDate,
         },
       })
 

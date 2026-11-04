@@ -31,6 +31,7 @@ import { useRouter } from '@tanstack/react-router'
 import type { UserProfile } from '@/lib/user/types'
 import { toDateOnlyString } from '@/lib/format'
 import DatePicker from '@/components/shared/date-picker'
+import { GraduationMonthInput } from '@/components/shared/graduation-month-input'
 
 interface ProfileContentProps {
   user: UserProfile
@@ -42,7 +43,7 @@ const profileFormSchema = z.object({
   instagramUsername: z.string().optional(),
   birthday: z.date().optional(),
   major: z.string().optional(),
-  graduationYear: z.string().optional(),
+  graduationDate: z.string().optional(),
   nuId: z.string().optional(),
 })
 
@@ -62,7 +63,7 @@ export function ProfileContent({ user }: ProfileContentProps) {
       instagramUsername: user.instagramUsername || '',
       birthday: user.birthday ? new Date(user.birthday) : undefined,
       major: user.major || '',
-      graduationYear: user.graduationYear?.toString() || '',
+      graduationDate: user.graduationDate || '',
       nuId: user.nuId?.toString() || '',
     },
   })
@@ -84,10 +85,7 @@ export function ProfileContent({ user }: ProfileContentProps) {
       const updateData = {
         ...data,
         birthday: data.birthday ? toDateOnlyString(data.birthday) : undefined,
-        graduationYear:
-          data.graduationYear && data.graduationYear !== ''
-            ? Number(data.graduationYear)
-            : undefined,
+        graduationDate: data.graduationDate || undefined,
         nuId: data.nuId && data.nuId !== '' ? Number(data.nuId) : undefined,
       }
 
@@ -211,18 +209,21 @@ export function ProfileContent({ user }: ProfileContentProps) {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="graduationYear">
-                    Graduation Year
+                  <FieldLabel htmlFor="graduationDate">
+                    Graduation month
                   </FieldLabel>
-                  <Input
-                    id="graduationYear"
-                    type="number"
-                    placeholder="e.g., 2025"
-                    {...form.register('graduationYear')}
+                  <GraduationMonthInput
+                    id="graduationDate"
+                    value={form.watch('graduationDate') ?? ''}
+                    onValueChange={(value) =>
+                      form.setValue('graduationDate', value, {
+                        shouldDirty: true,
+                      })
+                    }
                     disabled={!isEditing}
                   />
                   <FieldError>
-                    {form.formState.errors.graduationYear?.message}
+                    {form.formState.errors.graduationDate?.message}
                   </FieldError>
                 </Field>
 

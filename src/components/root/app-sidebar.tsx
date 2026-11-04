@@ -1,6 +1,6 @@
 import * as React from 'react'
 import {
-  HelpCircle,
+  Info,
   Layers,
   Camera,
   ShieldCheck,
@@ -11,7 +11,6 @@ import {
   FolderOpen,
   Heart,
   Cake,
-  FileText,
 } from 'lucide-react'
 
 import {
@@ -74,22 +73,9 @@ const data = {
   ],
   navSecondary: [
     {
-      title: 'FAQ',
-      url: 'https://github.com/sagyzdop/meriksirat/blob/main/docs/faq.md',
-      icon: HelpCircle,
-      external: true,
-    },
-    {
-      title: 'Terms of Service',
-      url: 'https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md',
-      icon: FileText,
-      external: true,
-    },
-    {
-      title: 'Privacy Policy',
-      url: 'https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md',
-      icon: ShieldCheck,
-      external: true,
+      title: 'About',
+      url: '/about',
+      icon: Info,
     },
   ],
   navAdmin: [
@@ -253,7 +239,7 @@ export function AppSidebar({
               sagyzdop
             </a>
           </div>
-          <NavSecondary title="Help" items={data.navSecondary} />
+          <NavSecondary items={data.navSecondary} />
         </div>
       </SidebarContent>
       <SidebarFooter>

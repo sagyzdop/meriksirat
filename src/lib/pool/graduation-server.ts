@@ -31,7 +31,7 @@ export async function runGraduationMaintenance(
   const rows = await database
     .select({
       ...drainColumns,
-      graduationDate: flamekeeper.graduationDate,
+      graduationDate: user.graduationDate,
       graduationConfirmedAt: flamekeeper.graduationConfirmedAt,
       graduationPromptSentAt: flamekeeper.graduationPromptSentAt,
       createdAt: flamekeeper.createdAt,
@@ -50,7 +50,7 @@ export async function runGraduationMaintenance(
     if (triggers >= TRIGGERS_PER_RUN) break
     const needsPhotoCheck = row.usedBytes > 0
     let plan: DrainTransition = planDomainChange(row, row.email, now, true)
-    if (plan.kind === 'none') {
+    if (plan.kind === 'none' && row.graduationDate) {
       plan = planGraduation(row, row.graduationDate, now, true)
     }
     if (plan.kind !== 'drain' && plan.kind !== 'drained') continue
@@ -84,7 +84,12 @@ export async function runGraduationMaintenance(
   let prompts = 0
   for (const row of rows) {
     if (prompts >= PROMPTS_PER_RUN) break
-    if (started.has(row.userId) || !graduationPromptEmailDue(row, now)) continue
+    if (
+      !row.graduationDate ||
+      started.has(row.userId) ||
+      !graduationPromptEmailDue(row, now)
+    )
+      continue
     if (!takeIfBudgeted(budget, 1)) break
     prompts++
     const sent = await sendEmail({

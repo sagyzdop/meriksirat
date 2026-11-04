@@ -29,7 +29,7 @@ erDiagram
         text instagram_username
         integer nu_id
         text major
-        integer graduation_year
+        text graduation_date "YYYY-MM-01, month precision"
         integer banned_at
         text ban_reason
         text banned_by

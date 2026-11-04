@@ -3,8 +3,9 @@
 > **Question:** What happens when someone clicks "Continue with
 > Google" on the login page, and how does a new account get made?
 >
-> **Answer:** The button stays disabled until the terms of service
-> box is ticked. Google confirms who they are and they come back to
+> **Answer:** The terms of service box is for new accounts only,
+> and the button is always enabled, so returning users sign in
+> without ticking it. Google confirms who they are and they come back to
 > `/login`, which sends them on to their home page. A brand-new
 > account is only created for an @nu.edu.kz or @alumni.nu.edu.kz
 > address, and only when the terms were accepted. The terms date is
@@ -21,7 +22,9 @@
 > - The home page is `/onboarding` for a member who has not
 >   finished onboarding, else `/equipment` for members and
 >   `/profile` for non-members. See access-gate.md for the rules.
-> - The ticked box travels to the server as extra data on the
+> - The login page cannot tell new users from existing ones, so it
+>   never blocks the button. Only account creation runs the check.
+> - The box value (ticked or not) travels to the server as extra data on the
 >   sign-in call, and comes back on the Google callback. A
 >   better-auth hook reads it while creating the user. The browser
 >   data is untrusted, so the hook accepts only an explicit true.
@@ -47,6 +50,7 @@
 >   seconds on its sign-in routes and 100 per 60 seconds on the
 >   others. The sign-in page shows no message when that stops
 >   a click.
+> - The login page links to the About page, see about-page.md.
 > - Sign-out is in sign-out.md.
 
 ```mermaid
@@ -60,8 +64,8 @@ sequenceDiagram
     P->>B: Open /login
     B->>W: getUserFn()
     W-->>B: No session, so the login page shows
-    P->>B: Tick the terms of service box, click Continue with Google
-    B->>W: POST /api/auth/sign-in/social (provider google,<br/>additionalData termsAccepted true)
+    P->>B: Click Continue with Google (terms box ticked or not)
+    B->>W: POST /api/auth/sign-in/social (provider google,<br/>additionalData termsAccepted)
     W-->>B: Redirect to Google, account picker always shown
     B->>G: Person picks a Google account
     G->>W: GET /api/auth/callback/google with code

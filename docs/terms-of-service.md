@@ -29,7 +29,7 @@ To sign up with an `@nu.edu.kz` or `@alumni.nu.edu.kz` account, you must accept
 these Terms on the login page. The date you accept is saved with your account.
 Connecting a Drive as a flamekeeper is optional and comes later (see Section
 14). Club members must also provide accurate personal information including
-their full name, date of birth, university ID, major, and graduation year.
+their full name, date of birth, university ID, major, and graduation month.
 
 An account that is not a club member is not deleted for being unfinished.
 
@@ -123,7 +123,7 @@ situations on a case-by-case basis.
 
 The Platform collects and stores the following personal data:
 
-- Account information (name, email, university ID, major, graduation year,
+- Account information (name, email, university ID, major, graduation month,
   date of birth)
 - Booking history and equipment usage records
 - Telegram account linkage

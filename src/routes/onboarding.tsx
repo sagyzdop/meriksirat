@@ -14,14 +14,18 @@ export const Route = createFileRoute('/onboarding')({
     if (!needsOnboarding(user)) {
       throw redirect({ to: homePath(user) })
     }
+
+    return { graduationDate: user.graduationDate }
   },
   component: RouteComponent,
 })
 
 function RouteComponent() {
+  const { graduationDate } = Route.useRouteContext()
+
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Page />
+      <Page graduationDate={graduationDate} />
     </div>
   )
 }

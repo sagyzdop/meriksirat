@@ -5,8 +5,8 @@
 ### How do I create an account?
 
 New accounts need an `@nu.edu.kz` or `@alumni.nu.edu.kz` Google account. Sign
-in with it. Tick the box to accept the terms of service on the login page, then
-continue with Google. Your account is ready straight away and you can browse
+in with it. If you are new, tick the box to accept the terms of service on the login
+page, then continue with Google. Returning users just sign in. Your account is ready straight away and you can browse
 albums and favorite photos. There is no Drive step.
 
 `@nu.edu.kz` accounts can also become flamekeepers from their profile, which is
@@ -14,7 +14,7 @@ optional.
 
 To book equipment and create albums you must be a club member. Enter the club
 code on your profile (any time) and you'll be asked for your name, date of
-birth, NU ID, major and graduation year, then to link your Telegram account.
+birth, NU ID, major and graduation month, then to link your Telegram account.
 Accounts are never removed for being unfinished.
 
 People who already had an account keep it, whatever their email.

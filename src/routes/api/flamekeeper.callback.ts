@@ -16,7 +16,7 @@ import {
 interface PendingConnect {
   userId: string
   pledgedBytes: number
-  graduationDate: string
+  graduationDate: string | null
   termsAcceptedAt: number
 }
 
@@ -111,11 +111,19 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         const now = new Date()
         await database.batch([
           database
+            .update(user)
+            .set({
+              ...(pending.graduationDate
+                ? { graduationDate: pending.graduationDate }
+                : {}),
+              updatedAt: now,
+            })
+            .where(eq(user.id, pending.userId)),
+          database
             .insert(flamekeeper)
             .values({
               userId: pending.userId,
               pledgedBytes: pending.pledgedBytes,
-              graduationDate: pending.graduationDate,
               graduationConfirmedAt: now,
               termsAcceptedAt: new Date(pending.termsAcceptedAt),
             })
@@ -123,7 +131,6 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
               target: flamekeeper.userId,
               set: {
                 pledgedBytes: pending.pledgedBytes,
-                graduationDate: pending.graduationDate,
                 termsAcceptedAt: new Date(pending.termsAcceptedAt),
                 state: 'active',
                 drainingDeadline: null,

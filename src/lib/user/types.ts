@@ -28,7 +28,7 @@ export interface UserProfile {
   lastName: string | null
   birthday: string | null
   major: string | null
-  graduationYear: number | null
+  graduationDate: string | null
   status: string | null
   clearanceLevel: number | null
   role: string | null
@@ -145,7 +145,10 @@ export const UpdateUserProfileSchema = z.object({
   instagramUsername: z.string().optional(),
   birthday: z.string().optional(),
   major: z.string().optional(),
-  graduationYear: z.number().min(1900).max(2100).optional(),
+  graduationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter your graduation month')
+    .optional(),
   nuId: z.number().optional(),
   image: z.string().optional(),
 })

@@ -7,7 +7,7 @@ export interface MyFlamekeeper {
   state: FlamekeeperState
   pledgedBytes: number
   usedBytes: number
-  graduationDate: string
+  graduationDate: string | null
   graduationConfirmDue: boolean
   drainingDeadline: Date | null
   drainReason: DrainReason | null
@@ -25,7 +25,7 @@ export interface AdminFlamekeeperRow {
   state: FlamekeeperState
   pledgedBytes: number
   usedBytes: number
-  graduationDate: string
+  graduationDate: string | null
   drainingDeadline: Date | null
   drainBytesLeft: number
   bannedAt: Date | null
