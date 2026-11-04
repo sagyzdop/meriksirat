@@ -106,6 +106,18 @@ describe('what to list, and with whose token', () => {
     expect(volume?.folderId).toBe('amina-folder')
   })
 
+  it('expects nothing from a buffer volume that carries no expected values', () => {
+    const sources = sourcesOf({
+      bufferVolume: {
+        driveFolderId: 'buffer-folder',
+        expectedCount: null,
+        expectedBytes: null,
+      },
+    })
+    const buffer = sources.find((s) => s.key === 'buffer')
+    expect(buffer?.expected).toBeNull()
+  })
+
   it('has nothing to list for a volume with no folder yet', () => {
     const sources = sourcesOf({
       bufferVolume: {

@@ -45,7 +45,7 @@ is marked incomplete and finished by a later view. Over budget or failing sectio
 keep their last listing, so the album page always opens.
 
 Uploads don't write to KV. The buffer section stores the volume's expected count
-and bytes as a stamp, and the view compares it with a fresh read of `buffer_volume`,
+and bytes as a stamp, and the view compares it with a fresh read of the buffer's `volume` row,
 so confirming an upload makes the next view list the buffer again. A KV delete per
 photo would spend the daily quota on one large upload. Photo deletions, moves and
 Refresh do touch KV. Refresh overwrites the entry and keeps the last listing if
@@ -53,6 +53,15 @@ Drive fails.
 
 A listing that is not `complete` says nothing about what is missing, so the expiry
 and count-warning tickets must not act on one.
+
+## One volume table
+
+#17 first stored the buffer's volumes in a separate `buffer_volume` table, next to the older flamekeeper `volume` table that had no expected count or bytes. The spec asks for one table, so that split is gone. Since migration 0037 there is one `volume` table. A row whose
+`flamekeeper_user_id` is NULL is the buffer's volume (one per album, enforced by
+a partial unique index); its expected count and bytes are filled. Legacy
+flamekeeper rows keep NULL expected values and never raise the warning.
+`expected_changed_at` records the last confirm or delete, so the listing can tell
+an upload burst from a quiet album.
 
 ## Status
 

@@ -538,37 +538,38 @@ export const flamekeeperGrant = sqliteTable('flamekeeper_grant', {
 export const volume = sqliteTable(
   'volume',
   {
+    id: text('id').primaryKey(),
     albumId: text('album_id')
       .notNull()
       .references(() => album.id, { onDelete: 'cascade' }),
-    flamekeeperUserId: text('flamekeeper_user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    permissionId: text('permission_id').notNull(),
+    // NULL means the buffer account holds the volume.
+    flamekeeperUserId: text('flamekeeper_user_id').references(() => user.id, {
+      onDelete: 'cascade',
+    }),
+    permissionId: text('permission_id').default('').notNull(),
     driveFolderId: text('drive_folder_id'),
     droppedAt: integer('dropped_at', { mode: 'timestamp_ms' }),
+    // NULL on legacy rows, which never raise the fewer-photos warning.
+    expectedCount: integer('expected_count'),
+    expectedBytes: integer('expected_bytes'),
+    expectedChangedAt: integer('expected_changed_at', {
+      mode: 'timestamp_ms',
+    }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.albumId, table.flamekeeperUserId] }),
+    uniqueIndex('volume_albumId_flamekeeperUserId_idx').on(
+      table.albumId,
+      table.flamekeeperUserId
+    ),
+    uniqueIndex('volume_albumId_buffer_idx')
+      .on(table.albumId)
+      .where(sql`${table.flamekeeperUserId} IS NULL`),
     index('volume_flamekeeperUserId_idx').on(table.flamekeeperUserId),
   ]
 )
-
-export const bufferVolume = sqliteTable('buffer_volume', {
-  albumId: text('album_id')
-    .primaryKey()
-    .references(() => album.id, { onDelete: 'cascade' }),
-  driveFolderId: text('drive_folder_id'),
-  permissionId: text('permission_id').default('').notNull(),
-  expectedCount: integer('expected_count').default(0).notNull(),
-  expectedBytes: integer('expected_bytes').default(0).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-    .notNull(),
-})
 
 export const settings = sqliteTable('settings', {
   id: text('id').primaryKey().default('global'),

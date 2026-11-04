@@ -346,8 +346,8 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
 export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
   .validator(AcceptFewerPhotosSchema)
   .handler(async ({ data }) => {
-    const { bufferVolume } = await import('@/db/schema')
-    const { eq, sql } = await import('drizzle-orm')
+    const { volume } = await import('@/db/schema')
+    const { and, eq, isNull, sql } = await import('drizzle-orm')
     const { planAccept } = await import('./count-warning')
     const { loadAlbumListing } = await import('./listing-server')
 
@@ -374,12 +374,12 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
     if (!plan.ok) throw new Error(plan.message)
 
     await database
-      .update(bufferVolume)
+      .update(volume)
       .set({
-        expectedCount: sql`MIN(${bufferVolume.expectedCount}, ${plan.expected.count})`,
-        expectedBytes: sql`MIN(${bufferVolume.expectedBytes}, ${plan.expected.bytes})`,
+        expectedCount: sql`MIN(${volume.expectedCount}, ${plan.expected.count})`,
+        expectedBytes: sql`MIN(${volume.expectedBytes}, ${plan.expected.bytes})`,
       })
-      .where(eq(bufferVolume.albumId, row.id))
+      .where(and(eq(volume.albumId, row.id), isNull(volume.flamekeeperUserId)))
 
     return { success: true }
   })

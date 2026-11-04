@@ -1,12 +1,6 @@
 import { and, eq, or, ne } from 'drizzle-orm'
 import type { Database } from '@/db'
-import {
-  album,
-  bufferVolume,
-  flamekeeper,
-  flamekeeperGrant,
-  volume,
-} from '@/db/schema'
+import { album, flamekeeper, flamekeeperGrant, volume } from '@/db/schema'
 import { withBufferToken } from '@/lib/buffer/tokens'
 import { createBudget } from '@/lib/cron/budget'
 import type { Budget } from '@/lib/cron/budget'
@@ -56,43 +50,49 @@ export async function loadListingSources(
   database: Database,
   row: { id: string; driveFolderId: string }
 ): Promise<ListingSource[]> {
-  const [buffer, volumes] = await Promise.all([
-    database
-      .select({
-        driveFolderId: bufferVolume.driveFolderId,
-        expectedCount: bufferVolume.expectedCount,
-        expectedBytes: bufferVolume.expectedBytes,
-      })
-      .from(bufferVolume)
-      .where(eq(bufferVolume.albumId, row.id))
-      .get(),
-    database
-      .select({
-        userId: volume.flamekeeperUserId,
-        driveFolderId: volume.driveFolderId,
-        droppedAt: volume.droppedAt,
-        state: flamekeeper.state,
-        grantUserId: flamekeeperGrant.userId,
-      })
-      .from(volume)
-      .leftJoin(flamekeeper, eq(flamekeeper.userId, volume.flamekeeperUserId))
-      .leftJoin(
-        flamekeeperGrant,
-        eq(flamekeeperGrant.userId, volume.flamekeeperUserId)
-      )
-      .where(eq(volume.albumId, row.id))
-      .all(),
-  ])
+  const rows = await database
+    .select({
+      userId: volume.flamekeeperUserId,
+      driveFolderId: volume.driveFolderId,
+      droppedAt: volume.droppedAt,
+      expectedCount: volume.expectedCount,
+      expectedBytes: volume.expectedBytes,
+      expectedChangedAt: volume.expectedChangedAt,
+      state: flamekeeper.state,
+      grantUserId: flamekeeperGrant.userId,
+    })
+    .from(volume)
+    .leftJoin(flamekeeper, eq(flamekeeper.userId, volume.flamekeeperUserId))
+    .leftJoin(
+      flamekeeperGrant,
+      eq(flamekeeperGrant.userId, volume.flamekeeperUserId)
+    )
+    .where(eq(volume.albumId, row.id))
+    .all()
+  const buffer = rows.find((v) => v.userId === null)
   return planListingSources({
     albumFolderId: row.driveFolderId,
-    bufferVolume: buffer ?? null,
-    flamekeeperVolumes: volumes.map((v) => ({
-      userId: v.userId,
-      driveFolderId: v.driveFolderId,
-      droppedAt: v.droppedAt,
-      state: v.state,
-      hasGrant: !!v.grantUserId,
-    })),
+    bufferVolume: buffer
+      ? {
+          driveFolderId: buffer.driveFolderId,
+          expectedCount: buffer.expectedCount,
+          expectedBytes: buffer.expectedBytes,
+          expectedChangedAt: buffer.expectedChangedAt?.getTime() ?? null,
+        }
+      : null,
+    flamekeeperVolumes: rows.flatMap((v) =>
+      v.userId === null
+        ? []
+        : [
+            {
+              userId: v.userId,
+              driveFolderId: v.driveFolderId,
+              droppedAt: v.droppedAt,
+              state: v.state,
+              hasGrant: !!v.grantUserId,
+            },
+          ]
+    ),
   })
 }
 

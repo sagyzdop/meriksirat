@@ -36,8 +36,9 @@ export interface ListingSourcesInput {
   albumFolderId: string
   bufferVolume: {
     driveFolderId: string | null
-    expectedCount: number
-    expectedBytes: number
+    expectedCount: number | null
+    expectedBytes: number | null
+    expectedChangedAt?: number | null
   } | null
   flamekeeperVolumes: {
     userId: string
@@ -58,9 +59,12 @@ export function planListingSources(
       key: BUFFER_SOURCE_KEY,
       owner: { kind: 'buffer' },
       folderId: buffer.driveFolderId,
-      stamp: `${buffer.expectedCount}:${buffer.expectedBytes}`,
+      stamp: `${buffer.expectedCount ?? ''}:${buffer.expectedBytes ?? ''}`,
       listable: true,
-      expected: { count: buffer.expectedCount, bytes: buffer.expectedBytes },
+      expected:
+        buffer.expectedCount === null || buffer.expectedBytes === null
+          ? null
+          : { count: buffer.expectedCount, bytes: buffer.expectedBytes },
     })
   }
   sources.push({
