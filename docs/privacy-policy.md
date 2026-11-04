@@ -55,19 +55,17 @@ flamekeeper:
 ## 3. What We Access in Your Google Account
 
 - **Sign-in:** your basic profile and email address only.
-- **Club storage:** album photos are uploaded to a club-run Gmail account. The
-  Platform uploads with the `drive.file` permission, so it manages only the
-  files it creates there.
+- **Club storage:** new uploads go to a club-run Gmail account. The Platform
+  uploads with the `drive.file` permission, so it manages only the files it
+  creates there. Existing albums were uploaded earlier and remain on the club's
+  main Google account for now.
 - **Flamekeepers:** with `drive.file`, the Platform can see and manage only the
   files and folders it created in your Drive. It cannot see, read or change any
   other file in your Drive. It also reads how much of your Drive storage is in
-  use, to show your pledge.
-- **Photos in flamekeepers' Drives:** new uploads are never placed in a
-  flamekeeper's Drive. Photos placed there before album storage moved to the
-  club-run account may still be in some flamekeepers' Drives. See Section 8.
+  use, to show your pledge. Flamekeepers hold no photos today; a pledge is
+  reserve space.
 
-Album folders are viewable by anyone with the link, so any photo stored in an
-album folder can be seen by anyone with the link, including in your Drive.
+Album folders are viewable by anyone with the link.
 
 The Platform does not use Google user data for advertising, does not sell it,
 and does not use it to train AI or machine-learning models.
@@ -81,8 +79,8 @@ including the Limited Use requirements.**
 
 - To run bookings: availability, reminders, cancellations of bookings nobody
   picked up, overdue handling and equipment accountability.
-- To host albums, including storing album photos in the club-run Gmail account
-  and, for photos placed there earlier, in flamekeepers' Drives.
+- To host albums, including storing new album photos in the club-run Gmail
+  account. Existing albums remain on the club's main Google account for now.
 - To send notifications by Telegram and, for some accounts, by email.
 - To add member birthdays to the club calendar, if you opted in.
 - To keep the Platform secure and stop abuse, for example by rate limiting.
@@ -101,9 +99,10 @@ We do not sell personal data. We use these service providers to run the
 Platform:
 
 - **Cloudflare:** hosting, the database, file and cache storage.
-- **Google:** sign-in, Google Drive (album storage in the club-run Gmail
-  account, and flamekeepers' Drives for photos placed there earlier), Google
-  Calendar (equipment and birthday calendars), and Gmail for email notices.
+- **Google:** sign-in, Google Drive (album storage: the club-run Gmail account
+  for new uploads, and the club's main Google account for existing albums),
+  Google Calendar (equipment and birthday calendars), and Gmail for email
+  notices.
 - **Telegram:** notifications and equipment returns.
 
 We may also disclose data where Kazakh law or Nazarbayev University
@@ -130,16 +129,10 @@ regulations require it.
 - You may ask to see or correct your personal data by contacting an
   administrator.
 - Flamekeepers may stop lending storage at any time from their profile. Stopping
-  ends your pledge, and the Platform places no new photos in your Drive.
-  Photos the Platform already stored in your Drive are not deleted by stopping;
-  they are moved back to club storage. Until the Platform can do this
-  automatically, an administrator arranges the move.
+  ends your pledge, and the Platform places no photos in your Drive.
 - Flamekeepers may also revoke the Platform's Drive access at
   [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
-  The Platform then cannot reach the photos it stored in your Drive, and they
-  drop out of the Platform after 7 days. The files stay in your Drive, and
-  because album folders are public, they remain visible to anyone with the link
-  until you delete them.
+  Flamekeepers hold no photos today, so this does not affect any album.
 - You may turn off birthday congratulations.
 - You have the rights given to you by the Law of the Republic of Kazakhstan
   "On Personal Data and Their Protection".

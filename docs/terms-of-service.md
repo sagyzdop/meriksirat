@@ -77,9 +77,9 @@ content that violates these Terms or is otherwise objectionable.
 
 ### 4.4 Where Content Is Stored
 
-Uploaded User Content is stored in a club-run Gmail account. Photos placed in
-flamekeepers' Google Drives before this change may also be stored there (see
-Section 14). You acknowledge that:
+New uploaded User Content is stored in a club-run Gmail account. Existing albums
+remain on the club's main Google account for now. Flamekeepers hold no photos
+(see Section 14). You acknowledge that:
 
 - Uploaded content resides on infrastructure provided by Google and subject to
   Google's terms of service.
@@ -211,21 +211,17 @@ storage to the Platform. Flamekeeping is optional. Signing up never requires
 connecting a Drive, and you can become a flamekeeper later from your profile.
 
 - **Storage.** New album photos are stored in the club-run Gmail account, not
-  in your Drive. Photos placed in your Drive before this change stay there
-  until they are moved back to club storage.
+  in your Drive. Flamekeepers hold no photos today; a pledge is reserve space.
 - **Ownership.** Photos the Platform stores in your Drive are owned by you in
   Google's terms, and count against your Google storage up to your pledge. The
   Organization keeps its license to use them as described in Section 4.2.
 - **No editing or deleting.** You must not edit, rename, move or delete the
   files the Platform stores in your Drive. The Platform manages them for you.
-- **Deletion.** The Platform may delete the photos it stored in your Drive when
-  an album expires, or after they have been moved back to club storage when you
-  stop flamekeeping, graduate or leave the `@nu.edu.kz` domain.
+- **Deletion.** The Platform may delete photos it stores in your Drive when an
+  album expires.
 - **Revoking access.** If you revoke the Platform's access to your Drive, the
-  Platform can no longer reach the photos it stored there, and they drop out of
-  the Platform after 7 days. The files remain in your Drive, and they remain
-  public until you delete them yourself, because the album folders they sit in
-  are public.
+  Platform can no longer use it. Flamekeepers hold no photos today, so this does
+  not affect any album.
 - **Pledge.** Your pledge is the most storage the Platform may use, and it must
   be at least 1 GB while you are flamekeeping. You can change it at any time,
   or stop flamekeeping instead.

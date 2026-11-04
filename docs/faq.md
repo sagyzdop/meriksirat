@@ -114,9 +114,8 @@ still return overdue equipment through the normal flow.
 
 ### What are albums?
 
-Albums are photo galleries. Each album is a public folder in a club-run Google
-account, and its photos are stored in the club's storage. You can upload photos
-directly from your browser.
+Albums are photo galleries. Each album is a public folder in the club's Google
+storage. You can upload photos directly from your browser.
 
 ### Where are my photos stored?
 
@@ -124,8 +123,8 @@ New uploads go to a club-run Gmail account, not to a student's Google Drive.
 Your browser uploads straight to Google, and the Platform does not pass the
 photos through its own server.
 
-Photos placed in flamekeepers' Drives before this change may still be there.
-See [Flamekeepers](#flamekeepers).
+Existing albums were uploaded earlier and remain on the club's main Google
+account for now. Flamekeepers hold no photos today.
 
 ### Who can see my albums?
 
@@ -181,14 +180,13 @@ signed in with. The Platform asks only for access to the files it creates
 ### How much do I need to pledge?
 
 The minimum pledge is 1 GB. The pledge is the most storage the Platform may use
-in your Drive. You can change it at any time from your profile.
+in your Drive. You can change it at any time from your profile. A pledge is
+reserve space; flamekeepers hold no photos today.
 
 ### Will my photos be stored in my Drive?
 
-Not new ones. New uploads go to the club-run Gmail account, so flamekeepers
-don't receive new photos. Some older photos may still be in a flamekeeper's
-Drive from before this change. Those are moved back to club storage. The move
-is not yet automatic: until it is, an admin arranges it.
+No. Flamekeepers hold no photos today, and new uploads go to the club-run Gmail
+account.
 
 ### What can the Platform see in my Drive?
 
@@ -198,11 +196,9 @@ other file in your Drive.
 ### Can I stop flamekeeping?
 
 Yes, at any time from your profile. Stopping ends your pledge, and the Platform
-places no new photos in your Drive. You can also revoke the Platform's access
-at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
-If you do, the photos the Platform stored in your Drive drop out of the site
-after 7 days, and the files remain in your Drive, where they are public until you
-delete them. See [Privacy Policy](https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md)
+places no photos in your Drive. You can also revoke the Platform's access at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions).
+Flamekeepers hold no photos today, so this does not affect any album. See [Privacy Policy](https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md)
 and [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md#14-flamekeepers).
 
 ## Telegram Bot
