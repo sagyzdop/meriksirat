@@ -1,3 +1,5 @@
+import { formatUtcDate } from '@/lib/format'
+
 export const EXPIRY_YEARS = 2
 export const REMINDER_WINDOWS_DAYS = { first: 30, second: 7 } as const
 
@@ -60,6 +62,14 @@ export function expiryBannerDate(
   const left = album.expiresAt.getTime() - now.getTime()
   if (left > REMINDER_WINDOWS_DAYS.first * DAY_MS) return null
   return album.expiresAt
+}
+
+export function expiryLabel(
+  album: Pick<ExpiryAlbum, 'expiresAt' | 'pinned'>
+): string | null {
+  if (!album.expiresAt) return null
+  if (album.pinned) return 'Pinned, kept past its expiry'
+  return `Expires on ${formatUtcDate(album.expiresAt.toISOString())}`
 }
 
 export function reminderRecipients(
