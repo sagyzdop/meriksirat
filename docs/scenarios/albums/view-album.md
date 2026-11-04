@@ -2,16 +2,17 @@
 
 > **Question:** What happens when someone opens an album link, signed in or not, and what do they see?
 >
-> **Answer:** Every album can be opened by anyone with the link, because all albums are public. The Worker works out the viewer's role (manager, owner, co-author or none) and returns the album with its photos. Guests are limited to 60 opens a minute per IP address, signed in users are not limited. The expensive part (photo list, authors, cover) is cached for up to an hour and shared by all viewers. Only people with a role get the edit link and the manage panel. A deleted album shows a "deleted" notice instead of photos, and an unknown id shows "Album not found".
+> **Answer:** Every album can be opened by anyone with the link, because all albums are public. The Worker works out the viewer's role (manager, owner, co-author or none) and returns the album with its photos. Guests are limited to 60 opens a minute per IP address, signed in users are not limited. The authors are cached for up to an hour and the photo list comes from a cached Drive listing, both shared by all viewers. Only people with a role get the edit link and the manage panel. A deleted album shows a "deleted" notice instead of photos, and an unknown id shows "Album not found".
 >
 > **Notes:**
-> - Role per viewer is always checked fresh against the album row. Only the shared core is cached.
-> - Core cache: 30 second memory copy per Worker instance in front of KV `album:detail:ALBUM_ID` with a 1 hour TTL. It is cleared by editing details, Refresh, deleting a photo, choosing a cover, joining or leaving as co-author, and deleting a gone album (see deleted-folder-warning.md). It is not cleared when an upload is confirmed, so new photos can take longer to appear unless Refresh is used, see refresh-album.md.
-> - Folder health (ok, trashed, missing) is cached separately in KV `album:list:FOLDER_ID` for 5 minutes.
-> - If the album has no cover yet, the earliest uploaded photo becomes the cover and is saved on the album.
+> - Role per viewer is always checked fresh against the album row. The cover and expiry also come from the fresh row.
+> - Core cache: 30 second memory copy per Worker instance in front of KV `album:detail:ALBUM_ID` with a 1 hour TTL. It is cleared by editing details, Refresh, deleting a photo, choosing a cover, joining or leaving as co-author, and deleting a gone album (see deleted-folder-warning.md). It no longer holds photos or folder health.
+> - Photos and folder health (ok, trashed, missing) come from KV `album:list:FOLDER_ID`. A fresh entry means no Drive call. How long an entry stays fresh, and what happens when listing fails, is in [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md).
+> - A listing that fails never stops the page: the last listing is shown, or no photos if there is none yet.
+> - If the album has no cover yet, the earliest uploaded photo becomes the cover. It is saved on the album only when the listing is complete.
 > - The page shows a banner "Will be deleted on DATE" with "There is no backup. Download the photos you want to keep before then." once the expiry is within 30 days and the album is not pinned.
 > - Photos load straight from Google's image servers: thumbnails at 600 px and full view at 1920 px. At most 6 images load at once, and a failed image is retried up to 5 tries, waiting 1, 2, 4 then 8 seconds.
-> - The figures above are for albums whose photos are in the photo table. How photos are listed for old albums is in legacy-albums.md. Downloading is in download-photos.md.
+> - Older albums are read the same way, see legacy-albums.md. Downloading is in download-photos.md.
 
 ```mermaid
 sequenceDiagram
@@ -41,10 +42,14 @@ sequenceDiagram
             W->>K: Read album:detail:albumId
             alt Cache miss
                 W->>D: Owner and co-authors names
-                W->>K: Read album:list:folderId (folder health)
-                W->>G: Master token: folder state, only if not cached
-                W->>D: Live photos of the album
                 W->>K: Save core, TTL 3600 seconds
+            end
+            W->>D: Buffer and flamekeeper volumes of the album
+            W->>K: Read album:list:folderId
+            opt A section is due or its stamp changed
+                W->>G: Master token: folder state
+                W->>G: Each due section's owner token: list its folder
+                W->>K: Save the listing, TTL 8 days
             end
             W-->>B: Album, photos, role, and edit token only if role exists
             B->>U: Title, authors, photo grid, expiry banner

@@ -36,6 +36,7 @@ export interface UserProfile {
   flamekeeperState?: FlamekeeperState | null
   onboardingComplete: boolean | null
   termsAcceptedAt?: Date | null
+  flamekeeperInvitationDismissedAt?: Date | null
   isMaster?: boolean
   createdAt: Date
   updatedAt: Date

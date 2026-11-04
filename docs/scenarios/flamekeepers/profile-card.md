@@ -23,9 +23,8 @@
 >   move. The draining state only survives on records left by
 >   earlier code; the hourly drainFlamekeepers step ends them, see
 >   ../cron/flamekeepers/steps-and-limits.md.
-> - Become a flamekeeper opens the existing sign-up form in a
->   dialog (`become-flamekeeper-dialog.tsx`), the one place to
->   change when the dedicated page arrives. See connect-drive.md.
+> - Become a flamekeeper is a link to the `/become-flamekeeper`
+>   page. See connect-drive.md.
 > - The graduation question appears 365 days after the last
 >   confirmation (or after signing up) as a "Still graduating in
 >   ..." row with a Yes button, see confirm-graduation.md. It is

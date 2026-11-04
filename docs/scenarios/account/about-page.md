@@ -7,7 +7,7 @@
 > nothing from the database for it. The page explains the club,
 > flamekeepers, how long albums last and how to help, and ends with
 > FAQ, Terms and Privacy links. The Become a flamekeeper button goes
-> to `/profile` for a signed-in person and to `/login` for a guest.
+> to `/become-flamekeeper` for a signed-in person and to `/login` for a guest.
 >
 > **Notes:**
 > - Links to the page: the sidebar "About" entry, the public gallery
@@ -22,8 +22,8 @@
 > - The minimum pledge, the two-year album lifetime and the 30 and 7
 >   day reminders in the text come from the same constants the app
 >   enforces, see `src/lib/about/content.ts`.
-> - The button's destination is one constant until the dedicated
->   Become a flamekeeper page exists.
+> - The button's destination is one constant,
+>   `BECOME_FLAMEKEEPER_PATH`, see connect-drive.md.
 
 ```mermaid
 sequenceDiagram

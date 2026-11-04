@@ -2,11 +2,11 @@
 
 > **Question:** Which tables, KV keys and Drive folders do the album scenarios read and write?
 >
-> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in photo. Favorites point at photos, and the settings row holds the per-flamekeeper storage cap. Photos held by the buffer carry the owner value `buffer`, and each album has one buffer_volume row with the expected photo count and bytes. Photos stored by flamekeepers before the buffer carry the flamekeeper's user id, with one volume row per flamekeeper. Upload reservations are no longer used (removed in #24; the table goes in #25). Short-lived copies of album pages and lists sit in KV. No R2 storage is used for albums.
+> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in photo, which album pages no longer read. Favorites point at photos, and the settings row holds the per-flamekeeper storage cap. Photos held by the buffer carry the owner value `buffer`, and each album has one buffer_volume row with the expected photo count and bytes. Photos stored by flamekeepers before the buffer carry the flamekeeper's user id, with one volume row per flamekeeper. Upload reservations are no longer used (removed in #24; the table goes in #25). Copies of album pages and Drive listings sit in KV. No R2 storage is used for albums.
 >
 > **Notes:**
-> - KV `album:detail:ALBUM_ID`: shared album page core (photos, authors, cover, folder health), TTL 3600 s, plus a 30 s per-Worker memory copy.
-> - KV `album:list:FOLDER_ID`: Drive folder listing and health (ok, trashed, missing), TTL 300 s.
+> - KV `album:detail:ALBUM_ID`: shared album page core (title, event, authors), TTL 3600 s, plus a 30 s per-Worker memory copy.
+> - KV `album:list:FOLDER_ID`: Drive listing of each volume and folder health (ok, trashed, missing), TTL 8 days, see [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md).
 > - KV `album:publist:HASH`: one page of the public gallery, TTL 600 s, plus a 30 s per-Worker memory copy.
 > - KV `photo-backfill:budget`: day and writes spent by the indexer, TTL 2 days.
 > - Drive layout in the master account: Albums / year / month / album title, with a "Volume xxxxxx" folder inside for the buffer, and for each flamekeeper who held photos before it. New photo files are owned by the buffer. See create-album.md and upload-to-buffer.md.

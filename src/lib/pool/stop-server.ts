@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { flamekeeper, user } from '@/db/schema'
 import { dropFlamekeeperGrant } from '@/lib/flamekeeper/tokens'
-import { MIN_PLEDGE_BYTES, MIN_PLEDGE_GB } from '@/lib/flamekeeper/rules'
+import { MIN_PLEDGE_BYTES, formatGb } from '@/lib/flamekeeper/rules'
 import type { StopStatus } from '@/lib/flamekeeper/types'
 import { siteOrigin } from '@/lib/format'
 import { graduationDateError } from '@/lib/graduation-date'
@@ -87,7 +87,7 @@ export async function changePledge(
     input.pledgedBytes < MIN_PLEDGE_BYTES &&
     input.pledgedBytes < row.pledgedBytes
   ) {
-    throw new Error(`Pledge at least ${MIN_PLEDGE_GB} GB`)
+    throw new Error(`Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
   }
   await database.batch([
     database

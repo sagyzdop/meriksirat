@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `flamekeeper_invitation_dismissed_at` integer;

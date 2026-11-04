@@ -8,7 +8,7 @@
 > - A confirmation for a photo that is already recorded is accepted silently and adds nothing, so the expected count is not raised twice.
 > - A file that is not an image is deleted from the buffer's Drive and not recorded. The browser still shows it as done.
 > - The browser retries the confirm call up to 3 times, waiting 0.5 s then 1 s. If all fail, the upload is treated as a temporary failure, see upload-failures.md.
-> - The album page may keep showing the old photo list for a while, because the cached album copy is not cleared by confirming. Refresh clears it, see refresh-album.md.
+> - Confirming changes the expected count and bytes, so the next album view lists the buffer again and shows the new photo without Refresh. The browser reloads the album once a whole batch is done. See [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md).
 > - Nothing is reserved or released: the buffer has no per-upload reservation. A file that does not reach Drive is handled as described in upload-failures.md.
 > - The photo table marks buffer photos with the owner value `buffer` (photos held by a flamekeeper carry that user's id). Deleting such a photo uses the buffer's token and lowers the expected count and bytes.
 

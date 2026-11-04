@@ -93,7 +93,7 @@ _Avoid_: Gallery, collection
 
 **Photo**:
 One image in an album, identified by its current Drive file ID, which changes when the photo moves to another account. Listed from Drive and cached, with no photo record of its own.
-Not built yet (Stage 1, #15): today's code still keeps a photo table with a stable photo ID (ADR-0008). ADR-0017 removes it.
+Album pages read this way since #18. Not built yet (Stage 1, #15): the photo table still exists with a stable photo ID (ADR-0008) and still serves favorites, expiry and flamekeeper moves. ADR-0017 removes it.
 _Avoid_: Image, file, picture
 
 **Volume**:
@@ -165,7 +165,6 @@ _Avoid_: Donor, contributor, host
 
 **Pledge**:
 The maximum GB a flamekeeper lets the app use, at least 512 MB. A cap on what the app uses, not space set aside in Google.
-Not built yet: the minimum is 1 GB in today's code.
 _Avoid_: Allocation, quota
 
 **Pool**:

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useRouter } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,6 @@ import { graduationMonthFromDate } from '@/lib/graduation-date'
 import type { AccessRules } from '@/lib/access/access-rules'
 import type { MyFlamekeeper } from '@/lib/flamekeeper/types'
 import type { UserProfile } from '@/lib/user/types'
-import { BecomeFlamekeeperButton } from './become-flamekeeper-dialog'
 import { EditPledgeDialog } from './edit-pledge-dialog'
 import { FlameIcon } from './flame-icon'
 import { ProfileField } from './profile-field'
@@ -97,10 +96,9 @@ export function FlamekeeperSection({
         </ItemContent>
         {view.action === 'become' && rules.canBecomeFlamekeeper && (
           <ItemActions>
-            <BecomeFlamekeeperButton
-              graduationDate={user.graduationDate}
-              error={connectError ?? null}
-            />
+            <Button size="sm" asChild>
+              <Link to="/become-flamekeeper">Become a flamekeeper</Link>
+            </Button>
           </ItemActions>
         )}
         {view.action === 'reconnect' && (

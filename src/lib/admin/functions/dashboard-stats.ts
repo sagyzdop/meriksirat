@@ -128,6 +128,7 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
 
     if (unindexedAlbums.length > 0) {
       const { getCachedListing } = await import('@/lib/albums/server')
+      const { listedMasterFiles } = await import('@/lib/albums/listing')
       const { getGoogleAccessToken } =
         await import('@/lib/google/google-calendar-auth')
       const { listDriveFolderFiles, DriveNotFoundError } =
@@ -140,7 +141,9 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
         await Promise.all(
           chunk.map(async (row) => {
             try {
-              let files = (await getCachedListing(row.driveFolderId))?.files
+              let files = listedMasterFiles(
+                await getCachedListing(row.driveFolderId)
+              )
               if (!files) {
                 files = await listDriveFolderFiles(
                   accessToken,

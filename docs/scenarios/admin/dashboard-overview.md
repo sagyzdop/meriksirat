@@ -7,7 +7,7 @@
 > **Notes:**
 > - The range filters bookings by their start time and albums by creation time. Deleted albums are left out.
 > - Stats stay fresh for 60 seconds in the browser. Alerts reload by themselves every 60 seconds.
-> - An album whose photos are not yet counted in the database is counted by listing its Drive folder. The folder listing is cached in KV for 300 seconds, so the Drive is called only for albums not in KV.
+> - An album whose photos are not yet counted in the database is counted by listing its Drive folder. It uses the master section of the album's KV listing when that is complete, so the Drive is called only for albums without one.
 > - A Drive "not found" for one album is skipped silently. Any other Drive error is logged and that album adds nothing to the totals.
 > - Alerts about album folders use only what KV already holds and never call Drive.
 > - The Telegram alert counts every account without a linked chat, not only club members.

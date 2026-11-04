@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { flamekeeperGrant, photo, volume } from '@/db/schema'
+import { album, flamekeeperGrant, photo, volume } from '@/db/schema'
+import { invalidateCachedListing } from '@/lib/albums/server'
 import {
   batchDeleteDriveFiles,
   listDriveFolderFileIds,
@@ -88,6 +89,12 @@ export async function healBlockedVolume(
       (token) => batchDeleteDriveFiles(token, doomed),
       budget
     )
+    const albumRow = await database
+      .select({ driveFolderId: album.driveFolderId })
+      .from(album)
+      .where(eq(album.id, v.albumId))
+      .get()
+    if (albumRow) await invalidateCachedListing(albumRow.driveFolderId)
     return {
       outcome: listed.length >= MAX_HEAL_DELETES ? 'incomplete' : 'cleared',
       worked: true,
