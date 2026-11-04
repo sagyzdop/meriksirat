@@ -339,34 +339,28 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
     return decorateAlbumDetail(core, row, access, currentUser)
   })
 
-export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
+export const deleteGoneAlbumFn = createServerFn({ method: 'POST' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }) => {
-    const { album, volume } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
-    const { invalidateCachedListing, invalidateCachedDetailCore } =
-      await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { createDriveFolder, getDriveFolderState, setAnyoneReader } =
-      await import('@/lib/google/google-drive')
+    const { getDriveFolderState } = await import('@/lib/google/google-drive')
+    const { folderCheckVerdict, canDeleteGoneAlbum } =
+      await import('./folder-warning')
+    const { tombstoneGoneAlbum } = await import('./expiry')
 
-    const { database, row, headers, user } = await albumContext(data.albumId, [
-      'owner',
-      'editor',
-      'manager',
-    ])
+    const {
+      database,
+      row,
+      user: currentUser,
+    } = await albumContext(data.albumId, ['manager'])
 
-    if (user?.id) {
-      const { rateLimit } = await import('@/lib/ratelimit')
-      const rl = await rateLimit(headers, 'rl_refresh_album', user.id)
-      if (!rl.allowed) {
-        throw new Error('Too many requests. Please try again shortly.')
-      }
+    const isAdmin = currentUser?.role === 'admin'
+    if (!currentUser || !isAdmin) {
+      throw new Error('Only an admin can delete this album.')
     }
 
     const accessToken = await getGoogleAccessToken()
-    const { folderCheckVerdict, pressAgainMessage } = await import('./recreate')
     let verdict: ReturnType<typeof folderCheckVerdict>
     try {
       verdict = folderCheckVerdict({
@@ -375,87 +369,17 @@ export const recreateAlbumFolderFn = createServerFn({ method: 'POST' })
     } catch (error) {
       verdict = folderCheckVerdict({ error })
     }
-    if (verdict === 'exists') {
-      throw new Error(
-        'The album folder still exists in Google Drive, so it was not recreated. Refresh the album.'
-      )
-    }
-    if (verdict === 'unknown') {
-      throw new Error(
-        'Could not confirm that the album folder is deleted. Nothing was changed. Please try again later.'
-      )
-    }
+    const decision = canDeleteGoneAlbum(verdict, { isAdmin })
+    if (!decision.ok) throw new Error(decision.message)
 
-    const { loadLivePhotoRefs, runRecreateDeletePass } =
-      await import('./recreate-server')
-    const pass = await runRecreateDeletePass(database, row, accessToken)
-    if (pass.remaining !== 0) {
-      throw new Error(pressAgainMessage(pass, pass.remaining))
-    }
+    await tombstoneGoneAlbum(database, row)
 
-    const monthFolder = await resolveMonthFolder(accessToken)
-    const folder = await createDriveFolder(
-      accessToken,
-      row.title,
-      monthFolder.id
-    )
-    await setAnyoneReader(accessToken, folder.id)
-
-    await invalidateCachedListing(row.driveFolderId)
-    await invalidateCachedDetailCore(data.albumId)
-    await database
-      .update(album)
-      .set({ driveFolderId: folder.id, updatedAt: new Date() })
-      .where(eq(album.id, data.albumId))
-    const { resetAlbumPhotos } = await import('./photo-index')
-    const { releaseOwnedBytesStatements } = await import('@/lib/pool/server')
-    const heldPhotos = await loadLivePhotoRefs(database, data.albumId)
-    await resetAlbumPhotos(
-      database,
-      data.albumId,
-      releaseOwnedBytesStatements(database, heldPhotos)
-    )
-    await database
-      .update(volume)
-      .set({
-        driveFolderId: null,
-        permissionId: '',
-        releaseLastBlockedAt: null,
-        releaseFirstBlockedAt: null,
-        releaseAlertedAt: null,
-      })
-      .where(eq(volume.albumId, data.albumId))
-
-    return { success: true, removed: pass.removed, abandoned: pass.abandoned }
-  })
-
-export const restoreAlbumFolderFn = createServerFn({ method: 'POST' })
-  .validator(AlbumIdSchema)
-  .handler(async ({ data }) => {
-    const { invalidateCachedListing, invalidateCachedDetailCore } =
-      await import('./server')
-    const { getGoogleAccessToken } =
-      await import('@/lib/google/google-calendar-auth')
-    const { restoreDriveFile } = await import('@/lib/google/google-drive')
-
-    const { database, row } = await albumContext(data.albumId, [
-      'owner',
-      'editor',
-      'manager',
-    ])
-
-    const accessToken = await getGoogleAccessToken()
-    await restoreDriveFile(accessToken, row.driveFolderId)
-    if (row.photosIndexSkipped) {
-      const { album } = await import('@/db/schema')
-      const { eq } = await import('drizzle-orm')
-      await database
-        .update(album)
-        .set({ photosIndexSkipped: null })
-        .where(eq(album.id, data.albumId))
-    }
-    await invalidateCachedListing(row.driveFolderId)
-    await invalidateCachedDetailCore(data.albumId)
+    const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
+    await logAlbumActivityByUser(currentUser.id, {
+      albumId: data.albumId,
+      albumTitle: row.title,
+      action: 'deleted',
+    })
 
     return { success: true }
   })
@@ -485,7 +409,7 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
       } catch (error) {
         if (error instanceof DriveNotFoundError) {
           throw new Error(
-            'The album folder was deleted from Google Drive. Use "Recreate folder" to fix it.'
+            'The album folder was deleted from Google Drive, so it cannot be renamed.'
           )
         }
         throw new Error('Failed to rename the Drive folder')
@@ -700,12 +624,12 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     )
     if (folderState === 'trashed') {
       throw new Error(
-        'The album folder is in the Google Drive bin. Restore it before uploading.'
+        'The album folder is in the Google Drive bin, so uploads are paused.'
       )
     }
     if (folderState === 'missing') {
       throw new Error(
-        'The album folder was deleted from Google Drive. Use "Recreate folder" to fix it.'
+        'The album folder was deleted from Google Drive, so uploads are paused.'
       )
     }
 

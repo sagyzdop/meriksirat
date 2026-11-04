@@ -6,7 +6,7 @@
 >
 > **Notes:**
 > - Role per viewer is always checked fresh against the album row. Only the shared core is cached.
-> - Core cache: 30 second memory copy per Worker instance in front of KV `album:detail:ALBUM_ID` with a 1 hour TTL. It is cleared by editing details, Refresh, deleting a photo, choosing a cover, joining or leaving as co-author, and recreate or restore folder. It is not cleared when an upload is confirmed, so new photos can take longer to appear unless Refresh is used, see refresh-album.md.
+> - Core cache: 30 second memory copy per Worker instance in front of KV `album:detail:ALBUM_ID` with a 1 hour TTL. It is cleared by editing details, Refresh, deleting a photo, choosing a cover, joining or leaving as co-author, and deleting a gone album (see deleted-folder-warning.md). It is not cleared when an upload is confirmed, so new photos can take longer to appear unless Refresh is used, see refresh-album.md.
 > - Folder health (ok, trashed, missing) is cached separately in KV `album:list:FOLDER_ID` for 5 minutes.
 > - If the album has no cover yet, the earliest uploaded photo becomes the cover and is saved on the album.
 > - The page shows a banner "Will be deleted on DATE" with "There is no backup. Download the photos you want to keep before then." once the expiry is within 30 days and the album is not pinned.

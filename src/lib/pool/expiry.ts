@@ -4,7 +4,11 @@ export const REMINDER_WINDOWS_DAYS = { first: 30, second: 7 } as const
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export type TombstoneReason =
-  'expired' | 'flamekeeper_left' | 'flamekeeper_lost' | 'no_space'
+  | 'expired'
+  | 'flamekeeper_left'
+  | 'flamekeeper_lost'
+  | 'no_space'
+  | 'folder_deleted'
 
 export interface ExpiryAlbum {
   id: string
@@ -92,6 +96,12 @@ export function tombstoneCopy(reason: TombstoneReason | null): {
         title: 'This album is gone',
         description:
           'There was not enough storage left for these photos, so the album was removed to make room.',
+      }
+    case 'folder_deleted':
+      return {
+        title: 'This album is gone',
+        description:
+          'The Google Drive folder behind this album was permanently deleted, so the album was removed by an admin.',
       }
     default:
       return {

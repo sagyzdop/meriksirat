@@ -2,7 +2,7 @@
 
 > **Question:** What does the Refresh button on an album page do?
 >
-> **Answer:** Refresh throws away the cached copies of the album (the shared album core and the cached folder health) and rebuilds the core right away, so the person who pressed it and everyone after them see current data. It is available to the owner, co-authors and admins or managers, and each person can press it at most 10 times a minute (the Recreate folder button shares this limit). The page then shows the toast "Album refreshed".
+> **Answer:** Refresh throws away the cached copies of the album (the shared album core and the cached folder health) and rebuilds the core right away, so the person who pressed it and everyone after them see current data. It is available to the owner, co-authors and admins or managers, and each person can press it at most 10 times a minute. The page then shows the toast "Album refreshed".
 >
 > **Notes:**
 > - For an album that is already indexed, the photos come from the photo table, so Refresh re-checks the folder health in Drive (ok, in the bin, deleted) and the authors, not the Drive file list. For a legacy album it also re-lists the Drive folder, see legacy-albums.md.

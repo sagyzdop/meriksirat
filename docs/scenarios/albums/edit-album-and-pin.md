@@ -31,7 +31,7 @@ sequenceDiagram
         opt Title changed
             W->>G: Master token: rename the album folder
             alt Folder no longer exists
-                W-->>B: Error The album folder was deleted from Google Drive.<br/>Use "Recreate folder" to fix it.
+                W-->>B: Error The album folder was deleted from Google Drive,<br/>so it cannot be renamed.
             else Other Drive error
                 W-->>B: Error Failed to rename the Drive folder
             end
