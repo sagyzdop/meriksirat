@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Effective Date:** [to be set by the project owner on approval]
+**Effective Date:** November 4, 2026
 **Last Updated:** November 4, 2026
 
 These Terms of Service ("Terms") govern your use of the Meriksirat equipment
@@ -10,8 +10,9 @@ agree to be bound by these Terms.
 
 ## 1. Acceptance of Terms
 
-By accepting these Terms on the login page when you create an account, you acknowledge that you have read, understood, and agree to be
-bound by these Terms. If you do not agree, you must not use the Platform.
+By logging in to the Platform, you acknowledge that you have read,
+understood, and agree to be bound by these Terms and the
+[Privacy Policy](privacy-policy.md). If you do not agree, you must not use the Platform.
 
 ## 2. Eligibility
 
@@ -25,8 +26,9 @@ membership with the club code. Your account is non-transferable.
 
 ### 3.1 Account Creation
 
-To sign up with an `@nu.edu.kz` or `@alumni.nu.edu.kz` account, you must accept
-these Terms on the login page. The date you accept is saved with your account.
+To sign up with an `@nu.edu.kz` or `@alumni.nu.edu.kz` account, you log in
+with Google, and by logging in you agree to these Terms. The date your account
+is created is saved as the date you accepted them.
 Connecting a Drive as a flamekeeper is optional and comes later (see Section
 14). Club members must also provide accurate personal information including
 their full name, date of birth, university ID, major, and graduation month.
@@ -77,8 +79,7 @@ content that violates these Terms or is otherwise objectionable.
 
 ### 4.4 Where Content Is Stored
 
-New uploaded User Content is stored in a club-run Gmail account. Existing albums
-remain on the club's main Google account for now. Flamekeepers hold no photos
+User Content is stored on Google accounts run by the club. Flamekeepers hold no photos
 (see Section 14). You acknowledge that:
 
 - Uploaded content resides on infrastructure provided by Google and subject to
@@ -210,8 +211,8 @@ flamekeeper (#savenuimg) by pledging part of your `@nu.edu.kz` Google Drive
 storage to the Platform. Flamekeeping is optional. Signing up never requires
 connecting a Drive, and you can become a flamekeeper later from the Become a flamekeeper page.
 
-- **Storage.** New album photos are stored in the club-run Gmail account, not
-  in your Drive. Flamekeepers hold no photos today; a pledge is reserve space.
+- **Storage.** Album photos are stored on club-run Google accounts, not in
+  your Drive. Flamekeepers hold no photos today; a pledge is reserve space.
 - **Ownership.** Photos the Platform stores in your Drive are owned by you in
   Google's terms, and count against your Google storage up to your pledge. The
   Organization keeps its license to use them as described in Section 4.2.
@@ -225,8 +226,8 @@ connecting a Drive, and you can become a flamekeeper later from the Become a fla
 - **Pledge.** Your pledge is the most storage the Platform may use, and it must
   be at least 512 MB while you are flamekeeping. You can change it at any time,
   or stop flamekeeping instead.
-- **Permission scope.** The Platform asks only for access to files it creates
-  (`drive.file`) and cannot read the rest of your Drive.
+- **Your other files.** The Platform only works with the files it creates in
+  your Drive and does not read the rest of it.
 
 ## 15. Contact
 
