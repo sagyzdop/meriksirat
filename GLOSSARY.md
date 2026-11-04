@@ -93,7 +93,7 @@ _Avoid_: Gallery, collection
 
 **Photo**:
 One image in an album, identified by its current Drive file ID, which changes when the photo moves to another account. Listed from Drive and cached, with no photo record of its own.
-Album pages read this way since #18. Not built yet (Stage 1, #15): the photo table still exists and still serves expiry and flamekeeper moves. Favorites no longer use it (#19). ADR-0017 removes it.
+Album pages read this way since #18. Not built yet (Stage 1, #15): the photo table still exists and still serves flamekeeper moves (expiry stopped using it in #21, favorites in #19). ADR-0017 removes it.
 _Avoid_: Image, file, picture
 
 **Volume**:
@@ -106,7 +106,7 @@ A photo a user has saved, keyed by user, album and Drive file ID. Moving a photo
 _Avoid_: Bookmark, like, star
 
 **Expiry**:
-The date an album is deleted, by default two years after its event; shown on the album in its last 30 days.
+The date an album is deleted, by default two years after its event; shown on every unpinned album page, with a warning in its last 30 days. Expiry lists each volume fresh with its owner token and deletes what it finds; an unreachable flamekeeper's files are left in place.
 _Avoid_: TTL, deletion deadline
 
 **Pin**:

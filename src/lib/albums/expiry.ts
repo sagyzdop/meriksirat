@@ -18,17 +18,12 @@ import {
 import { getGoogleAccessToken } from '@/lib/google/google-calendar-auth'
 import { planExpiry, reminderRecipients } from '@/lib/pool/expiry'
 import {
-  albumRemovalCost,
+  RUN_SUBREQUEST_BUDGET,
+  createBudget,
   takeIfBudgeted,
   type Budget,
 } from '@/lib/cron/budget'
-import {
-  MAX_PHOTO_DELETES_PER_CALL,
-  deleteOwnedPhotos,
-  loadOwnedPhotos,
-} from '@/lib/pool/server'
 import type { TombstoneReason } from '@/lib/pool/expiry'
-import type { HealTally } from '@/lib/pool/volumes'
 import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
 import { formatLongDate } from '@/lib/club-time'
 import { chunk } from '@/lib/utils'
@@ -38,54 +33,7 @@ type AlbumRecord = typeof album.$inferSelect
 
 const ROW_DELETE_CHUNK = 90
 const EXPIRES_PER_RUN = 3
-
-export const albumRecountSet = (albumId: string) => ({
-  photoCount: sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
-  photoBytes: sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
-  favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} WHERE ${favorite.albumId} = ${albumId})`,
-})
-
-export async function dropPhotoRows(
-  database: Database,
-  albumId: string,
-  ids: string[]
-): Promise<void> {
-  if (ids.length === 0) return
-  for (const part of chunk(ids, ROW_DELETE_CHUNK)) {
-    await database.delete(photo).where(inArray(photo.id, part))
-  }
-  await database
-    .update(album)
-    .set(albumRecountSet(albumId))
-    .where(eq(album.id, albumId))
-}
-
-async function removeOwnedPhotos(
-  database: Database,
-  albumId: string,
-  budget?: Budget
-): Promise<boolean> {
-  const owned = await loadOwnedPhotos(database, albumId)
-  if (owned.length === 0) return true
-  const batch = owned.slice(0, MAX_PHOTO_DELETES_PER_CALL)
-  const { deleted, lost, error } = await deleteOwnedPhotos(
-    database,
-    batch,
-    budget
-  )
-  await dropPhotoRows(
-    database,
-    albumId,
-    [...deleted, ...lost].map((p) => p.id)
-  )
-  if (error) throw error
-  if (owned.length > batch.length) {
-    throw new Error(
-      'This album is too large to delete in one go. Some photos were deleted; try again to continue.'
-    )
-  }
-  return lost.length === 0
-}
+const MIN_ALBUM_COST = 8
 
 export class AlbumDeletionDeferredError extends Error {
   constructor() {
@@ -102,69 +50,29 @@ async function deleteAlbumFolder(
   accessToken: string,
   options: { strictDrive?: boolean; budget?: Budget }
 ): Promise<void> {
-  const { decideAlbumFolder } = await import('@/lib/pool/volumes')
-  let tally: HealTally | null = null
-  let retried = false
-  while (true) {
-    try {
-      await deleteDriveFile(accessToken, row.driveFolderId)
-      return
-    } catch (error) {
-      if (error instanceof DriveNotFoundError) return
-      if (error instanceof DriveAppNotAuthorizedError) {
-        if (!tally) {
-          try {
-            const { healAlbumVolumes } =
-              await import('@/lib/pool/volumes-server')
-            tally = await healAlbumVolumes(
-              database,
-              row.id,
-              new Date(),
-              options.budget
-            )
-          } catch (healError) {
-            console.warn(
-              `Could not clear volumes of album ${row.id}:`,
-              healError
-            )
-            tally = { cleared: 0, blocked: 0, incomplete: 1 }
-          }
-        }
-        const decision = decideAlbumFolder(tally, retried)
-        if (decision === 'defer') throw new AlbumDeletionDeferredError()
-        if (decision === 'retry') {
-          if (!takeIfBudgeted(options.budget, 1)) {
-            throw new AlbumDeletionDeferredError()
-          }
-          retried = true
-          continue
-        }
-        console.warn(
-          `Album ${row.id} keeps its Drive folder: it still holds photos the club account cannot delete (${tally.blocked} volumes could not be cleared)`
-        )
-        const alerted = await alertBlockedAlbum(
-          database,
-          row.id,
-          tally.blocked,
-          options.budget
-        )
-        if (!alerted) throw new AlbumDeletionDeferredError()
-        return
-      }
-      if (options.strictDrive) throw error
+  try {
+    await deleteDriveFile(accessToken, row.driveFolderId)
+  } catch (error) {
+    if (error instanceof DriveNotFoundError) return
+    if (error instanceof DriveAppNotAuthorizedError) {
       console.warn(
-        'Failed to delete Drive folder, continuing with DB cleanup:',
-        error
+        `Album ${row.id} keeps its Drive folder: it still holds files the club account cannot delete`
       )
+      const alerted = await alertBlockedAlbum(database, row.id, options.budget)
+      if (!alerted) throw new AlbumDeletionDeferredError()
       return
     }
+    if (options.strictDrive) throw error
+    console.warn(
+      'Failed to delete Drive folder, continuing with DB cleanup:',
+      error
+    )
   }
 }
 
 async function alertBlockedAlbum(
   database: Database,
   albumId: string,
-  blocked: number,
   budget?: Budget
 ): Promise<boolean> {
   try {
@@ -174,7 +82,7 @@ async function alertBlockedAlbum(
     const result = await sendAdminsTelegramResult(
       database,
       (env as { TELEGRAM_BOT_TOKEN?: string }).TELEGRAM_BOT_TOKEN,
-      albumBlockedAlertText(albumId, blocked),
+      albumBlockedAlertText(albumId, 0),
       budget
     )
     if (result === 'no_admins') {
@@ -197,18 +105,12 @@ export async function removeAlbum(
     budget?: Budget
   } = {}
 ): Promise<void> {
-  const folderDeletable = await removeOwnedPhotos(
-    database,
-    row.id,
-    options.budget
-  )
-  if (!folderDeletable) {
-    console.warn(
-      `Album ${row.id} keeps its Drive folder: a lost flamekeeper's photos are still in it`
-    )
-  } else {
-    await deleteAlbumFolder(database, row, accessToken, options)
+  const budget = options.budget ?? createBudget(RUN_SUBREQUEST_BUDGET)
+  const { tearDownAlbumFiles } = await import('./teardown-server')
+  if ((await tearDownAlbumFiles(database, row, budget)) === 'retry') {
+    throw new AlbumDeletionDeferredError()
   }
+  await deleteAlbumFolder(database, row, accessToken, { ...options, budget })
   await invalidateCachedListing(row.driveFolderId)
   await invalidateCachedDetailCore(row.id)
 
@@ -288,19 +190,6 @@ export async function tombstoneGoneAlbum(
   }
 }
 
-async function removalCost(
-  database: Database,
-  albumId: string
-): Promise<number> {
-  const owners = await database
-    .select({ n: sql<number>`COUNT(*)` })
-    .from(photo)
-    .where(and(eq(photo.albumId, albumId), isNotNull(photo.flamekeeperUserId)))
-    .groupBy(photo.flamekeeperUserId)
-    .all()
-  return albumRemovalCost(owners.map((o) => Number(o.n)))
-}
-
 export async function runAlbumExpiry(
   env: {
     meriksirat_d1: D1Database
@@ -346,9 +235,11 @@ export async function runAlbumExpiry(
     for (const id of rotateIds(plan.expire, turn)) {
       if (removed >= EXPIRES_PER_RUN) break
       try {
-        const cost = (await removalCost(database, id)) + (accessToken ? 0 : 1)
-        if (!takeIfBudgeted(budget, cost)) continue
-        accessToken ??= await getGoogleAccessToken()
+        if (budget && !budget.canAfford(MIN_ALBUM_COST)) continue
+        if (!accessToken) {
+          if (!takeIfBudgeted(budget, 1)) continue
+          accessToken = await getGoogleAccessToken()
+        }
         removed++
         await removeAlbum(database, byId.get(id)!, accessToken, {
           tombstone: 'expired',

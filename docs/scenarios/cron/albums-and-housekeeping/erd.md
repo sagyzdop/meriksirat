@@ -5,8 +5,9 @@
 >
 > **Answer:** They work on the album, photo and volume tables, the
 > owners and co-authors in user and album_member. Early expiry also reads
-> favorite, and the Drive cleanup reads upload_reservation and
-> flamekeeper_grant. The bot menu step touches no table, only a KV marker. Only the
+> favorite. Deleting an expired album reads buffer_volume, volume,
+> flamekeeper and flamekeeper_grant to find each volume's owner, and
+> no longer reads photo to decide what to delete. The bot menu step touches no table, only a KV marker. Only the
 > columns these steps use are listed.
 >
 > **Notes:**

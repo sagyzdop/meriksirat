@@ -40,7 +40,7 @@ import { useAlbumFavorites } from '@/lib/favorites/use-album-favorites'
 import { useUploads, revealUploadDetails } from '@/lib/albums/upload-manager'
 import { driveFolderUrl } from '@/lib/albums/urls'
 import { formatUtcDate } from '@/lib/format'
-import { expiryBannerDate, tombstoneCopy } from '@/lib/pool/expiry'
+import { expiryBannerDate, expiryLabel, tombstoneCopy } from '@/lib/pool/expiry'
 import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
 import { PhotoGrid } from '@/components/albums/photo-grid'
@@ -263,6 +263,11 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
     new Date()
   )
 
+  const expiryText = expiryLabel({
+    expiresAt: album.expiresAt ? new Date(album.expiresAt) : null,
+    pinned: album.pinned,
+  })
+
   return renderPage(
     <PageContainer>
       <PageHeader
@@ -344,6 +349,15 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         )}
         <span>Created {formatUtcDate(album.createdAt)}</span>
         <span aria-hidden="true">·</span>
+        {!album.pinned && expiryText && (
+          <>
+            <span className="flex items-center gap-1.5">
+              <CalendarClock className="size-4" />
+              {expiryText}
+            </span>
+            <span aria-hidden="true">·</span>
+          </>
+        )}
         <span>
           {album.photos.length} photo{album.photos.length !== 1 ? 's' : ''}
         </span>
