@@ -21,18 +21,19 @@
 >   per admin.
 > - The budget of 40 is below the Worker limit of 50 outgoing
 >   requests per run.
-> - The photo health check has a slice of 24 requests inside the
->   40. The reconnect emails and the admin report of the same
->   step use the rest of the budget.
-> - Photo moves between flamekeepers are not done by the cron.
->   The browser of the flamekeeper does them, see
->   ../../flamekeepers/relay-move-photo.md for that.
+> - The health probes have a slice of 24 requests inside the
+>   40. The reconnect emails of the same step use the rest of
+>   the budget.
+> - Nobody holds photos on a flamekeeper until Stage 2 of #15,
+>   so maintainPool and drainFlamekeepers do very little.
+>   drainFlamekeepers only ends flamekeepers that earlier code
+>   left in the old draining state (drop the Drive access, mark
+>   drained, at most 10 per run, 2 requests each).
 > - Each step has its own file: health-probe.md,
->   missing-photos.md, lost-notice.md, lost-finalize.md,
->   lost-recovery.md, pool-top-up.md, drain-notices.md,
->   drain-finish.md, drain-deadline.md, release-volumes.md,
+>   lost-notice.md, lost-finalize.md, pool-top-up.md,
 >   ban-cleanup.md, graduation-trigger.md and
->   graduation-prompt.md.
+>   graduation-prompt.md. The removed placement, drain and relay
+>   code can be found at `dev` commit `2565826`.
 
 ```mermaid
 sequenceDiagram
@@ -41,13 +42,13 @@ sequenceDiagram
     participant Worker
 
     Cron->>Worker: scheduled() every hour<br/>create one budget of 40 requests
-    Worker->>Worker: checkFlamekeeperHealth<br/>probes and photo checks share 24 requests<br/>at most 3 reconnect emails<br/>finalizes at most 1 lost flamekeeper<br/>restores at most 2 dropped volumes<br/>see health-probe.md
-    Worker->>Worker: maintainPool<br/>no request cap of its own<br/>only the admin alert spends budget<br/>see pool-top-up.md
-    Worker->>Worker: drainFlamekeepers<br/>at most 2 stuck-folder alerts, 2 drain alerts<br/>at most 2 reminder emails<br/>deletes for 1 overdue flamekeeper only<br/>at most 2 drains finished<br/>see drain-notices.md
-    Worker->>Worker: finishBans<br/>at most 3 booking cancellations<br/>at most 10 volume folders released<br/>see ban-cleanup.md
+    Worker->>Worker: checkFlamekeeperHealth<br/>probes share 24 requests<br/>at most 3 reconnect emails<br/>stamps lost flamekeepers finalized<br/>see health-probe.md
+    Worker->>Worker: maintainPool<br/>no request cap of its own<br/>only the admin alert spends budget<br/>resets full flamekeepers to active<br/>see pool-top-up.md
+    Worker->>Worker: drainFlamekeepers<br/>ends at most 10 flamekeepers left draining<br/>2 requests each
+    Worker->>Worker: finishBans<br/>at most 3 booking cancellations<br/>ends at most 10 banned flamekeepers<br/>see ban-cleanup.md
     Note over Worker: Then expireAlbums,<br/>see ../albums-and-housekeeping/
     Worker->>Worker: log outside requests spent out of 40
     Cron->>Worker: scheduled() every day at 03:00 UTC<br/>create a separate budget of 40 requests
-    Worker->>Worker: graduateFlamekeepers<br/>at most 3 drains started, 2 prompt emails<br/>see graduation-trigger.md
+    Worker->>Worker: graduateFlamekeepers<br/>at most 3 flamekeepers ended, 2 prompt emails<br/>see graduation-trigger.md
     Worker->>Worker: log outside requests spent out of 40
 ```

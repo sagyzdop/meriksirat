@@ -107,8 +107,8 @@ erDiagram
     flamekeeper {
         text user_id PK,FK
         text state "active, full, draining, lost, drained"
-        text drain_reason "opt_out, pledge, graduation, domain, ban"
-        integer draining_deadline
+        text drain_reason "unused since #24"
+        integer draining_deadline "unused since #24"
     }
     volume {
         text album_id PK,FK

@@ -15,10 +15,6 @@
 >   flamekeeping and may delete. Any other state blocks it.
 > - The row is hidden when the rule says no, and the server
 >   checks the same rule again.
-> - Opening `/profile` also loads the flamekeeper record. For a
->   flamekeeper whose photos are still moving away, that load
->   finishes the move if no photos are left, which can make the
->   row appear.
 > - Deleting the user row also removes sessions, linked Google
 >   accounts, Telegram tokens, favorites and the flamekeeper row
 >   through database cascades.
@@ -50,7 +46,7 @@ sequenceDiagram
             B->>W: deleteMyAccountFn()
             W->>D: Read isMember, email, flamekeeper.state
             alt Member or still flamekeeping
-                W-->>B: Error Club members keep their account.<br/>Other accounts can be deleted once any flamekeeping<br/>has stopped and the photos have moved.
+                W-->>B: Error Club members keep their account.<br/>Other accounts can be deleted once any flamekeeping<br/>has stopped.
                 B-->>P: Error toast with that message, or Could not<br/>delete the account
             else Allowed
                 W->>D: Delete the user row (cascades)

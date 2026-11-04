@@ -1,19 +1,10 @@
 import { useState } from 'react'
-import { useNavigate, useRouter } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import {
   BanUserDialog,
   UnbanUserDialog,
 } from '@/components/shared/ban-user-dialogs'
-import { DrainRelay } from '@/components/shared/drain-relay'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { UserTabs } from '@/components/admin/users/components/user-tabs'
@@ -55,19 +46,10 @@ export function Page({
   viewerId,
 }: PageProps) {
   const navigate = useNavigate()
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const [relayUserId, setRelayUserId] = useState<string | null>(null)
-  const relayRow = flamekeepers.find((row) => row.userId === relayUserId)
   const [banUserId, setBanUserId] = useState<string | null>(null)
   const [unbanUserId, setUnbanUserId] = useState<string | null>(null)
   const banRow = flamekeepers.find((row) => row.userId === banUserId)
   const unbanRow = flamekeepers.find((row) => row.userId === unbanUserId)
-
-  const handleRelayFinished = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['flamekeepers'] })
-    await router.invalidate()
-  }
 
   return (
     <PageContainer>
@@ -97,7 +79,6 @@ export function Page({
                 <TableHead>Pledged</TableHead>
                 <TableHead>Used</TableHead>
                 <TableHead>Graduation</TableHead>
-                <TableHead>Draining</TableHead>
                 {canBan && <TableHead />}
               </TableRow>
             </TableHeader>
@@ -105,7 +86,7 @@ export function Page({
               {flamekeepers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={canBan ? 7 : 6}
+                    colSpan={canBan ? 6 : 5}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No flamekeepers found.
@@ -156,22 +137,6 @@ export function Page({
                     <TableCell className="tabular-nums">
                       {row.graduationDate}
                     </TableCell>
-                    <TableCell>
-                      {row.state === 'draining' && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm tabular-nums text-muted-foreground">
-                            {formatGb(row.drainBytesLeft)} left
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setRelayUserId(row.userId)}
-                          >
-                            Move photos
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
                     {canBan && (
                       <TableCell className="text-right">
                         {row.bannedAt ? (
@@ -202,28 +167,6 @@ export function Page({
           </Table>
         </div>
       </div>
-      <Dialog
-        open={!!relayRow}
-        onOpenChange={(open) => !open && setRelayUserId(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Move {relayRow?.name}'s photos</DialogTitle>
-            <DialogDescription>
-              Photos move through this browser to other flamekeepers. Keep the
-              dialog open until it finishes.
-            </DialogDescription>
-          </DialogHeader>
-          {relayRow && (
-            <DrainRelay
-              userId={relayRow.userId}
-              bytesLeft={relayRow.drainBytesLeft}
-              drainingDeadline={relayRow.drainingDeadline}
-              onFinished={handleRelayFinished}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
       {banRow && (
         <BanUserDialog
           userId={banRow.userId}

@@ -1,6 +1,6 @@
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, ne } from 'drizzle-orm'
 import { db, type Database } from '@/db'
-import { booking, session, user, volume } from '@/db/schema'
+import { booking, flamekeeper, session, user } from '@/db/schema'
 import { isMasterEmail } from '@/lib/flamekeeper/master'
 import { cancelWholeBooking } from '@/lib/booking/booking-items'
 import {
@@ -9,16 +9,16 @@ import {
 } from '@/lib/telegram/logging'
 import { formatUserDisplayName } from '@/lib/utils'
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
-import { checkBan, planBanDrain } from './ban'
-import { releaseVolumes } from './volumes-server'
+import { checkBan } from './ban'
+import { planBan } from './stop'
 import {
-  applyDrainTransition,
-  hasPhotosLeft,
-  loadDrainRow,
-} from './drain-server'
+  applyStopPlan,
+  endFlamekeeping,
+  loadFlamekeeperState,
+} from './stop-server'
 
 const CANCELS_PER_RUN = 3
-const REVOKES_PER_RUN = 10
+const STOPS_PER_RUN = 10
 
 function displayName(row: {
   firstName: string | null
@@ -77,15 +77,25 @@ async function cancelBannedBookings(
   }
 }
 
-async function revokeBannedWriterAccess(
+async function stopBannedFlamekeepers(
   database: Database,
   budget?: Budget
 ): Promise<void> {
-  await releaseVolumes(
-    database,
-    sql`${volume.flamekeeperUserId} IN (SELECT ${user.id} FROM ${user} WHERE ${user.bannedAt} IS NOT NULL)`,
-    { limit: REVOKES_PER_RUN, budget }
-  )
+  const banned = await database
+    .select({ userId: flamekeeper.userId })
+    .from(flamekeeper)
+    .innerJoin(user, eq(user.id, flamekeeper.userId))
+    .where(and(isNotNull(user.bannedAt), ne(flamekeeper.state, 'drained')))
+    .limit(STOPS_PER_RUN)
+    .all()
+  for (const { userId } of banned) {
+    if (!takeIfBudgeted(budget, 2)) return
+    try {
+      await endFlamekeeping(database, userId)
+    } catch (error) {
+      console.error(`Failed to stop banned flamekeeper ${userId}:`, error)
+    }
+  }
 }
 
 async function finishBanWork(
@@ -93,7 +103,7 @@ async function finishBanWork(
   budget?: Budget
 ): Promise<void> {
   await cancelBannedBookings(database, budget)
-  await revokeBannedWriterAccess(database, budget)
+  await stopBannedFlamekeepers(database, budget)
 }
 
 export async function runBanMaintenance(
@@ -135,14 +145,8 @@ export async function banUser(
     .where(eq(user.id, input.targetId))
   await database.delete(session).where(eq(session.userId, input.targetId))
 
-  const fk = await loadDrainRow(database, input.targetId)
-  const hasPhotos = fk ? await hasPhotosLeft(database, input.targetId) : false
-  await applyDrainTransition(
-    database,
-    input.targetId,
-    planBanDrain(fk, hasPhotos, now),
-    now
-  )
+  const fk = await loadFlamekeeperState(database, input.targetId)
+  await applyStopPlan(database, input.targetId, planBan(fk), now)
 
   const names = await loadNames(database, [input.actorId, input.targetId])
   await logUserBanActivity({

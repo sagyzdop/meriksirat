@@ -6,14 +6,11 @@
 > **Answer:** The flamekeeper is marked lost and, unless banned,
 > gets one email asking them to reconnect Drive before a date 7
 > days after the loss. Up to 3 such emails go out per cron run,
-> 1 request each. Their photos stay listed during the 7 days.
-> When the 7 days have passed, the cron finalizes the loss (see
-> lost-finalize.md). If the email fails to send, it is tried
+> 1 request each. The 7 days are only a reminder window: when they have passed,
+> the cron just stamps the loss finalized (see lost-finalize.md). If the email fails to send, it is tried
 > again on the next run.
 >
 > **Notes:**
-> - A flamekeeper in state lost no longer receives uploads:
->   placement only looks at active flamekeepers.
 > - The email goes out in the same run that marks the loss,
 >   right after the probes.
 > - If the budget is gone or the cap of 3 is reached, the rest
@@ -21,13 +18,13 @@
 > - Banned flamekeepers get no reconnect email, but are still
 >   finalized after 7 days.
 > - The email is sent from the club account. Subject: Reconnect
->   your Google Drive to keep your photos in the app. The body
->   gives the deadline date and a link to /profile, and says the
->   files stay in the flamekeeper's Drive and come back if they
->   reconnect later.
+>   your Google Drive to keep your flame lit. The body
+>   gives the deadline date and a link to /profile, and ends there.
 > - Reconnecting is done by the flamekeeper in the app, see
->   ../../flamekeepers/connect-drive.md. The restoration after
->   it is in lost-recovery.md.
+>   ../../flamekeepers/connect-drive.md. Reconnecting
+>   puts the flamekeeper back to active; no photos are restored
+>   because none are dropped (removed in #24, `dev` commit
+>   `2565826`).
 > - How the loss is detected is in health-probe.md.
 
 ```mermaid

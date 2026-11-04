@@ -80,7 +80,7 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
 
     const { graduationDate, ...fields } = data
     if (graduationDate !== undefined) {
-      const { saveGraduationDate } = await import('@/lib/pool/drain-server')
+      const { saveGraduationDate } = await import('@/lib/pool/stop-server')
       await saveGraduationDate(database, session.user.id, graduationDate)
     }
     if (Object.values(fields).some((value) => value !== undefined)) {

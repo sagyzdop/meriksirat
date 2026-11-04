@@ -27,12 +27,8 @@ export function StopFlamekeepingDialog({
 
   const handleConfirm = () =>
     run(async () => {
-      const status = await optOutFlamekeeperFn()
-      toast.success(
-        status.state === 'drained'
-          ? 'You have stopped flamekeeping'
-          : 'Your flame is winding down'
-      )
+      await optOutFlamekeeperFn()
+      toast.success('You have stopped flamekeeping')
       onOpenChange(false)
       await onStopped()
     }, 'Could not stop flamekeeping')
@@ -43,9 +39,8 @@ export function StopFlamekeepingDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Stop flamekeeping?</AlertDialogTitle>
           <AlertDialogDescription>
-            Your Drive stops being used for new club photos right away. There is
-            nothing else to do on your side, and the app then removes its access
-            to your Drive.
+            Your flamekeeping ends right away and the app removes its access to
+            your Drive. There is nothing else to do on your side.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

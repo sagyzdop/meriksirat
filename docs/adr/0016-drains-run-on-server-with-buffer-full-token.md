@@ -1,5 +1,10 @@
 # Drains run on the server, with a full-scope token on the buffer only
 
+> **Amended by #24.** The relay, drain and placement code described below was
+> removed because nobody holds photos on a flamekeeper until Stage 2. The last
+> `dev` commit containing it is `2565826`; Stage 2 tickets restore what they need
+> from the commit history.
+
 A drain moves a leaving flamekeeper's photos to the buffer. It runs in the hourly
 cron on the server, not in the flamekeeper's browser. Under `drive.file` the
 server can't read or copy another account's files, so the buffer alone gets a
