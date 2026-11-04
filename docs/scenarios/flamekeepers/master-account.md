@@ -39,7 +39,7 @@ sequenceDiagram
     GO->>Worker: GET /api/flamekeeper/callback
     Worker-->>Browser: Redirect with fk_error=master<br/>("The club account owns the album folders<br/>and cannot be a flamekeeper.")
     Note over Worker,D1: No flamekeeper row is written, so there is<br/>nothing to drain
-    Note over Worker,D1: Photo placement at upload time
+    Note over Worker,D1: Placement of a relayed photo (uploads go to the buffer)
     Worker->>D1: load active and full flamekeepers with email
     alt A listed email equals the club account
         Worker->>Worker: placeUpload skips that flamekeeper

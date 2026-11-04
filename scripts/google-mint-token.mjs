@@ -6,6 +6,14 @@
  * GOOGLE_MASTER_REFRESH_TOKEN. Scopes are
  * fixed when a token is issued, so a fresh consent + token is required.
  *
+ * It also mints the buffer account's two tokens (docs/agents/buffer-setup.md):
+ *   node scripts/google-mint-token.mjs --account buffer-upload
+ *     drive.file only -> GOOGLE_BUFFER_REFRESH_TOKEN (sign in as the buffer)
+ *   node scripts/google-mint-token.mjs --account buffer-full
+ *     full `drive` scope -> GOOGLE_BUFFER_FULL_REFRESH_TOKEN (server only,
+ *     sign in as the buffer). Never use this for the master account.
+ * Minting a token never revokes the grant behind an existing one.
+ *
  * Usage:
  *   node scripts/google-mint-token.mjs
  *   node scripts/google-mint-token.mjs --port 9000
@@ -46,12 +54,46 @@ for (const key of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']) {
   if (!process.env[key]) throw new Error(`${key} is not set in .env`)
 }
 
-const SCOPES = [
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/gmail.send',
-]
+const DRIVE_FILE = 'https://www.googleapis.com/auth/drive.file'
+const DRIVE_FULL = 'https://www.googleapis.com/auth/drive'
+
+const ACCOUNTS = {
+  master: {
+    envName: 'GOOGLE_MASTER_REFRESH_TOKEN',
+    scopes: [
+      'https://www.googleapis.com/auth/calendar',
+      'https://www.googleapis.com/auth/calendar.events',
+      DRIVE_FILE,
+      'https://www.googleapis.com/auth/gmail.send',
+    ],
+  },
+  'buffer-upload': {
+    envName: 'GOOGLE_BUFFER_REFRESH_TOKEN',
+    scopes: ['openid', 'email', DRIVE_FILE],
+    hint: process.env.GOOGLE_BUFFER_EMAIL || 'nuimage.storage@gmail.com',
+  },
+  'buffer-full': {
+    envName: 'GOOGLE_BUFFER_FULL_REFRESH_TOKEN',
+    scopes: ['openid', 'email', DRIVE_FULL],
+    hint: process.env.GOOGLE_BUFFER_EMAIL || 'nuimage.storage@gmail.com',
+  },
+}
+
+const argAccount = process.argv.indexOf('--account')
+const ACCOUNT = argAccount !== -1 ? process.argv[argAccount + 1] : 'master'
+if (!ACCOUNTS[ACCOUNT]) {
+  throw new Error(
+    `Unknown --account ${ACCOUNT}. Use master, buffer-upload or buffer-full.`
+  )
+}
+const {
+  envName: TOKEN_ENV_NAME,
+  scopes: SCOPES,
+  hint: LOGIN_HINT,
+} = ACCOUNTS[ACCOUNT]
+if (ACCOUNT === 'master' && SCOPES.includes(DRIVE_FULL)) {
+  throw new Error('The master account must never get the full drive scope')
+}
 
 const argPort = process.argv.indexOf('--port')
 const argRedirect = process.argv.indexOf('--redirect-uri')
@@ -75,6 +117,7 @@ const authUrl =
     access_type: 'offline',
     prompt: 'consent',
     state,
+    ...(LOGIN_HINT ? { login_hint: LOGIN_HINT } : {}),
   })
 
 async function exchangeCode(code) {
@@ -101,6 +144,16 @@ async function checkScopes(accessToken) {
   )
   const data = await info.json()
   if (data.error) throw new Error(`tokeninfo failed: ${JSON.stringify(data)}`)
+  if (data.email) console.log(`Signed in as: ${data.email}`)
+  if (
+    LOGIN_HINT &&
+    data.email &&
+    data.email.toLowerCase() !== LOGIN_HINT.toLowerCase()
+  ) {
+    console.log(
+      `WARNING: expected ${LOGIN_HINT}. Do not use this token for the buffer.`
+    )
+  }
   return data.scope.split(' ')
 }
 
@@ -127,14 +180,12 @@ const server = createServer((req, res) => {
   exchangeCode(code)
     .then(async (tokens) => {
       const scopes = await checkScopes(tokens.access_token)
-      console.log('\n=== NEW GOOGLE_MASTER_REFRESH_TOKEN ===')
+      console.log(`\n=== NEW ${TOKEN_ENV_NAME} ===`)
       console.log(tokens.refresh_token)
       console.log('==========================================')
       console.log('Granted scopes:')
       for (const scope of scopes) console.log('  -', scope)
-      console.log(
-        '\nCopy the token above into .env as GOOGLE_MASTER_REFRESH_TOKEN,'
-      )
+      console.log(`\nCopy the token above into .env as ${TOKEN_ENV_NAME},`)
       console.log('then restart the dev server.')
     })
     .catch((err) => console.error('\nERROR:', err.message))

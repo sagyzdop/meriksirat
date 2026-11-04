@@ -43,6 +43,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 
 - Local: `.env` (see `.env.example`). Production builds read `wrangler.jsonc` bindings; secrets via wrangler secrets.
 - Set `DEV=true` locally to auto-skip the Telegram onboarding step.
+- Buffer account tokens (`GOOGLE_BUFFER_REFRESH_TOKEN` drive.file, `GOOGLE_BUFFER_FULL_REFRESH_TOKEN` full `drive`, server-only, only `src/lib/buffer/full-token.ts` may name it): setup in README "Connecting the buffer account". Uploads go to the buffer and fail when it is unavailable; never fall back to flamekeepers.
 - Google master tokens (`GOOGLE_MASTER_ACCESS_TOKEN`/`GOOGLE_MASTER_REFRESH_TOKEN`) expire; refresh with `scripts/google-mint-token.mjs` (see also `scripts/cleanup-gcal.mjs`).
 
 ## Cron / scheduled work

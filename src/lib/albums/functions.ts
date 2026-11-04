@@ -8,7 +8,6 @@ import {
   CreateAlbumSchema,
   CreateUploadSessionSchema,
   DeletePhotoSchema,
-  ReleaseUploadSchema,
   RemoveMemberSchema,
   SetAlbumPinnedSchema,
   SetCoverPhotoSchema,
@@ -21,6 +20,7 @@ import type {
   UploadSession,
 } from './types'
 import { defaultExpiry } from '@/lib/pool/expiry'
+import { BUFFER_OWNER_ID } from '@/lib/buffer/plan'
 
 type Database = ReturnType<(typeof import('@/db'))['db']>
 
@@ -606,7 +606,7 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       await import('@/lib/google/google-calendar-auth')
     const { findDriveFileByName, getDriveFolderState } =
       await import('@/lib/google/google-drive')
-    const { startFlamekeeperUpload } = await import('@/lib/pool/server')
+    const { startBufferUpload } = await import('@/lib/buffer/server')
 
     const { database, row, headers } = await albumContext(data.albumId, [
       'owner',
@@ -667,7 +667,7 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       }
     }
 
-    return startFlamekeeperUpload(database, row, {
+    return startBufferUpload(database, row, {
       name: data.fileName,
       mimeType: data.mimeType,
       bytes: data.size,
@@ -684,34 +684,9 @@ export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
       'manager',
     ])
 
-    const { confirmFlamekeeperUpload } = await import('@/lib/pool/server')
-    const registered = await confirmFlamekeeperUpload(
-      database,
-      row,
-      data.reservationId,
-      data.fileId
-    )
+    const { confirmBufferUpload } = await import('@/lib/buffer/server')
+    const registered = await confirmBufferUpload(database, row, data.fileId)
     return { registered }
-  })
-
-export const releaseUploadFn = createServerFn({ method: 'POST' })
-  .validator(ReleaseUploadSchema)
-  .handler(async ({ data }) => {
-    const { releaseFlamekeeperUpload } = await import('@/lib/pool/server')
-
-    const { database, row } = await albumContext(data.albumId, [
-      'owner',
-      'editor',
-      'manager',
-    ])
-
-    await releaseFlamekeeperUpload(
-      database,
-      row.id,
-      data.reservationId,
-      data.quotaExceeded
-    )
-    return { success: true }
   })
 
 export const deletePhotoFn = createServerFn({ method: 'POST' })
@@ -751,6 +726,10 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
       if (error) throw error
     } else {
       await deleteDriveFile(await getGoogleAccessToken(), data.fileId)
+    }
+    if (registered?.flamekeeperUserId === BUFFER_OWNER_ID) {
+      const { adjustExpected } = await import('@/lib/buffer/server')
+      await adjustExpected(database, row.id, -1, -registered.bytes)
     }
     if (registered) {
       const { favorite } = await import('@/db/schema')

@@ -614,6 +614,19 @@ export const volume = sqliteTable(
   ]
 )
 
+export const bufferVolume = sqliteTable('buffer_volume', {
+  albumId: text('album_id')
+    .primaryKey()
+    .references(() => album.id, { onDelete: 'cascade' }),
+  driveFolderId: text('drive_folder_id'),
+  permissionId: text('permission_id').default('').notNull(),
+  expectedCount: integer('expected_count').default(0).notNull(),
+  expectedBytes: integer('expected_bytes').default(0).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+})
+
 export const uploadReservation = sqliteTable(
   'upload_reservation',
   {

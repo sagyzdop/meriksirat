@@ -66,13 +66,6 @@ export const DeletePhotoSchema = z.object({
 export const ConfirmPhotoUploadSchema = z.object({
   albumId: z.string(),
   fileId: z.string().min(1).max(200),
-  reservationId: z.string().min(1).max(64),
-})
-
-export const ReleaseUploadSchema = z.object({
-  albumId: z.string(),
-  reservationId: z.string().min(1).max(64),
-  quotaExceeded: z.boolean(),
 })
 
 export const SetCoverPhotoSchema = z.object({
@@ -178,5 +171,4 @@ export interface AlbumDetail extends AlbumSummary {
 
 export interface UploadSession {
   uploadUrl: string
-  reservationId: string
 }

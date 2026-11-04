@@ -2,7 +2,7 @@
 
 > **Question:** What happens when a member deletes one photo, and whose Google token removes the file?
 >
-> **Answer:** The owner, co-authors and admins or managers can delete a photo from the photo viewer after confirming "Delete photo?". The Worker finds the photo in this album's table. If a flamekeeper holds the file, it is deleted with that flamekeeper's own token. If it is a master-owned or older file, it is deleted with the master token. Then the photo row goes, the album's photo count, size and favorite count go down, a cover that pointed at this photo is cleared, and the page shows the toast "Photo deleted".
+> **Answer:** The owner, co-authors and admins or managers can delete a photo from the photo viewer after confirming "Delete photo?". The Worker finds the photo in this album's table. If the buffer holds the file, it is deleted with the buffer's token and the volume's expected count and bytes go down. If a flamekeeper holds it, it is deleted with that flamekeeper's own token. If it is a master-owned or older file, it is deleted with the master token. Then the photo row goes, the album's photo count, size and favorite count go down, a cover that pointed at this photo is cleared, and the page shows the toast "Photo deleted".
 >
 > **Notes:**
 > - Ownership checks, in order: the caller needs a role on this album, and the file id must belong to a photo of this same album, so a photo id from another album is refused with "Photo not found in this album".
@@ -20,7 +20,7 @@ sequenceDiagram
     participant W as Worker
     participant D as D1
     participant K as KV
-    participant F as Flamekeeper Drive
+    participant F as Buffer or flamekeeper Drive
     participant G as Master Drive
     participant T as Telegram
     M->>B: Open the photo, click Delete, confirm Delete
@@ -32,8 +32,8 @@ sequenceDiagram
         W->>D: Find photo with this fileId in this album
         alt Not found and album is indexed
             W-->>B: Error Photo not found in this album
-        else Held by a flamekeeper
-            W->>F: That flamekeeper's token: delete the file
+        else Held by the buffer or a flamekeeper
+            W->>F: The holder's token (buffer or flamekeeper): delete the file
             alt Drive fails
                 W-->>B: Error from Drive, nothing else changes
             else Flamekeeper access lost or flamekeeper gone
