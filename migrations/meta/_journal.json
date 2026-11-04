@@ -141,6 +141,13 @@
       "when": 1793777872413,
       "tag": "0034_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1793794082990,
+      "tag": "0035_setup",
+      "breakpoints": true
     }
   ]
 }

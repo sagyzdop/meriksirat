@@ -42,7 +42,7 @@ const EXPIRES_PER_RUN = 3
 export const albumRecountSet = (albumId: string) => ({
   photoCount: sql`(SELECT COUNT(*) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
   photoBytes: sql`(SELECT COALESCE(SUM(${photo.bytes}), 0) FROM ${photo} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
-  favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} INNER JOIN ${photo} ON ${photo.id} = ${favorite.photoId} WHERE ${photo.albumId} = ${albumId} AND ${photo.state} = 'live')`,
+  favoriteCount: sql`(SELECT COUNT(*) FROM ${favorite} WHERE ${favorite.albumId} = ${albumId})`,
 })
 
 export async function dropPhotoRows(
@@ -214,6 +214,7 @@ export async function removeAlbum(
 
   if (options.tombstone) {
     await database.delete(photo).where(eq(photo.albumId, row.id))
+    await database.delete(favorite).where(eq(favorite.albumId, row.id))
     await database.delete(volume).where(eq(volume.albumId, row.id))
     await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
     await database
@@ -263,6 +264,7 @@ export async function tombstoneGoneAlbum(
       .where(eq(flamekeeper.userId, userId))
   }
   await database.delete(photo).where(eq(photo.albumId, row.id))
+  await database.delete(favorite).where(eq(favorite.albumId, row.id))
   await database.delete(volume).where(eq(volume.albumId, row.id))
   await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
   await database

@@ -24,7 +24,6 @@ export function useAlbumFavorites(
       setFavoriteFn({
         data: {
           albumId,
-          photoId: vars.photo.photoId ?? null,
           driveFileId: vars.photo.id,
           favorite: vars.favorite,
         },

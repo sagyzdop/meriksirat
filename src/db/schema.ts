@@ -459,16 +459,20 @@ export const favorite = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    photoId: text('photo_id')
+    albumId: text('album_id')
       .notNull()
-      .references(() => photo.id, { onDelete: 'cascade' }),
+      .references(() => album.id, { onDelete: 'cascade' }),
+    driveFileId: text('drive_file_id').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.userId, table.photoId] }),
-    index('favorite_photoId_idx').on(table.photoId),
+    primaryKey({ columns: [table.userId, table.albumId, table.driveFileId] }),
+    index('favorite_albumId_driveFileId_idx').on(
+      table.albumId,
+      table.driveFileId
+    ),
   ]
 )
 

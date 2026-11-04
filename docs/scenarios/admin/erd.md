@@ -122,7 +122,8 @@ erDiagram
     }
     favorite {
         text user_id PK,FK
-        text photo_id PK,FK
+        text album_id PK,FK
+        text drive_file_id PK
     }
     user ||--o{ session : has
     user ||--o{ booking : makes
@@ -135,7 +136,7 @@ erDiagram
     user ||--o| flamekeeper : may_be
     user ||--o{ volume : holds
     album ||--o{ photo : has
-    photo ||--o{ favorite : favorited_as
+    album ||--o{ favorite : favorited_as
     user ||--o{ favorite : makes
     album ||--o{ volume : stored_in
 ```

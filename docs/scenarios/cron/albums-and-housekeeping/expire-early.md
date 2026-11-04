@@ -7,7 +7,7 @@
 > confirms with "Expire and notify". The album's expiry date is set
 > to 7 days from now, the 30-day reminder mark is cleared, and the
 > 7-day reminder is marked as already sent so the cron does not
-> repeat it. The owner and everyone who favorited a live photo in
+> repeat it. The owner and everyone who favorited a photo in
 > the album are told by Telegram, or by email if they have no
 > Telegram. The admin sees a toast: "TITLE" will be deleted in 7
 > days. N person (or people) notified. The cron deletes the album
@@ -63,7 +63,7 @@ sequenceDiagram
         Browser->>Admin: error toast with that message
     else allowed
         Worker->>D1: expiresAt = now + 7 days, reminder30 = null,<br/>reminder7 = now
-        Worker->>D1: read owner and users who favorited live photos
+        Worker->>D1: read owner and users who favorited photos
         loop owner first, then each favoriter once
             opt user has a Telegram chat and a bot token exists
                 Worker->>Telegram: sendMessage(chatId, notice)

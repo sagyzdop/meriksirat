@@ -13,6 +13,7 @@ import {
 import type { DrainStatus, RelayHandout } from '@/lib/flamekeeper/types'
 import { OUT_OF_SPACE_MESSAGE } from './placement'
 import { invalidateCachedListing } from '@/lib/albums/server'
+import { remapDriveFile } from '@/lib/favorites/remap-server'
 import { releaseOwnedBytes, startFlamekeeperUpload } from './server'
 import { loadVolumeFolderId } from './volumes-server'
 import { isInVolumeFolder } from './volumes'
@@ -198,16 +199,12 @@ export async function confirmRelay(
     database
       .delete(uploadReservation)
       .where(eq(uploadReservation.id, reservation.id)),
-    database
-      .update(album)
-      .set({ coverFileId: input.fileId })
-      .where(
-        and(
-          eq(album.id, albumRow.id),
-          eq(album.coverFileId, original.driveFileId)
-        )
-      ),
   ])
+  await remapDriveFile(database, {
+    albumId: albumRow.id,
+    oldFileId: original.driveFileId,
+    newFileId: input.fileId,
+  })
 
   try {
     await withFlamekeeperToken(database, sourceUserId, (token) =>

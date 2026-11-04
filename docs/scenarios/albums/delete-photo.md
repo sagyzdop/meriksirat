@@ -2,7 +2,7 @@
 
 > **Question:** What happens when a member deletes one photo, and whose Google token removes the file?
 >
-> **Answer:** The owner, co-authors and admins or managers can delete a photo from the photo viewer after confirming "Delete photo?". The Worker finds the photo in this album's table, or failing that in the album's listing. If the buffer holds the file, it is deleted with the buffer's token and the volume's expected count and bytes go down. If a flamekeeper holds it, it is deleted with that flamekeeper's own token. If it is a master-owned or older file, it is deleted with the master token. Then the photo row goes, the album's photo count, size and favorite count go down, a cover that pointed at this photo is cleared, and the page shows the toast "Photo deleted".
+> **Answer:** The owner, co-authors and admins or managers can delete a photo from the photo viewer after confirming "Delete photo?". The Worker finds the photo in this album's table, or failing that in the album's listing. If the buffer holds the file, it is deleted with the buffer's token and the volume's expected count and bytes go down. If a flamekeeper holds it, it is deleted with that flamekeeper's own token. If it is a master-owned or older file, it is deleted with the master token. Then the photo row (if any) goes, the album's photo count and size go down, its favorites of this file are removed and the favorite count drops with them, a cover that pointed at this photo is cleared, and the page shows the toast "Photo deleted".
 >
 > **Notes:**
 > - Ownership checks, in order: the caller needs a role on this album, and the file id must belong to a photo of this same album, either a row or a listed file, so a photo id from another album is refused with "Photo not found in this album".
@@ -11,7 +11,7 @@
 > - A deleting caller's own token is never used. Admins deleting someone else's photo still delete it through that flamekeeper's token.
 > - If the flamekeeper's access was lost or the flamekeeper is gone, the row is removed without the Drive file. If Drive fails for another reason, the error is shown and nothing is removed from the table.
 > - The photo viewer and the dialog text say the photo is removed "from the album and your Drive storage".
-> - Favorites of this photo are removed with the row.
+> - Favorites of this photo are removed whether or not the photo has a row, and the album's favorite count goes down by that many.
 
 ```mermaid
 sequenceDiagram
@@ -46,8 +46,9 @@ sequenceDiagram
         else Master-owned or legacy file
             W->>G: Master token: delete the file
         end
+        W->>D: Remove favorites of this file, favorite count down
         opt Photo row exists
-            W->>D: Photo count and bytes down, favorites down,<br/>delete the photo row
+            W->>D: Photo count and bytes down,<br/>delete the photo row
         end
         W->>K: Delete album:list:folderId
         opt Photo was the cover

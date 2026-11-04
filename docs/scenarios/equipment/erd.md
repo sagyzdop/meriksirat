@@ -26,7 +26,7 @@
 ```mermaid
 erDiagram
     user ||--o{ favorite : makes
-    photo ||--o{ favorite : receives
+    album ||--o{ favorite : receives
     album ||--o{ photo : contains
     category ||--o{ equipment : groups
     user {
@@ -73,7 +73,8 @@ erDiagram
     }
     favorite {
         text user_id PK "FK to user"
-        text photo_id PK "FK to photo"
+        text album_id PK "FK to album"
+        text drive_file_id PK
         integer created_at
     }
 ```

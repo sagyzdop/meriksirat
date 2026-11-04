@@ -9,7 +9,9 @@ API key is used.
 
 A photo's identity is its current Drive file ID. It changes when the photo moves,
 so moving a photo remaps the favorites and the album cover. Favorites are keyed
-by `(user_id, album_id, drive_file_id)`. Listed files are the source of truth, so
+by `(user_id, album_id, drive_file_id)`. One shared remap, `remapDriveFile` in
+`src/lib/favorites/remap-server.ts`, does the re-pointing for relay, drain and
+offload. Listed files are the source of truth, so
 files added by hand in Drive don't appear.
 
 The count warning replaces the table's bookkeeping. It compares each listing with

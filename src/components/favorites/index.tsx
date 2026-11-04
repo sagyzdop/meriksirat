@@ -22,11 +22,8 @@ export function Page() {
   const { data: photos = [], isLoading } = useQuery(favoriteQueries.mine())
 
   const unfavorite = useMutation({
-    mutationFn: (vars: {
-      albumId: string
-      photoId: string | null | undefined
-      driveFileId: string
-    }) => setFavoriteFn({ data: { ...vars, favorite: false } }),
+    mutationFn: (vars: { albumId: string; driveFileId: string }) =>
+      setFavoriteFn({ data: { ...vars, favorite: false } }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: favoriteQueries.all }),
     onError: (error) =>
@@ -44,11 +41,7 @@ export function Page() {
       toggle: (photo) => {
         const albumId = albumByPhoto.get(photo.id)
         if (!albumId) return
-        unfavorite.mutate({
-          albumId,
-          photoId: photo.photoId,
-          driveFileId: photo.id,
-        })
+        unfavorite.mutate({ albumId, driveFileId: photo.id })
       },
     }),
     [albumByPhoto, unfavorite]
