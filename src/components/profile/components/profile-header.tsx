@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card'
+import { classOfYear } from '@/lib/graduation-date'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Calendar, Mail, Instagram } from 'lucide-react'
@@ -68,7 +69,8 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
             {user.major && (
               <p className="text-muted-foreground">
                 {user.major}
-                {user.graduationYear && ` • Class of ${user.graduationYear}`}
+                {classOfYear(user.graduationDate) &&
+                  ` • Class of ${classOfYear(user.graduationDate)}`}
               </p>
             )}
             <div className="text-muted-foreground flex flex-wrap gap-4 text-sm">

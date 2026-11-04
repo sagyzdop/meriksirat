@@ -25,13 +25,17 @@ export const Route = createFileRoute('/onboarding')({
       throw redirect({ to: homePath(user) })
     }
 
-    return { isMember: user.isMember, email: user.email }
+    return {
+      isMember: user.isMember,
+      email: user.email,
+      graduationDate: user.graduationDate,
+    }
   },
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  const { isMember, email } = Route.useRouteContext()
+  const { isMember, email, graduationDate } = Route.useRouteContext()
   const { fk_error } = Route.useSearch()
 
   return (
@@ -39,6 +43,7 @@ function RouteComponent() {
       <Page
         isMember={isMember}
         email={email}
+        graduationDate={graduationDate}
         connectError={fk_error ? CONNECT_ERROR_MESSAGES[fk_error] : null}
       />
     </div>

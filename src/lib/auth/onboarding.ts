@@ -13,11 +13,9 @@ const updateOnboardingSchema = z.object({
   instagramUsername: z.string().optional(),
   nuId: z.number().int().positive('NU ID must be a positive number'),
   major: z.string().min(1, 'Major is required'),
-  graduationYear: z
-    .number()
-    .int()
-    .min(2010)
-    .max(3000, 'Graduation year must be between 2010 and 3000'),
+  graduationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Graduation month is required'),
 })
 
 export const submitClubCodeFn = createServerFn({ method: 'POST' })
@@ -77,6 +75,9 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
       throw new Error('Club membership is required')
     }
 
+    const { saveGraduationDate } = await import('@/lib/pool/drain-server')
+    await saveGraduationDate(database, session.user.id, data.graduationDate)
+
     // Update user info but don't mark onboarding as complete yet
     await database
       .update(user)
@@ -88,7 +89,6 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
         instagramUsername: data.instagramUsername,
         nuId: data.nuId,
         major: data.major,
-        graduationYear: data.graduationYear,
         updatedAt: new Date(),
       })
       .where(eq(user.id, session.user.id))

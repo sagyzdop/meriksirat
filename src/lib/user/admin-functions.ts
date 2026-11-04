@@ -290,7 +290,7 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
         nuId: user.nuId,
         birthday: user.birthday,
         major: user.major,
-        graduationYear: user.graduationYear,
+        graduationDate: user.graduationDate,
         onboardingComplete: user.onboardingComplete,
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
         overdueCount: user.overdueCount,
@@ -308,7 +308,9 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
       throw new Error('User not found')
     }
 
-    return userData
+    const { graduationDate, ...rest } = userData
+    const { classOfYear } = await import('@/lib/graduation-date')
+    return { ...rest, graduationYear: classOfYear(graduationDate) }
   })
 
 export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })

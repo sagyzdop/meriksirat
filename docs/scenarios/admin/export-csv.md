@@ -6,7 +6,7 @@
 >
 > **Notes:**
 > - The Members page passes its current role, status, clearance and search filters to the export. The dashboard menu exports everyone. The user export is not limited to club members, so alumni and non-members are included.
-> - User columns: Full Name, Email, Role, Status, Clearance Level, NU ID, Instagram Username, Telegram Username, Major, Graduation Year, Birthday, Member Since, Auto-Cancelled, Overdue, Albums. Album columns: Event, Event Date, Authors, Authors' Emails, Authors' Telegram, Album Link, Album Date.
+> - User columns: Full Name, Email, Role, Status, Clearance Level, NU ID, Instagram Username, Telegram Username, Major, Graduation Year (derived from the graduation month), Birthday, Member Since, Auto-Cancelled, Overdue, Albums. Album columns: Event, Event Date, Authors, Authors' Emails, Authors' Telegram, Album Link, Album Date.
 > - Columns come out in the order they sit in the ticked list: the dialog's order at first, and a column that is unticked and ticked again goes to the end. Dates are YYYY-MM-DD for users and DD.MM.YYYY for albums. Several authors in one cell are joined with a semicolon.
 > - The file starts with a byte-order mark so Excel reads the characters correctly.
 > - Fetched rows are kept for the rest of the visit, so a second export of the same filters does not reload the data and can be out of date until the page is reloaded.

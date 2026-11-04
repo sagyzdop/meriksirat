@@ -38,7 +38,7 @@ const updateOnboardingSchema = z.object({
   instagramUsername: z.string().optional(),
   nuId: z.string().min(1, 'NU ID is required'),
   major: z.string().min(1, 'Major is required'),
-  graduationYear: z.string().min(1, 'Graduation year is required'),
+  graduationDate: z.string().min(1, 'Graduation month is required'),
 })
 
 type OnboardingForm = z.infer<typeof updateOnboardingSchema>
@@ -48,12 +48,14 @@ type OnboardingStep = 'signup' | 'profile' | 'telegram'
 interface PageProps extends React.ComponentProps<'div'> {
   isMember: boolean
   email: string
+  graduationDate?: string | null
   connectError?: string | null
 }
 
 export function Page({
   isMember,
   email,
+  graduationDate,
   connectError,
   className,
   ...props
@@ -117,7 +119,7 @@ export function Page({
       instagramUsername: '',
       nuId: '',
       major: '',
-      graduationYear: '',
+      graduationDate: graduationDate ?? '',
     },
   })
 
@@ -145,7 +147,7 @@ export function Page({
           instagramUsername: data.instagramUsername,
           nuId: parseInt(data.nuId),
           major: data.major,
-          graduationYear: parseInt(data.graduationYear),
+          graduationDate: data.graduationDate,
         },
       })
 
@@ -221,6 +223,7 @@ export function Page({
           />
           {signupKind(email) === 'nu' ? (
             <FlamekeeperStep
+              graduationDate={graduationDate}
               error={connectError ?? null}
               onBeforeRedirect={() => {
                 completeNavigatingRef.current = true

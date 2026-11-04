@@ -25,7 +25,7 @@ Platform or Telegram.
 
 Only people who enter the club code are asked for these.
 
-- First and last name, date of birth, NU ID, major, graduation year and,
+- First and last name, date of birth, NU ID, major, graduation month and,
   optionally, Instagram username.
 - Your Telegram chat ID and username, once you link the Telegram bot.
 - Whether you want birthday congratulations.
@@ -47,7 +47,7 @@ If you choose to lend Google Drive storage as a flamekeeper:
   offline refresh token so the Platform can manage its files when you are not
   signed in.
 - Your pledged storage, the storage the Platform uses in your Drive, your
-  expected graduation date, and whether you appear on the leaderboard under
+  expected graduation month, and whether you appear on the leaderboard under
   your name or anonymously.
 
 ## 3. What We Access in Your Google Account

@@ -312,7 +312,7 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
         telegramUsername: user.telegramUsername,
         telegramChatId: user.telegramChatId,
         major: user.major,
-        graduationYear: user.graduationYear,
+        graduationDate: user.graduationDate,
         birthday: user.birthday,
         onboardingComplete: user.onboardingComplete,
         cancelledInStartWindowCount: user.cancelledInStartWindowCount,
@@ -326,8 +326,10 @@ export const exportUsersFn = createServerFn({ method: 'GET' })
       .orderBy(user.firstName)
       .all()
 
-    return rows.map((row) => ({
+    const { classOfYear } = await import('@/lib/graduation-date')
+    return rows.map(({ graduationDate, ...row }) => ({
       ...row,
+      graduationYear: classOfYear(graduationDate),
       onboardingComplete: !!row.onboardingComplete,
     }))
   })

@@ -8,11 +8,13 @@ import {
 import { FlamekeeperSignupForm } from '@/components/shared/flamekeeper-signup-form'
 
 interface FlamekeeperStepProps {
+  graduationDate?: string | null
   error: string | null
   onBeforeRedirect: () => void
 }
 
 export function FlamekeeperStep({
+  graduationDate,
   error,
   onBeforeRedirect,
 }: FlamekeeperStepProps) {
@@ -27,6 +29,7 @@ export function FlamekeeperStep({
       </CardHeader>
       <CardContent>
         <FlamekeeperSignupForm
+          initialGraduationDate={graduationDate}
           error={error}
           onBeforeRedirect={onBeforeRedirect}
         />

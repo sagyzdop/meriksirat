@@ -29,7 +29,7 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<MyFlamekeeper | null> => {
     const { userContext } = await import('@/lib/auth/context')
     const { session, database } = await userContext()
-    const { flamekeeper } = await import('@/db/schema')
+    const { flamekeeper, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
     let row = await database
@@ -39,6 +39,11 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
       .get()
 
     if (!row) return null
+    const owner = await database
+      .select({ graduationDate: user.graduationDate })
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get()
     if (row.state === 'draining') {
       const { finishDrainIfEmpty } = await import('@/lib/pool/drain-server')
       try {
@@ -60,7 +65,7 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
       state: row.state,
       pledgedBytes: row.pledgedBytes,
       usedBytes: row.usedBytes,
-      graduationDate: row.graduationDate,
+      graduationDate: owner?.graduationDate ?? null,
       graduationConfirmDue: graduationConfirmDue(row, new Date()),
       drainingDeadline: row.drainingDeadline,
       drainReason: row.drainReason,
@@ -77,7 +82,7 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
     const { userContext } = await import('@/lib/auth/context')
     const { session, database } = await userContext()
     const { env } = await import('cloudflare:workers')
-    const { flamekeeper } = await import('@/db/schema')
+    const { flamekeeper, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { loadAccessRules } = await import('@/lib/access/server')
     const {
@@ -100,7 +105,7 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
     let pending: {
       userId: string
       pledgedBytes: number
-      graduationDate: string
+      graduationDate: string | null
       termsAcceptedAt: number
     }
 
@@ -130,10 +135,15 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
       if (!existing || existing.state !== 'lost') {
         throw new Error('Only a lost flamekeeper can reconnect Drive')
       }
+      const owner = await database
+        .select({ graduationDate: user.graduationDate })
+        .from(user)
+        .where(eq(user.id, session.user.id))
+        .get()
       pending = {
         userId: session.user.id,
         pledgedBytes: existing.pledgedBytes,
-        graduationDate: existing.graduationDate,
+        graduationDate: owner?.graduationDate ?? null,
         termsAcceptedAt: existing.termsAcceptedAt.getTime(),
       }
     }
@@ -163,8 +173,7 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
     const { session, database } = await userContext()
     const { flamekeeper } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { gbToBytes, isValidGraduationDate, isValidPledgeGb } =
-      await import('./rules')
+    const { gbToBytes, isValidPledgeGb } = await import('./rules')
 
     if (!isValidPledgeGb(data.pledgeGb)) throw new Error('Invalid pledge')
 
@@ -178,12 +187,18 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
       throw new Error('Sign up again to resume flamekeeping')
     }
 
-    if (
-      data.graduationDate !== existing.graduationDate &&
-      !isValidGraduationDate(data.graduationDate)
-    ) {
-      throw new Error('Expected graduation date must be in the future')
-    }
+    const { graduationDateError } = await import('@/lib/graduation-date')
+    const { user } = await import('@/db/schema')
+    const owner = await database
+      .select({ graduationDate: user.graduationDate })
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get()
+    const dateError = graduationDateError(data.graduationDate, {
+      isFlamekeeper: true,
+      current: owner?.graduationDate,
+    })
+    if (dateError) throw new Error(dateError)
 
     const { changePledge } = await import('@/lib/pool/drain-server')
     await changePledge(database, session.user.id, {
@@ -199,9 +214,8 @@ export const confirmGraduationFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { userContext } = await import('@/lib/auth/context')
     const { session, database } = await userContext()
-    const { flamekeeper } = await import('@/db/schema')
+    const { flamekeeper, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { isValidGraduationDate } = await import('./rules')
 
     const existing = await database
       .select()
@@ -209,16 +223,16 @@ export const confirmGraduationFn = createServerFn({ method: 'POST' })
       .where(eq(flamekeeper.userId, session.user.id))
       .get()
     if (!existing) throw new Error('You are not a flamekeeper')
+    const owner = await database
+      .select({ graduationDate: user.graduationDate })
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get()
 
-    const date = data.graduationDate ?? existing.graduationDate
-    if (date !== existing.graduationDate && !isValidGraduationDate(date)) {
-      throw new Error('Expected graduation date must be in the future')
-    }
-    const { changePledge } = await import('@/lib/pool/drain-server')
-    await changePledge(database, session.user.id, {
-      pledgedBytes: existing.pledgedBytes,
-      graduationDate: date,
-    })
+    const date = data.graduationDate ?? owner?.graduationDate
+    if (!date) throw new Error('Enter your expected graduation month')
+    const { saveGraduationDate } = await import('@/lib/pool/drain-server')
+    await saveGraduationDate(database, session.user.id, date)
     return { success: true }
   })
 
@@ -246,7 +260,7 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
         state: flamekeeper.state,
         pledgedBytes: flamekeeper.pledgedBytes,
         usedBytes: flamekeeper.usedBytes,
-        graduationDate: flamekeeper.graduationDate,
+        graduationDate: user.graduationDate,
         drainReason: flamekeeper.drainReason,
         drainingDeadline: flamekeeper.drainingDeadline,
         bannedAt: user.bannedAt,
