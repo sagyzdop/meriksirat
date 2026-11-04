@@ -1,10 +1,10 @@
-# How the five housekeeping steps run
+# How the four housekeeping steps run
 
 > **Question:** When do the album expiry, public notice, photo
-> backfill, bot menu and stale signup steps run, and how much can
-> they do each time?
+> backfill and bot menu steps run, and how much can they do each
+> time?
 >
-> **Answer:** All five run on every 5-minute cron tick, one after
+> **Answer:** All four run on every 5-minute cron tick, one after
 > the other, after the booking and flamekeeper steps. They share one
 > counter of 40 outside requests for the whole tick. A step that
 > cannot afford its next request stops or skips that item and tries
@@ -15,16 +15,15 @@
 > - Cloudflare allows 50 outside requests per run. The counter is
 >   set to 40. The code does not say why 40, and I could not
 >   confirm from it which calls Cloudflare itself counts.
-> - The steps before these five are in `../overview.md`. They use
->   the same counter, so what is left for the five depends on them.
+> - The steps before these four are in `../overview.md`. They use
+>   the same counter, so what is left for the four depends on them.
 > - The counter does not include D1, KV or R2 calls. It does
 >   include Telegram sends, Google token refreshes and Drive calls
 >   made by the cron. Messages sent from the website, such as the
 >   early expiry notice, are not part of it.
 > - Each step is in its own file here: expiry in
 >   `expiry-plan.md`, public notice in `public-notice.md`, backfill
->   in `photo-backfill.md`, bot menu in `bot-menu.md`, stale signups
->   in `stale-signups.md`.
+>   in `photo-backfill.md`, bot menu in `bot-menu.md`.
 
 ```mermaid
 sequenceDiagram
@@ -42,8 +41,6 @@ sequenceDiagram
     Note right of Worker: At most 5 albums and 500 photos.<br/>Also capped by a daily write budget
     Worker->>Worker: configureTelegramBot
     Note right of Worker: 1 request, every tick
-    Worker->>Worker: cleanupStaleSignups (runStaleSignupCleanup)
-    Note right of Worker: Uses no outside requests. Deletes up to 20
     alt a step throws
         Worker->>Worker: log "Error in STEP NAME", go on to next step
     end

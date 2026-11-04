@@ -22,9 +22,8 @@
 > - Deleting the user row also removes sessions, linked Google
 >   accounts, Telegram tokens, favorites and the flamekeeper row
 >   through database cascades.
-> - Accounts left unfinished are removed by a scheduled cleanup
->   instead, see cron/albums-and-housekeeping/.
-> - Abandoning signup is a different path, see leave-signup.md.
+> - Nothing else deletes an account. Accounts are never removed
+>   for being unfinished.
 
 ```mermaid
 sequenceDiagram

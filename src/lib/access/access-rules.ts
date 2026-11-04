@@ -57,9 +57,7 @@ export interface EntryUser {
 }
 
 export function needsOnboarding(user: EntryUser): boolean {
-  if (user.isMember) return !user.onboardingComplete
-  if (user.isMaster) return false
-  return !user.flamekeeperState && !user.termsAcceptedAt
+  return user.isMember && !user.onboardingComplete
 }
 
 export type HomePath = '/onboarding' | '/equipment' | '/profile'

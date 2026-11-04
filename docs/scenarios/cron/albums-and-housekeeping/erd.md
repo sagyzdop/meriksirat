@@ -1,12 +1,10 @@
 # Data used by the album and housekeeping cron steps
 
 > **Question:** Which tables and stored values do the album expiry,
-> public notice, photo backfill, bot menu and stale signup steps
-> read or write?
+> public notice, photo backfill and bot menu steps read or write?
 >
 > **Answer:** They work on the album, photo and volume tables, the
-> owners and co-authors in user and album_member, and the sign-in
-> tables when deleting stale signups. Early expiry also reads
+> owners and co-authors in user and album_member. Early expiry also reads
 > favorite, and the Drive cleanup reads upload_reservation and
 > flamekeeper_grant. The bot menu step touches no table. Only the
 > columns these steps use are listed.
@@ -19,9 +17,7 @@
 >   album. Their own lifetimes are set in the albums folder, not by
 >   these steps.
 > - R2 is not used by these steps.
-> - Tables booking, flamekeeper and flamekeeper_grant are only
->   checked to see if a stale signup owns something, so only their
->   user link is shown. Column names are the database names.
+> - Column names are the database names.
 > - album_member also has its own id and created_at, not used here.
 > - The photo state is read, not changed, by these steps.
 

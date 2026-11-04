@@ -148,7 +148,7 @@ The code lives in `src/`. Domain vocabulary is fixed in
 - [Triage labels](docs/agents/triage-labels.md) — canonical triage roles → repo label strings
 - [Domain docs](docs/agents/domain.md) — how skills read the glossary / ADRs
 - [FAQ](https://github.com/sagyzdop/meriksirat/blob/main/docs/faq.md) — common questions (linked from the About page)
-- [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md) — user agreement (linked from the About page + onboarding)
+- [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md) — user agreement (linked from the About page + login page)
 
 ## Contributing
 

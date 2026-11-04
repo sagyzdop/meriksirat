@@ -156,18 +156,15 @@ describe('getAccessRules across flamekeeper states', () => {
 describe('entry rules', () => {
   const nonMember = { isMember: false }
 
-  it('sends a new non-member to signup until they finish it', () => {
-    expect(needsOnboarding(nonMember)).toBe(true)
-    expect(homePath(nonMember)).toBe('/onboarding')
-  })
-
-  it('treats a flamekeeper record or accepted terms as a finished signup', () => {
+  it('never sends a non-member to onboarding, whatever their history', () => {
+    expect(needsOnboarding(nonMember)).toBe(false)
+    expect(homePath(nonMember)).toBe('/profile')
     expect(needsOnboarding({ ...nonMember, flamekeeperState: 'active' })).toBe(
       false
     )
-    const withTerms = { ...nonMember, termsAcceptedAt: new Date() }
-    expect(needsOnboarding(withTerms)).toBe(false)
-    expect(homePath(withTerms)).toBe('/profile')
+    expect(needsOnboarding({ ...nonMember, termsAcceptedAt: new Date() })).toBe(
+      false
+    )
   })
 
   it('sends a member to the profile step until onboarding is complete', () => {

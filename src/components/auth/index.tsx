@@ -5,18 +5,28 @@ import {
   SIGNUP_REFUSED_ERROR,
   SIGNUP_REFUSED_MESSAGE,
 } from '@/lib/auth/signup-domain'
+import {
+  TERMS_REFUSED_ERROR,
+  TERMS_REFUSED_MESSAGE,
+} from '@/lib/auth/new-account'
+import { TERMS_URL } from '@/lib/flamekeeper/rules'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
 import { Link, useSearch } from '@tanstack/react-router'
+import { useState } from 'react'
 
 export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   const search = useSearch({ strict: false }) as { error?: string }
   const error = search.error
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const handleGoogleSignIn = async () => {
     try {
       await authClient.signIn.social({
         provider: 'google',
+        additionalData: { termsAccepted },
         callbackURL: '/login',
         errorCallbackURL: '/login',
       })
@@ -58,7 +68,35 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
             {SIGNUP_REFUSED_MESSAGE}
           </div>
         )}
+        {error === TERMS_REFUSED_ERROR && (
+          <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
+            {TERMS_REFUSED_MESSAGE}
+          </div>
+        )}
         <Field className="grid gap-4">
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="loginTerms"
+              checked={termsAccepted}
+              onCheckedChange={(value) => setTermsAccepted(value === true)}
+              className="mt-0.5"
+            />
+            <Label
+              htmlFor="loginTerms"
+              className="text-sm font-normal leading-snug"
+            >
+              New here? I have read and accept the{' '}
+              <a
+                href={TERMS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                terms of service
+              </a>
+              .
+            </Label>
+          </div>
           <Button
             variant="outline"
             type="button"

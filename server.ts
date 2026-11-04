@@ -192,13 +192,6 @@ const STEPS: Array<[string, () => Promise<Step>]> = [
         (m) => m.configureTelegramBot
       ),
   ],
-  [
-    'cleanupStaleSignups',
-    () =>
-      import('./src/lib/auth/stale-signups-server').then(
-        (m) => m.runStaleSignupCleanup
-      ),
-  ],
 ]
 
 async function runScheduled(env: Env): Promise<void> {
