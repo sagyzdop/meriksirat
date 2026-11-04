@@ -64,6 +64,22 @@ export function getAccessRules(user: AccessUser): AccessRules {
   }
 }
 
+export interface FlamekeeperInvitationUser extends AccessUser {
+  invitationDismissedAt?: Date | string | number | null
+  isMaster?: boolean
+}
+
+export function showFlamekeeperInvitation(
+  user: FlamekeeperInvitationUser
+): boolean {
+  return (
+    !user.isMaster &&
+    !user.invitationDismissedAt &&
+    (user.flamekeeperState ?? null) === null &&
+    getAccessRules(user).canBecomeFlamekeeper
+  )
+}
+
 export interface EntryUser {
   isMember: boolean
   onboardingComplete?: boolean | null
@@ -83,7 +99,7 @@ export function homePath(user: EntryUser): HomePath {
   return user.isMember ? '/equipment' : '/profile'
 }
 
-const NON_MEMBER_PATHS = ['/profile', '/favorites']
+const NON_MEMBER_PATHS = ['/profile', '/favorites', '/become-flamekeeper']
 
 export function nonMemberCanVisit(pathname: string): boolean {
   const clean = pathname.replace(/\/+$/, '') || '/'

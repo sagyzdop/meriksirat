@@ -5,7 +5,8 @@
 > **Answer:** The callback checks the person is signed in, finds the pledge saved before the redirect, trades the Google code for tokens and checks that the Drive belongs to the same @nu.edu.kz account, has file access and gave a refresh token. If everything is fine it creates (or revives) the flamekeeper as active, saves the refresh token, and sends the person to the profile page with a "Drive connected" banner. Any failure sends them back with an error code that shows as a red message on the form.
 >
 > **Notes:**
-> - Failures go to /profile. The code travels in the address as
+> - Failures go back to /become-flamekeeper, which sends anyone who
+>   cannot use it on to /profile with the same code. The code travels in the address as
 >   fk_error.
 > - The saved pledge is deleted as soon as it is read, so
 >   refreshing the callback gives the "state" error.

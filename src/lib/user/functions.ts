@@ -46,6 +46,25 @@ export const getUserFn = createServerFn({ method: 'GET' }).handler(
   }
 )
 
+export const dismissFlamekeeperInvitationFn = createServerFn({
+  method: 'POST',
+}).handler(async () => {
+  const { userContext } = await import('@/lib/auth/context')
+  const { user } = await import('@/db/schema')
+  const { and, eq, isNull } = await import('drizzle-orm')
+  const { session, database } = await userContext()
+  await database
+    .update(user)
+    .set({ flamekeeperInvitationDismissedAt: new Date() })
+    .where(
+      and(
+        eq(user.id, session.user.id),
+        isNull(user.flamekeeperInvitationDismissedAt)
+      )
+    )
+  return { success: true }
+})
+
 export const updateUserProfileFn = createServerFn({ method: 'POST' })
   .validator(UpdateUserProfileSchema)
   .handler(async ({ data }) => {

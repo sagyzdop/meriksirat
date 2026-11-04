@@ -6,6 +6,7 @@ import { SiteHeader } from './site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { FlamekeeperBanner } from '@/components/shared/flamekeeper-banner'
+import { FlamekeeperInvitation } from '@/components/shared/flamekeeper-invitation'
 import { BirthdayWishDrawer } from '@/components/shared/birthday-wish-drawer'
 
 interface AuthenticatedShellProps {
@@ -40,6 +41,13 @@ export function AuthenticatedShell({
       </SidebarInset>
       <Toaster />
       <BirthdayWishDrawer userId={user.id} />
+      <FlamekeeperInvitation
+        user={{
+          ...user,
+          role: (user.role as 'user' | 'manager' | 'admin' | null) ?? null,
+          invitationDismissedAt: user.flamekeeperInvitationDismissedAt,
+        }}
+      />
     </SidebarProvider>
   )
 }

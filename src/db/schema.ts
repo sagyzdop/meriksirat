@@ -54,6 +54,10 @@ export const user = sqliteTable(
       mode: 'boolean',
     }).default(false),
     termsAcceptedAt: integer('terms_accepted_at', { mode: 'timestamp_ms' }),
+    flamekeeperInvitationDismissedAt: integer(
+      'flamekeeper_invitation_dismissed_at',
+      { mode: 'timestamp_ms' }
+    ),
     bannedAt: integer('banned_at', { mode: 'timestamp_ms' }),
     banReason: text('ban_reason'),
     bannedBy: text('banned_by'),

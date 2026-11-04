@@ -1,14 +1,13 @@
 export const GB = 1024 * 1024 * 1024
-export const MIN_PLEDGE_GB = 1
-export const MIN_PLEDGE_BYTES = MIN_PLEDGE_GB * GB
+export const MB = 1024 * 1024
+export const MIN_PLEDGE_BYTES = 512 * MB
+export const MIN_PLEDGE_GB = MIN_PLEDGE_BYTES / GB
 export const MAX_PLEDGE_GB = 1024
 export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 export const FLAMEKEEPER_SCOPES = [DRIVE_FILE_SCOPE, 'openid', 'email']
 export const DRAIN_GRACE_MS = 14 * 24 * 60 * 60 * 1000
 export const TERMS_URL =
   'https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md'
-export const FLAMEKEEPER_TERMS_URL =
-  'https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md#14-flamekeepers'
 
 export function gbToBytes(gb: number): number {
   return Math.round(gb * GB)
@@ -21,6 +20,9 @@ export function bytesToGb(bytes: number): number {
 export function formatGb(bytes: number): string {
   const gb = bytesToGb(bytes)
   if (bytes > 0 && gb < 0.1) return 'less than 0.1 GB'
+  if (bytes >= MIN_PLEDGE_BYTES && bytes < GB) {
+    return `${Math.round(bytes / MB)} MB`
+  }
   return `${gb >= 10 || Number.isInteger(gb) ? gb.toFixed(0) : gb.toFixed(1)} GB`
 }
 
@@ -93,8 +95,17 @@ export function buildDriveAuthUrl(params: {
   return url.toString()
 }
 
-export type ConnectErrorCode =
-  'denied' | 'state' | 'session' | 'account' | 'scope' | 'token' | 'master'
+export const CONNECT_ERROR_CODES = [
+  'denied',
+  'state',
+  'session',
+  'account',
+  'scope',
+  'token',
+  'master',
+] as const
+
+export type ConnectErrorCode = (typeof CONNECT_ERROR_CODES)[number]
 
 export const CONNECT_ERROR_MESSAGES: Record<ConnectErrorCode, string> = {
   denied: 'Google access was not granted. You can try again.',

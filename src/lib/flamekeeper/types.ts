@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import type { FlamekeeperState } from '@/lib/access/access-rules'
 import type { DrainReason } from '@/lib/pool/drain'
-import { MAX_PLEDGE_GB, MIN_PLEDGE_GB } from './rules'
+import {
+  MAX_PLEDGE_GB,
+  MIN_PLEDGE_BYTES,
+  MIN_PLEDGE_GB,
+  formatGb,
+} from './rules'
 
 export interface MyFlamekeeper {
   state: FlamekeeperState
@@ -58,7 +63,7 @@ export type RelayHandout =
 
 const pledgeGb = z
   .number()
-  .min(MIN_PLEDGE_GB, `Pledge at least ${MIN_PLEDGE_GB} GB`)
+  .min(MIN_PLEDGE_GB, `Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
   .max(MAX_PLEDGE_GB, `Pledge at most ${MAX_PLEDGE_GB} GB`)
 
 const graduationDate = z
@@ -70,9 +75,6 @@ export const StartDriveConnectSchema = z.discriminatedUnion('mode', [
     mode: z.literal('signup'),
     pledgeGb,
     graduationDate,
-    termsAccepted: z.literal(true, {
-      message: 'You must accept the flamekeeper terms',
-    }),
   }),
   z.object({ mode: z.literal('reconnect') }),
 ])

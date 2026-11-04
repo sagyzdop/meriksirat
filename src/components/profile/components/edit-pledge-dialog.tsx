@@ -13,7 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateFlamekeeperFn } from '@/lib/flamekeeper/functions'
 import {
+  MIN_PLEDGE_BYTES,
   MIN_PLEDGE_GB,
+  formatGb,
   bytesToGb,
   isValidPledgeGb,
 } from '@/lib/flamekeeper/rules'
@@ -42,7 +44,7 @@ export function EditPledgeDialog({
   const handleSave = async () => {
     const pledgeGb = Number(pledge)
     if (!isValidPledgeGb(pledgeGb)) {
-      toast.error(`Pledge at least ${MIN_PLEDGE_GB} GB`)
+      toast.error(`Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
       return
     }
     if (!graduationDate) {
@@ -72,7 +74,7 @@ export function EditPledgeDialog({
             id="editPledge"
             type="number"
             min={MIN_PLEDGE_GB}
-            step="1"
+            step="0.5"
             value={pledge}
             onChange={(e) => setPledge(e.target.value)}
           />

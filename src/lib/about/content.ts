@@ -24,8 +24,7 @@ export const ABOUT_LEGAL_LINKS = [
   },
 ] as const
 
-// #31 replaces this with the dedicated Become a flamekeeper page.
-export const BECOME_FLAMEKEEPER_PATH = '/profile'
+export const BECOME_FLAMEKEEPER_PATH = '/become-flamekeeper'
 
 export function becomeFlamekeeperPath(signedIn: boolean): string {
   return signedIn ? BECOME_FLAMEKEEPER_PATH : '/login'

@@ -17,8 +17,8 @@
 >   as it was.
 > - Moving a graduation date out of the 60-day window ends a
 >   graduation drain and the state goes back to active.
-> - The server also rejects a pledge outside 1 to 1024 GB, with
->   the message "Pledge at least 1 GB" or "Pledge at most 1024 GB".
+> - The server also rejects a pledge outside 512 MB to 1024 GB, with
+>   the message "Pledge at least 512 MB" or "Pledge at most 1024 GB".
 > - A drained flamekeeper cannot edit and must sign up again, see
 >   connect-drive.md. A lost flamekeeper can still edit.
 > - The date is stored once, on the user, not on the flamekeeper. Changing it in the Graduating field follows the same 60-day rule as this dialog.
@@ -34,8 +34,8 @@ sequenceDiagram
     participant Worker
     participant D1
     F->>Browser: Press Edit, change the pledge, press Save
-    alt Pledge outside 1 to 1024 GB
-        Browser-->>F: Toast "Pledge at least 1 GB"
+    alt Pledge outside 512 MB to 1024 GB
+        Browser-->>F: Toast "Pledge at least 512 MB"
     else Pledge valid
         Browser->>Worker: updateFlamekeeperFn(pledgeGb,<br/>graduationDate)
         Worker->>D1: read flamekeeper row

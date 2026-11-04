@@ -15,6 +15,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedBecomeFlamekeeperRouteImport } from './routes/_authenticated/become-flamekeeper'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AlbumsIndexRouteImport } from './routes/albums/index'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums/$albumId'
@@ -74,6 +75,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBecomeFlamekeeperRoute =
+  AuthenticatedBecomeFlamekeeperRouteImport.update({
+    id: '/become-flamekeeper',
+    path: '/become-flamekeeper',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -248,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
@@ -284,6 +292,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
@@ -322,6 +331,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
@@ -360,6 +370,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/admin'
+    | '/become-flamekeeper'
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/admin'
+    | '/become-flamekeeper'
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
@@ -433,6 +445,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/_authenticated/admin'
+    | '/_authenticated/become-flamekeeper'
     | '/_authenticated/profile'
     | '/albums/$albumId'
     | '/api/telegram'
@@ -520,6 +533,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/become-flamekeeper': {
+      id: '/_authenticated/become-flamekeeper'
+      path: '/become-flamekeeper'
+      fullPath: '/become-flamekeeper'
+      preLoaderRoute: typeof AuthenticatedBecomeFlamekeeperRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/profile': {
@@ -771,6 +791,7 @@ const AuthenticatedAdminRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedBecomeFlamekeeperRoute: typeof AuthenticatedBecomeFlamekeeperRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedBookingsNewRoute: typeof AuthenticatedBookingsNewRoute
   AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
@@ -784,6 +805,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedBecomeFlamekeeperRoute: AuthenticatedBecomeFlamekeeperRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedBookingsNewRoute: AuthenticatedBookingsNewRoute,
   AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,

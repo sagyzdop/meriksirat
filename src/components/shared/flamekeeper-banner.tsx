@@ -21,8 +21,11 @@ export function FlamekeeperBanner({ email }: { email: string }) {
           <span>
             Space for new photos is running short. Lend a little of your NU
             Drive to keep the albums safe.{' '}
-            <Link to="/profile" className="underline underline-offset-4">
-              Open your profile
+            <Link
+              to="/become-flamekeeper"
+              className="underline underline-offset-4"
+            >
+              Become a flamekeeper
             </Link>
           </span>
         </AlertDescription>

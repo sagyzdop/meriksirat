@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import * as rules from '../lib/flamekeeper/rules'
 import {
   GB,
+  MIN_PLEDGE_BYTES,
+  TERMS_URL,
   buildDriveAuthUrl,
   decodeIdTokenPayload,
   driveAccountMatches,
@@ -13,10 +16,23 @@ import {
 } from '../lib/flamekeeper/rules'
 
 describe('pledge', () => {
-  it('requires at least 1 GB', () => {
-    expect(isValidPledgeGb(0.5)).toBe(false)
+  it('requires at least 512 MB', () => {
+    expect(MIN_PLEDGE_BYTES).toBe(512 * 1024 * 1024)
+    expect(isValidPledgeGb(0.49)).toBe(false)
+    expect(isValidPledgeGb(0.5)).toBe(true)
     expect(isValidPledgeGb(1)).toBe(true)
     expect(isValidPledgeGb(NaN)).toBe(false)
+  })
+
+  it('shows the minimum pledge in megabytes', () => {
+    expect(formatGb(MIN_PLEDGE_BYTES)).toBe('512 MB')
+    expect(formatGb(0.75 * GB)).toBe('768 MB')
+    expect(formatGb(GB)).toBe('1 GB')
+  })
+
+  it('has one terms link', () => {
+    expect(TERMS_URL).toContain('terms-of-service.md')
+    expect(Object.keys(rules)).not.toContain('FLAMEKEEPER_TERMS_URL')
   })
 
   it('converts GB to bytes and back for display', () => {
