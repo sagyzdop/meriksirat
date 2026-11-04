@@ -22,6 +22,10 @@ import {
   planVolumeSetup,
 } from './plan'
 import { withBufferToken } from './tokens'
+import { bufferUploadBlock } from './usage'
+import { getBufferUsage } from './usage-server'
+
+const UPLOAD_USAGE_MAX_AGE_MS = 10 * 60 * 1000
 
 const key = (albumId: string) => eq(bufferVolume.albumId, albumId)
 
@@ -133,6 +137,11 @@ export async function startBufferUpload(
     )
     throw new Error(plan.message)
   }
+
+  const blocked = bufferUploadBlock(
+    await getBufferUsage(UPLOAD_USAGE_MAX_AGE_MS)
+  )
+  if (blocked) throw new Error(blocked)
 
   let retried = false
   while (true) {

@@ -1,3 +1,4 @@
+import { BUFFER_FULL_MESSAGE, BUFFER_UNAVAILABLE_MESSAGE } from './messages'
 import {
   DriveAuthError,
   DriveQuotaExceededError,
@@ -6,10 +7,7 @@ import {
 export const BUFFER_OWNER_ID = 'buffer'
 export const DEFAULT_BUFFER_EMAIL = 'nuimage.storage@gmail.com'
 
-export const BUFFER_UNAVAILABLE_MESSAGE =
-  'Photo storage is not available right now, so uploads are paused. Please tell an admin.'
-export const BUFFER_FULL_MESSAGE =
-  "The club's photo storage is full, so uploads are paused. Please tell an admin."
+export { BUFFER_FULL_MESSAGE, BUFFER_UNAVAILABLE_MESSAGE }
 
 const REQUIRED_FOR_UPLOAD = [
   'GOOGLE_CLIENT_ID',
