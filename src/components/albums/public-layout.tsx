@@ -25,6 +25,12 @@ export function PublicAlbumsHeader() {
           </span>
         </Link>
         <div className="flex shrink-0 items-center gap-4">
+          <Link
+            to="/about"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          >
+            About
+          </Link>
           <a
             href={BOO_VIDEO}
             target="_blank"

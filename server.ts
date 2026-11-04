@@ -8,6 +8,7 @@
 
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 import { createBudget, type Budget } from './src/lib/cron/budget'
+import { guestHtmlTtlSeconds } from './src/lib/cache/guest-html'
 
 interface Env {
   meriksirat_d1: D1Database
@@ -26,7 +27,7 @@ const serverEntry = createServerEntry({
 })
 
 /**
- * Edge cache for guest document loads of the public album pages.
+ * Edge cache for guest document loads of the public album pages and /about.
  *
  * Logged-out visitors (and scrapers fetching link previews) hit /albums and
  * /albums/:id constantly when links are shared. Each uncached document load
@@ -37,19 +38,16 @@ const serverEntry = createServerEntry({
  * (Cookie header present), and editor-token URLs (?edit=...) are never cached
  * because they unlock per-link state.
  */
-const GUEST_HTML_TTL_SECONDS = 60
-
-const GUEST_HTML_PATH_RE = /^\/albums(?:\/[^/]+)?$/
-
 async function serveGuestHtmlCache(
   request: Request,
   run: () => Response | Promise<Response>
 ): Promise<Response> {
   try {
     const url = new URL(request.url)
+    const ttl = guestHtmlTtlSeconds(url.pathname)
     if (
       request.method !== 'GET' ||
-      !GUEST_HTML_PATH_RE.test(url.pathname) ||
+      ttl === null ||
       request.headers.get('cookie') ||
       !(request.headers.get('accept') || '').includes('text/html') ||
       url.searchParams.has('edit')
@@ -90,10 +88,7 @@ async function serveGuestHtmlCache(
       const storedHeaders = new Headers(headers)
       // The TTL is carried on the stored response only; visitors get the
       // header stripped so browsers revalidate normally.
-      storedHeaders.set(
-        'cache-control',
-        `public, max-age=${GUEST_HTML_TTL_SECONDS}`
-      )
+      storedHeaders.set('cache-control', `public, max-age=${ttl}`)
       try {
         await cache.put(
           request,

@@ -4,7 +4,7 @@ What the app does, from a click, Telegram tap or cron run through to what the pe
 
 | Folder | Covers |
 |---|---|
-| [account](account/) | Sign-in, onboarding, profile, deleting an account |
+| [account](account/) | Sign-in, onboarding, profile, deleting an account, the About page |
 | [equipment](equipment/) | Browsing equipment, availability, favorites, images |
 | [bookings](bookings/) | Bookings on the website, for members and admins |
 | [telegram](telegram/) | The bot and the club channel log |
