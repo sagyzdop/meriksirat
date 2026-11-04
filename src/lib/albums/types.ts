@@ -101,8 +101,8 @@ export type AlbumAccessLevel = 'none' | 'owner' | 'editor' | 'manager'
 /**
  * Health of the Google Drive folder behind an album.
  * - `ok`: folder exists and is usable.
- * - `trashed`: folder is in the Drive bin — uploads are blocked until restored.
- * - `missing`: folder was permanently deleted — photos are unrecoverable.
+ * - `trashed`: folder is in the Drive bin — uploads are blocked and a warning links to it.
+ * - `missing`: folder was permanently deleted — a warning links to it and an admin can delete the album.
  */
 export type AlbumFolderState =
   import('@/lib/google/google-drive').DriveFolderState
@@ -168,8 +168,7 @@ export interface AlbumDetail extends AlbumSummary {
   editShareToken: string | null
   /**
    * Health of the album's Google Drive folder. `missing` means the folder was
-   * permanently deleted in Drive (photos are unrecoverable), `trashed` means
-   * it is sitting in the bin and can be restored.
+   * permanently deleted in Drive, `trashed` means it is sitting in the bin.
    */
   folderState: AlbumFolderState
   expiresAt: string | null

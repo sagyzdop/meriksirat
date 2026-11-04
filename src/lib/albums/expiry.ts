@@ -1,6 +1,14 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { db, type Database } from '@/db'
-import { album, albumMember, favorite, photo, user, volume } from '@/db/schema'
+import {
+  album,
+  albumMember,
+  favorite,
+  flamekeeper,
+  photo,
+  user,
+  volume,
+} from '@/db/schema'
 import {
   DriveAppNotAuthorizedError,
   DriveNotFoundError,
@@ -221,6 +229,52 @@ export async function removeAlbum(
     await database.delete(album).where(eq(album.id, row.id))
   }
 
+  if (!row.deletedAt) {
+    await database
+      .update(user)
+      .set({ albumCount: sql`MAX(${user.albumCount} - 1, 0)` })
+      .where(eq(user.id, row.ownerUserId))
+  }
+}
+
+export async function tombstoneGoneAlbum(
+  database: Database,
+  row: Pick<AlbumRecord, 'id' | 'driveFolderId' | 'ownerUserId' | 'deletedAt'>
+): Promise<void> {
+  const held = await database
+    .select({
+      userId: photo.flamekeeperUserId,
+      bytes: sql<number>`SUM(${photo.bytes})`,
+    })
+    .from(photo)
+    .where(and(eq(photo.albumId, row.id), isNotNull(photo.flamekeeperUserId)))
+    .groupBy(photo.flamekeeperUserId)
+    .all()
+  for (const { userId, bytes } of held) {
+    if (!userId) continue
+    await database
+      .update(flamekeeper)
+      .set({
+        usedBytes: sql`MAX(${flamekeeper.usedBytes} - ${Number(bytes)}, 0)`,
+        driveUsageBytes: sql`MAX(${flamekeeper.driveUsageBytes} - ${Number(bytes)}, 0)`,
+      })
+      .where(eq(flamekeeper.userId, userId))
+  }
+  await database.delete(photo).where(eq(photo.albumId, row.id))
+  await database.delete(volume).where(eq(volume.albumId, row.id))
+  await database
+    .update(album)
+    .set({
+      deletedAt: new Date(),
+      tombstoneReason: 'folder_deleted',
+      photoCount: 0,
+      photoBytes: 0,
+      coverFileId: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(album.id, row.id))
+  await invalidateCachedListing(row.driveFolderId)
+  await invalidateCachedDetailCore(row.id)
   if (!row.deletedAt) {
     await database
       .update(user)

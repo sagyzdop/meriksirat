@@ -100,7 +100,7 @@ erDiagram
         integer photos_indexed_at
         integer expires_at
         integer pinned
-        text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space"
+        text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space, folder_deleted"
         integer deleted_at
     }
     upload_reservation {

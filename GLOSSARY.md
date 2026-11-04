@@ -112,7 +112,7 @@ An admin's mark that keeps an album past its expiry for as long as there is spac
 _Avoid_: Keep, archive
 
 **Tombstone**:
-The page an album's URL shows once the album has been deleted, saying why.
+The page an album's URL shows once the album has been deleted, saying why. An admin can delete an album whose folder is permanently gone, leaving a tombstone.
 _Avoid_: Dead link, 404
 
 **Album owner**:
@@ -128,7 +128,7 @@ An admin or manager, who may act on any album.
 _Avoid_: Admin, when the album context is meant
 
 **Folder state**:
-The health of an album's Drive folder: `ok`, `trashed` (in the Drive bin), or `missing` (permanently gone).
+The health of an album's Drive folder: `ok`, `trashed` (in the Drive bin), or `missing` (permanently gone). A `trashed` or `missing` folder shows a warning with a Drive link; the app never restores or recreates it.
 _Avoid_: Album state, drive status
 
 ### Save NU Image (#savenuimg)

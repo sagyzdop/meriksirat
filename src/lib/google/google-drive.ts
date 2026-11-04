@@ -239,20 +239,6 @@ export async function getDriveFolderState(
 }
 
 /**
- * Move a trashed file or folder out of the bin so it is usable again.
- */
-export async function restoreDriveFile(
-  accessToken: string,
-  fileId: string
-): Promise<void> {
-  await driveFetch(accessToken, `${API}/files/${fileId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trashed: false }),
-  })
-}
-
-/**
  * Find an existing file by exact name inside `parentId` (not trashed).
  * Returns null when no match exists.
  */

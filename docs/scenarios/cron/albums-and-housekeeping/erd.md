@@ -66,7 +66,7 @@ erDiagram
         text photos_index_skipped "trashed, missing"
         integer expires_at
         integer pinned "boolean"
-        text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space"
+        text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space, folder_deleted"
         integer deleted_at
         integer expiry_reminder_30_sent_at
         integer expiry_reminder_7_sent_at

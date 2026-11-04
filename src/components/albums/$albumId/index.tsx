@@ -354,6 +354,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
           <AlbumManager
             album={album}
             currentUserId={session?.user?.id}
+            isAdmin={authUser?.role === 'admin'}
             onChanged={invalidate}
             onDeleted={handleAlbumDeleted}
           />

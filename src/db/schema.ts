@@ -363,7 +363,13 @@ export const album = sqliteTable(
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
     pinned: integer('pinned', { mode: 'boolean' }).default(false).notNull(),
     tombstoneReason: text('tombstone_reason', {
-      enum: ['expired', 'flamekeeper_left', 'flamekeeper_lost', 'no_space'],
+      enum: [
+        'expired',
+        'flamekeeper_left',
+        'flamekeeper_lost',
+        'no_space',
+        'folder_deleted',
+      ],
     }),
     deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     expiryReminder30SentAt: integer('expiry_reminder_30_sent_at', {

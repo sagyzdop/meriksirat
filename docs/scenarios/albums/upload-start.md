@@ -5,7 +5,7 @@
 > **Answer:** The owner, co-authors and admins or managers choose image files or drop them on the upload box. The browser drops duplicates by name, saves the rest in a persistent queue, and works on 2 files at a time. For each file it asks the Worker for an upload session. The Worker checks the album folder is usable and the name is not taken, then picks a flamekeeper to host the file (see upload-pick-flamekeeper.md) and returns a one-time Google upload address with a reservation id. A file may be up to 5 GB.
 >
 > **Notes:**
-> - The Upload photos button is disabled unless the folder state is ok, with hover texts "Restore the album folder from the Drive bin before uploading" and "Recreate the album folder before uploading".
+> - The Upload photos button is disabled unless the folder state is ok, with the hover text "Uploads are paused while the album folder is in the bin or deleted". The page also shows a warning, see deleted-folder-warning.md.
 > - The queue survives a page refresh: jobs go to localStorage and the files to IndexedDB. A job that was uploading is restarted from 0 after a refresh. A job whose file cannot be found fails with "File is no longer available — choose it again".
 > - Finished jobs disappear after 1 hour (done or cancelled) or 7 days (failed).
 > - Names are compared exactly. The same name in the same album is refused by the browser and again by the Worker. The browser counts a file as an image if its type starts with image/ or is empty.
@@ -40,9 +40,9 @@ sequenceDiagram
     else Allowed
         W->>G: Master token: folder state
         alt Folder in the bin
-            W-->>B: Error The album folder is in the Google Drive bin.<br/>Restore it before uploading.
+            W-->>B: Error The album folder is in the Google Drive bin,<br/>so uploads are paused.
         else Folder deleted
-            W-->>B: Error The album folder was deleted from Google Drive.<br/>Use "Recreate folder" to fix it.
+            W-->>B: Error The album folder was deleted from Google Drive,<br/>so uploads are paused.
         else Folder ok
             W->>D: Is there a live photo with this name in the album
             alt Name already used

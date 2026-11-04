@@ -1,5 +1,6 @@
 import * as React from 'react'
 import {
+  ExternalLink,
   TriangleAlert,
   Pencil,
   RefreshCw,
@@ -31,19 +32,20 @@ import type { AlbumFormValues } from './album-form-fields'
 import { useAsyncAction } from '@/hooks/use-async-action'
 import {
   deleteAlbumFn,
-  recreateAlbumFolderFn,
+  deleteGoneAlbumFn,
   refreshAlbumFn,
   removeMemberFn,
-  restoreAlbumFolderFn,
   updateAlbumFn,
 } from '@/lib/albums'
 import type { AlbumDetail } from '@/lib/albums'
-import { recreateSummary } from '@/lib/albums/recreate'
+import { folderWarning } from '@/lib/albums/folder-warning'
+import { driveFolderUrl } from '@/lib/albums/urls'
 import { clearUploadReveal, useUploadReveal } from '@/lib/albums/upload-manager'
 
 interface AlbumManagerProps {
   album: AlbumDetail
   currentUserId?: string
+  isAdmin?: boolean
   onChanged: () => void
   onDeleted: () => void
 }
@@ -51,6 +53,7 @@ interface AlbumManagerProps {
 export function AlbumManager({
   album,
   currentUserId,
+  isAdmin = false,
   onChanged,
   onDeleted,
 }: AlbumManagerProps) {
@@ -59,10 +62,9 @@ export function AlbumManager({
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [leaveOpen, setLeaveOpen] = React.useState(false)
-  const [recreateOpen, setRecreateOpen] = React.useState(false)
+  const [deleteGoneOpen, setDeleteGoneOpen] = React.useState(false)
   const { pending: busy, run: runBusy } = useAsyncAction()
-  const { pending: recreating, run: runRecreate } = useAsyncAction()
-  const { pending: restoring, run: runRestore } = useAsyncAction()
+  const { pending: deletingGone, run: runDeleteGone } = useAsyncAction()
   const { pending: refreshing, run: runRefresh } = useAsyncAction()
   const { pending: removePending, run: runRemove } = useAsyncAction()
   const [removingId, setRemovingId] = React.useState<string | null>(null)
@@ -120,22 +122,13 @@ export function AlbumManager({
     }, 'Failed to leave album')
   }
 
-  const handleRecreate = () =>
-    runRecreate(async () => {
-      const result = await recreateAlbumFolderFn({
-        data: { albumId: album.id },
-      })
-      toast.success(recreateSummary(result))
-      setRecreateOpen(false)
-      onChanged()
-    }, 'Failed to recreate folder')
-
-  const handleRestore = () =>
-    runRestore(async () => {
-      await restoreAlbumFolderFn({ data: { albumId: album.id } })
-      toast.success('Album folder restored')
-      onChanged()
-    }, 'Failed to restore folder')
+  const handleDeleteGone = () =>
+    runDeleteGone(async () => {
+      await deleteGoneAlbumFn({ data: { albumId: album.id } })
+      toast.success('Album deleted')
+      setDeleteGoneOpen(false)
+      onDeleted()
+    }, 'Failed to delete album')
 
   const handleRefresh = () =>
     runRefresh(async () => {
@@ -153,61 +146,42 @@ export function AlbumManager({
     }, 'Failed to remove member')
   }
 
-  const folderMissing = album.folderState === 'missing'
-  const folderTrashed = album.folderState === 'trashed'
+  const warning = folderWarning(album.folderState, { isAdmin })
 
   return (
     <div className="space-y-4">
-      {folderMissing && (
-        <Alert variant="destructive">
+      {warning && (
+        <Alert
+          variant={album.folderState === 'missing' ? 'destructive' : 'default'}
+        >
           <TriangleAlert />
-          <AlertTitle>Album folder deleted from Google Drive</AlertTitle>
+          <AlertTitle>{warning.title}</AlertTitle>
           <AlertDescription>
-            The folder behind this album was permanently deleted. Photos that
-            flamekeepers uploaded may still be in their Google Drives. You can
-            recreate an empty folder to keep uploading, which permanently
-            deletes those photos, or delete the album.
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              disabled={recreating}
-              onClick={() => setRecreateOpen(true)}
-            >
-              {recreating ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <TriangleAlert />
+            {warning.description}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" asChild>
+                <a
+                  href={driveFolderUrl(album.driveFolderId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink />
+                  Open in Google Drive
+                </a>
+              </Button>
+              {warning.canDelete && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={deletingGone}
+                  onClick={() => setDeleteGoneOpen(true)}
+                >
+                  <Trash2 />
+                  Delete album
+                </Button>
               )}
-              Recreate folder
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {folderTrashed && (
-        <Alert>
-          <TriangleAlert />
-          <AlertTitle>Album folder is in the Google Drive bin</AlertTitle>
-          <AlertDescription>
-            The folder behind this album was moved to the bin in Drive. Uploads
-            are paused until it is restored.
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              disabled={restoring}
-              onClick={handleRestore}
-            >
-              {restoring ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <TriangleAlert />
-              )}
-              Restore folder
-            </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -221,11 +195,9 @@ export function AlbumManager({
             onClick={() => setShowUpload((s) => !s)}
             disabled={album.folderState !== 'ok'}
             title={
-              album.folderState === 'trashed'
-                ? 'Restore the album folder from the Drive bin before uploading'
-                : album.folderState === 'missing'
-                  ? 'Recreate the album folder before uploading'
-                  : undefined
+              album.folderState !== 'ok'
+                ? 'Uploads are paused while the album folder is in the bin or deleted'
+                : undefined
             }
           >
             {showUpload ? <X /> : <Upload />}
@@ -372,33 +344,33 @@ export function AlbumManager({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={recreateOpen} onOpenChange={setRecreateOpen}>
+      <Dialog open={deleteGoneOpen} onOpenChange={setDeleteGoneOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Recreate folder?</DialogTitle>
+            <DialogTitle>Delete album?</DialogTitle>
             <DialogDescription>
-              Any photos from this album that are still in the Google Drives of
-              flamekeepers will be permanently deleted and cannot be recovered.
-              The album will restart empty with a new folder.
+              The Google Drive folder is permanently gone. The album will be
+              replaced by a notice, and any photos still held elsewhere are left
+              untouched and stop being managed by the app.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => setRecreateOpen(false)}
-              disabled={recreating}
+              onClick={() => setDeleteGoneOpen(false)}
+              disabled={deletingGone}
             >
               Cancel
             </Button>
             <Button
               type="button"
               variant="destructive"
-              onClick={handleRecreate}
-              disabled={recreating}
+              onClick={handleDeleteGone}
+              disabled={deletingGone}
             >
-              {recreating && <Loader2 className="animate-spin" />}
-              {recreating ? 'Deleting...' : 'Delete photos and recreate'}
+              {deletingGone && <Loader2 className="animate-spin" />}
+              {deletingGone ? 'Deleting...' : 'Delete album'}
             </Button>
           </DialogFooter>
         </DialogContent>
