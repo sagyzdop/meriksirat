@@ -186,6 +186,13 @@ const STEPS: Array<[string, () => Promise<Step>]> = [
       import('./src/lib/albums/photo-index').then((m) => m.runPhotoBackfill),
   ],
   [
+    'checkBufferUsage',
+    () =>
+      import('./src/lib/buffer/usage-server').then(
+        (m) => m.runBufferUsageCheck
+      ),
+  ],
+  [
     'configureTelegramBot',
     () =>
       import('./src/lib/telegram/configure').then(

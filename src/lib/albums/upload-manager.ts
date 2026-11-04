@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { confirmPhotoUploadFn, createUploadSessionFn } from './functions'
+import { BUFFER_FULL_MESSAGE } from '@/lib/buffer/messages'
 import { planEnqueue } from './upload-dedupe'
 import {
   deleteUploadFiles,
@@ -61,9 +62,9 @@ class TransientUploadError extends Error {
   }
 }
 
-class QuotaExceededUploadError extends TransientUploadError {
+class QuotaExceededUploadError extends Error {
   constructor() {
-    super('Storage quota exceeded')
+    super(BUFFER_FULL_MESSAGE)
     this.name = 'QuotaExceededUploadError'
   }
 }

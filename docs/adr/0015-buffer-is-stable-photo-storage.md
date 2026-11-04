@@ -30,8 +30,14 @@ never a token. The full-scope token is read only by `src/lib/buffer/full-token.t
 which nothing imports yet. If the buffer is not configured or its token fails, the
 upload fails with a plain message and nothing is placed on a flamekeeper.
 
-Not built yet: usage limits and the 90% and 100% thresholds
-([#26](https://github.com/sagyzdop/meriksirat/issues/26)), and offload (Stage 2,
-which waits for its live tests). Photos uploaded to flamekeepers before #17 stay
+Built in [#26](https://github.com/sagyzdop/meriksirat/issues/26): usage is read
+from the Drive quota with the `drive.file` token and cached in KV. The hourly
+step warns admins once per crossing of 90% and of 100%, tracked by a KV marker
+that clears when usage falls below 90%, so the schema is untouched. The
+banner and the dashboard card read the cache. Uploads are refused at 100% before
+the browser sends any bytes. See
+[the scenario](../scenarios/cron/flamekeepers/buffer-usage.md).
+
+Not built yet: offload (Stage 2, which waits for its live tests). Photos uploaded to flamekeepers before #17 stay
 there until a drain. [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)
 still describes them.

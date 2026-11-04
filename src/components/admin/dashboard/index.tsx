@@ -11,7 +11,9 @@ import { MostActiveUsersTable } from './components/most-active-users-table'
 import { ViolationsTable } from './components/violations-table'
 import { ClubCodeCard } from './components/club-code-card'
 import { FreeSpacePanel } from './components/free-space-panel'
+import { BufferCard } from './components/buffer-card'
 import { PoolCard } from './components/pool-card'
+import type { BufferUsageOverview } from '@/lib/buffer/functions'
 import type { PoolOverview } from '@/lib/admin/functions/pool'
 import type { FreeSpaceSuggestion } from '@/lib/admin/functions/free-space'
 import { SettingsTab, SettingsTabSkeleton } from './components/settings-tab'
@@ -45,6 +47,8 @@ interface PageProps {
   clubCode?: string
   freeSpace?: FreeSpaceSuggestion[]
   freeSpaceLoading: boolean
+  buffer?: BufferUsageOverview | null
+  bufferLoading: boolean
   pool?: PoolOverview
   poolLoading: boolean
   canBroadcast: boolean
@@ -67,6 +71,8 @@ export function Page({
   clubCode,
   freeSpace,
   freeSpaceLoading,
+  buffer,
+  bufferLoading,
   pool,
   poolLoading,
   canBroadcast,
@@ -168,6 +174,7 @@ export function Page({
           </TabsContent>
 
           <TabsContent value="albums" className="space-y-4">
+            <BufferCard usage={buffer} isLoading={bufferLoading} />
             <PoolCard
               pool={pool}
               isLoading={poolLoading}
