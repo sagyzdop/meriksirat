@@ -12,8 +12,8 @@ const USER_CHUNK = 90
 
 /**
  * Re-points an album's favorites and cover from `oldFileId` to `newFileId`
- * after a photo moves to a new Drive file. Safe to repeat. Drains, offloads
- * and relay call this once per moved photo, after the new copy is verified.
+ * after a photo moves to a new Drive file. Safe to repeat. Offloads
+ * call this once per moved photo, after the new copy is verified.
  */
 export async function remapDriveFile(
   database: Database,

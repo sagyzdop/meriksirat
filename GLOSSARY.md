@@ -159,7 +159,7 @@ _Avoid_: Storage account, main account, master
 
 **Flamekeeper**:
 An `@nu.edu.kz` user who pledges optional reserve storage from their Google Drive to the club. Holds no photos when they sign up, since new uploads go to the buffer; they hold photos only after an admin offloads some to them. May also be a member.
-Not built yet: offload is Stage 2 (#15), so until then a flamekeeper's Drive grant sits unused. Uploads no longer go to flamekeepers (#17), but photos uploaded to them earlier stay where they are until a drain.
+Not built yet: offload is Stage 2 (#15), so until then a flamekeeper's Drive grant sits unused. Uploads no longer go to flamekeepers (#17), and the old placement, drain and relay code was removed in #24; the last `dev` commit containing it is `2565826`. Stopping, graduating, a domain change and a ban end flamekeeping at once, dropping the grant, because nothing is held.
 _Avoid_: Donor, contributor, host
 
 **Pledge**:
@@ -173,22 +173,22 @@ _Avoid_: Storage, capacity
 
 **Draining**:
 A flamekeeper state in which the server copies their photos to the buffer, before they leave or graduate. The flamekeeper's own token then deletes the originals, and the drain is one-way.
-Not built yet (Stage 2, #15): today's code drains through the browser relay and moves photos to other flamekeepers (ADR-0009). ADR-0016 replaces that.
+Not built yet (Stage 2, #15). Until then nothing is held on a flamekeeper, so the code that drained through the browser relay (ADR-0009) was removed in #24 (last `dev` commit containing it: `2565826`) and ending flamekeeping is immediate. The `drained` state now simply means "stopped"; the old `draining` state is only found on rows left by earlier code, which the hourly `drainFlamekeepers` step ends.
 _Avoid_: Evacuating, migrating
 
 **Relay**:
 Moving one photo through a browser: downloaded with a short-lived `drive.file` token and uploaded into the album's volume for the destination. The photo gets a new Drive file ID (ADR-0009, amended by ADR-0016).
 Under the new design, relay is used only by an admin-started offload, from the buffer to a flamekeeper, in the admin's browser. Drains no longer use it.
-Not built yet (Stage 2): today's code relays drains only from the admin Flamekeepers page. The profile no longer has a relay, so a flamekeeper's own drain waits for an admin until #24.
+Not built yet (Stage 2): no relay exists in the code. The old drain relay was removed in #24 (last `dev` commit containing it: `2565826`).
 _Avoid_: Transfer, copy
 
 **Lost flamekeeper**:
-A flamekeeper whose Drive access can no longer be refreshed; their photos drop out of the app after 7 days and return if they reconnect, however late. If the rescue test passes, the buffer copies their photos during those 7 days. Their original files stay in their Drive either way.
-Not built yet (Stage 2): the rescue test has not been run (#15).
+A flamekeeper whose Drive access can no longer be refreshed; they can reconnect from their profile at any time. Under the Stage 2 design their photos drop out of the app after 7 days and return if they reconnect, however late. If the rescue test passes, the buffer copies their photos during those 7 days. Their original files stay in their Drive either way.
+Not built yet (Stage 2): the rescue test has not been run (#15). Today nothing is held, so a lost flamekeeper loses nothing and the 7 days only time the reconnect email.
 _Avoid_: Revoked, disconnected
 
 **Banned user**:
-A user an admin has shut out for abusing the platform. They can no longer sign in, can't sign up again with that Google account, and any photos they hold are drained.
+A user an admin has shut out for abusing the platform. They can no longer sign in, can't sign up again with that Google account, and any flamekeeping they have ends at once.
 _Avoid_: Blocked, suspended
 
 ### Notifications

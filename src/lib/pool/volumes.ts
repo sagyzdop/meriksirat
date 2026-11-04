@@ -1,6 +1,3 @@
-export const RELEASE_RETRY_MS = 6 * 60 * 60 * 1000
-
-export const RELEASE_FALLBACK_MS = 7 * 24 * 60 * 60 * 1000
 export const MAX_HEAL_DELETES = 50
 
 export type HealOutcome = 'cleared' | 'blocked' | 'incomplete'
@@ -34,67 +31,8 @@ export function rotateIds<T>(ids: T[], turn: number): T[] {
   return [...ids.slice(start), ...ids.slice(0, start)]
 }
 
-export interface ReleaseVolume {
-  albumId: string
-  driveFolderId: string | null
-  releaseLastBlockedAt: Date | null
-  releaseFirstBlockedAt: Date | null
-  releaseAlertedAt?: Date | null
-}
-
-export interface ReleasePlan<T extends ReleaseVolume> {
-  calls: T[]
-  drops: T[]
-  pending: T[]
-}
-
 export function volumeFolderName(shortId: string): string {
   return `Volume ${shortId}`
-}
-
-export function releaseAbandonedCutoff(now: Date): Date {
-  return new Date(now.getTime() - RELEASE_FALLBACK_MS)
-}
-
-export function isReleaseAbandoned(
-  volume: { releaseFirstBlockedAt: Date | null },
-  now: Date
-): boolean {
-  return (
-    !!volume.releaseFirstBlockedAt &&
-    volume.releaseFirstBlockedAt.getTime() <=
-      releaseAbandonedCutoff(now).getTime()
-  )
-}
-
-export function planVolumeReleases<T extends ReleaseVolume>(
-  volumes: T[],
-  now: Date,
-  maxCalls: number
-): ReleasePlan<T> {
-  const plan: ReleasePlan<T> = {
-    calls: [],
-    drops: [],
-    pending: [],
-  }
-  for (const volume of volumes) {
-    if (volume.releaseAlertedAt && isReleaseAbandoned(volume, now)) continue
-    const waiting =
-      !!volume.releaseLastBlockedAt &&
-      now.getTime() - volume.releaseLastBlockedAt.getTime() < RELEASE_RETRY_MS
-    if (waiting) {
-      if (!isReleaseAbandoned(volume, now)) plan.pending.push(volume)
-      continue
-    }
-    if (!volume.driveFolderId) {
-      plan.drops.push(volume)
-    } else if (plan.calls.length >= maxCalls) {
-      plan.pending.push(volume)
-    } else {
-      plan.calls.push(volume)
-    }
-  }
-  return plan
 }
 
 export function planHealDeletes(
@@ -111,10 +49,6 @@ export function planHealDeletes(
   return picked
 }
 
-export function abandonedAlertText(who: string, albumTitle: string): string {
-  return `#savenuimg: a volume of ${who} in the album "${albumTitle}" could not be emptied for 7 days. Its Drive subfolder still holds files that need manual cleanup.`
-}
-
 export function albumBlockedAlertText(
   albumId: string,
   blocked: number
@@ -123,15 +57,6 @@ export function albumBlockedAlertText(
     return `#savenuimg: album ${albumId} was deleted but its Drive folder could not be removed, so it may still hold public files that need manual cleanup.`
   }
   return `#savenuimg: album ${albumId} was deleted but ${blocked} of its volume subfolders could not be emptied, so its Drive folder may still hold public files that need manual cleanup.`
-}
-
-export function planRecoveryShare(volume: {
-  driveFolderId: string | null
-  permissionId: string
-  hasPhotoRows: boolean
-}): boolean {
-  if (!volume.driveFolderId || volume.hasPhotoRows) return false
-  return !volume.permissionId
 }
 
 export function isInVolumeFolder(

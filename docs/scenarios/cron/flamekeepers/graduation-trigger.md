@@ -1,41 +1,33 @@
-# How graduation and non-university emails start a drain
+# How graduation and non-university emails end flamekeeping
 
-> **Question:** When does the cron start moving photos off a
-> flamekeeper's Drive because they are graduating or their email
-> changed?
+> **Question:** When does the cron end someone's flamekeeping
+> because they are graduating or their email changed?
 >
-> **Answer:** graduateFlamekeepers checks flamekeepers in state
-> active, full or draining. A flamekeeper whose email no longer
-> ends in @nu.edu.kz is drained with reason domain. Otherwise,
-> when their expected graduation date is 60 days away or closer,
-> they are drained with reason graduation. Up to 3 drains start
-> per run, 2 requests each. The flamekeeper is told by email
-> that their photos must move before a deletion date 14 days
-> away. If they hold no photos, they go straight to drained.
+> **Answer:** graduateFlamekeepers checks every flamekeeper who
+> has not stopped (active, full, draining or lost). A flamekeeper
+> whose email no longer ends in @nu.edu.kz is ended with reason
+> domain. Otherwise, when their expected graduation date is 60
+> days away or closer, they are ended with reason graduation.
+> Ending means the stored Drive access is revoked and deleted and
+> the state becomes drained. Up to 3 per run, 3 requests each.
+> The flamekeeper gets a short email saying why; there is nothing
+> for them to do.
 >
 > **Notes:**
-> - A draining flamekeeper with reason pledge or graduation
->   whose email is not @nu.edu.kz is switched to a domain drain,
->   and a pledge drain turns into a graduation drain when the
->   date is near. Both restart the 14-day deadline.
-> - A graduation drain whose date was moved later is not
->   cancelled by the cron. Only the flamekeeper's own edit in
->   the app does that.
-> - Email subject: #savenuimg: we are moving your photos. It
+> - Nothing is held on a flamekeeper's Drive, so there are no
+>   photos to move and no deadline. The old drain, with its
+>   reminders, relay and deletions, was removed in #24 (last
+>   `dev` commit containing it: `2565826`).
+> - Email subject: #savenuimg: your flamekeeping has ended. It
 >   says why (for graduation: Your expected graduation date is
->   less than 60 days away and your account is about to move to
->   alumni storage, for domain: Your account is no longer an
->   @nu.edu.kz account, so it cannot keep lending storage), how
->   many GB must move, to keep the account page open, and the
->   deletion date.
-> - The 2 requests are taken before the work. If they do not fit
+>   less than 60 days away; for domain: Your account is no longer
+>   an @nu.edu.kz account, so it cannot keep lending storage) and
+>   that the app has removed its access to the Drive.
+> - The requests are taken before the work. If they do not fit
 >   in the budget, the loop stops.
-> - The drain itself continues in drain-notices.md,
->   drain-deadline.md and drain-finish.md. The move of the
->   photos is in ../../flamekeepers/relay-move-photo.md.
-> - Flamekeepers without photos (used bytes 0, or no live or
->   dropped volumes) skip the drain and are finished at once,
->   see drain-finish.md.
+> - The same graduation rule runs when a flamekeeper saves a
+>   nearer graduation date in the app, see
+>   ../../flamekeepers/change-pledge.md.
 
 ```mermaid
 sequenceDiagram
@@ -47,21 +39,17 @@ sequenceDiagram
     participant Member as Flamekeeper
 
     Cron->>Worker: graduateFlamekeepers
-    Worker->>D1: load flamekeepers in state active, full, draining<br/>with email, graduationDate, usedBytes
-    loop each flamekeeper until 3 drains started
+    Worker->>D1: load flamekeepers not drained<br/>with email and graduationDate
+    loop each flamekeeper until 3 ended
         Worker->>Worker: planDomainChange: email not @nu.edu.kz?
         opt email is fine
             Worker->>Worker: planGraduation: date is 60 days away or less?
         end
-        opt a drain or a direct finish was planned
-            Worker->>Worker: take 2 requests, if not affordable stop
-            alt usedBytes is 0 or no live or dropped photos left
-                Worker->>Worker: finish the drain at once, see drain-finish.md
-            else photos to move
-                Worker->>D1: set state = draining, drainReason = domain or graduation<br/>drainingDeadline = now + 14 days, clear all stamps
-                Worker->>Gmail: sendEmail with the club account token:<br/>#35;savenuimg: we are moving your photos
-                Gmail-->>Member: why, GB to move, deletion date, account page link
-            end
+        opt an ending was planned
+            Worker->>Worker: take 3 requests, if not affordable stop
+            Worker->>D1: revoke and delete Drive access<br/>state = drained
+            Worker->>Gmail: sendEmail with the club account token:<br/>#35;savenuimg: your flamekeeping has ended
+            Gmail-->>Member: why, and that the app removed its access
         end
     end
 ```

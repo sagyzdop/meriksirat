@@ -3,15 +3,12 @@ import type { FlamekeeperState } from '@/lib/access/access-rules'
 export const HEALTH_INTERVAL_MS = 24 * 60 * 60 * 1000
 export const LOST_GRACE_MS = 7 * 24 * 60 * 60 * 1000
 export const HEALTH_STEP_CAP = 24
-export const HEALTH_PASS_COST = 2
-export const MISSING_GRACE_MS = 60 * 60 * 1000
-export const RESTORE_BATCH = 300
+export const HEALTH_CHECK_COST = 2
 
 export interface HealthCandidate {
   userId: string
   state: FlamekeeperState
   healthCheckedAt: Date | null
-  volumeCount: number
 }
 
 export interface LostFlamekeeper {
@@ -61,19 +58,11 @@ export function planHealthBatch(
   const picked: string[] = []
   let spent = 0
   for (const c of due) {
-    const cost = c.volumeCount > 0 ? HEALTH_PASS_COST : 1
-    if (spent + cost > budget) break
+    if (spent + HEALTH_CHECK_COST > budget) break
     picked.push(c.userId)
-    spent += cost
+    spent += HEALTH_CHECK_COST
   }
   return picked
-}
-
-export function volumesAfterCursor(
-  albumIds: string[],
-  cursor: string | null
-): string[] {
-  return [...albumIds].sort().filter((id) => !cursor || id > cursor)
 }
 
 export interface EmailSync {
@@ -116,75 +105,4 @@ export function planLost(fks: LostFlamekeeper[], now: Date): LostPlan {
     }
   }
   return plan
-}
-
-export interface PhotoRef {
-  id: string
-  driveFileId: string
-}
-
-export function findMissingPhotos(
-  dbPhotos: PhotoRef[],
-  driveFileIds: Iterable<string>
-): PhotoRef[] {
-  const present = new Set(driveFileIds)
-  return dbPhotos.filter((p) => !present.has(p.driveFileId))
-}
-
-export const MAX_CONFIRMS_PER_ALBUM = 10
-
-export function pickConfirmCandidates(
-  missing: PhotoRef[],
-  limit: number,
-  random: () => number
-): PhotoRef[] {
-  const pool = [...missing]
-  const count = Math.min(limit, pool.length)
-  for (let i = 0; i < count; i++) {
-    const j = i + Math.floor(random() * (pool.length - i))
-    ;[pool[i], pool[j]] = [pool[j], pool[i]]
-  }
-  return pool.slice(0, count)
-}
-
-export type FileProbeOutcome = 'exists' | 'trashed' | 'missing' | 'error'
-
-export function confirmMissing(outcome: FileProbeOutcome): 'remove' | 'keep' {
-  return outcome === 'missing' || outcome === 'trashed' ? 'remove' : 'keep'
-}
-
-export function planVolumeAudit(
-  volumeFolderId: string | null,
-  rows: PhotoRef[]
-): 'skip' | 'audit' {
-  if (rows.length === 0) return 'skip'
-  if (!volumeFolderId) return 'skip'
-  return 'audit'
-}
-
-export interface RecoveryAlbum {
-  deletedAt: Date | null
-  tombstoneReason: string | null
-  expiresAt: Date | null
-  pinned: boolean
-}
-
-export type RecoveryAction = 'restore' | 'abandon'
-
-export function planRecovery(album: RecoveryAlbum, now: Date): RecoveryAction {
-  if (album.deletedAt && album.tombstoneReason !== 'flamekeeper_lost') {
-    return 'abandon'
-  }
-  if (
-    !album.pinned &&
-    album.expiresAt &&
-    album.expiresAt.getTime() <= now.getTime()
-  ) {
-    return 'abandon'
-  }
-  return 'restore'
-}
-
-export function oldEnoughToAudit(createdAt: Date, now: Date): boolean {
-  return now.getTime() - createdAt.getTime() >= MISSING_GRACE_MS
 }

@@ -1,95 +1,44 @@
 import { isNuEmail } from '@/lib/flamekeeper/rules'
-import {
-  planPledgeChange,
-  startDrain,
-  type DrainFlamekeeper,
-  type DrainTransition,
-} from './drain'
+import type { StopPlan, StoppableFlamekeeper } from './stop'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export const GRADUATION_LEAD_DAYS = 60
 export const GRADUATION_CONFIRM_DAYS = 365
 
-export function graduationDrainStart(graduationDate: string): Date {
+export function graduationStopStart(graduationDate: string): Date {
   return new Date(
     new Date(`${graduationDate}T00:00:00Z`).getTime() -
       GRADUATION_LEAD_DAYS * DAY_MS
   )
 }
 
-export function graduationDrainDue(graduationDate: string, now: Date): boolean {
-  const start = graduationDrainStart(graduationDate)
+export function graduationStopDue(graduationDate: string, now: Date): boolean {
+  const start = graduationStopStart(graduationDate)
   return !Number.isNaN(start.getTime()) && now.getTime() >= start.getTime()
 }
 
 export function planGraduation(
-  fk: DrainFlamekeeper,
+  fk: StoppableFlamekeeper,
   graduationDate: string,
-  now: Date,
-  hasPhotos: boolean = fk.usedBytes > 0
-): DrainTransition {
-  const due = graduationDrainDue(graduationDate, now)
-  switch (fk.state) {
-    case 'active':
-    case 'full':
-      if (!due) return { kind: 'none' }
-      return hasPhotos ? startDrain('graduation', now) : { kind: 'drained' }
-    case 'draining':
-      if (fk.drainReason === 'graduation') {
-        return due ? { kind: 'none' } : { kind: 'resume' }
-      }
-      if (fk.drainReason === 'pledge' && due) {
-        return startDrain('graduation', now)
-      }
-      return { kind: 'none' }
-    default:
-      return { kind: 'none' }
-  }
+  now: Date
+): StopPlan {
+  if (fk.state === 'drained') return { kind: 'none' }
+  return graduationStopDue(graduationDate, now)
+    ? { kind: 'stop' }
+    : { kind: 'none' }
 }
 
 export function planDomainChange(
-  fk: DrainFlamekeeper,
-  email: string,
-  now: Date,
-  hasPhotos: boolean = fk.usedBytes > 0
-): DrainTransition {
-  if (isNuEmail(email)) return { kind: 'none' }
-  switch (fk.state) {
-    case 'active':
-    case 'full':
-      return hasPhotos ? startDrain('domain', now) : { kind: 'drained' }
-    case 'draining':
-      if (fk.drainReason === 'pledge' || fk.drainReason === 'graduation') {
-        return startDrain('domain', now)
-      }
-      return { kind: 'none' }
-    default:
-      return { kind: 'none' }
-  }
-}
-
-export function planFlamekeeperEdit(
-  fk: DrainFlamekeeper,
-  input: { pledgedBytes: number; graduationDate: string },
-  now: Date,
-  hasPhotos: boolean = fk.usedBytes > 0
-): DrainTransition {
-  const graduation = planGraduation(fk, input.graduationDate, now, hasPhotos)
-  if (graduation.kind === 'resume') {
-    const pledge = planPledgeChange(
-      { ...fk, state: 'active', drainReason: null },
-      input.pledgedBytes,
-      now
-    )
-    return pledge.kind === 'drain' ? pledge : graduation
-  }
-  if (graduation.kind !== 'none') return graduation
-  return planPledgeChange(fk, input.pledgedBytes, now)
+  fk: StoppableFlamekeeper,
+  email: string
+): StopPlan {
+  if (isNuEmail(email) || fk.state === 'drained') return { kind: 'none' }
+  return { kind: 'stop' }
 }
 
 export interface GraduationConfirmState {
-  state: DrainFlamekeeper['state']
+  state: StoppableFlamekeeper['state']
   createdAt: Date
   graduationConfirmedAt: Date | null
   graduationPromptSentAt: Date | null
@@ -113,7 +62,6 @@ export function graduationPromptEmailDue(
   now: Date
 ): boolean {
   if (!graduationConfirmDue(fk, now)) return false
-  if (fk.state === 'draining') return false
   return (
     !fk.graduationPromptSentAt ||
     fk.graduationPromptSentAt.getTime() < graduationConfirmDueAt(fk).getTime()

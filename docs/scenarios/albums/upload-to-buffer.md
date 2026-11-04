@@ -10,7 +10,7 @@
 > - The browser gets an upload address and nothing else. The buffer's `drive.file` token and its full-scope token (kept for drains, read only by src/lib/buffer/full-token.ts) never leave the Worker.
 > - Messages: "Photo storage is not available right now, so uploads are paused. Please tell an admin." when GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET or GOOGLE_BUFFER_REFRESH_TOKEN is missing or Google rejects the buffer's token, and "The club's photo storage is full, so uploads are paused. Your photos are still on your device and nothing was lost. Please tell an admin." when the buffer is at 100% or Drive reports the quota exceeded. Setup is in the README, "Connecting the buffer account".
 > - A Volume folder that has vanished from Drive is forgotten and recreated once, but only while the album has no buffer photos. Otherwise the upload stops with "The album storage folder could not be found in Google Drive, so uploads are paused."
-> - Photos that flamekeepers already hold from before this change stay where they are. The old flamekeeper placement, reservations and pool figures still exist for the browser relay in ../flamekeepers/relay-move-photo.md until they are removed; uploads no longer use them.
+> - Photos that flamekeepers already hold from before this change stay where they are. The old flamekeeper placement, reservations and browser relay were removed in #24 (last `dev` commit containing them: `2565826`).
 > - Before asking Google for an address the Worker checks the buffer's cached usage (refreshed from Drive when older than 10 minutes). At 100 percent it refuses the upload with the full message. If usage cannot be read the upload goes ahead. See [../cron/flamekeepers/buffer-usage.md](../cron/flamekeepers/buffer-usage.md).
 
 ```mermaid

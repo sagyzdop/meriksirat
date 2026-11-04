@@ -10,9 +10,9 @@ API key is used.
 A photo's identity is its current Drive file ID. It changes when the photo moves,
 so moving a photo remaps the favorites and the album cover. Favorites are keyed
 by `(user_id, album_id, drive_file_id)`. One shared remap, `remapDriveFile` in
-`src/lib/favorites/remap-server.ts`, does the re-pointing for relay, drain and
-offload. Listed files are the source of truth, so
-files added by hand in Drive don't appear.
+`src/lib/favorites/remap-server.ts`, does the re-pointing for offload and
+drain. Listed files are the source of truth, so files added by hand in Drive
+don't appear.
 
 The count warning replaces the table's bookkeeping. It compares each listing with
 the volume's expected count and bytes, on listing and on the health check. Owners
@@ -55,7 +55,7 @@ and count-warning tickets must not act on one.
 
 ## Status
 
-Album pages read from these listings since [#18](https://github.com/sagyzdop/meriksirat/issues/18).
+Album pages read from these listings since [#18](https://github.com/sagyzdop/meriksirat/issues/18). Upload dedupe reads them too since [#20](https://github.com/sagyzdop/meriksirat/issues/20); the browser hashes a file only when a listed file has its size.
 The rest is not built yet. Stage 1 of [#15](https://github.com/sagyzdop/meriksirat/issues/15)
 removes the table. Until then, [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)
 describes favorites, expiry and flamekeeper moves, which still use the table.

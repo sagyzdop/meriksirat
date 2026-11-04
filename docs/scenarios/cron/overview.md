@@ -14,7 +14,7 @@
 > - Every 5 minutes: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders`, in `bookings/`. `backfillAlbumPhotos` also runs here until the photo table is removed, see `albums-and-housekeeping/photo-backfill.md`.
 > - Every hour: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans` in `flamekeepers/` (start with `flamekeepers/steps-and-limits.md`), then `expireAlbums` (start with `albums-and-housekeeping/run-order.md`), then `checkBufferUsage` (`flamekeepers/buffer-usage.md`). After the steps, the Telegram bot is configured once per deploy, see `albums-and-housekeeping/bot-menu.md`.
 > - Every day: `graduateFlamekeepers`, in `flamekeepers/graduation-trigger.md`.
-> - Per-run caps inside a step (for example 3 ban cancellations or 3 graduation drains) apply per run, so on the hourly and daily schedules they now allow less work per day than on the old 5-minute schedule.
+> - Per-run caps inside a step (for example 3 ban cancellations or 3 graduation endings) apply per run, so on the hourly and daily schedules they now allow less work per day than on the old 5-minute schedule.
 
 ```mermaid
 sequenceDiagram

@@ -1,40 +1,34 @@
-# How the storage pool is kept topped up
+# How the storage pool is checked
 
-> **Question:** What does the cron do about the shared photo
-> storage, and when are admins told that space is running low?
+> **Question:** What does the cron do about the flamekeeper pool,
+> and when are admins told that pledged space is running low?
 >
-> **Answer:** maintainPool deletes old upload reservations, puts
-> flamekeepers marked full back to active once they have at
-> least 512 MB usable again, and checks whether the free space
-> of the pool is under 10% of what was pledged (or nothing is
-> pledged at all). If so, and no alert is already out, every
-> admin with Telegram gets a low-space message. When space
-> recovers, the alert is re-armed so it can fire again later. It
-> adds no new flamekeepers or space by itself.
+> **Answer:** maintainPool puts any flamekeeper still marked full
+> back to active, and checks whether the free space of the pool
+> is under 10% of what was pledged (or nothing is pledged at
+> all). If so, and no alert is already out, every admin with
+> Telegram gets a low-space message. When space recovers, the
+> alert is re-armed so it can fire again later. It adds no new
+> flamekeepers or space by itself.
 >
 > **Notes:**
+> - Nothing is stored on flamekeepers until Stage 2 of #15, so
+>   this step does little: no placement, reservations or upload
+>   slots exist any more (removed in #24, last `dev` commit
+>   containing them: `2565826`). Uploads go to the buffer, see
+>   ../../albums/upload-to-buffer.md. The buffer's own usage
+>   warning is in buffer-usage.md.
 > - Usable space of a flamekeeper is the smaller of two: pledge
->   minus used minus reserved, and the per-account cap minus
->   Drive usage minus reserved. The cap comes from
->   settings.flamekeeperCapBytes, 20 GB by default.
-> - Uploads no longer use the pool: they go to the buffer (../../albums/upload-to-buffer.md). Reservations now come only from the browser relay, and the pool figures serve only offload (Stage 2).
-> - A reservation is created when a relay move starts and counts
->   for 2 hours. This step deletes reservations that expired
->   more than 24 hours ago.
+>   minus used, and the per-account cap minus Drive usage. The
+>   cap comes from settings.flamekeeperCapBytes, 20 GB by default.
 > - Free space counts active flamekeepers only. Full ones add to
 >   the pledged total but not to the free total.
-> - The club account (master) is never given uploads: placement
->   skips the account whose email equals GOOGLE_MASTER_EMAIL.
 > - The alert costs 1 request per admin. If admins have no
 >   Telegram chat, or the budget is short, the alert is not
 >   marked as sent and is tried again next run. If the bot token
 >   is missing, the alert is counted as sent without sending.
-> - A flamekeeper becomes full during a relay move when Drive
->   answers that the quota is exceeded. A relay move with no
->   room anywhere stops with: Out of space, become a
->   flamekeeper / #savenuimg.
-> - If the settings row does not exist, the step stops after the
->   recovery of full flamekeepers.
+> - If the settings row does not exist, the step stops after
+>   resetting full flamekeepers.
 
 ```mermaid
 sequenceDiagram
@@ -45,12 +39,8 @@ sequenceDiagram
     participant Telegram
 
     Cron->>Worker: maintainPool
-    Worker->>D1: delete upload reservations that expired over 24 hours ago
-    Worker->>D1: load active and full flamekeepers with reserved bytes<br/>(reservations not yet expired), the cap and poolLowAlertedAt
-    Worker->>Worker: recoverFull: full flamekeepers with 512 MB or more usable
-    opt some can recover
-        Worker->>D1: set state = active where still full
-    end
+    Worker->>D1: set state = active where state = full
+    Worker->>D1: load active flamekeepers, the cap and poolLowAlertedAt
     Worker->>Worker: poolStats and poolAlert:<br/>low means free under 10% of pledged or pledged is 0
     alt low and no alert sent yet
         Worker->>D1: load admins that have a Telegram chat id

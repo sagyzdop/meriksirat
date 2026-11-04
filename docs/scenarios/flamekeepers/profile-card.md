@@ -20,12 +20,9 @@
 >   saved as in [../account/profile-edit.md](../account/profile-edit.md).
 >   A member edits Graduating under About you.
 > - The text never mentions where photos are kept or that they
->   move. A draining flamekeeper has nothing to do on this page;
->   the Move photos now panel is no longer here, see
->   relay-hand-out.md.
-> - A draining record is checked on every load. If nothing is
->   left to move, the drain is finished right there (state becomes
->   drained, usage is zeroed and the app's Drive access is deleted).
+>   move. The draining state only survives on records left by
+>   earlier code; the hourly drainFlamekeepers step ends them, see
+>   ../cron/flamekeepers/steps-and-limits.md.
 > - Become a flamekeeper is a link to the `/become-flamekeeper`
 >   page. See connect-drive.md.
 > - The graduation question appears 365 days after the last
@@ -51,10 +48,7 @@ sequenceDiagram
     F->>Browser: Open /profile
     Browser->>Worker: getMyFlamekeeperFn()
     Worker->>D1: read flamekeeper row
-    opt State is draining
-        Worker->>D1: finishDrainIfEmpty, mark drained if no<br/>photos are left
-    end
-    Worker-->>Browser: state, pledge, used, date, drain info
+    Worker-->>Browser: state, pledge, used, date
     alt No row, or state drained
         Browser-->>F: "Keep the flame alive" and a Become a<br/>flamekeeper button, see connect-drive.md
     else State lost

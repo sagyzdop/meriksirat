@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import { confirmPhotoUploadFn, createUploadSessionFn } from './functions'
 import { BUFFER_FULL_MESSAGE } from '@/lib/buffer/messages'
-import { planEnqueue } from './upload-dedupe'
+import { NEEDS_HASH_MESSAGE, planEnqueue } from './upload-dedupe'
+import { md5OfFile } from './file-md5'
 import {
   deleteUploadFiles,
   getUploadFiles,
@@ -197,23 +198,22 @@ class UploadManager {
   }
 
   /**
-   * Queue files for upload. Files whose name already exists in `existingNames`
-   * (already in the album), in a queued/active job for the same album, or
-   * earlier in the same batch are skipped (dedup). Returns the accepted jobs
-   * and the skipped names.
+   * Queue files for upload. Files already queued or uploading in the same
+   * album, or repeated in the same batch (same name and size), are skipped.
+   * Duplicates of photos already in the album are caught by size and MD5 when
+   * the upload session is requested. Returns the accepted jobs and the
+   * skipped names.
    */
   enqueue(
     albumId: string,
     albumTitle: string,
-    files: File[],
-    existingNames: Set<string> = new Set()
+    files: File[]
   ): { accepted: UploadJob[]; skipped: string[] } {
     const accepted: UploadJob[] = []
     const plan = planEnqueue(
       albumId,
-      files.map((file) => file.name),
-      this.snapshot,
-      existingNames
+      files.map((file) => ({ name: file.name, size: file.size })),
+      this.snapshot
     )
     const skipped = plan.skipped
     const acceptable = new Set(plan.acceptNames)
@@ -348,14 +348,13 @@ class UploadManager {
     const attempt = (job.attempts ?? 0) + 1
     this.patch(job.id, { status: 'uploading', progress: 0 })
     try {
-      const { uploadUrl } = await createUploadSessionFn({
-        data: {
-          albumId: job.albumId,
-          fileName: job.name,
-          mimeType: job.mimeType,
-          size: job.size,
-        },
-      })
+      const session = {
+        albumId: job.albumId,
+        fileName: job.name,
+        mimeType: job.mimeType,
+        size: job.size,
+      }
+      const { uploadUrl } = await this.openSession(job.id, session)
 
       const fileId = await this.putFile(job.id, uploadUrl)
       if (fileId) await this.confirmUpload(job.albumId, fileId)
@@ -411,6 +410,28 @@ class UploadManager {
     } finally {
       this.running--
       this.pump()
+    }
+  }
+
+  private async openSession(
+    jobId: string,
+    session: {
+      albumId: string
+      fileName: string
+      mimeType: string
+      size: number
+    }
+  ) {
+    try {
+      return await createUploadSessionFn({ data: session })
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== NEEDS_HASH_MESSAGE) {
+        throw error
+      }
+      const file = this.filesById.get(jobId)
+      if (!file) throw new Error('Upload file is missing')
+      const md5 = await md5OfFile(file)
+      return createUploadSessionFn({ data: { ...session, md5 } })
     }
   }
 

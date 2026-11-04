@@ -8,7 +8,7 @@
 > - There is no backup. The dialog says this permanently deletes the album, all its photos from Google Drive, and removes all co-authors.
 > - A gone folder is different: an admin deletes it as a tombstone without touching any photos, see deleted-folder-warning.md.
 > - Deleting by hand removes the row completely. Expiry (cron) keeps a tombstone row instead, see cron/albums-and-housekeeping/.
-> - Volume folders that the master account cannot delete are emptied first through each flamekeeper, see ../cron/flamekeepers/release-volumes.md. If that is not finished in one go, the person sees "This album is too large to delete in one go. Some photos were deleted, try again to continue." If some folders stay blocked, admins get a Telegram alert, the album row is still removed and the person sees "Album deleted".
+> - Volume folders that the master account cannot delete are emptied first through each flamekeeper, if an old one still has files. If that is not finished in one go, the person sees "This album is too large to delete in one go. Some photos were deleted, try again to continue." If some folders stay blocked, admins get a Telegram alert, the album row is still removed and the person sees "Album deleted".
 > - If a flamekeeper's Google connection is lost, their photos are dropped from the table and the album's Drive folder is kept. The album row is still removed.
 > - Only the album owner's album count goes down. Co-authors' counts are not changed.
 > - If Drive refuses to delete the folder for another reason, the failure is only logged and the album row is still removed.
@@ -41,7 +41,7 @@ sequenceDiagram
         else All flamekeeper photos gone
             W->>G: Master token: delete the album folder,<br/>skipped if a lost flamekeeper's photos remain
             opt Master not allowed to delete a volume folder
-                W->>W: Empty the volume folders first,<br/>see ../cron/flamekeepers/release-volumes.md
+                W->>W: Empty any old flamekeeper volume folders first
                 alt Clearing not finished in this call
                     W-->>B: Error This album is too large to delete in one go.<br/>Some photos were deleted, try again to continue.
                 else Some folders stay blocked

@@ -5,7 +5,6 @@ export const MIN_PLEDGE_GB = MIN_PLEDGE_BYTES / GB
 export const MAX_PLEDGE_GB = 1024
 export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 export const FLAMEKEEPER_SCOPES = [DRIVE_FILE_SCOPE, 'openid', 'email']
-export const DRAIN_GRACE_MS = 14 * 24 * 60 * 60 * 1000
 export const TERMS_URL =
   'https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md'
 
