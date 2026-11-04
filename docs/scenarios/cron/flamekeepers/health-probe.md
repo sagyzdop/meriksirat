@@ -7,36 +7,30 @@
 > **Answer:** checkFlamekeeperHealth looks at flamekeepers in
 > state active, full or draining and probes each one at most
 > once every 24 hours, oldest check first. The probe refreshes
-> the flamekeeper's Google token, records the Drive usage,
-> copies Google's email onto the account if it differs, and
-> checks that their photos still exist. If Google says the
-> grant is gone (invalid_grant, or no grant row at all), the
-> flamekeeper is marked lost. Any other failure is retried in
+> the flamekeeper's Google token, records the Drive usage, and
+> copies Google's email onto the account if it differs. If Google
+> says the grant is gone (invalid_grant, or no grant row at all),
+> the flamekeeper is marked lost. Any other failure is retried in
 > about 1 hour. The probes share a cap of 24 requests, taken
 > from the run's 40.
 >
 > **Notes:**
 > - Cost per flamekeeper is 2 requests (token refresh and Drive
->   about call), or 1 when the previous run stopped half-way
->   through the photo check and is resuming from a saved
->   place. The pick stops at the first flamekeeper that no
->   longer fits. The photo check itself spends more requests
->   from the same cap of 24.
-> - If the cap runs out during the photo check, the place is
->   saved and the flamekeeper is due again on the next run,
->   instead of waiting 24 hours.
-> - The reconnect emails, the lost-flamekeeper work and the
->   admin report that follow use the run's budget outside this
->   cap of 24.
-> - Flamekeepers who host no volumes are planned at a cost of 1,
->   but a fresh probe still takes 2.
+>   about call). The pick stops at the first flamekeeper that no
+>   longer fits.
+> - The probe works on the grant alone. It does not look at
+>   photos: nothing is held on flamekeepers, and the old photo
+>   check was removed in #24 (last `dev` commit containing it:
+>   `2565826`).
+> - The reconnect emails that follow use the run's budget outside
+>   the cap of 24, see lost-notice.md.
 > - The cached token is always thrown away first, so every probe
 >   uses a fresh token. A token is otherwise cached for 50
 >   minutes.
 > - Only active, full and draining flamekeepers are probed. A
->   lost flamekeeper is not probed again until it reconnects.
-> - The photo check is in missing-photos.md. What happens to
->   lost flamekeepers is in lost-notice.md.
+>   lost flamekeeper is not probed again until it reconnects,
+>   which puts it back to active, see
+>   ../../flamekeepers/drive-callback.md.
 > - If Google reports no email for the account, the email sync
 >   is skipped and a warning is logged once per Worker instance.
 
@@ -50,10 +44,10 @@ sequenceDiagram
     participant Drive
 
     Cron->>Worker: checkFlamekeeperHealth
-    Worker->>D1: load flamekeepers in state active, full, draining<br/>with their count of volumes not dropped
-    Worker->>Worker: planHealthBatch: keep those never checked<br/>or last checked 24 hours ago or more<br/>oldest first, cost 2 (1 without volumes)<br/>stop when the 24 request cap is full
+    Worker->>D1: load flamekeepers in state active, full, draining
+    Worker->>Worker: planHealthBatch: keep those never checked<br/>or last checked 24 hours ago or more<br/>oldest first, cost 2 each<br/>stop when the 24 request cap is full
     loop each picked flamekeeper
-        Worker->>Worker: take 2 requests (1 if resuming a cursor)<br/>if not affordable, stop the loop
+        Worker->>Worker: take 2 requests<br/>if not affordable, stop the loop
         Worker->>GO: refresh token with the flamekeeper's<br/>saved refresh token
         alt invalid_grant (HTTP 400 or 401) or no grant row
             Worker->>D1: set state = lost, lostSince = now<br/>only if state is active, full or draining
@@ -61,20 +55,12 @@ sequenceDiagram
             Worker->>D1: set healthCheckedAt = now minus 23 hours<br/>so the probe is due again in 1 hour
         else token refreshed
             Worker->>D1: set flamekeeper_grant.lastRefreshAt = now
-            opt not resuming a saved cursor
-                Worker->>Drive: getDriveAbout with the flamekeeper token
-                Worker->>D1: set driveUsageBytes and driveUsageCheckedAt
-                opt Google email is valid and differs from saved email
-                    Worker->>D1: set user.email = Google email in lower case<br/>if another account owns it, leave unchanged
-                end
-            end
-            Worker->>Worker: check the flamekeeper's photos,<br/>see missing-photos.md
-            alt check finished
-                Worker->>D1: set healthCheckedAt = now, clear healthCursor
-            else cap of 24 ran out
-                Worker->>D1: set healthCheckedAt = now minus 24 hours<br/>save healthCursor, due again next run
+            Worker->>Drive: getDriveAbout with the flamekeeper token
+            Worker->>D1: set driveUsageBytes, driveUsageCheckedAt,<br/>healthCheckedAt = now
+            opt Google email is valid and differs from saved email
+                Worker->>D1: set user.email = Google email in lower case<br/>if another account owns it, leave unchanged
             end
         end
     end
-    Worker->>Worker: report removed photos to admins and handle<br/>lost flamekeepers, see missing-photos.md<br/>and lost-notice.md
+    Worker->>Worker: send reconnect emails and mark lost<br/>flamekeepers finalized, see lost-notice.md
 ```

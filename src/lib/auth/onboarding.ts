@@ -54,7 +54,7 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
       throw new Error('Club membership is required')
     }
 
-    const { saveGraduationDate } = await import('@/lib/pool/drain-server')
+    const { saveGraduationDate } = await import('@/lib/pool/stop-server')
     await saveGraduationDate(database, session.user.id, data.graduationDate)
 
     // Update user info but don't mark onboarding as complete yet

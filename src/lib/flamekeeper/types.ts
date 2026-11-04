@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import type { FlamekeeperState } from '@/lib/access/access-rules'
-import type { DrainReason } from '@/lib/pool/drain'
 import { MAX_PLEDGE_GB, MIN_PLEDGE_GB } from './rules'
 
 export interface MyFlamekeeper {
@@ -9,11 +8,7 @@ export interface MyFlamekeeper {
   usedBytes: number
   graduationDate: string | null
   graduationConfirmDue: boolean
-  drainingDeadline: Date | null
-  drainReason: DrainReason | null
-  drainBytesLeft: number
   lostSince: Date | null
-  albumsHosted: number
 }
 
 export interface AdminFlamekeeperRow {
@@ -26,35 +21,14 @@ export interface AdminFlamekeeperRow {
   pledgedBytes: number
   usedBytes: number
   graduationDate: string | null
-  drainingDeadline: Date | null
-  drainBytesLeft: number
   bannedAt: Date | null
   banReason: string | null
   createdAt: Date
 }
 
-export interface DrainStatus {
+export interface StopStatus {
   state: FlamekeeperState
-  drainReason: DrainReason | null
-  drainingDeadline: Date | null
-  bytesLeft: number
 }
-
-export type RelayHandout =
-  | {
-      kind: 'photo'
-      photoId: string
-      albumId: string
-      sourceFileId: string
-      name: string
-      mimeType: string
-      bytes: number
-      sourceToken: string
-      uploadUrl: string
-      reservationId: string
-    }
-  | { kind: 'done'; status: DrainStatus }
-  | { kind: 'no_space'; message: string }
 
 const pledgeGb = z
   .number()
@@ -88,18 +62,4 @@ export const ConfirmGraduationSchema = z.object({
 
 export const AdminFlamekeepersSchema = z.object({
   search: z.string().optional(),
-})
-
-export const relaySource = z.object({ userId: z.string().optional() })
-
-export const ConfirmRelaySchema = relaySource.extend({
-  photoId: z.string(),
-  reservationId: z.string(),
-  fileId: z.string(),
-})
-
-export const ReleaseRelaySchema = relaySource.extend({
-  albumId: z.string(),
-  reservationId: z.string(),
-  quotaExceeded: z.boolean().default(false),
 })

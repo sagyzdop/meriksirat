@@ -2,7 +2,7 @@
 
 > **Question:** What does an admin or manager see on the Flamekeepers tab of Manage Users?
 >
-> **Answer:** The page lists every flamekeeper, newest signup first, with name, email, state, pledge, usage, graduation date and, for draining flamekeepers, how much is left to move with a Move photos button. Typing in the search box filters by name or email. Only admins and managers can open it. Admins also get a Ban button on each row except their own, and an Unban button on banned rows.
+> **Answer:** The page lists every flamekeeper, newest signup first, with name, email, state, pledge, usage, and graduation date. Typing in the search box filters by name or email. Only admins and managers can open it. Admins also get a Ban button on each row except their own, and an Unban button on banned rows.
 >
 > **Notes:**
 > - At most 500 rows are returned. The search text lives in the
@@ -16,8 +16,8 @@
 >   with "Insufficient permissions" if called directly.
 > - If the list fails to load, the page shows the empty-list text
 >   "No flamekeepers found." and the error is only logged.
-> - The Move photos button opens the dialog described in
->   relay-hand-out.md and relay-move-photo.md.
+> - The Draining column and Move photos button were removed in
+>   #24 (last `dev` commit containing them: `2565826`).
 > - The Ban and Unban dialogs are described in
 >   ../admin/ban-member.md and ../admin/unban-member.md.
 
@@ -42,7 +42,7 @@ sequenceDiagram
             Browser-->>A: Empty list "No flamekeepers found."
         else Allowed
             Worker->>D1: flamekeepers joined with users,<br/>filtered by search, newest first, limit 500
-            Worker-->>Browser: rows with state and drain bytes left
+            Worker-->>Browser: rows with state
             Browser-->>A: Table of flamekeepers
         end
     end
@@ -50,7 +50,4 @@ sequenceDiagram
     Browser->>Worker: getAdminFlamekeepersFn(search)
     Worker-->>Browser: filtered rows
     Browser-->>A: Table dims while loading, then updates
-    opt Row is draining
-        Browser-->>A: "N GB left" and a Move photos button
-    end
 ```

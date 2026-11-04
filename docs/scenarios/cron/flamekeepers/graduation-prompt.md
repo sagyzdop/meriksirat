@@ -7,9 +7,9 @@
 > after they became a flamekeeper, if they never confirmed),
 > graduateFlamekeepers emails them once to ask if the
 > expected graduation date is still right. Up to 2 such emails
-> go out per run, 1 request each. Flamekeepers who are draining,
-> drained or lost get none, and nobody who just had a drain
-> started in the same run. Ignoring the email changes nothing by
+> go out per run, 1 request each. Flamekeepers who are drained or
+> lost get none, and nobody whose flamekeeping was just ended in
+> the same run. Ignoring the email changes nothing by
 > itself.
 >
 > **Notes:**
@@ -20,7 +20,7 @@
 >   stored, and another is due only after the flamekeeper
 >   confirms again and a further year passes.
 > - Subject: #savenuimg: is your graduation date still right?
->   Body: the saved date, a note that photos are moved 60 days
+>   Body: the saved date, a note that flamekeeping ends 60 days
 >   before it, a request to confirm or change it, and a link to
 >   the account page.
 > - If the email fails to send, nothing is stored and it is
@@ -38,8 +38,8 @@ sequenceDiagram
 
     Note over Worker: Second half of graduateFlamekeepers
     loop each loaded flamekeeper until 2 prompts sent
-        Worker->>Worker: skip if a drain was just started for them
-        Worker->>Worker: graduationPromptEmailDue: not drained, lost or draining,<br/>365 days since confirmation, no prompt since then
+        Worker->>Worker: skip if flamekeeping was just ended for them
+        Worker->>Worker: graduationPromptEmailDue: not drained or lost,<br/>365 days since confirmation, no prompt since then
         opt prompt is due
             Worker->>Worker: take 1 request, if not affordable stop
             Worker->>Gmail: sendEmail with the club account token:<br/>#35;savenuimg: is your graduation date still right?

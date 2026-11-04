@@ -1,5 +1,10 @@
 # Flamekeepers grant only drive.file; photos move through the browser
 
+> **Amended by #24.** The relay, drain and placement code described below was
+> removed because nobody holds photos on a flamekeeper until Stage 2. The last
+> `dev` commit containing it is `2565826`; Stage 2 tickets restore what they need
+> from the commit history.
+
 > **Amended by [ADR-0016](0016-drains-run-on-server-with-buffer-full-token.md).**
 > The `drive.file`-only rule for flamekeepers and the master still holds. Drains
 > no longer go through the browser: the server copies photos to the buffer with

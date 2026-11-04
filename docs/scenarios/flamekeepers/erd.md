@@ -2,7 +2,7 @@
 
 > **Question:** Which tables do the flamekeeper scenarios read and write?
 >
-> **Answer:** A flamekeeper has one row with pledge, usage and state, one saved Google refresh token, one folder (volume) per album it holds photos for, and temporary upload reservations while photos are in flight. Photos point at the flamekeeper that stores them. The cap lives in the global settings row.
+> **Answer:** A flamekeeper has one row with pledge, usage and state, one saved Google refresh token. Older code also gave it one folder (volume) per album and temporary upload reservations; nothing creates either any more. Photos uploaded before the buffer still point at the flamekeeper that stores them. The cap lives in the global settings row.
 >
 > **Notes:**
 > - KV key flamekeeper-oauth:nonce holds user id, pledged bytes,
@@ -15,7 +15,7 @@
 > - The flamekeeper and flamekeeper_grant rows are deleted with
 >   the user. Photos keep flamekeeper_user_id as plain text with
 >   no link to the user table.
-> - Reservations expire 2 hours after they are made.
+> - Unused since #24 (columns and tables go in #25): draining_deadline, drain_reason, the drain_* stamps, health_cursor and the upload_reservation table.
 > - Used and pledged sizes are in bytes. The default cap is
 >   21474836480 bytes (20 GB).
 > - The access token cache lives in Worker memory for 50 minutes
@@ -26,10 +26,8 @@ erDiagram
     user ||--o| flamekeeper : "can be"
     user ||--o| flamekeeper_grant : "has"
     user ||--o{ volume : "holds"
-    user ||--o{ upload_reservation : "reserved for"
     album ||--o{ volume : "stored in"
     album ||--o{ photo : "contains"
-    album ||--o{ upload_reservation : "for"
     user {
         text id PK
         text name "account name"
@@ -49,8 +47,8 @@ erDiagram
         integer drive_usage_bytes "whole Drive usage"
         text state "active, full, draining, lost, drained"
         integer graduation_confirmed_at "last confirmation"
-        integer draining_deadline "14 days after drain start"
-        text drain_reason "opt_out, pledge, graduation, domain, ban"
+        integer draining_deadline "unused since #24"
+        text drain_reason "unused since #24"
         integer lost_since "set when Drive is lost"
         integer terms_accepted_at "terms time"
         integer created_at "signup time"
@@ -67,13 +65,6 @@ erDiagram
         text drive_folder_id "folder in the flamekeeper Drive"
         text permission_id "share permission"
         integer dropped_at "set when the folder is dropped"
-    }
-    upload_reservation {
-        text id PK
-        text flamekeeper_user_id FK "user.id"
-        text album_id FK "album.id"
-        integer bytes "reserved size"
-        integer expires_at "2 hours after creation"
     }
     photo {
         text id PK

@@ -1,5 +1,7 @@
 # One club folder per album; photos are owned by flamekeepers in volume subfolders
 
+> **Amended by #24.** The placement, relay and drain code this ADR describes was removed; the last `dev` commit containing it is `2565826`.
+
 > **Amended by [ADR-0015](0015-buffer-is-stable-photo-storage.md) and [ADR-0017](0017-drop-photo-table-read-from-drive.md).**
 > New uploads go to the buffer, not to flamekeepers, so flamekeepers hold photos
 > only after an offload (Stage 2). The photo table, its backfill and the

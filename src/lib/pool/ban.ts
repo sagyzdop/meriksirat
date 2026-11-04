@@ -1,9 +1,3 @@
-import {
-  startDrain,
-  type DrainFlamekeeper,
-  type DrainTransition,
-} from './drain'
-
 export const BAN_REASON_MAX = 500
 
 export type BanCheck =
@@ -26,33 +20,4 @@ export function checkBan(input: {
     }
   }
   return { ok: true, reason }
-}
-
-function keepDeadline(
-  transition: DrainTransition,
-  deadline: Date | null
-): DrainTransition {
-  if (transition.kind !== 'drain' || !deadline) return transition
-  if (deadline.getTime() >= transition.drainingDeadline.getTime()) {
-    return transition
-  }
-  return { ...transition, drainingDeadline: deadline }
-}
-
-export function planBanDrain(
-  fk: DrainFlamekeeper | null,
-  hasPhotos: boolean,
-  now: Date
-): DrainTransition {
-  if (!fk) return { kind: 'none' }
-  switch (fk.state) {
-    case 'active':
-    case 'full':
-      return hasPhotos ? startDrain('ban', now) : { kind: 'drained' }
-    case 'draining':
-      if (fk.drainReason === 'ban') return { kind: 'none' }
-      return keepDeadline(startDrain('ban', now), fk.drainingDeadline)
-    default:
-      return { kind: 'none' }
-  }
 }

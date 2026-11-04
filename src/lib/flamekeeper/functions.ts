@@ -1,29 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest, getRequestHeaders } from '@tanstack/react-start/server'
+import { getRequest } from '@tanstack/react-start/server'
 import {
   AdminFlamekeepersSchema,
   ConfirmGraduationSchema,
-  ConfirmRelaySchema,
-  ReleaseRelaySchema,
   StartDriveConnectSchema,
-  relaySource,
   UpdateFlamekeeperSchema,
   type AdminFlamekeeperRow,
-  type DrainStatus,
   type MyFlamekeeper,
-  type RelayHandout,
+  type StopStatus,
 } from './types'
-
-async function resolveRelaySource(userId: string | undefined) {
-  const { userContext } = await import('@/lib/auth/context')
-  const { session } = await userContext()
-  if (userId && userId !== session.user.id) {
-    const { adminContext } = await import('@/lib/admin/server')
-    await adminContext(['admin', 'manager'])
-    return userId
-  }
-  return session.user.id
-}
 
 export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<MyFlamekeeper | null> => {
@@ -32,7 +17,7 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
     const { flamekeeper, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
 
-    let row = await database
+    const row = await database
       .select()
       .from(flamekeeper)
       .where(eq(flamekeeper.userId, session.user.id))
@@ -44,22 +29,6 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
       .from(user)
       .where(eq(user.id, session.user.id))
       .get()
-    if (row.state === 'draining') {
-      const { finishDrainIfEmpty } = await import('@/lib/pool/drain-server')
-      try {
-        await finishDrainIfEmpty(database, session.user.id)
-      } catch (error) {
-        console.warn('Could not finish an empty drain:', error)
-      }
-      row =
-        (await database
-          .select()
-          .from(flamekeeper)
-          .where(eq(flamekeeper.userId, session.user.id))
-          .get()) ?? row
-    }
-    const { countHostedAlbums } = await import('@/lib/pool/server')
-    const { drainBytesLeft } = await import('@/lib/pool/drain')
     const { graduationConfirmDue } = await import('@/lib/pool/graduation')
     return {
       state: row.state,
@@ -67,11 +36,7 @@ export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
       usedBytes: row.usedBytes,
       graduationDate: owner?.graduationDate ?? null,
       graduationConfirmDue: graduationConfirmDue(row, new Date()),
-      drainingDeadline: row.drainingDeadline,
-      drainReason: row.drainReason,
-      drainBytesLeft: drainBytesLeft(row),
       lostSince: row.lostSince,
-      albumsHosted: await countHostedAlbums(database, session.user.id),
     }
   }
 )
@@ -200,7 +165,7 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
     })
     if (dateError) throw new Error(dateError)
 
-    const { changePledge } = await import('@/lib/pool/drain-server')
+    const { changePledge } = await import('@/lib/pool/stop-server')
     await changePledge(database, session.user.id, {
       pledgedBytes: gbToBytes(data.pledgeGb),
       graduationDate: data.graduationDate,
@@ -231,7 +196,7 @@ export const confirmGraduationFn = createServerFn({ method: 'POST' })
 
     const date = data.graduationDate ?? owner?.graduationDate
     if (!date) throw new Error('Enter your expected graduation month')
-    const { saveGraduationDate } = await import('@/lib/pool/drain-server')
+    const { saveGraduationDate } = await import('@/lib/pool/stop-server')
     await saveGraduationDate(database, session.user.id, date)
     return { success: true }
   })
@@ -246,8 +211,6 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
     const { flamekeeper, user } = await import('@/db/schema')
     const { eq, desc } = await import('drizzle-orm')
 
-    const { drainBytesLeft } = await import('@/lib/pool/drain')
-
     const rows = await database
       .select({
         userId: flamekeeper.userId,
@@ -261,8 +224,6 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
         pledgedBytes: flamekeeper.pledgedBytes,
         usedBytes: flamekeeper.usedBytes,
         graduationDate: user.graduationDate,
-        drainReason: flamekeeper.drainReason,
-        drainingDeadline: flamekeeper.drainingDeadline,
         bannedAt: user.bannedAt,
         banReason: user.banReason,
         createdAt: flamekeeper.createdAt,
@@ -283,8 +244,6 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
       pledgedBytes: row.pledgedBytes,
       usedBytes: row.usedBytes,
       graduationDate: row.graduationDate,
-      drainingDeadline: row.drainingDeadline,
-      drainBytesLeft: drainBytesLeft(row),
       bannedAt: row.bannedAt,
       banReason: row.banReason,
       createdAt: row.createdAt,
@@ -292,57 +251,13 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
   })
 
 export const optOutFlamekeeperFn = createServerFn({ method: 'POST' }).handler(
-  async (): Promise<DrainStatus> => {
+  async (): Promise<StopStatus> => {
     const { userContext } = await import('@/lib/auth/context')
     const { session, database } = await userContext()
-    const { optOutFlamekeeper } = await import('@/lib/pool/drain-server')
+    const { optOutFlamekeeper } = await import('@/lib/pool/stop-server')
     return optOutFlamekeeper(database, session.user.id)
   }
 )
-
-export const startRelayFn = createServerFn({ method: 'POST' })
-  .validator(relaySource)
-  .handler(async ({ data }): Promise<RelayHandout> => {
-    const sourceUserId = await resolveRelaySource(data.userId)
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { startRelay } = await import('@/lib/pool/relay-server')
-    return startRelay(
-      db(env.meriksirat_d1 as D1Database),
-      sourceUserId,
-      getRequestHeaders().get('origin') ?? new URL(getRequest().url).origin
-    )
-  })
-
-export const confirmRelayFn = createServerFn({ method: 'POST' })
-  .validator(ConfirmRelaySchema)
-  .handler(async ({ data }): Promise<DrainStatus> => {
-    const sourceUserId = await resolveRelaySource(data.userId)
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { confirmRelay } = await import('@/lib/pool/relay-server')
-    return confirmRelay(db(env.meriksirat_d1 as D1Database), sourceUserId, {
-      photoId: data.photoId,
-      reservationId: data.reservationId,
-      fileId: data.fileId,
-    })
-  })
-
-export const releaseRelayFn = createServerFn({ method: 'POST' })
-  .validator(ReleaseRelaySchema)
-  .handler(async ({ data }) => {
-    await resolveRelaySource(data.userId)
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { releaseFlamekeeperUpload } = await import('@/lib/pool/server')
-    await releaseFlamekeeperUpload(
-      db(env.meriksirat_d1 as D1Database),
-      data.albumId,
-      data.reservationId,
-      data.quotaExceeded
-    )
-    return { success: true }
-  })
 
 export const deleteMyAccountFn = createServerFn({ method: 'POST' }).handler(
   async () => {
@@ -355,7 +270,7 @@ export const deleteMyAccountFn = createServerFn({ method: 'POST' }).handler(
     const rules = await loadAccessRules(database, session.user.id)
     if (!rules.canDeleteAccount) {
       throw new Error(
-        'Club members keep their account. Other accounts can be deleted once any flamekeeping has stopped and the photos have moved.'
+        'Club members keep their account. Other accounts can be deleted once any flamekeeping has stopped.'
       )
     }
     await database.delete(user).where(eq(user.id, session.user.id))

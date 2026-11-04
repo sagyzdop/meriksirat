@@ -4,8 +4,8 @@
 > steps read and write?
 >
 > **Answer:** The steps work on the flamekeeper, its Drive
-> grant, the volumes it hosts in albums, the photos it holds,
-> its upload reservations, and the global settings row. They
+> grant, and the global settings row. The volume, photo and upload
+> reservation tables are no longer read by these steps (#24). They
 > also read users (email, Telegram chat, ban) and, for banned
 > members, bookings, booking items and the equipment calendar
 > each item was booked on.
@@ -15,8 +15,9 @@
 >   seconds, and album:detail:(album id), TTL 3600 seconds,
 >   are only deleted by these steps, never written.
 > - R2 is not used by these steps.
-> - Dropped photos and volumes are kept in the database so a
->   reconnecting flamekeeper can bring them back.
+> - Unused since #24 (columns go in #25): draining_deadline,
+>   drain_reason, drain_reminder_sent_at, drain_admin_started_at,
+>   drain_admin_reminded_at and health_cursor.
 
 ```mermaid
 erDiagram
