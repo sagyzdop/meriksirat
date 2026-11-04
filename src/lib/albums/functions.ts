@@ -269,7 +269,7 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
       setCachedDetailCore,
       resolveAlbumAccess,
     } = await import('./server')
-    const { buildAlbumCore, buildTombstoneDetail, decorateAlbumDetail } =
+    const { buildAlbumCore, buildTombstoneDetail, loadAlbumDetail } =
       await import('./detail')
     if (!(await getSessionUser(headers))) {
       const { rateLimit } = await import('@/lib/ratelimit')
@@ -281,8 +281,8 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
       }
     }
 
-    // The authz gate always reads a fresh album row; only the expensive
-    // viewer-independent core comes from cache.
+    // The authz gate always reads a fresh album row; only the viewer-independent
+    // core and the Drive listings come from cache.
     const row = await loadAlbumOrNull(database, data.albumId)
     if (!row) return null
 
@@ -298,18 +298,15 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
       await setCachedDetailCore(data.albumId, core)
     }
 
-    return decorateAlbumDetail(core, row, access, currentUser)
+    return loadAlbumDetail(database, core, row, access, currentUser)
   })
 
 export const refreshAlbumFn = createServerFn({ method: 'POST' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<AlbumDetail | null> => {
-    const {
-      invalidateCachedListing,
-      invalidateCachedDetailCore,
-      setCachedDetailCore,
-    } = await import('./server')
-    const { buildAlbumCore, decorateAlbumDetail } = await import('./detail')
+    const { invalidateCachedDetailCore, setCachedDetailCore } =
+      await import('./server')
+    const { buildAlbumCore, loadAlbumDetail } = await import('./detail')
 
     const {
       database,
@@ -319,8 +316,8 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
       access,
     } = await albumContext(data.albumId, ['owner', 'editor', 'manager'])
 
-    // Refreshing invalidates the listing cache and re-fetches the folder from
-    // the Drive API, so cap how often a user can trigger it.
+    // Refreshing re-lists every volume from the Drive API, so cap how often a
+    // user can trigger it.
     if (currentUser?.id) {
       const { rateLimit } = await import('@/lib/ratelimit')
       const rl = await rateLimit(headers, 'rl_refresh_album', currentUser.id)
@@ -329,14 +326,17 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
       }
     }
 
-    await invalidateCachedListing(row.driveFolderId)
     await invalidateCachedDetailCore(data.albumId)
 
     // Rebuild synchronously so the refresher sees fresh data immediately and
-    // the next viewers are served the refreshed core from cache.
+    // the next viewers are served the refreshed core from cache. The listing is
+    // overwritten rather than cleared, so a failed listing keeps its last good
+    // photos.
     const core = await buildAlbumCore(database, row)
     await setCachedDetailCore(data.albumId, core)
-    return decorateAlbumDetail(core, row, access, currentUser)
+    return loadAlbumDetail(database, core, row, access, currentUser, {
+      force: true,
+    })
   })
 
 export const deleteGoneAlbumFn = createServerFn({ method: 'POST' })
@@ -716,7 +716,14 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
       .from(photo)
       .where(and(eq(photo.driveFileId, data.fileId), eq(photo.albumId, row.id)))
       .get()
-    if (!registered && row.photosIndexedAt) {
+    // A listed upload whose confirm never landed has no row, so the listing
+    // says whose token can delete it.
+    const { findAlbumFileOwner, withListingOwnerToken } =
+      await import('./listing-server')
+    const listedOwner = registered
+      ? null
+      : await findAlbumFileOwner(database, row, data.fileId)
+    if (!registered && !listedOwner && row.photosIndexedAt) {
       throw new Error('Photo not found in this album')
     }
 
@@ -724,6 +731,10 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
       const { deleteOwnedPhotos } = await import('@/lib/pool/server')
       const { error } = await deleteOwnedPhotos(database, [registered])
       if (error) throw error
+    } else if (listedOwner) {
+      await withListingOwnerToken(database, listedOwner, (token) =>
+        deleteDriveFile(token, data.fileId)
+      )
     } else {
       await deleteDriveFile(await getGoogleAccessToken(), data.fileId)
     }
@@ -788,7 +799,11 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
           and(eq(photo.driveFileId, data.fileId), eq(photo.albumId, row.id))
         )
         .get()
-      if (!registered) throw new Error('Photo not found in this album')
+      if (!registered) {
+        const { findAlbumFileOwner } = await import('./listing-server')
+        const owner = await findAlbumFileOwner(database, row, data.fileId)
+        if (!owner) throw new Error('Photo not found in this album')
+      }
     }
 
     await database

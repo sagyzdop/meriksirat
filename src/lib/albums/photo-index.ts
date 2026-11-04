@@ -94,27 +94,6 @@ export async function registerDriveFileById(
   return inserted > 0
 }
 
-export async function requestAlbumIndex(
-  database: Database,
-  albumId: string
-): Promise<void> {
-  try {
-    await database
-      .update(album)
-      .set({ photosIndexRequestedAt: new Date() })
-      .where(
-        and(
-          eq(album.id, albumId),
-          isNull(album.photosIndexedAt),
-          isNull(album.photosIndexRequestedAt),
-          isNull(album.photosIndexSkipped)
-        )
-      )
-  } catch (error) {
-    console.warn('Failed to request album photo indexing:', error)
-  }
-}
-
 export async function resetAlbumPhotos(
   database: Database,
   albumId: string,

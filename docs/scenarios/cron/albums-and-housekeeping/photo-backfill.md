@@ -24,11 +24,11 @@
 >   folder costs 1. One run adds at most 500 photos. 1 write of the
 >   day's budget is always kept in reserve, so the step stops when
 >   fewer than 4 writes are left.
-> - Albums asked for by `requestAlbumIndex` (set the first time
->   someone opens an album whose photo list is still read from
->   Drive) go first, oldest request first. The rest go newest event first (creation date if
->   there is no event date). Deleted albums and skipped ones are
->   never chosen.
+> - Album pages no longer read the table or ask for indexing, so
+>   only requests made before #18 still go first, oldest first. The
+>   rest go newest event first (creation date if there is no event
+>   date). Deleted albums and skipped ones are never chosen. The
+>   table still serves favorites and expiry until #25.
 > - Photo rows get no flamekeeper, and are inserted 6 rows at a
 >   time. Only files whose type starts with image/ are added.
 > - Outside requests: 1 for the master token, then 2 per album

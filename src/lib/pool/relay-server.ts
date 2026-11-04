@@ -12,6 +12,7 @@ import {
 } from '@/lib/flamekeeper/tokens'
 import type { DrainStatus, RelayHandout } from '@/lib/flamekeeper/types'
 import { OUT_OF_SPACE_MESSAGE } from './placement'
+import { invalidateCachedListing } from '@/lib/albums/server'
 import { releaseOwnedBytes, startFlamekeeperUpload } from './server'
 import { loadVolumeFolderId } from './volumes-server'
 import { isInVolumeFolder } from './volumes'
@@ -229,6 +230,7 @@ export async function confirmRelay(
     },
   ])
   await releaseEmptyVolumes(database, sourceUserId, [albumRow.id])
+  await invalidateCachedListing(albumRow.driveFolderId)
   await invalidateAlbumDetailIfCached(albumRow.id)
 
   return await finishedDrainStatus(database, sourceUserId)

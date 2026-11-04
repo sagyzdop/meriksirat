@@ -26,6 +26,34 @@ drop out of the app, which is why an album folder can't be deleted while they
 exist. Deleted folders become a warning with a Drive link, and an admin may delete
 an album that is permanently gone.
 
-Not built yet. Stage 1 of [#15](https://github.com/sagyzdop/meriksirat/issues/15)
+## The listing cache
+
+Each album has one KV entry, `album:list:{album folder id}`, with one section per
+source: `buffer`, `master` and `flamekeeper:{user id}`. One entry means one KV
+write per refresh however many volumes an album has, which matters on the free
+plan's 1,000 writes a day. The master section exists because older albums' photos
+still sit in the album's root folder on master until they are moved. A lost
+flamekeeper keeps its section, and its last listing is shown for up to 7 days.
+
+A section is listed again after 12 hours, or after 15 minutes if the last attempt
+failed or was cut short. The entry expires after 8 days. A cold load spends at
+most 40 Drive requests, the Worker's run budget, and whatever it could not finish
+is marked incomplete and finished by a later view. Over budget or failing sections
+keep their last listing, so the album page always opens.
+
+Uploads don't write to KV. The buffer section stores the volume's expected count
+and bytes as a stamp, and the view compares it with a fresh read of `buffer_volume`,
+so confirming an upload makes the next view list the buffer again. A KV delete per
+photo would spend the daily quota on one large upload. Photo deletions, moves and
+Refresh do touch KV. Refresh overwrites the entry and keeps the last listing if
+Drive fails.
+
+A listing that is not `complete` says nothing about what is missing, so the expiry
+and count-warning tickets must not act on one.
+
+## Status
+
+Album pages read from these listings since [#18](https://github.com/sagyzdop/meriksirat/issues/18).
+The rest is not built yet. Stage 1 of [#15](https://github.com/sagyzdop/meriksirat/issues/15)
 removes the table. Until then, [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)
-describes the running code.
+describes favorites, expiry and flamekeeper moves, which still use the table.

@@ -7,6 +7,7 @@ import { formatGb } from '@/lib/flamekeeper/rules'
 import { formatLongDate } from '@/lib/club-time'
 import { dropPhotoRows, removeAlbum } from '@/lib/albums/expiry'
 import { batchDeleteCost, takeIfBudgeted, type Budget } from '@/lib/cron/budget'
+import { invalidateCachedListing } from '@/lib/albums/server'
 import { deleteOwnedPhotos, sendAdminsTelegramResult } from './server'
 import { notifyAlbumTombstoned, type NoticeEnv } from './notices'
 import {
@@ -129,6 +130,7 @@ async function tombstoneEmptyAlbums(
     .all()
   for (const a of empty) {
     if (a.deletedAt || a.photoCount > 0 || !a.photosIndexedAt) {
+      await invalidateCachedListing(a.driveFolderId)
       await invalidateAlbumDetailIfCached(a.id)
       continue
     }

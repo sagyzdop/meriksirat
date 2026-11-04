@@ -2,14 +2,12 @@
 
 > **Question:** How is an older album shown when its photos are not yet recorded in the database, and how does it become a normal album?
 >
-> **Answer:** An album with no indexing date (photosIndexedAt empty) has its photos read straight from its Drive folder with the master token, plus any flamekeeper-owned photos already in the database, because the master cannot see those. Opening such an album also asks the background indexer to prioritise it. A 5-minute cron job later copies the folder's image list into the photo table and stamps the album as indexed. After that the album is read from the database like any new album. If the folder is in the Drive bin or deleted, indexing is skipped and marked until the folder is back and the album is refreshed.
+> **Answer:** It is shown like any other album, from the cached Drive listing, see view-album.md. Its photos sit in the album's root folder, which the listing reads with the master token. Opening it no longer asks the indexer for anything. A 5-minute cron job still copies the folder's image list into the photo table and stamps the album as indexed, because favorites and expiry read that table until it is removed. If the folder is in the Drive bin or deleted, indexing is skipped and marked until the folder is back and the album is refreshed.
 >
 > **Notes:**
-> - The indexer is described in ../cron/albums-and-housekeeping/photo-backfill.md and is not redrawn here. Each run handles at most 5 albums and 500 photos and respects a daily write budget (default 60000 writes, 3 per photo) kept in KV `photo-backfill:budget` with a 2 day TTL. Albums that someone opened go first (oldest request first), then the newest event date first.
-> - The request is a single D1 write that only applies when the album is not indexed, not already requested and not skipped.
-> - The Drive listing is cached in KV `album:list:FOLDER_ID` for 5 minutes. Refresh clears it, see refresh-album.md. The finished album page is also cached for up to an hour, so the switch to the photo table can take that long to show unless someone presses Refresh.
+> - The indexer is described in ../cron/albums-and-housekeeping/photo-backfill.md and is not redrawn here. Each run handles at most 5 albums and 500 photos and respects a daily write budget (default 60000 writes, 3 per photo) kept in KV `photo-backfill:budget` with a 2 day TTL.
 > - A trashed or deleted folder only shows a warning, see deleted-folder-warning.md.
-> - Legacy albums behave differently elsewhere too: upload checks the Drive folder for a same-name file, deleting a photo that is not in the table deletes it with the master token, and setting a cover skips the ownership check. See upload-start.md, delete-photo.md and set-cover-photo.md.
+> - Legacy albums behave differently elsewhere: upload checks the Drive folder for a same-name file, deleting a file id with no row and no listing deletes it with the master token, and setting a cover skips the ownership check. See upload-start.md, delete-photo.md and set-cover-photo.md.
 
 ```mermaid
 sequenceDiagram
@@ -23,23 +21,14 @@ sequenceDiagram
     participant C as Cron
     U->>B: Open an album that is not indexed
     B->>W: getAlbumFn(albumId)
-    W->>D: Request indexing: set photosIndexRequestedAt = now<br/>if not indexed, not requested, not skipped
     W->>K: Read album:list:folderId
-    alt Listing not cached
+    opt A section is due
         W->>G: Master token: folder state and list of files
-        alt Folder is permanently deleted
-            G-->>W: Not found
-            W->>K: Save as missing, TTL 300 seconds
-        else Any other Drive error
-            W-->>B: Error, the album page does not load
-        else Folder exists
-            W->>K: Save files and folder state, TTL 300 seconds
-        end
+        W->>K: Save the listing, TTL 8 days
     end
-    W->>D: Live photo rows owned by flamekeepers<br/>that are not in the Drive list
-    W-->>B: Photos from Drive plus flamekeeper photos
+    W-->>B: Photos from the listing
     B->>U: Photo grid
-    C->>W: backfillAlbumPhotos step: runPhotoBackfill<br/>picks requested albums first
+    C->>W: backfillAlbumPhotos step: runPhotoBackfill
     W->>G: Master token: folder state
     alt Folder in the bin or deleted
         W->>D: Set photosIndexSkipped = trashed or missing
@@ -49,8 +38,4 @@ sequenceDiagram
         W->>D: Set photosIndexedAt once every file is recorded
     end
     Note over C,D: Details: ../cron/albums-and-housekeeping/photo-backfill.md
-    U->>B: Open the album again
-    B->>W: getAlbumFn(albumId)
-    W->>D: Read photos from the photo table
-    W-->>B: Photos
 ```
