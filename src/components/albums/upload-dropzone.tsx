@@ -35,6 +35,8 @@ function jobDescription(job: UploadJob): string {
       return `Uploading · ${job.progress}%`
     case 'done':
       return `${formatBytes(job.size)} · uploaded`
+    case 'duplicate':
+      return 'Already in this album, skipped'
     case 'error':
       return job.error ?? 'Upload failed'
     case 'cancelled':
@@ -50,6 +52,8 @@ function statusDot(job: UploadJob): string {
       return 'bg-primary animate-pulse'
     case 'done':
       return 'bg-green-500'
+    case 'duplicate':
+      return 'bg-amber-500'
     case 'error':
       return 'bg-destructive'
     case 'cancelled':
@@ -306,7 +310,11 @@ export function UploadDropzone({
                       <Check
                         className="size-4"
                         aria-label={
-                          job.status === 'done' ? 'Uploaded' : 'Cancelled'
+                          job.status === 'done'
+                            ? 'Uploaded'
+                            : job.status === 'duplicate'
+                              ? 'Already in this album'
+                              : 'Cancelled'
                         }
                       />
                     </span>

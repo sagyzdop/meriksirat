@@ -20,7 +20,11 @@ import type {
   AlbumListPage,
   UploadSession,
 } from './types'
-import { NEEDS_HASH_MESSAGE, planDuplicateCheck } from './upload-dedupe'
+import {
+  NEEDS_HASH_MESSAGE,
+  duplicateMessage,
+  planDuplicateCheck,
+} from './upload-dedupe'
 import { defaultExpiry } from '@/lib/pool/expiry'
 
 type Database = ReturnType<(typeof import('@/db'))['db']>
@@ -676,7 +680,7 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     const check = planDuplicateCheck(data.size, data.md5, listing.files)
     if (check.kind === 'needs-hash') throw new Error(NEEDS_HASH_MESSAGE)
     if (check.kind === 'duplicate') {
-      throw new Error(`Photo "${data.fileName}" already exists in this album`)
+      throw new Error(duplicateMessage(data.fileName))
     }
 
     return startBufferUpload(database, row, {

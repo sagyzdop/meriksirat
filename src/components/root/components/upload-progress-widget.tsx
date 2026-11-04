@@ -26,7 +26,10 @@ export function UploadProgressWidget() {
   )
   const finished = jobs.filter(
     (j) =>
-      j.status === 'done' || j.status === 'error' || j.status === 'cancelled'
+      j.status === 'done' ||
+      j.status === 'duplicate' ||
+      j.status === 'error' ||
+      j.status === 'cancelled'
   )
   const total = jobs.length
   const doneCount = finished.length

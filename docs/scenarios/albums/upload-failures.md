@@ -5,7 +5,7 @@
 > **Answer:** If the transfer to Drive fails or is cancelled, the browser decides whether to retry. Network errors, timeouts, Google answers 408, 429 or 5xx, a failed confirmation and a failed session request caused by a network error are temporary: the job goes back in the queue and waits about 1, 2, 4 then 8 seconds (plus or minus 20 percent), for at most 5 attempts in total. After that the list shows "Upload failed after N attempts — retry manually" with a retry button. Any other Google answer fails at once with the message "Upload failed (STATUS)", where STATUS is Google's status number. A quota error from the PUT (403 storageQuotaExceeded) is not retried: the job fails at once with the storage-full message, the file stays queued in the browser, and the retry button works once an admin has made room.
 >
 > **Notes:**
-> - If the name already exists on the server when the session is requested (typically because an earlier attempt finished but its result was lost), the job is shown as done instead of failed.
+> - If the name already exists on the server when the session is requested (typically because an earlier attempt finished but its result was lost), the job ends as a duplicate (not done), with a toast naming the file. If the earlier attempt did finish, the photo is in the album anyway.
 > - The retry button restarts with a fresh attempt count. Choosing the same file again replaces the failed job.
 > - Cancel aborts the transfer in progress and marks the job as cancelled (the list shows a tick labelled Cancelled).
 > - If the confirm step fails 3 times, the file may sit in the buffer's Volume folder without being counted in the album's totals (the next complete listing corrects them), and the retry uploads the photo again as a second file.

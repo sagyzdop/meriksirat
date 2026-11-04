@@ -10,7 +10,7 @@
 > - Finished jobs disappear after 1 hour (done or cancelled) or 7 days (failed).
 > - Filenames are ignored. The Worker compares the file's size with the album's cached listing (see ADR-0017). Only when a listed file has the same size does the browser hash the file (MD5, in 4 MB slices) and retry; a matching MD5 refuses the upload as a duplicate, so a renamed copy is caught and a same-named different photo is not. Files with no size match are never hashed. The browser counts a file as an image if its type starts with image/ or is empty.
 > - A rate limit named rl_create_upload_session (20 a minute) is declared in the project settings, but createUploadSessionFn does not use it.
-> - Only a queued or uploading job with the same name and size blocks a new pick in the browser. A failed job with the same name and size is replaced instead. A duplicate refused by the Worker ends as done, since the photo is already in the album.
+> - Only a queued or uploading job with the same name and size blocks a new pick in the browser. A failed job with the same name and size is replaced instead. A duplicate refused by the Worker ends in its own state, "Already in this album, skipped", with a toast naming the file. Nothing was uploaded: the Worker refuses before any upload session exists.
 > - What the browser does next is in upload-send-and-confirm.md.
 
 ```mermaid
