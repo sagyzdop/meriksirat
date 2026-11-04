@@ -18,6 +18,8 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AlbumsIndexRouteImport } from './routes/albums/index'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums/$albumId'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
+import { Route as PrototypeAboutRouteImport } from './routes/prototype.about'
+import { Route as PrototypeProfileRouteImport } from './routes/prototype.profile'
 import { Route as AuthenticatedAdminAlbumsRouteImport } from './routes/_authenticated/admin/albums'
 import { Route as AuthenticatedAdminAlumniRouteImport } from './routes/_authenticated/admin/alumni'
 import { Route as AuthenticatedAdminBirthdaysRouteImport } from './routes/_authenticated/admin/birthdays'
@@ -86,6 +88,16 @@ const AlbumsAlbumIdRoute = AlbumsAlbumIdRouteImport.update({
 const ApiTelegramRoute = ApiTelegramRouteImport.update({
   id: '/api/telegram',
   path: '/api/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrototypeAboutRoute = PrototypeAboutRouteImport.update({
+  id: '/prototype/about',
+  path: '/prototype/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrototypeProfileRoute = PrototypeProfileRouteImport.update({
+  id: '/prototype/profile',
+  path: '/prototype/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminAlbumsRoute =
@@ -244,6 +256,8 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/prototype/about': typeof PrototypeAboutRoute
+  '/prototype/profile': typeof PrototypeProfileRoute
   '/albums/': typeof AlbumsIndexRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/alumni': typeof AuthenticatedAdminAlumniRoute
@@ -279,6 +293,8 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/prototype/about': typeof PrototypeAboutRoute
+  '/prototype/profile': typeof PrototypeProfileRoute
   '/albums': typeof AlbumsIndexRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/alumni': typeof AuthenticatedAdminAlumniRoute
@@ -316,6 +332,8 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
+  '/prototype/about': typeof PrototypeAboutRoute
+  '/prototype/profile': typeof PrototypeProfileRoute
   '/albums/': typeof AlbumsIndexRoute
   '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/_authenticated/admin/alumni': typeof AuthenticatedAdminAlumniRoute
@@ -353,6 +371,8 @@ export interface FileRouteTypes {
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
+    | '/prototype/about'
+    | '/prototype/profile'
     | '/albums/'
     | '/admin/albums'
     | '/admin/alumni'
@@ -388,6 +408,8 @@ export interface FileRouteTypes {
     | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
+    | '/prototype/about'
+    | '/prototype/profile'
     | '/albums'
     | '/admin/albums'
     | '/admin/alumni'
@@ -424,6 +446,8 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/albums/$albumId'
     | '/api/telegram'
+    | '/prototype/about'
+    | '/prototype/profile'
     | '/albums/'
     | '/_authenticated/admin/albums'
     | '/_authenticated/admin/alumni'
@@ -459,6 +483,8 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   AlbumsAlbumIdRoute: typeof AlbumsAlbumIdRoute
   ApiTelegramRoute: typeof ApiTelegramRoute
+  PrototypeAboutRoute: typeof PrototypeAboutRoute
+  PrototypeProfileRoute: typeof PrototypeProfileRoute
   AlbumsIndexRoute: typeof AlbumsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiFlamekeeperCallbackRoute: typeof ApiFlamekeeperCallbackRoute
@@ -528,6 +554,20 @@ declare module '@tanstack/react-router' {
       path: '/api/telegram'
       fullPath: '/api/telegram'
       preLoaderRoute: typeof ApiTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prototype/about': {
+      id: '/prototype/about'
+      path: '/prototype/about'
+      fullPath: '/prototype/about'
+      preLoaderRoute: typeof PrototypeAboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prototype/profile': {
+      id: '/prototype/profile'
+      path: '/prototype/profile'
+      fullPath: '/prototype/profile'
+      preLoaderRoute: typeof PrototypeProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/albums': {
@@ -788,6 +828,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   AlbumsAlbumIdRoute: AlbumsAlbumIdRoute,
   ApiTelegramRoute: ApiTelegramRoute,
+  PrototypeAboutRoute: PrototypeAboutRoute,
+  PrototypeProfileRoute: PrototypeProfileRoute,
   AlbumsIndexRoute: AlbumsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiFlamekeeperCallbackRoute: ApiFlamekeeperCallbackRoute,
