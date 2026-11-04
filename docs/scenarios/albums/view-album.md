@@ -10,7 +10,7 @@
 > - Photos and folder health (ok, trashed, missing) come from KV `album:list:FOLDER_ID`. A fresh entry means no Drive call. How long an entry stays fresh, and what happens when listing fails, is in [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md).
 > - A listing that fails never stops the page: the last listing is shown, or no photos if there is none yet.
 > - If the album has no cover yet, the earliest uploaded photo becomes the cover. It is saved on the album only when the listing is complete.
-> - The page shows a banner "Will be deleted on DATE" with "There is no backup. Download the photos you want to keep before then." once the expiry is within 30 days and the album is not pinned.
+> - The header always shows "Expires on DATE" for an unpinned album with an expiry (pinned albums show the Pinned badge instead). The page also shows a banner "Will be deleted on DATE" with "There is no backup. Download the photos you want to keep before then." once the expiry is within 30 days and the album is not pinned.
 > - Photos load straight from Google's image servers: thumbnails at 600 px and full view at 1920 px. At most 6 images load at once, and a failed image is retried up to 5 tries, waiting 1, 2, 4 then 8 seconds.
 > - Older albums are read the same way, see legacy-albums.md. Downloading is in download-photos.md.
 

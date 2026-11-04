@@ -49,7 +49,7 @@ export function withListingOwnerToken<T>(
   }
 }
 
-async function loadListingSources(
+export async function loadListingSources(
   database: Database,
   row: { id: string; driveFolderId: string }
 ): Promise<ListingSource[]> {
