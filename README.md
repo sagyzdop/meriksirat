@@ -81,6 +81,41 @@ The app will be available at `http://localhost:3000`
 
 `.env.example` is the canonical key list — copy it (see Installation above) and fill in values. Production builds read bindings from `wrangler.jsonc`; secrets are set via `wrangler secrets`.
 
+### Connecting the buffer account
+
+New album photos upload to the buffer, the club-run Google account
+`nuimage.storage@gmail.com` (see [GLOSSARY.md](GLOSSARY.md#save-nu-image-savenuimg)
+and [ADR-0015](docs/adr/0015-buffer-is-stable-photo-storage.md)). Uploads fail
+with "Photo storage is not available right now" until it is connected. Nothing
+falls back to a flamekeeper.
+
+The buffer uses the same OAuth client as production and holds two tokens:
+
+| Env or secret | Scope | Used for |
+|---|---|---|
+| `GOOGLE_BUFFER_REFRESH_TOKEN` | `drive.file` | Every upload. The Worker mints a resumable upload address with it; the browser never receives the token. |
+| `GOOGLE_BUFFER_FULL_REFRESH_TOKEN` | full `drive` | Server-only drains from flamekeepers (Stage 2, [ADR-0016](docs/adr/0016-drains-run-on-server-with-buffer-full-token.md)). Nothing reads it yet. |
+| `GOOGLE_BUFFER_EMAIL` | none | Optional, defaults to `nuimage.storage@gmail.com`. |
+
+Setup:
+
+1. In Google Cloud Console, check that the OAuth consent screen allows a
+   `gmail.com` account (user type External; in Testing mode, add the buffer as a
+   test user) and that `http://localhost:8788/oauth` is an authorized redirect
+   URI on the OAuth client.
+2. With `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`, run
+   `node scripts/google-mint-token.mjs --account buffer-upload` and sign in as
+   the buffer. Put the printed token in `.env` as `GOOGLE_BUFFER_REFRESH_TOKEN`.
+   The script prints the account it got; stop if it is not the buffer.
+3. Run `node scripts/google-mint-token.mjs --account buffer-full`, sign in as the
+   buffer again, and keep the printed token as `GOOGLE_BUFFER_FULL_REFRESH_TOKEN`.
+4. In production, set both with `wrangler secret put`. Never put either in a
+   `vars` block or any `VITE_` variable.
+
+Minting a token does not revoke the master account's grant. Never revoke the app
+on the master account at myaccount.google.com/permissions: it shares the OAuth
+client with production. The master account never gets the full `drive` scope.
+
 ## Development
 
 ```bash

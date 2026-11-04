@@ -1,9 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import {
-  confirmPhotoUploadFn,
-  createUploadSessionFn,
-  releaseUploadFn,
-} from './functions'
+import { confirmPhotoUploadFn, createUploadSessionFn } from './functions'
 import { planEnqueue } from './upload-dedupe'
 import {
   deleteUploadFiles,
@@ -351,7 +347,7 @@ class UploadManager {
     const attempt = (job.attempts ?? 0) + 1
     this.patch(job.id, { status: 'uploading', progress: 0 })
     try {
-      const { uploadUrl, reservationId } = await createUploadSessionFn({
+      const { uploadUrl } = await createUploadSessionFn({
         data: {
           albumId: job.albumId,
           fileName: job.name,
@@ -360,20 +356,8 @@ class UploadManager {
         },
       })
 
-      let fileId: string | null
-      try {
-        fileId = await this.putFile(job.id, uploadUrl)
-      } catch (error) {
-        void releaseUploadFn({
-          data: {
-            albumId: job.albumId,
-            reservationId,
-            quotaExceeded: error instanceof QuotaExceededUploadError,
-          },
-        }).catch(() => {})
-        throw error
-      }
-      if (fileId) await this.confirmUpload(job.albumId, fileId, reservationId)
+      const fileId = await this.putFile(job.id, uploadUrl)
+      if (fileId) await this.confirmUpload(job.albumId, fileId)
       this.patch(job.id, {
         status: 'done',
         progress: 100,
@@ -429,14 +413,10 @@ class UploadManager {
     }
   }
 
-  private async confirmUpload(
-    albumId: string,
-    fileId: string,
-    reservationId: string
-  ): Promise<void> {
+  private async confirmUpload(albumId: string, fileId: string): Promise<void> {
     for (let attempt = 1; ; attempt++) {
       try {
-        await confirmPhotoUploadFn({ data: { albumId, fileId, reservationId } })
+        await confirmPhotoUploadFn({ data: { albumId, fileId } })
         return
       } catch (error) {
         if (attempt >= 3) throw new TransientUploadError(String(error))

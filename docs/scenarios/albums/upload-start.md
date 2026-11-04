@@ -2,7 +2,7 @@
 
 > **Question:** What happens between choosing photos and the browser getting a Drive upload address for each one?
 >
-> **Answer:** The owner, co-authors and admins or managers choose image files or drop them on the upload box. The browser drops duplicates by name, saves the rest in a persistent queue, and works on 2 files at a time. For each file it asks the Worker for an upload session. The Worker checks the album folder is usable and the name is not taken, then picks a flamekeeper to host the file (see upload-pick-flamekeeper.md) and returns a one-time Google upload address with a reservation id. A file may be up to 5 GB.
+> **Answer:** The owner, co-authors and admins or managers choose image files or drop them on the upload box. The browser drops duplicates by name, saves the rest in a persistent queue, and works on 2 files at a time. For each file it asks the Worker for an upload session. The Worker checks the album folder is usable and the name is not taken, then sets up the file's home on the buffer (see upload-to-buffer.md) and returns a one-time Google upload address. A file may be up to 5 GB.
 >
 > **Notes:**
 > - The Upload photos button is disabled unless the folder state is ok, with the hover text "Uploads are paused while the album folder is in the bin or deleted". The page also shows a warning, see deleted-folder-warning.md.
@@ -52,8 +52,8 @@ sequenceDiagram
                     W->>G: Master token: find a file with this name in the folder
                     W->>D: If found, record it as a photo, then refuse as a duplicate
                 end
-                W->>W: startFlamekeeperUpload, see upload-pick-flamekeeper.md
-                W-->>B: uploadUrl and reservationId
+                W->>W: startBufferUpload, see upload-to-buffer.md
+                W-->>B: uploadUrl
             end
         end
     end

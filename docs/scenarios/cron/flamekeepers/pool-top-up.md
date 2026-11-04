@@ -17,7 +17,8 @@
 >   minus used minus reserved, and the per-account cap minus
 >   Drive usage minus reserved. The cap comes from
 >   settings.flamekeeperCapBytes, 20 GB by default.
-> - A reservation is created when an upload starts and counts
+> - Uploads no longer use the pool: they go to the buffer (../../albums/upload-to-buffer.md). Reservations now come only from the browser relay, and the pool figures serve only offload (Stage 2).
+> - A reservation is created when a relay move starts and counts
 >   for 2 hours. This step deletes reservations that expired
 >   more than 24 hours ago.
 > - Free space counts active flamekeepers only. Full ones add to
@@ -28,9 +29,9 @@
 >   Telegram chat, or the budget is short, the alert is not
 >   marked as sent and is tried again next run. If the bot token
 >   is missing, the alert is counted as sent without sending.
-> - A flamekeeper becomes full during an upload when Drive
->   answers that the quota is exceeded. A member trying to
->   upload with no room anywhere sees: Out of space, become a
+> - A flamekeeper becomes full during a relay move when Drive
+>   answers that the quota is exceeded. A relay move with no
+>   room anywhere stops with: Out of space, become a
 >   flamekeeper / #savenuimg.
 > - If the settings row does not exist, the step stops after the
 >   recovery of full flamekeepers.

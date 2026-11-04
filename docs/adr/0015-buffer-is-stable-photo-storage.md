@@ -22,7 +22,16 @@ the buffer is a single point of failure: it depends on the paid plan
 continuing. A cut to 2 TB still fits the estimate. A drop to the free 15 GB
 would force an offload, which is why offload stays planned.
 
-Not built yet. Stage 1 of [#15](https://github.com/sagyzdop/meriksirat/issues/15)
-makes uploads land on the buffer. Offload is Stage 2 and waits for its live
-tests. Until Stage 1 ships, [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)
-still describes the running code.
+Built in [#17](https://github.com/sagyzdop/meriksirat/issues/17): uploads land on
+the buffer, in a `buffer_volume` row per album whose folder is created by the
+master and shared with the buffer on the first upload. The buffer's `drive.file`
+token mints each resumable upload address, so the browser receives an address and
+never a token. The full-scope token is read only by `src/lib/buffer/full-token.ts`,
+which nothing imports yet. If the buffer is not configured or its token fails, the
+upload fails with a plain message and nothing is placed on a flamekeeper.
+
+Not built yet: usage limits and the 90% and 100% thresholds
+([#26](https://github.com/sagyzdop/meriksirat/issues/26)), and offload (Stage 2,
+which waits for its live tests). Photos uploaded to flamekeepers before #17 stay
+there until a drain. [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)
+still describes them.

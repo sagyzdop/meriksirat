@@ -98,7 +98,7 @@ _Avoid_: Image, file, picture
 
 **Volume**:
 The photos of one album held by one account: the buffer, or a flamekeeper after an offload. One volume per album per account. Stores the expected count and bytes, which the count warning checks against.
-Not built yet (Stage 1): the 256 MB unit is removed, so one volume per album per account replaces it.
+The buffer's volumes are built (#17) and live in `buffer_volume`, one row per album. Flamekeeper volumes still sit in the older `volume` table, which has no expected count and bytes. Offload (Stage 2) is the only thing that will create them again.
 _Avoid_: Chunk, shard, part
 
 **Favorite**:
@@ -154,12 +154,12 @@ _Avoid_: Invite code, password
 
 **Buffer**:
 The club-run Google account, `nuimage.storage@gmail.com`, on a 5 TB plan. New album photos are uploaded to it, and photos leaving a flamekeeper are copied back to it. It holds a `drive.file` token for uploads and a full-scope token that only the server uses, for drains. It is not a flamekeeper.
-Not built yet (Stage 1, #15): uploads still go to flamekeepers in today's code (ADR-0008). Copying photos onto the buffer from flamekeepers is Stage 2.
+Uploads go to it as of #17. Copying photos onto the buffer from flamekeepers is Stage 2 and not built yet. Setup is in the README, "Connecting the buffer account".
 _Avoid_: Storage account, main account, master
 
 **Flamekeeper**:
 An `@nu.edu.kz` user who pledges optional reserve storage from their Google Drive to the club. Holds no photos when they sign up, since new uploads go to the buffer; they hold photos only after an admin offloads some to them. May also be a member.
-Not built yet: offload is Stage 2 (#15), so until then a flamekeeper's Drive grant sits unused. Today's code still uploads photos to flamekeepers.
+Not built yet: offload is Stage 2 (#15), so until then a flamekeeper's Drive grant sits unused. Uploads no longer go to flamekeepers (#17), but photos uploaded to them earlier stay where they are until a drain.
 _Avoid_: Donor, contributor, host
 
 **Pledge**:

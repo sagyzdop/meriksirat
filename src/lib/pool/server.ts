@@ -24,6 +24,8 @@ import {
   withFlamekeeperToken,
 } from '@/lib/flamekeeper/tokens'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
+import { BUFFER_OWNER_ID } from '@/lib/buffer/plan'
+import { withBufferToken } from '@/lib/buffer/tokens'
 import { isImage } from '@/lib/albums/photo-backfill'
 import { registerDrivePhotos } from '@/lib/albums/photo-index'
 import { newId } from '@/lib/albums/ids'
@@ -327,17 +329,15 @@ export async function deleteOwnedPhotos(
 
   for (const [ownerId, owned] of byOwner) {
     try {
-      const failedIds = new Set(
-        await withFlamekeeperToken(
-          database,
-          ownerId,
-          (token) =>
-            batchDeleteDriveFiles(
-              token,
-              owned.map((p) => p.driveFileId)
-            ),
-          budget
+      const deleteAll = (token: string) =>
+        batchDeleteDriveFiles(
+          token,
+          owned.map((p) => p.driveFileId)
         )
+      const failedIds = new Set(
+        ownerId === BUFFER_OWNER_ID
+          ? await withBufferToken(deleteAll, budget)
+          : await withFlamekeeperToken(database, ownerId, deleteAll, budget)
       )
       for (const p of owned) {
         if (failedIds.has(p.driveFileId)) {

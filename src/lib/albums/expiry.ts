@@ -3,6 +3,7 @@ import { db, type Database } from '@/db'
 import {
   album,
   albumMember,
+  bufferVolume,
   favorite,
   flamekeeper,
   photo,
@@ -214,6 +215,7 @@ export async function removeAlbum(
   if (options.tombstone) {
     await database.delete(photo).where(eq(photo.albumId, row.id))
     await database.delete(volume).where(eq(volume.albumId, row.id))
+    await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
     await database
       .update(album)
       .set({
@@ -262,6 +264,7 @@ export async function tombstoneGoneAlbum(
   }
   await database.delete(photo).where(eq(photo.albumId, row.id))
   await database.delete(volume).where(eq(volume.albumId, row.id))
+  await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
   await database
     .update(album)
     .set({

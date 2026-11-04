@@ -2,7 +2,7 @@
 
 > **Question:** What does the #savenuimg pool card on the admin dashboard show, and how does an admin change the cap?
 >
-> **Answer:** The Albums tab of the admin dashboard shows how much space active and full flamekeepers have pledged, how much is used, and how much is still free for new photos. Admins and managers can see it. Only admins can change the per-account cap, the most of one Drive the app may use. Saving stores the new cap, refreshes the card and shows a toast. The cap applies to new placements from then on.
+> **Answer:** The Albums tab of the admin dashboard shows how much space active and full flamekeepers have pledged, how much is used, and how much is still free. New uploads no longer use it: they go to the buffer (../albums/upload-to-buffer.md), so the free figure matters only for moves to flamekeepers. Admins and managers can see it. Only admins can change the per-account cap, the most of one Drive the app may use. Saving stores the new cap, refreshes the card and shows a toast. The cap applies to later moves to flamekeepers.
 >
 > **Notes:**
 > - Free space counts only active flamekeepers. For each one it
