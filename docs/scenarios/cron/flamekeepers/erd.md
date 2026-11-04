@@ -12,7 +12,7 @@
 >
 > **Notes:**
 > - KV keys album:list:(album Drive folder id), TTL 8 days
->   seconds, and album:detail:(album id), TTL 3600 seconds,
+>   seconds, and album:detail:(album id), TTL 6 hours,
 >   are only deleted by these steps, never written.
 > - R2 is not used by these steps.
 > - The drain deadline, reason and reminder columns and health_cursor

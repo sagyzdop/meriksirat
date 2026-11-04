@@ -45,8 +45,13 @@ is marked incomplete and finished by a later view. Over budget or failing sectio
 keep their last listing, so the album page always opens.
 
 Uploads don't write to KV. The buffer section stores the volume's expected count
-and bytes as a stamp, and the view compares it with a fresh read of the buffer's `volume` row,
-so confirming an upload makes the next view list the buffer again. A KV delete per
+and bytes as a stamp, and the view compares it with a fresh read of the buffer's `volume` row.
+A changed stamp makes the buffer due for listing, but during an upload burst a view
+lists it at most once every 5 minutes, and lists at once when no upload was confirmed
+in the last 30 seconds, so a finished batch shows up promptly. While the cached
+listing is behind the stamp, the volume raises no fewer-photos warning. The upload
+duplicate check always lists a stale-stamped buffer fresh and does not store the
+result, so it sees files uploaded moments ago without a KV write. A KV delete per
 photo would spend the daily quota on one large upload. Photo deletions, moves and
 Refresh do touch KV. Refresh overwrites the entry and keeps the last listing if
 Drive fails.

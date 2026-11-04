@@ -676,7 +676,10 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     }
 
     const { loadAlbumListing } = await import('./listing-server')
-    const listing = await loadAlbumListing(database, row)
+    const listing = await loadAlbumListing(database, row, {
+      strictStamp: true,
+      persist: false,
+    })
     const check = planDuplicateCheck(data.size, data.md5, listing.files)
     if (check.kind === 'needs-hash') throw new Error(NEEDS_HASH_MESSAGE)
     if (check.kind === 'duplicate') {

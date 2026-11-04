@@ -20,6 +20,7 @@ import {
   planListingRefresh,
   planListingSources,
   readAlbumListing,
+  sameListingEntry,
 } from './listing'
 import type {
   AlbumListing,
@@ -28,7 +29,7 @@ import type {
   ListingOwner,
   ListingSource,
 } from './listing'
-import { getCachedListing, setCachedListing } from './server'
+import { getCachedListing, rememberListing, setCachedListing } from './server'
 
 export function withListingOwnerToken<T>(
   database: Database,
@@ -138,7 +139,7 @@ async function checkFolderState(
 export async function loadAlbumListing(
   database: Database,
   row: { id: string; driveFolderId: string },
-  options: { force?: boolean } = {}
+  options: { force?: boolean; strictStamp?: boolean; persist?: boolean } = {}
 ): Promise<AlbumListing> {
   const [sources, entry] = await Promise.all([
     loadListingSources(database, row),
@@ -150,6 +151,7 @@ export async function loadAlbumListing(
     entry,
     now,
     force: options.force,
+    strictStamp: options.strictStamp,
   })
   if (entry && !plan.checkFolder) {
     return readAlbumListing({ entry, sources, now })
@@ -177,7 +179,11 @@ export async function loadAlbumListing(
     folderState,
     outcomes,
   })
-  await setCachedListing(row.driveFolderId, next)
+  if (options.persist !== false && !sameListingEntry(entry, next)) {
+    await setCachedListing(row.driveFolderId, next)
+  } else {
+    rememberListing(row.driveFolderId, next)
+  }
   const listing = readAlbumListing({ entry: next, sources, now })
   await syncAlbumTotals(database, row.id, listing)
   return listing

@@ -10,6 +10,8 @@ import type { AlbumPhoto } from './types'
 
 export const LISTING_FRESH_MS = 12 * 60 * 60 * 1000
 export const LISTING_RETRY_MS = 15 * 60 * 1000
+export const LISTING_STAMP_THROTTLE_MS = 5 * 60 * 1000
+export const LISTING_SETTLE_MS = 30 * 1000
 export const LISTING_STALE_LIMIT_MS = 7 * 24 * 60 * 60 * 1000
 export const LISTING_KV_TTL_SECONDS = 8 * 24 * 60 * 60
 export const LISTING_DRIVE_BUDGET = RUN_SUBREQUEST_BUDGET
@@ -28,6 +30,7 @@ export interface ListingSource {
   owner: ListingOwner
   folderId: string
   stamp: string
+  changedAt: number | null
   listable: boolean
   expected: { count: number; bytes: number } | null
 }
@@ -60,6 +63,7 @@ export function planListingSources(
       owner: { kind: 'buffer' },
       folderId: buffer.driveFolderId,
       stamp: `${buffer.expectedCount ?? ''}:${buffer.expectedBytes ?? ''}`,
+      changedAt: buffer.expectedChangedAt ?? null,
       listable: true,
       expected:
         buffer.expectedCount === null || buffer.expectedBytes === null
@@ -72,6 +76,7 @@ export function planListingSources(
     owner: { kind: 'master' },
     folderId: input.albumFolderId,
     stamp: '',
+    changedAt: null,
     listable: true,
     expected: null,
   })
@@ -82,6 +87,7 @@ export function planListingSources(
       owner: { kind: 'flamekeeper', userId: v.userId },
       folderId: v.driveFolderId,
       stamp: '',
+      changedAt: null,
       listable: v.hasGrant && v.state !== 'lost' && v.state !== 'drained',
       expected: null,
     })
@@ -116,11 +122,23 @@ export interface ListingRefreshPlan {
 function isDue(
   source: ListingSource,
   cached: CachedSource | undefined,
-  now: number
+  now: number,
+  strictStamp: boolean
 ): boolean {
   if (!cached) return true
   if (cached.folderId !== source.folderId) return true
-  if (cached.stamp !== source.stamp) return true
+  if (cached.stamp !== source.stamp) {
+    // During an upload burst every confirm changes the stamp. List again at
+    // most every few minutes, or once the burst has gone quiet.
+    const midBurst =
+      !strictStamp &&
+      cached.status === 'ok' &&
+      cached.listedAt !== null &&
+      source.changedAt !== null &&
+      now - cached.listedAt < LISTING_STAMP_THROTTLE_MS &&
+      now - source.changedAt < LISTING_SETTLE_MS
+    return !midBurst
+  }
   if (cached.status === 'unavailable') return true
   if (cached.failedAt !== null) {
     return now - cached.failedAt >= LISTING_RETRY_MS
@@ -134,6 +152,7 @@ export function planListingRefresh(input: {
   entry: AlbumListingEntry | null
   now: number
   force?: boolean
+  strictStamp?: boolean
 }): ListingRefreshPlan {
   const actions: Record<string, SourceAction> = {}
   for (const source of input.sources) {
@@ -141,7 +160,12 @@ export function planListingRefresh(input: {
       actions[source.key] = 'keep'
     } else if (
       input.force ||
-      isDue(source, input.entry?.sources[source.key], input.now)
+      isDue(
+        source,
+        input.entry?.sources[source.key],
+        input.now,
+        input.strictStamp ?? false
+      )
     ) {
       actions[source.key] = 'list'
     } else {
@@ -254,6 +278,7 @@ export interface VolumeListing {
   count: number
   bytes: number
   expected: { count: number; bytes: number } | null
+  stampStale?: boolean
 }
 
 export interface AlbumListing {
@@ -292,6 +317,7 @@ function readVolume(
     count: files.length,
     bytes: files.reduce((sum, f) => sum + fileBytes(f), 0),
     expected: source.expected,
+    stampStale: !!usable && usable.stamp !== source.stamp,
   }
 }
 
@@ -371,6 +397,13 @@ export function listedMasterFiles(
 ): ListingFile[] | null {
   const master = entry?.sources.master
   return master?.status === 'ok' ? master.files : null
+}
+
+export function sameListingEntry(
+  a: AlbumListingEntry | null,
+  b: AlbumListingEntry
+): boolean {
+  return !!a && JSON.stringify(a) === JSON.stringify(b)
 }
 
 function entryTime(entry: AlbumListingEntry): number {

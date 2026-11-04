@@ -116,7 +116,10 @@ function listingKey(folderId: string): string {
 const LISTING_MEMO_MAX = 50
 const listingMemo = new Map<string, AlbumListingEntry>()
 
-function rememberListing(folderId: string, entry: AlbumListingEntry): void {
+export function rememberListing(
+  folderId: string,
+  entry: AlbumListingEntry
+): void {
   listingMemo.delete(folderId)
   if (listingMemo.size >= LISTING_MEMO_MAX) {
     const oldest = listingMemo.keys().next().value
@@ -234,7 +237,9 @@ function parseCached(raw: string): unknown | null {
   }
 }
 
-const detailCache = memoKvCache(3600, 'album detail')
+// Every change to a core invalidates it explicitly, so the TTL only bounds how
+// long an unnoticed change (such as a renamed author) can linger.
+const detailCache = memoKvCache(6 * 3600, 'album detail')
 
 function detailCoreKey(albumId: string): string {
   return `album:detail:${albumId}`
@@ -263,7 +268,48 @@ export async function invalidateCachedDetailCore(
   }
 }
 
-const publicPageCache = memoKvCache(600, 'public album list')
+// The public list is viewer-independent and only needs to be roughly fresh, so
+// it lives in the edge Cache API, which has no write quota, instead of KV.
+const PUBLIC_PAGE_TTL_SECONDS = 600
+
+function edgeCache() {
+  const cacheUrl = (key: string) => `https://cache.internal/${key}`
+  const store = () => (caches as unknown as { default: Cache }).default
+  return {
+    async get(key: string): Promise<unknown | null> {
+      const fromMem = memGet(key)
+      if (fromMem !== null) return parseCached(fromMem)
+      try {
+        const hit = await store().match(cacheUrl(key))
+        if (!hit) return null
+        const raw = await hit.text()
+        memSet(key, raw)
+        return parseCached(raw)
+      } catch (error) {
+        console.warn('Failed to read public album list cache:', error)
+        return null
+      }
+    },
+    async set(key: string, value: unknown): Promise<void> {
+      const raw = JSON.stringify(value)
+      memSet(key, raw)
+      try {
+        await store().put(
+          cacheUrl(key),
+          new Response(raw, {
+            headers: {
+              'cache-control': `public, max-age=${PUBLIC_PAGE_TTL_SECONDS}`,
+            },
+          })
+        )
+      } catch (error) {
+        console.warn('Failed to write public album list cache:', error)
+      }
+    },
+  }
+}
+
+const publicPageCache = edgeCache()
 
 function publicPageKey(query: unknown): string {
   const raw = JSON.stringify(query)

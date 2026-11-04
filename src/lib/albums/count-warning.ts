@@ -36,6 +36,7 @@ function trustworthy(
   return (
     listing.folderState === 'ok' &&
     volume.status === 'ok' &&
+    !volume.stampStale &&
     volume.listedAt !== null &&
     now - volume.listedAt <= LISTING_FRESH_MS
   )

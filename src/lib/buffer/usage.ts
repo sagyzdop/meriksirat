@@ -43,3 +43,19 @@ export function bufferUploadBlock(usage: BufferUsage | null): string | null {
   if (!usage) return null
   return bufferUsageLevel(usage) === 'full' ? BUFFER_FULL_MESSAGE : null
 }
+
+export const USAGE_REWRITE_MS = 6 * 60 * 60 * 1000
+
+export function planUsageWrite(
+  stored: (BufferUsage & { checkedAt: number }) | null,
+  next: BufferUsage & { checkedAt: number }
+): boolean {
+  if (!stored) return true
+  if (
+    stored.usedBytes !== next.usedBytes ||
+    stored.limitBytes !== next.limitBytes
+  ) {
+    return true
+  }
+  return next.checkedAt - stored.checkedAt >= USAGE_REWRITE_MS
+}

@@ -152,6 +152,13 @@ describe('planCountWarning', () => {
     ).toHaveLength(1)
   })
 
+  it('never warns from a listing taken before the latest upload', () => {
+    const l = listing([
+      bufferVolume([file('a')], { count: 3, bytes: 300 }, { stampStale: true }),
+    ])
+    expect(planCountWarning({ listing: l, viewer: ADMIN, now: NOW })).toBeNull()
+  })
+
   it('never warns when the album folder is trashed or gone', () => {
     for (const folderState of ['trashed', 'missing'] as const) {
       expect(
