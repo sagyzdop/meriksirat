@@ -1,5 +1,6 @@
 import * as React from 'react'
 import {
+  Check,
   ExternalLink,
   TriangleAlert,
   Pencil,
@@ -31,6 +32,7 @@ import { EditAlbumDialog } from './edit-album-dialog'
 import type { AlbumFormValues } from './album-form-fields'
 import { useAsyncAction } from '@/hooks/use-async-action'
 import {
+  acceptFewerPhotosFn,
   deleteAlbumFn,
   deleteGoneAlbumFn,
   refreshAlbumFn,
@@ -66,6 +68,7 @@ export function AlbumManager({
   const { pending: busy, run: runBusy } = useAsyncAction()
   const { pending: deletingGone, run: runDeleteGone } = useAsyncAction()
   const { pending: refreshing, run: runRefresh } = useAsyncAction()
+  const { pending: accepting, run: runAccept } = useAsyncAction()
   const { pending: removePending, run: runRemove } = useAsyncAction()
   const [removingId, setRemovingId] = React.useState<string | null>(null)
   const removing = removePending ? removingId : null
@@ -137,6 +140,13 @@ export function AlbumManager({
       onChanged()
     }, 'Failed to refresh album')
 
+  const handleAccept = (volumeKey: string) =>
+    runAccept(async () => {
+      await acceptFewerPhotosFn({ data: { albumId: album.id, volumeKey } })
+      toast.success('New photo count accepted')
+      onChanged()
+    }, 'Failed to accept the new photo count')
+
   const handleRemoveMember = (userId: string) => {
     setRemovingId(userId)
     return runRemove(async () => {
@@ -185,6 +195,45 @@ export function AlbumManager({
           </AlertDescription>
         </Alert>
       )}
+
+      {album.countWarning?.volumes.map((v) => (
+        <Alert key={v.key}>
+          <TriangleAlert />
+          <AlertTitle>Fewer photos than expected</AlertTitle>
+          <AlertDescription>
+            {v.listed.count} of {v.expected.count} photos found
+            {v.admin
+              ? ` (${v.admin.holder === 'buffer' ? 'buffer' : 'flamekeeper'} volume).`
+              : '.'}{' '}
+            Some files may have been removed from Google Drive. If you removed
+            them on purpose, accept the new count.
+            <div className="mt-2 flex flex-wrap gap-2">
+              {v.admin && (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <a
+                    href={driveFolderUrl(v.admin.folderId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink />
+                    Open volume in Google Drive
+                  </a>
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={accepting}
+                onClick={() => handleAccept(v.key)}
+              >
+                {accepting ? <Loader2 className="animate-spin" /> : <Check />}
+                Accept
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ))}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <div className="flex flex-col gap-2 sm:min-w-0 sm:flex-1 sm:flex-row sm:flex-wrap">
