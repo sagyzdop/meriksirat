@@ -1,14 +1,11 @@
-import { PageContainer } from '@/components/layout/page-container'
-import { PageHeader } from '@/components/layout/page-header'
-import { Section } from '@/components/layout/section'
-import { ProfileHeader } from './components/profile-header'
-import { ProfileContent } from './components/profile-content'
-import { FlamekeeperCard } from './components/flamekeeper-card'
-import { JoinClubCard } from './components/join-club-card'
-import { DeleteAccountCard } from './components/delete-account-card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getAccessRules } from '@/lib/access/access-rules'
-import type { UserProfile } from '@/lib/user/types'
 import type { MyFlamekeeper } from '@/lib/flamekeeper/types'
+import type { UserProfile } from '@/lib/user/types'
+import { AboutYouSection } from './components/about-you-section'
+import { ClubSection } from './components/club-section'
+import { ContactSection } from './components/contact-section'
+import { FlamekeeperSection } from './components/flamekeeper-section'
 
 interface ProfilePageProps {
   user?: UserProfile
@@ -25,13 +22,9 @@ export function Page({
 }: ProfilePageProps) {
   if (!user) {
     return (
-      <PageContainer>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-muted-foreground">
-            Please sign in to view your profile.
-          </div>
-        </div>
-      </PageContainer>
+      <div className="flex items-center justify-center py-10 text-muted-foreground">
+        Please sign in to view your profile.
+      </div>
     )
   }
 
@@ -41,63 +34,49 @@ export function Page({
     email: user.email,
     flamekeeperState: flamekeeper?.state ?? null,
   })
-  const showFlamekeeperCard = flamekeeper !== null || rules.canBecomeFlamekeeper
-
-  const flamekeeperCard = (
-    <FlamekeeperCard
-      user={user}
-      flamekeeper={flamekeeper}
-      connectError={connectError}
-      justConnected={justConnected}
-    />
-  )
-
-  if (!user.isMember) {
-    return (
-      <PageContainer>
-        <PageHeader
-          title="Account"
-          description="Your account, storage pledge and membership"
-        />
-        <div className="space-y-8">
-          <Section spacing="compact">
-            <ProfileHeader user={user} />
-          </Section>
-          {showFlamekeeperCard && <Section>{flamekeeperCard}</Section>}
-          <Section>
-            <h2 className="mb-3 text-lg font-semibold">Join the club</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Already part of NU Image? Enter the club code to become a member.
-              You will then add your name, NU ID and major and link Telegram.
-              Your pledge and photos stay exactly as they are.
-            </p>
-            <JoinClubCard />
-          </Section>
-          {rules.canDeleteAccount && (
-            <Section>
-              <DeleteAccountCard />
-            </Section>
-          )}
-        </div>
-      </PageContainer>
-    )
-  }
+  const fullName =
+    [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+    user.name ||
+    user.email
+  const initials =
+    [user.firstName?.[0], user.lastName?.[0]]
+      .filter(Boolean)
+      .join('')
+      .toUpperCase() ||
+    user.email[0]?.toUpperCase() ||
+    'U'
 
   return (
-    <PageContainer>
-      <PageHeader
-        title="Profile"
-        description="Manage your account information"
-      />
-      <div className="space-y-8">
-        <Section spacing="compact">
-          <ProfileHeader user={user} />
-        </Section>
-        {showFlamekeeperCard && <Section>{flamekeeperCard}</Section>}
-        <Section>
-          <ProfileContent user={user} />
-        </Section>
+    <div className="mx-auto w-full max-w-2xl space-y-10 px-4 py-8">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <Avatar className="size-24">
+          <AvatarImage src={user.image || undefined} alt="" />
+          <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
+        </Avatar>
+        <div className="max-w-full">
+          <h1 className="text-xl font-semibold">{fullName}</h1>
+          <p className="text-sm break-all text-muted-foreground">
+            {user.email}
+          </p>
+        </div>
       </div>
-    </PageContainer>
+
+      {rules.showFlamekeeperSection && (
+        <FlamekeeperSection
+          user={user}
+          flamekeeper={flamekeeper}
+          rules={rules}
+          connectError={connectError}
+          justConnected={justConnected}
+        />
+      )}
+      {rules.showAboutYou && <AboutYouSection user={user} />}
+      {rules.showContact && <ContactSection user={user} />}
+      <ClubSection
+        user={user}
+        canJoinClub={rules.canJoinClub}
+        canDeleteAccount={rules.canDeleteAccount}
+      />
+    </div>
   )
 }

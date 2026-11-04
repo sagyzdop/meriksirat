@@ -2,7 +2,7 @@
 
 > **Question:** What happens when someone presses Move photos now, and which account's access does the browser get?
 >
-> **Answer:** The flamekeeper moves their own photos from the profile card, or an admin or manager moves someone else's from Manage Users. Each round asks the server for one random photo (out of up to 20 candidates). The server picks another flamekeeper with room, reserves the space, and returns three things: the file to read, the permission to read it, and a one-time upload link into the new flamekeeper's folder. If no one has room, the round stops with a message.
+> **Answer:** The profile page no longer has a Move photos panel; an admin or manager moves someone's photos from Manage Users. Each round asks the server for one random photo (out of up to 20 candidates). The server picks another flamekeeper with room, reserves the space, and returns three things: the file to read, the permission to read it, and a one-time upload link into the new flamekeeper's folder. If no one has room, the round stops with a message.
 >
 > **Notes:**
 > - Who gets which token. The browser receives the SOURCE

@@ -2,7 +2,7 @@
 
 > **Question:** What happens when a flamekeeper edits their pledge or expected graduation month?
 >
-> **Answer:** The edit dialog sends both values to the server, which saves them and then decides whether the flamekeeper must start moving photos, may go back to normal, or carries on unchanged. A new pledge below the space already used starts a 14-day drain of the excess. A graduation date under 60 days away starts a drain of all photos, or ends flamekeeping at once if none are held. Raising the pledge above usage returns a full or pledge-draining flamekeeper to normal. The dialog closes with a toast and the profile refreshes.
+> **Answer:** The Edit button on the pledge row opens a dialog for the pledge. It sends the pledge and the graduation month already stored to the server (the month itself is changed in the Graduating field, see ../account/profile-edit.md), which saves them and then decides whether the flamekeeper must start moving photos, may go back to normal, or carries on unchanged. A new pledge below the space already used starts a 14-day drain of the excess. A graduation date under 60 days away starts a drain of all photos, or ends flamekeeping at once if none are held. Raising the pledge above usage returns a full or pledge-draining flamekeeper to normal. The dialog closes with a toast and the profile refreshes.
 >
 > **Notes:**
 > - The new values are always saved, even when a drain starts.
@@ -21,7 +21,7 @@
 >   the message "Pledge at least 1 GB" or "Pledge at most 1024 GB".
 > - A drained flamekeeper cannot edit and must sign up again, see
 >   connect-drive.md. A lost flamekeeper can still edit.
-> - The date is stored once, on the user, not on the flamekeeper. Changing it from the profile form follows the same 60-day rule as this dialog.
+> - The date is stored once, on the user, not on the flamekeeper. Changing it in the Graduating field follows the same 60-day rule as this dialog.
 > - A graduation date that is unchanged is not re-checked for
 >   being in the future.
 > - After saving, profile data is reloaded, see profile-card.md.
@@ -33,7 +33,7 @@ sequenceDiagram
     participant Browser
     participant Worker
     participant D1
-    F->>Browser: Press Edit pledge, change values, press Save
+    F->>Browser: Press Edit, change the pledge, press Save
     alt Pledge outside 1 to 1024 GB
         Browser-->>F: Toast "Pledge at least 1 GB"
     else Pledge valid

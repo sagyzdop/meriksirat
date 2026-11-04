@@ -10,20 +10,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { optOutFlamekeeperFn } from '@/lib/flamekeeper/functions'
-import { formatGb } from '@/lib/flamekeeper/rules'
 import { useAsyncAction } from '@/hooks/use-async-action'
 
 interface StopFlamekeepingDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  usedBytes: number
   onStopped: () => void | Promise<void>
 }
 
 export function StopFlamekeepingDialog({
   open,
   onOpenChange,
-  usedBytes,
   onStopped,
 }: StopFlamekeepingDialogProps) {
   const { pending: isLoading, run } = useAsyncAction()
@@ -34,7 +31,7 @@ export function StopFlamekeepingDialog({
       toast.success(
         status.state === 'drained'
           ? 'You have stopped flamekeeping'
-          : 'Your photos are now moving to other flamekeepers'
+          : 'Your flame is winding down'
       )
       onOpenChange(false)
       await onStopped()
@@ -46,10 +43,9 @@ export function StopFlamekeepingDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Stop flamekeeping?</AlertDialogTitle>
           <AlertDialogDescription>
-            New uploads stop going to your Drive right away.
-            {usedBytes > 0 &&
-              ` The ${formatGb(usedBytes)} of club photos you hold move to other flamekeepers through your browser. Photos that have not moved within 14 days are deleted.`}{' '}
-            When everything has moved, the app deletes its access to your Drive.
+            Your Drive stops being used for new club photos right away. There is
+            nothing else to do on your side, and the app then removes its access
+            to your Drive.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -180,7 +180,7 @@ _Avoid_: Evacuating, migrating
 **Relay**:
 Moving one photo through a browser: downloaded with a short-lived `drive.file` token and uploaded into the album's volume for the destination. The photo gets a new Drive file ID (ADR-0009, amended by ADR-0016).
 Under the new design, relay is used only by an admin-started offload, from the buffer to a flamekeeper, in the admin's browser. Drains no longer use it.
-Not built yet (Stage 2): today's code relays drains from flamekeeper pages.
+Not built yet (Stage 2): today's code relays drains only from the admin Flamekeepers page. The profile no longer has a relay, so a flamekeeper's own drain waits for an admin until #24.
 _Avoid_: Transfer, copy
 
 **Lost flamekeeper**:

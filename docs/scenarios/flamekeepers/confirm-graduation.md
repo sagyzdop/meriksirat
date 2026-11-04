@@ -2,7 +2,7 @@
 
 > **Question:** What happens when a flamekeeper answers the yearly "is this still your graduation date?" question?
 >
-> **Answer:** Pressing "Yes, it is right" saves the same pledge and date again and records the confirmation time, which starts a new 365-day wait. Pressing "Change date" opens the edit dialog instead. If the confirmed date is already under 60 days away (or past), the same save also starts the drain of all photos, or ends flamekeeping at once if none are held.
+> **Answer:** Pressing Yes on the "Still graduating in ..." row saves the same pledge and date again and records the confirmation time, which starts a new 365-day wait. To change the date instead, the flamekeeper edits the Graduating field. If the confirmed date is already under 60 days away (or past), the same save also starts the drain of all photos, or ends flamekeeping at once if none are held.
 >
 > **Notes:**
 > - The question appears on the profile card once 365 days have
@@ -13,7 +13,7 @@
 >   see ../cron/flamekeepers/graduation-prompt.md.
 > - Confirming sends the date stored in the row. A new date can
 >   also be passed, but the button on the card does not send one.
-> - Change date is the same flow as change-pledge.md.
+> - Editing the Graduating field is the same flow as change-pledge.md.
 > - The server only needs a flamekeeper row, so the call also
 >   works in any state, including draining.
 
@@ -25,7 +25,7 @@ sequenceDiagram
     participant Worker
     participant D1
     Note over F,D1: Reminder email, see<br/>cron/flamekeepers/graduation-prompt.md
-    F->>Browser: Press Yes, it is right
+    F->>Browser: Press Yes
     Browser->>Worker: confirmGraduationFn()
     Worker->>D1: read flamekeeper row
     alt No row
@@ -40,6 +40,6 @@ sequenceDiagram
         Browser-->>F: Toast "Graduation date confirmed"
     end
     Browser-->>F: On error, toast "Could not confirm the date"<br/>or the server message
-    F->>Browser: Or press Change date
-    Browser-->>F: Edit pledge dialog opens
+    F->>Browser: Or edit the Graduating field
+    Browser-->>F: Saved as in change-pledge.md
 ```

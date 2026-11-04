@@ -4,8 +4,8 @@
 > happens when they do?
 >
 > **Answer:** Only a non-member who is not currently flamekeeping
-> can. They see a "Delete account" card on `/profile`, click
-> "Delete my account" and confirm "Delete your account?". The
+> can. They see a "Delete my account" row in the Club section of
+> `/profile`, click Delete and confirm "Delete your account?". The
 > account and its favorites are removed for good and the browser
 > goes to `/`, which redirects to `/albums`. Club members cannot
 > delete themselves.
@@ -13,12 +13,12 @@
 > **Notes:**
 > - A flamekeeper whose state is "drained" counts as no longer
 >   flamekeeping and may delete. Any other state blocks it.
-> - The card is hidden when the rule says no, and the server
+> - The row is hidden when the rule says no, and the server
 >   checks the same rule again.
 > - Opening `/profile` also loads the flamekeeper record. For a
 >   flamekeeper whose photos are still moving away, that load
 >   finishes the move if no photos are left, which can make the
->   card appear.
+>   row appear.
 > - Deleting the user row also removes sessions, linked Google
 >   accounts, Telegram tokens, favorites and the flamekeeper row
 >   through database cascades.
@@ -38,7 +38,7 @@ sequenceDiagram
     B->>W: getMyFlamekeeperFn()
     W-->>B: Flamekeeper record or none
     opt canDeleteAccount is true
-        B-->>P: Delete account card
+        B-->>P: Delete my account row in the Club section
         P->>B: Click Delete my account
         B-->>P: Dialog Delete your account? This removes your<br/>account and your favorites. It cannot be undone.
         alt Cancel

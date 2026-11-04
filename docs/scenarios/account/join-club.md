@@ -2,8 +2,8 @@
 
 > **Question:** How does a non-member become a club member?
 >
-> **Answer:** On `/profile` they type the current club code under
-> "Join the club". If it matches, the account becomes a member
+> **Answer:** On `/profile` they type the current club code in the "Join the
+> club" row of the Club section and click Join. If it matches, the account becomes a member
 > and the app moves them to `/onboarding` to fill in their
 > profile. A wrong code shows an error and nothing changes.
 >
@@ -16,7 +16,7 @@
 > - The pledge and photos of a flamekeeper stay as they are.
 > - The profile step and Telegram step that follow are in
 >   onboarding-profile.md and onboarding-telegram.md.
-> - Only non-members see this card. Deleting the account is
+> - Only non-members see this row. Deleting the account is
 >   offered below it, see delete-account.md.
 
 ```mermaid
@@ -26,8 +26,8 @@ sequenceDiagram
     participant B as Browser
     participant W as Worker
     participant D as D1
-    P->>B: Open /profile, type the code in Enter the club code,<br/>click Continue
-    Note over B: Continue is disabled while the box is empty
+    P->>B: Open /profile, type the code in the Join the club row,<br/>click Join
+    Note over B: Join is disabled while the box is empty
     B->>W: submitClubCodeFn(code)
     W->>D: Read settings.clubCode (create one if missing)
     alt Not signed in or server error

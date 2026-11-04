@@ -2,7 +2,7 @@
 
 > **Question:** What happens when someone fills in the flamekeeper form and presses Connect Drive?
 >
-> **Answer:** The browser checks the pledge, the graduation month (prefilled from the member's saved one) and the terms box, then asks the server to start the connection. The server refuses the club account and anyone who cannot sign up (not an @nu.edu.kz account, or already flamekeeping). Otherwise it remembers the pledge for 10 minutes under a random code and returns a Google consent link, and the browser goes to Google. The form is in the profile card for @nu.edu.kz accounts that are not flamekeeping. Signup no longer asks for it.
+> **Answer:** The browser checks the pledge, the graduation month (prefilled from the member's saved one) and the terms box, then asks the server to start the connection. The server refuses the club account and anyone who cannot sign up (not an @nu.edu.kz account, or already flamekeeping). Otherwise it remembers the pledge for 10 minutes under a random code and returns a Google consent link, and the browser goes to Google. The form is in a dialog opened from the Flamekeeper section of the profile for @nu.edu.kz accounts that are not flamekeeping. Signup no longer asks for it.
 >
 > **Notes:**
 > - The pledge is only stored in KV at this point. No flamekeeper
