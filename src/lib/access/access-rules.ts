@@ -15,6 +15,13 @@ export interface AccessRules {
   canHoldStaffRole: boolean
   canBecomeFlamekeeper: boolean
   canDeleteAccount: boolean
+  canJoinClub: boolean
+  showFlamekeeperSection: boolean
+  showAboutYou: boolean
+  showContact: boolean
+  graduationUnderFlamekeeper: boolean
+  canEditPledge: boolean
+  canStopFlamekeeping: boolean
 }
 
 export const FLAMEKEEPER_EMAIL_DOMAIN = '@nu.edu.kz'
@@ -36,15 +43,24 @@ export function getAccessRules(user: AccessUser): AccessRules {
   const flamekeeperState = user.flamekeeperState ?? null
   const hasFlamekeeperRecord = flamekeeperState !== null
   const isFlamekeeping = hasFlamekeeperRecord && flamekeeperState !== 'drained'
+  const canBecomeFlamekeeper =
+    user.email.trim().toLowerCase().endsWith(FLAMEKEEPER_EMAIL_DOMAIN) &&
+    !isFlamekeeping
+  const isKeeping = flamekeeperState === 'active' || flamekeeperState === 'full'
   return {
     canBook: user.isMember,
     canCreateAlbum: user.isMember,
     canFavorite: true,
     canHoldStaffRole: user.isMember,
-    canBecomeFlamekeeper:
-      user.email.trim().toLowerCase().endsWith(FLAMEKEEPER_EMAIL_DOMAIN) &&
-      !isFlamekeeping,
+    canBecomeFlamekeeper,
     canDeleteAccount: !user.isMember && !isFlamekeeping,
+    canJoinClub: !user.isMember,
+    showFlamekeeperSection: isFlamekeeping || canBecomeFlamekeeper,
+    showAboutYou: user.isMember,
+    showContact: user.isMember,
+    graduationUnderFlamekeeper: !user.isMember && isFlamekeeping,
+    canEditPledge: isKeeping,
+    canStopFlamekeeping: isKeeping,
   }
 }
 

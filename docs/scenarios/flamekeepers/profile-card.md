@@ -1,33 +1,42 @@
-# See the flamekeeper card on the profile page
+# See the Flamekeeper section on the profile page
 
-> **Question:** What does a person see in the flamekeeper card on /profile for each flamekeeper state?
+> **Question:** What does a person see in the Flamekeeper section on /profile for each flamekeeper state?
 >
-> **Answer:** The profile page loads the person's flamekeeper record. The card only appears for people who have a record or who could sign up (an @nu.edu.kz account that is not flamekeeping). Someone without a record sees the signup form. Someone whose record is drained sees a Become a flamekeeper switch that opens the same form. An active or full flamekeeper sees pledge, usage and buttons to edit the pledge or stop. A draining flamekeeper also sees why their photos are moving and a Move photos now panel. A lost flamekeeper sees a red warning with a Reconnect Drive button. When the yearly graduation question is due, it shows above the numbers.
+> **Answer:** The profile page loads the person's flamekeeper record. The section only appears for people who have a record or who could sign up (an @nu.edu.kz account that is not flamekeeping). It starts with one muted row holding the Lucide fire icon, a title and a description, and the copy depends on the state. Someone with no record, or a drained one, sees "Keep the flame alive" and a Become a flamekeeper button. An active or full flamekeeper sees "You're keeping the flame alive", a "x GB of y GB pledged" row with a thin bar and Edit, and a Stop flamekeeping row. A draining flamekeeper sees "Your flame is winding down" and the pledge row without buttons. A lost flamekeeper sees "We lost touch with your Drive" with a Reconnect Drive button.
 >
 > **Notes:**
+> - The page is one centred column of rows with no tabs or cards, see
+>   [GLOSSARY.md](../../../GLOSSARY.md) for the terms.
+> - Icon by state. Keeping with photos stored: primary colour, light
+>   fill, gentle flicker. Not started, or keeping with nothing
+>   stored: primary colour, slow pulse. Winding down: muted. Lost:
+>   muted at low opacity. All motion stops under
+>   `prefers-reduced-motion`. The copy and icon choice live in
+>   `src/lib/flamekeeper/profile-copy.ts`.
+> - Which rows show is decided by `getAccessRules`: Edit and Stop
+>   only while the state is active or full.
+> - A flamekeeper who is not a member sees no About you or Contact
+>   section and their Graduating field sits in this section,
+>   saved as in [../account/profile-edit.md](../account/profile-edit.md).
+>   A member edits Graduating under About you.
+> - The text never mentions where photos are kept or that they
+>   move. A draining flamekeeper has nothing to do on this page;
+>   the Move photos now panel is no longer here, see
+>   relay-hand-out.md.
 > - A draining record is checked on every load. If nothing is
 >   left to move, the drain is finished right there (state becomes
 >   drained, usage is zeroed and the app's Drive access is deleted).
-> - A drained person who is not on an @nu.edu.kz account sees the
->   card with the text "Only @nu.edu.kz accounts can become
->   flamekeepers." and no form.
-> - Drain messages by reason. opt_out: "You stopped flamekeeping,
->   so your photos are moving to other flamekeepers." pledge: "Your
->   pledge is below what you hold, so the excess is moving..."
->   graduation: "Your graduation is less than 60 days away..."
->   domain: "Your account is no longer an @nu.edu.kz account..."
->   ban: "Your account was banned..." Each ends with "New uploads
->   no longer go to your Drive."
-> - Edit pledge is hidden when the reason is opt_out or domain.
->   Stop flamekeeping is hidden when lost or already opted out.
+> - Become a flamekeeper opens the existing sign-up form in a
+>   dialog (`become-flamekeeper-dialog.tsx`), the one place to
+>   change when the dedicated page arrives. See connect-drive.md.
 > - The graduation question appears 365 days after the last
->   confirmation (or after signing up), see confirm-graduation.md.
->   It is not shown to lost or drained flamekeepers.
-> - The Move photos now panel is explained in relay-hand-out.md.
-> - Albums hosted counts the albums where the person holds a
->   folder that was not dropped and whose album is not deleted.
-> - Connection errors from Google are shown in the card, see
->   drive-callback.md for the messages.
+>   confirmation (or after signing up) as a "Still graduating in
+>   ..." row with a Yes button, see confirm-graduation.md. It is
+>   not shown to lost or drained flamekeepers.
+> - Albums hosted is no longer shown.
+> - Connection errors from Google are shown under the description,
+>   see drive-callback.md for the messages, and a successful
+>   connection shows a toast.
 > - The reconnect toast shows the server message when there is
 >   one, and "Could not reconnect Drive" otherwise.
 > - Stopping and editing are in opt-out.md and change-pledge.md.
@@ -46,13 +55,11 @@ sequenceDiagram
     opt State is draining
         Worker->>D1: finishDrainIfEmpty, mark drained if no<br/>photos are left
     end
-    Worker-->>Browser: state, pledge, used, date, drain info,<br/>albumsHosted
-    alt No row
-        Browser-->>F: Signup form, see connect-drive.md
-    else State drained
-        Browser-->>F: Switch "Become a flamekeeper" for the form,<br/>or "Only @nu.edu.kz accounts can become<br/>flamekeepers."
+    Worker-->>Browser: state, pledge, used, date, drain info
+    alt No row, or state drained
+        Browser-->>F: "Keep the flame alive" and a Become a<br/>flamekeeper button, see connect-drive.md
     else State lost
-        Browser-->>F: Red box "We can no longer reach your Drive.<br/>Reconnect within 7 days or your photos will<br/>drop out of the app."
+        Browser-->>F: "We lost touch with your Drive" and<br/>Reconnect Drive
         F->>Browser: Press Reconnect Drive
         Browser->>Worker: startDriveConnectFn(mode reconnect)
         alt Row is not lost
@@ -63,11 +70,11 @@ sequenceDiagram
             Browser->>GO: Redirect (button "Redirecting...")
         end
     else State draining
-        Browser-->>F: Reason message and Move photos now panel
+        Browser-->>F: "Your flame is winding down", pledge row,<br/>no buttons
     else State active or full
-        Browser-->>F: Badge, usage bar, pledge, date, albums hosted
+        Browser-->>F: "You're keeping the flame alive", pledge row<br/>with Edit, Stop flamekeeping row
     end
     opt Graduation question is due
-        Browser-->>F: "Is the stored date still your expected<br/>graduation date?" with two buttons
+        Browser-->>F: "Still graduating in ...?" with a Yes button
     end
 ```

@@ -2,7 +2,7 @@
 
 > **Question:** What happens when a flamekeeper presses Stop flamekeeping?
 >
-> **Answer:** A confirmation dialog explains that new uploads stop at once and, if the flamekeeper holds photos, that photos not moved within 14 days are deleted. After confirming, a flamekeeper holding no photos becomes drained straight away and the app deletes its Drive access. One who holds photos goes into a 14-day draining state, receives an email, and moves the photos through the browser. A lost flamekeeper or one already drained is refused.
+> **Answer:** A confirmation dialog explains that the Drive stops being used for new club photos at once and that there is nothing else to do. After confirming, a flamekeeper holding no photos becomes drained straight away and the app deletes its Drive access. One who holds photos goes into a 14-day draining state, receives an email, and moves the photos through the browser. A lost flamekeeper or one already drained is refused.
 >
 > **Notes:**
 > - Draining ends when the last photo has moved. Then the state
