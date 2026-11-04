@@ -20,7 +20,11 @@ import type {
   AlbumListPage,
   UploadSession,
 } from './types'
-import { NEEDS_HASH_MESSAGE, planDuplicateCheck } from './upload-dedupe'
+import {
+  NEEDS_HASH_MESSAGE,
+  duplicateMessage,
+  planDuplicateCheck,
+} from './upload-dedupe'
 import { defaultExpiry } from '@/lib/pool/expiry'
 
 type Database = ReturnType<(typeof import('@/db'))['db']>
@@ -342,8 +346,8 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
 export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
   .validator(AcceptFewerPhotosSchema)
   .handler(async ({ data }) => {
-    const { bufferVolume } = await import('@/db/schema')
-    const { eq, sql } = await import('drizzle-orm')
+    const { volume } = await import('@/db/schema')
+    const { and, eq, isNull, sql } = await import('drizzle-orm')
     const { planAccept } = await import('./count-warning')
     const { loadAlbumListing } = await import('./listing-server')
 
@@ -370,12 +374,12 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
     if (!plan.ok) throw new Error(plan.message)
 
     await database
-      .update(bufferVolume)
+      .update(volume)
       .set({
-        expectedCount: sql`MIN(${bufferVolume.expectedCount}, ${plan.expected.count})`,
-        expectedBytes: sql`MIN(${bufferVolume.expectedBytes}, ${plan.expected.bytes})`,
+        expectedCount: sql`MIN(${volume.expectedCount}, ${plan.expected.count})`,
+        expectedBytes: sql`MIN(${volume.expectedBytes}, ${plan.expected.bytes})`,
       })
-      .where(eq(bufferVolume.albumId, row.id))
+      .where(and(eq(volume.albumId, row.id), isNull(volume.flamekeeperUserId)))
 
     return { success: true }
   })
@@ -672,11 +676,14 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
     }
 
     const { loadAlbumListing } = await import('./listing-server')
-    const listing = await loadAlbumListing(database, row)
+    const listing = await loadAlbumListing(database, row, {
+      strictStamp: true,
+      persist: false,
+    })
     const check = planDuplicateCheck(data.size, data.md5, listing.files)
     if (check.kind === 'needs-hash') throw new Error(NEEDS_HASH_MESSAGE)
     if (check.kind === 'duplicate') {
-      throw new Error(`Photo "${data.fileName}" already exists in this album`)
+      throw new Error(duplicateMessage(data.fileName))
     }
 
     return startBufferUpload(database, row, {

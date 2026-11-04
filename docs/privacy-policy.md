@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Effective Date:** [to be set by the project owner on approval]
+**Effective Date:** November 4, 2026
 **Last Updated:** November 4, 2026
 
 This Privacy Policy explains what personal data the Meriksirat equipment
@@ -20,8 +20,8 @@ Platform or Telegram.
 
 - Your Google account name, email address, profile picture and Google account
   ID.
-- Whether you accepted these terms on the login page. The date you accepted is
-  saved when your account is created.
+- The date your account was created, which we keep as the date you accepted the
+  Terms of Service and this Privacy Policy by logging in.
 
 ### 2.2 When You Join the Club (Club Members)
 
@@ -46,24 +46,18 @@ Only people who enter the club code are asked for these.
 Flamekeeping is optional. If you choose to pledge Google Drive storage as a
 flamekeeper:
 
-- A Google authorization for the `drive.file` permission only, stored as an
-  offline refresh token so the Platform can manage the files it creates in your
-  Drive when you are not signed in.
+- Your permission for the Platform to use your Google Drive for this purpose.
 - Your pledged storage, the storage the Platform uses in your Drive, and your
   expected graduation month.
 
 ## 3. What We Access in Your Google Account
 
 - **Sign-in:** your basic profile and email address only.
-- **Club storage:** new uploads go to a club-run Gmail account. The Platform
-  uploads with the `drive.file` permission, so it manages only the files it
-  creates there. Existing albums were uploaded earlier and remain on the club's
-  main Google account for now.
-- **Flamekeepers:** with `drive.file`, the Platform can see and manage only the
-  files and folders it created in your Drive. It cannot see, read or change any
-  other file in your Drive. It also reads how much of your Drive storage is in
-  use, to show your pledge. Flamekeepers hold no photos today; a pledge is
-  reserve space.
+- **Club storage:** photos are stored on Google accounts run by the club.
+- **Flamekeepers:** the Platform only works with the files and folders it
+  created in your Drive, and does not read your other files. It also checks how
+  much of your Drive storage is in use, to show your pledge. Flamekeepers hold
+  no photos today; a pledge is reserve space.
 
 Album folders are viewable by anyone with the link.
 
@@ -79,8 +73,7 @@ including the Limited Use requirements.**
 
 - To run bookings: availability, reminders, cancellations of bookings nobody
   picked up, overdue handling and equipment accountability.
-- To host albums, including storing new album photos in the club-run Gmail
-  account. Existing albums remain on the club's main Google account for now.
+- To host albums, including storing album photos on club-run Google accounts.
 - To send notifications by Telegram and, for some accounts, by email.
 - To add member birthdays to the club calendar, if you opted in.
 - To keep the Platform secure and stop abuse, for example by rate limiting.
@@ -99,9 +92,8 @@ We do not sell personal data. We use these service providers to run the
 Platform:
 
 - **Cloudflare:** hosting, the database, file and cache storage.
-- **Google:** sign-in, Google Drive (album storage: the club-run Gmail account
-  for new uploads, and the club's main Google account for existing albums),
-  Google Calendar (equipment and birthday calendars), and Gmail for email
+- **Google:** sign-in, Google Drive (album storage on club-run Google
+  accounts), Google Calendar (equipment and birthday calendars), and Gmail for email
   notices.
 - **Telegram:** notifications and equipment returns.
 
@@ -115,8 +107,8 @@ regulations require it.
   been moved. Accounts are never deleted for being unfinished.
 - **Members:** accounts and their records are kept indefinitely, so that there
   is always a record of who was responsible for each piece of equipment (see
-  Terms of Service, Section 3.2). Your Drive authorization is deleted when the
-  account is.
+  Terms of Service, Section 3.2). Your Drive connection is removed when the
+  account is deleted.
 - **Album photos:** kept until the album expires (by default two years after
   the event), unless an administrator pins it or it is deleted earlier. When an
   album expires, its folder and photos are deleted. After deletion, only the

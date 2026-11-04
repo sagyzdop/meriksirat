@@ -12,8 +12,8 @@
 > **Notes:**
 > - Member: the account has isMember set. Their onboarding is
 >   unfinished until onboardingComplete is set.
-> - Non-member: has no onboarding. Terms are accepted on the login
->   page when the account is created, so there is no signup step
+> - Non-member: has no onboarding. Logging in means agreeing to the terms
+>   (stated on the login page), and the time is saved when the account is created, so there is no signup step
 >   left to finish, and an account is never removed for being
 >   unfinished.
 > - `/profile`, `/favorites` and `/become-flamekeeper` count along with any sub-path.

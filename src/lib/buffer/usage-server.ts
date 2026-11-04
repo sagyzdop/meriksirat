@@ -8,6 +8,7 @@ import { withBufferToken } from './tokens'
 import {
   bufferUsageLevel,
   planBufferAlert,
+  planUsageWrite,
   usagePercent,
   type BufferMarker,
   type BufferUsage,
@@ -51,6 +52,8 @@ export async function readBufferUsage(): Promise<CachedBufferUsage | null> {
   }
 }
 
+let lastUsage: CachedBufferUsage | null = null
+
 export async function refreshBufferUsage(): Promise<CachedBufferUsage> {
   const quota = await withBufferToken((token) => getDriveStorageQuota(token))
   const usage: CachedBufferUsage = {
@@ -58,6 +61,9 @@ export async function refreshBufferUsage(): Promise<CachedBufferUsage> {
     limitBytes: quota.limitBytes,
     checkedAt: Date.now(),
   }
+  const previous = await readBufferUsage()
+  lastUsage = usage
+  if (!planUsageWrite(previous, usage)) return usage
   try {
     await (
       await kv()
@@ -74,7 +80,11 @@ export async function refreshBufferUsage(): Promise<CachedBufferUsage> {
 export async function getBufferUsage(
   maxAgeMs: number
 ): Promise<CachedBufferUsage | null> {
-  const cached = await readBufferUsage()
+  const stored = await readBufferUsage()
+  const cached =
+    lastUsage && (!stored || lastUsage.checkedAt > stored.checkedAt)
+      ? lastUsage
+      : stored
   if (cached && Date.now() - cached.checkedAt < maxAgeMs) return cached
   if (planBufferUpload(process.env).kind === 'unavailable') return cached
   try {

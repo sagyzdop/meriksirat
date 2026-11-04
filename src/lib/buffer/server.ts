@@ -1,6 +1,6 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { album, bufferVolume } from '@/db/schema'
+import { album, volume } from '@/db/schema'
 import {
   DriveNotFoundError,
   createDriveFolder,
@@ -27,7 +27,8 @@ import { getBufferUsage } from './usage-server'
 
 const UPLOAD_USAGE_MAX_AGE_MS = 10 * 60 * 1000
 
-const key = (albumId: string) => eq(bufferVolume.albumId, albumId)
+const key = (albumId: string) =>
+  and(eq(volume.albumId, albumId), isNull(volume.flamekeeperUserId))
 
 export async function ensureBufferVolume(
   database: Database,
@@ -38,10 +39,10 @@ export async function ensureBufferVolume(
   const load = () =>
     database
       .select({
-        driveFolderId: bufferVolume.driveFolderId,
-        permissionId: bufferVolume.permissionId,
+        driveFolderId: volume.driveFolderId,
+        permissionId: volume.permissionId,
       })
-      .from(bufferVolume)
+      .from(volume)
       .where(key(albumRow.id))
       .get()
 
@@ -58,14 +59,18 @@ export async function ensureBufferVolume(
     )
     const claimed = existing
       ? await database
-          .update(bufferVolume)
+          .update(volume)
           .set({ driveFolderId: created.id, permissionId: '' })
-          .where(
-            and(key(albumRow.id), sql`${bufferVolume.driveFolderId} IS NULL`)
-          )
+          .where(and(key(albumRow.id), sql`${volume.driveFolderId} IS NULL`))
       : await database
-          .insert(bufferVolume)
-          .values({ albumId: albumRow.id, driveFolderId: created.id })
+          .insert(volume)
+          .values({
+            id: newId(10),
+            albumId: albumRow.id,
+            driveFolderId: created.id,
+            expectedCount: 0,
+            expectedBytes: 0,
+          })
           .onConflictDoNothing()
     if ((claimed.meta?.changes ?? 0) > 0) {
       folderId = created.id
@@ -89,10 +94,7 @@ export async function ensureBufferVolume(
     folderId!,
     bufferEmail
   )
-  await database
-    .update(bufferVolume)
-    .set({ permissionId })
-    .where(key(albumRow.id))
+  await database.update(volume).set({ permissionId }).where(key(albumRow.id))
   return folderId!
 }
 
@@ -101,7 +103,7 @@ async function forgetBufferVolumeFolder(
   albumId: string
 ): Promise<void> {
   await database
-    .update(bufferVolume)
+    .update(volume)
     .set({ driveFolderId: null, permissionId: '' })
     .where(key(albumId))
 }
@@ -111,8 +113,8 @@ async function volumeHasPhotos(
   albumId: string
 ): Promise<boolean> {
   const row = await database
-    .select({ expectedCount: bufferVolume.expectedCount })
-    .from(bufferVolume)
+    .select({ expectedCount: volume.expectedCount })
+    .from(volume)
     .where(key(albumId))
     .get()
   return (row?.expectedCount ?? 0) > 0
@@ -183,8 +185,8 @@ export async function confirmBufferUpload(
   fileId: string
 ): Promise<boolean> {
   const volumeRow = await database
-    .select({ driveFolderId: bufferVolume.driveFolderId })
-    .from(bufferVolume)
+    .select({ driveFolderId: volume.driveFolderId })
+    .from(volume)
     .where(key(albumRow.id))
     .get()
 
@@ -222,10 +224,11 @@ export async function adjustExpected(
   bytesDelta: number
 ): Promise<void> {
   await database
-    .update(bufferVolume)
+    .update(volume)
     .set({
-      expectedCount: sql`MAX(${bufferVolume.expectedCount} + ${countDelta}, 0)`,
-      expectedBytes: sql`MAX(${bufferVolume.expectedBytes} + ${bytesDelta}, 0)`,
+      expectedCount: sql`MAX(COALESCE(${volume.expectedCount}, 0) + ${countDelta}, 0)`,
+      expectedBytes: sql`MAX(COALESCE(${volume.expectedBytes}, 0) + ${bytesDelta}, 0)`,
+      expectedChangedAt: new Date(),
     })
     .where(key(albumId))
 }

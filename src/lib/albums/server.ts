@@ -2,7 +2,11 @@ import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { albumMember, user } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { LISTING_KV_TTL_SECONDS, parseListingEntry } from './listing'
+import {
+  LISTING_KV_TTL_SECONDS,
+  newerListingEntry,
+  parseListingEntry,
+} from './listing'
 import type { AlbumListingEntry } from './listing'
 import type { AlbumAccessLevel } from './types'
 
@@ -107,18 +111,36 @@ function listingKey(folderId: string): string {
   return `album:list:${folderId}`
 }
 
+// Last entry this isolate wrote. When a KV write is refused (daily quota), the
+// next view still finds the fresh listing here instead of re-listing Drive.
+const LISTING_MEMO_MAX = 50
+const listingMemo = new Map<string, AlbumListingEntry>()
+
+export function rememberListing(
+  folderId: string,
+  entry: AlbumListingEntry
+): void {
+  listingMemo.delete(folderId)
+  if (listingMemo.size >= LISTING_MEMO_MAX) {
+    const oldest = listingMemo.keys().next().value
+    if (oldest !== undefined) listingMemo.delete(oldest)
+  }
+  listingMemo.set(folderId, entry)
+}
+
 export async function getCachedListing(
   folderId: string
 ): Promise<AlbumListingEntry | null> {
+  const remembered = listingMemo.get(folderId) ?? null
   try {
     const { env } = await import('cloudflare:workers')
     const raw = await (env.meriksirat_kv as KVNamespace).get(
       listingKey(folderId)
     )
-    return parseListingEntry(raw)
+    return newerListingEntry(parseListingEntry(raw), remembered)
   } catch (error) {
     console.warn('Failed to read album listing cache:', error)
-    return null
+    return remembered
   }
 }
 
@@ -126,6 +148,7 @@ export async function setCachedListing(
   folderId: string,
   entry: AlbumListingEntry
 ): Promise<void> {
+  rememberListing(folderId, entry)
   try {
     const { env } = await import('cloudflare:workers')
     await (env.meriksirat_kv as KVNamespace).put(
@@ -139,6 +162,7 @@ export async function setCachedListing(
 }
 
 export async function invalidateCachedListing(folderId: string): Promise<void> {
+  listingMemo.delete(folderId)
   try {
     const { env } = await import('cloudflare:workers')
     await (env.meriksirat_kv as KVNamespace).delete(listingKey(folderId))
@@ -213,7 +237,9 @@ function parseCached(raw: string): unknown | null {
   }
 }
 
-const detailCache = memoKvCache(3600, 'album detail')
+// Every change to a core invalidates it explicitly, so the TTL only bounds how
+// long an unnoticed change (such as a renamed author) can linger.
+const detailCache = memoKvCache(6 * 3600, 'album detail')
 
 function detailCoreKey(albumId: string): string {
   return `album:detail:${albumId}`
@@ -242,7 +268,48 @@ export async function invalidateCachedDetailCore(
   }
 }
 
-const publicPageCache = memoKvCache(600, 'public album list')
+// The public list is viewer-independent and only needs to be roughly fresh, so
+// it lives in the edge Cache API, which has no write quota, instead of KV.
+const PUBLIC_PAGE_TTL_SECONDS = 600
+
+function edgeCache() {
+  const cacheUrl = (key: string) => `https://cache.internal/${key}`
+  const store = () => (caches as unknown as { default: Cache }).default
+  return {
+    async get(key: string): Promise<unknown | null> {
+      const fromMem = memGet(key)
+      if (fromMem !== null) return parseCached(fromMem)
+      try {
+        const hit = await store().match(cacheUrl(key))
+        if (!hit) return null
+        const raw = await hit.text()
+        memSet(key, raw)
+        return parseCached(raw)
+      } catch (error) {
+        console.warn('Failed to read public album list cache:', error)
+        return null
+      }
+    },
+    async set(key: string, value: unknown): Promise<void> {
+      const raw = JSON.stringify(value)
+      memSet(key, raw)
+      try {
+        await store().put(
+          cacheUrl(key),
+          new Response(raw, {
+            headers: {
+              'cache-control': `public, max-age=${PUBLIC_PAGE_TTL_SECONDS}`,
+            },
+          })
+        )
+      } catch (error) {
+        console.warn('Failed to write public album list cache:', error)
+      }
+    },
+  }
+}
+
+const publicPageCache = edgeCache()
 
 function publicPageKey(query: unknown): string {
   const raw = JSON.stringify(query)

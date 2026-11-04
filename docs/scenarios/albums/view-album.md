@@ -2,11 +2,11 @@
 
 > **Question:** What happens when someone opens an album link, signed in or not, and what do they see?
 >
-> **Answer:** Every album can be opened by anyone with the link, because all albums are public. The Worker works out the viewer's role (manager, owner, co-author or none) and returns the album with its photos. Guests are limited to 60 opens a minute per IP address, signed in users are not limited. The authors are cached for up to an hour and the photo list comes from a cached Drive listing, both shared by all viewers. Only people with a role get the edit link and the manage panel. A deleted album shows a "deleted" notice instead of photos, and an unknown id shows "Album not found".
+> **Answer:** Every album can be opened by anyone with the link, because all albums are public. The Worker works out the viewer's role (manager, owner, co-author or none) and returns the album with its photos. Guests are limited to 60 opens a minute per IP address, signed in users are not limited. The authors are cached for up to six hours and the photo list comes from a cached Drive listing, both shared by all viewers. Only people with a role get the edit link and the manage panel. A deleted album shows a "deleted" notice instead of photos, and an unknown id shows "Album not found".
 >
 > **Notes:**
 > - Role per viewer is always checked fresh against the album row. The cover and expiry also come from the fresh row.
-> - Core cache: 30 second memory copy per Worker instance in front of KV `album:detail:ALBUM_ID` with a 1 hour TTL. It is cleared by editing details, Refresh, deleting a photo, choosing a cover, joining or leaving as co-author, and deleting a gone album (see deleted-folder-warning.md). It no longer holds photos or folder health.
+> - Core cache: 30 second memory copy per Worker instance in front of KV `album:detail:ALBUM_ID` with a 6 hour TTL. It is cleared by editing details, Refresh, deleting a photo, choosing a cover, joining or leaving as co-author, and deleting a gone album (see deleted-folder-warning.md). It no longer holds photos or folder health.
 > - Photos and folder health (ok, trashed, missing) come from KV `album:list:FOLDER_ID`. A fresh entry means no Drive call. How long an entry stays fresh, and what happens when listing fails, is in [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md).
 > - Owners and admins also get a fewer-photos warning when a buffer Volume lists less than expected, built per viewer, see fewer-photos-warning.md.
 > - A listing that fails never stops the page: the last listing is shown, or no photos if there is none yet.
@@ -43,7 +43,7 @@ sequenceDiagram
             W->>K: Read album:detail:albumId
             alt Cache miss
                 W->>D: Owner and co-authors names
-                W->>K: Save core, TTL 3600 seconds
+                W->>K: Save core, TTL 6 hours
             end
             W->>D: Buffer and flamekeeper volumes of the album
             W->>K: Read album:list:folderId

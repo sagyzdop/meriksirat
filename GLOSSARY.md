@@ -98,7 +98,7 @@ _Avoid_: Image, file, picture
 
 **Volume**:
 The photos of one album held by one account: the buffer, or a flamekeeper after an offload. One volume per album per account. Stores the expected count and bytes, which the count warning checks against (see `docs/scenarios/albums/fewer-photos-warning.md`).
-The buffer's volumes are built (#17) and live in `buffer_volume`, one row per album. Flamekeeper volumes still sit in the older `volume` table, which has no expected count and bytes. Offload (Stage 2) is the only thing that will create them again.
+All volumes live in the `volume` table. The buffer's volume is the row with no flamekeeper (`flamekeeper_user_id` is NULL), one per album, and carries the expected count and bytes. Flamekeeper rows from before the buffer keep those NULL and never warn. Offload (Stage 2) is the only thing that will create new ones.
 _Avoid_: Chunk, shard, part
 
 **Favorite**:
@@ -144,7 +144,7 @@ A user with an `@alumni.nu.edu.kz` account. Can favorite photos and enter the cl
 _Avoid_: Graduate, when the account rather than the member status is meant
 
 **Terms acceptance**:
-A new user ticks the terms on the login page before Google sign-in. The date is saved on the user (`termsAcceptedAt`) when the account is created, and the account is finished at once. Accounts are never removed for being unfinished. Accounts that existed before this are not asked again.
+The login page states that logging in means agreeing to the Terms of Service and Privacy Policy, with links; there is no checkbox. The date is saved on the user (`termsAcceptedAt`) when the account is created, and the account is finished at once. Accounts are never removed for being unfinished. Accounts that existed before this are not asked again.
 _Avoid_: Signup step, registration
 
 **Club code**:

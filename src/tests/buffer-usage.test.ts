@@ -4,6 +4,8 @@ import {
   bufferUploadBlock,
   bufferUsageLevel,
   planBufferAlert,
+  planUsageWrite,
+  USAGE_REWRITE_MS,
   usagePercent,
 } from '@/lib/buffer/usage'
 import { BUFFER_FULL_MESSAGE } from '@/lib/buffer/messages'
@@ -134,5 +136,25 @@ describe('bufferUploadBlock', () => {
       bufferUploadBlock({ usedBytes: 0.95 * LIMIT, limitBytes: LIMIT })
     ).toBeNull()
     expect(bufferUploadBlock(null)).toBeNull()
+  })
+})
+
+describe('planUsageWrite', () => {
+  const stored = { usedBytes: 100, limitBytes: LIMIT, checkedAt: 1_000 }
+
+  it('writes when nothing is stored or the usage changed', () => {
+    expect(planUsageWrite(null, stored)).toBe(true)
+    expect(planUsageWrite(stored, { ...stored, usedBytes: 101 })).toBe(true)
+    expect(planUsageWrite(stored, { ...stored, limitBytes: null })).toBe(true)
+  })
+
+  it('skips an unchanged reading, then refreshes it before it ages out', () => {
+    expect(planUsageWrite(stored, { ...stored, checkedAt: 2_000 })).toBe(false)
+    expect(
+      planUsageWrite(stored, {
+        ...stored,
+        checkedAt: stored.checkedAt + USAGE_REWRITE_MS,
+      })
+    ).toBe(true)
   })
 })

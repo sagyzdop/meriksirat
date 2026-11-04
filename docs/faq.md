@@ -5,8 +5,8 @@
 ### How do I create an account?
 
 Sign in with Google using an `@nu.edu.kz` or `@alumni.nu.edu.kz` account. If
-you are new, tick the box to accept the terms of service on the login page
-before you continue. Your account is ready straight away. You can browse albums
+you are new, logging in means you agree to the terms of service and privacy
+policy linked on the login page. Your account is ready straight away. You can browse albums
 and favorite photos, and you do not need to connect Google Drive.
 
 Returning users just sign in. People who already had an account keep it,

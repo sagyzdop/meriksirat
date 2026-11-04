@@ -7,6 +7,8 @@ export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 export const FLAMEKEEPER_SCOPES = [DRIVE_FILE_SCOPE, 'openid', 'email']
 export const TERMS_URL =
   'https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md'
+export const PRIVACY_URL =
+  'https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md'
 
 export function gbToBytes(gb: number): number {
   return Math.round(gb * GB)

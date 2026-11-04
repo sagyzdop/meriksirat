@@ -1,12 +1,6 @@
 import { and, eq, or, ne } from 'drizzle-orm'
 import type { Database } from '@/db'
-import {
-  album,
-  bufferVolume,
-  flamekeeper,
-  flamekeeperGrant,
-  volume,
-} from '@/db/schema'
+import { album, flamekeeper, flamekeeperGrant, volume } from '@/db/schema'
 import { withBufferToken } from '@/lib/buffer/tokens'
 import { createBudget } from '@/lib/cron/budget'
 import type { Budget } from '@/lib/cron/budget'
@@ -26,6 +20,7 @@ import {
   planListingRefresh,
   planListingSources,
   readAlbumListing,
+  sameListingEntry,
 } from './listing'
 import type {
   AlbumListing,
@@ -34,7 +29,7 @@ import type {
   ListingOwner,
   ListingSource,
 } from './listing'
-import { getCachedListing, setCachedListing } from './server'
+import { getCachedListing, rememberListing, setCachedListing } from './server'
 
 export function withListingOwnerToken<T>(
   database: Database,
@@ -56,43 +51,49 @@ export async function loadListingSources(
   database: Database,
   row: { id: string; driveFolderId: string }
 ): Promise<ListingSource[]> {
-  const [buffer, volumes] = await Promise.all([
-    database
-      .select({
-        driveFolderId: bufferVolume.driveFolderId,
-        expectedCount: bufferVolume.expectedCount,
-        expectedBytes: bufferVolume.expectedBytes,
-      })
-      .from(bufferVolume)
-      .where(eq(bufferVolume.albumId, row.id))
-      .get(),
-    database
-      .select({
-        userId: volume.flamekeeperUserId,
-        driveFolderId: volume.driveFolderId,
-        droppedAt: volume.droppedAt,
-        state: flamekeeper.state,
-        grantUserId: flamekeeperGrant.userId,
-      })
-      .from(volume)
-      .leftJoin(flamekeeper, eq(flamekeeper.userId, volume.flamekeeperUserId))
-      .leftJoin(
-        flamekeeperGrant,
-        eq(flamekeeperGrant.userId, volume.flamekeeperUserId)
-      )
-      .where(eq(volume.albumId, row.id))
-      .all(),
-  ])
+  const rows = await database
+    .select({
+      userId: volume.flamekeeperUserId,
+      driveFolderId: volume.driveFolderId,
+      droppedAt: volume.droppedAt,
+      expectedCount: volume.expectedCount,
+      expectedBytes: volume.expectedBytes,
+      expectedChangedAt: volume.expectedChangedAt,
+      state: flamekeeper.state,
+      grantUserId: flamekeeperGrant.userId,
+    })
+    .from(volume)
+    .leftJoin(flamekeeper, eq(flamekeeper.userId, volume.flamekeeperUserId))
+    .leftJoin(
+      flamekeeperGrant,
+      eq(flamekeeperGrant.userId, volume.flamekeeperUserId)
+    )
+    .where(eq(volume.albumId, row.id))
+    .all()
+  const buffer = rows.find((v) => v.userId === null)
   return planListingSources({
     albumFolderId: row.driveFolderId,
-    bufferVolume: buffer ?? null,
-    flamekeeperVolumes: volumes.map((v) => ({
-      userId: v.userId,
-      driveFolderId: v.driveFolderId,
-      droppedAt: v.droppedAt,
-      state: v.state,
-      hasGrant: !!v.grantUserId,
-    })),
+    bufferVolume: buffer
+      ? {
+          driveFolderId: buffer.driveFolderId,
+          expectedCount: buffer.expectedCount,
+          expectedBytes: buffer.expectedBytes,
+          expectedChangedAt: buffer.expectedChangedAt?.getTime() ?? null,
+        }
+      : null,
+    flamekeeperVolumes: rows.flatMap((v) =>
+      v.userId === null
+        ? []
+        : [
+            {
+              userId: v.userId,
+              driveFolderId: v.driveFolderId,
+              droppedAt: v.droppedAt,
+              state: v.state,
+              hasGrant: !!v.grantUserId,
+            },
+          ]
+    ),
   })
 }
 
@@ -138,7 +139,7 @@ async function checkFolderState(
 export async function loadAlbumListing(
   database: Database,
   row: { id: string; driveFolderId: string },
-  options: { force?: boolean } = {}
+  options: { force?: boolean; strictStamp?: boolean; persist?: boolean } = {}
 ): Promise<AlbumListing> {
   const [sources, entry] = await Promise.all([
     loadListingSources(database, row),
@@ -150,6 +151,7 @@ export async function loadAlbumListing(
     entry,
     now,
     force: options.force,
+    strictStamp: options.strictStamp,
   })
   if (entry && !plan.checkFolder) {
     return readAlbumListing({ entry, sources, now })
@@ -177,7 +179,11 @@ export async function loadAlbumListing(
     folderState,
     outcomes,
   })
-  await setCachedListing(row.driveFolderId, next)
+  if (options.persist !== false && !sameListingEntry(entry, next)) {
+    await setCachedListing(row.driveFolderId, next)
+  } else {
+    rememberListing(row.driveFolderId, next)
+  }
   const listing = readAlbumListing({ entry: next, sources, now })
   await syncAlbumTotals(database, row.id, listing)
   return listing

@@ -1,7 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import { confirmPhotoUploadFn, createUploadSessionFn } from './functions'
 import { BUFFER_FULL_MESSAGE } from '@/lib/buffer/messages'
-import { NEEDS_HASH_MESSAGE, planEnqueue } from './upload-dedupe'
+import { toast } from 'sonner'
+import {
+  NEEDS_HASH_MESSAGE,
+  isDuplicateRejection,
+  planEnqueue,
+} from './upload-dedupe'
 import { md5OfFile } from './file-md5'
 import {
   deleteUploadFiles,
@@ -12,7 +17,7 @@ import {
 } from './upload-storage'
 
 export type UploadStatus =
-  'queued' | 'uploading' | 'done' | 'error' | 'cancelled'
+  'queued' | 'uploading' | 'done' | 'duplicate' | 'error' | 'cancelled'
 
 export interface UploadJob {
   id: string
@@ -45,8 +50,12 @@ export interface UploadJob {
  * Finished jobs are kept briefly so the UI can show the completed state and so
  * errors stay retryable for a while, but they auto-expire after these TTLs.
  */
-const FINISHED_TTL_MS: Record<'done' | 'error' | 'cancelled', number> = {
+const FINISHED_TTL_MS: Record<
+  'done' | 'duplicate' | 'error' | 'cancelled',
+  number
+> = {
   done: 60 * 60 * 1000, // 1 hour
+  duplicate: 60 * 60 * 1000, // 1 hour
   cancelled: 60 * 60 * 1000, // 1 hour
   error: 7 * 24 * 60 * 60 * 1000, // 7 days — long enough to retry manually
 }
@@ -72,19 +81,6 @@ class QuotaExceededUploadError extends Error {
 
 function isTransientError(error: unknown): boolean {
   return error instanceof TransientUploadError || error instanceof TypeError
-}
-
-/**
- * The server rejects session minting when the file already exists in the
- * album folder. A previous attempt of this exact job usually finished on
- * Google's side while its result was lost (e.g. the page refreshed mid-upload),
- * so treat it as success instead of failing.
- */
-function isAlreadyExistsError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    error.message.includes('already exists in this album')
-  )
 }
 
 function retryDelay(attempt: number): number {
@@ -297,7 +293,7 @@ class UploadManager {
   clear(albumId?: string): void {
     const next = this.snapshot.filter(
       (job) =>
-        !['done', 'error', 'cancelled'].includes(job.status) ||
+        !['done', 'duplicate', 'error', 'cancelled'].includes(job.status) ||
         (albumId !== undefined && job.albumId !== albumId)
     )
     const removedIds = this.snapshot
@@ -317,7 +313,7 @@ class UploadManager {
     const now = Date.now()
     const expired = this.snapshot.filter((job) => {
       if (!job.finishedAt) return false
-      const ttl = FINISHED_TTL_MS[job.status as 'done' | 'error' | 'cancelled']
+      const ttl = FINISHED_TTL_MS[job.status as keyof typeof FINISHED_TTL_MS]
       if (ttl === undefined) return false
       return now - job.finishedAt >= ttl
     })
@@ -369,18 +365,18 @@ class UploadManager {
     } catch (error) {
       const current = this.snapshot.find((j) => j.id === job.id)
       if (current?.status !== 'cancelled') {
-        if (isAlreadyExistsError(error)) {
-          // The file reached the folder (a previous attempt finished on
-          // Google's side) — this job is effectively done.
+        if (isDuplicateRejection(error)) {
+          // The server refused to start the upload, so nothing was sent.
           this.patch(job.id, {
-            status: 'done',
-            progress: 100,
+            status: 'duplicate',
+            progress: 0,
             attempts: attempt,
             error: undefined,
             finishedAt: Date.now(),
           })
           this.filesById.delete(job.id)
           void deleteUploadFiles([job.id])
+          toast.warning(`"${job.name}" is already in this album, skipped`)
         } else if (isTransientError(error) && attempt < this.maxAttempts) {
           // Transient failure (network error, timeout, 5xx, 429): back off
           // and re-queue automatically. `nextAttemptAt` is persisted so a

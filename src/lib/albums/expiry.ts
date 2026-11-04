@@ -1,13 +1,6 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db, type Database } from '@/db'
-import {
-  album,
-  albumMember,
-  bufferVolume,
-  favorite,
-  user,
-  volume,
-} from '@/db/schema'
+import { album, albumMember, favorite, user, volume } from '@/db/schema'
 import {
   DriveAppNotAuthorizedError,
   DriveNotFoundError,
@@ -115,7 +108,6 @@ export async function removeAlbum(
   if (options.tombstone) {
     await database.delete(favorite).where(eq(favorite.albumId, row.id))
     await database.delete(volume).where(eq(volume.albumId, row.id))
-    await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
     await database
       .update(album)
       .set({
@@ -145,7 +137,6 @@ export async function tombstoneGoneAlbum(
 ): Promise<void> {
   await database.delete(favorite).where(eq(favorite.albumId, row.id))
   await database.delete(volume).where(eq(volume.albumId, row.id))
-  await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
   await database
     .update(album)
     .set({

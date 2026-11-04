@@ -23,7 +23,7 @@ continuing. A cut to 2 TB still fits the estimate. A drop to the free 15 GB
 would force an offload, which is why offload stays planned.
 
 Built in [#17](https://github.com/sagyzdop/meriksirat/issues/17): uploads land on
-the buffer, in a `buffer_volume` row per album whose folder is created by the
+the buffer, in a `volume` row (no flamekeeper) per album whose folder is created by the
 master and shared with the buffer on the first upload. The buffer's `drive.file`
 token mints each resumable upload address, so the browser receives an address and
 never a token. The full-scope token is read only by `src/lib/buffer/full-token.ts`,

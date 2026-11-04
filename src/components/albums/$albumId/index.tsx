@@ -370,6 +370,12 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
             currentUserId={session?.user?.id}
             isAdmin={authUser?.role === 'admin'}
             onChanged={invalidate}
+            onRefreshed={(detail) => {
+              queryClient.setQueryData(
+                albumQueries.detail(albumId).queryKey,
+                detail
+              )
+            }}
             onDeleted={handleAlbumDeleted}
           />
         </div>

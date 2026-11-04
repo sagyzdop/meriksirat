@@ -49,6 +49,7 @@ interface AlbumManagerProps {
   currentUserId?: string
   isAdmin?: boolean
   onChanged: () => void
+  onRefreshed: (detail: AlbumDetail | null) => void
   onDeleted: () => void
 }
 
@@ -57,6 +58,7 @@ export function AlbumManager({
   currentUserId,
   isAdmin = false,
   onChanged,
+  onRefreshed,
   onDeleted,
 }: AlbumManagerProps) {
   const [showUpload, setShowUpload] = React.useState(false)
@@ -135,9 +137,9 @@ export function AlbumManager({
 
   const handleRefresh = () =>
     runRefresh(async () => {
-      await refreshAlbumFn({ data: { albumId: album.id } })
+      const refreshed = await refreshAlbumFn({ data: { albumId: album.id } })
       toast.success('Album refreshed')
-      onChanged()
+      onRefreshed(refreshed)
     }, 'Failed to refresh album')
 
   const handleAccept = (volumeKey: string) =>

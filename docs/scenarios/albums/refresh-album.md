@@ -6,8 +6,9 @@
 >
 > **Notes:**
 > - Refresh re-checks the folder health in Drive (ok, in the bin, deleted), the authors and the file list of each volume. A volume that fails to list keeps its last listing, so Refresh never empties an album because Drive had a bad moment.
+> - The page shows the album the Refresh call returned instead of reading the listing cache again, so the fewer-photos warning appears at once even if the cache write was refused (KV quota). The Worker also keeps the last listing it wrote in memory, so a refused write does not make every view list Drive again.
 > - Refresh is not needed after an upload, see upload-send-and-confirm.md. It is the way to pick up changes made outside the app before the listing is due again.
-> - Cache keys: KV `album:detail:ALBUM_ID` (1 hour) and `album:list:FOLDER_ID` (see [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md)).
+> - Cache keys: KV `album:detail:ALBUM_ID` (6 hours) and `album:list:FOLDER_ID` (see [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md)).
 > - Who may use it is decided by albumContext, the same check used by most album actions: no session or no role gives "Insufficient permissions", and an unknown or deleted album gives "Album not found".
 
 ```mermaid
@@ -33,13 +34,13 @@ sequenceDiagram
         else Allowed
             W->>K: Delete album:detail:albumId
             W->>D: Read authors and co-authors
-            W->>K: Save new core, TTL 3600 seconds
+            W->>K: Save new core, TTL 6 hours
             W->>G: Master token: folder state
             W->>G: Each volume's owner token: list its folder
             W->>K: Overwrite album:list:folderId, TTL 8 days
             W-->>B: Fresh album
             B->>M: Toast "Album refreshed"
-            B->>B: Invalidate albums queries and reload the page data
+            B->>B: Show the returned album directly, without re-reading the cache
         end
     end
     opt Any error

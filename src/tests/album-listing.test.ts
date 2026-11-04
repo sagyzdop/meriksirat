@@ -3,6 +3,8 @@ import {
   LISTING_DRIVE_BUDGET,
   LISTING_FRESH_MS,
   LISTING_RETRY_MS,
+  LISTING_SETTLE_MS,
+  LISTING_STAMP_THROTTLE_MS,
   LISTING_STALE_LIMIT_MS,
   applyListingOutcomes,
   classifyListingError,
@@ -10,6 +12,7 @@ import {
   findListedFileOwner,
   listingTotals,
   listingPhotos,
+  newerListingEntry,
   parseListingEntry,
   planListingRefresh,
   planListingSources,
@@ -103,6 +106,18 @@ describe('what to list, and with whose token', () => {
     const volume = sources.find((s) => s.owner.kind === 'flamekeeper')
     expect(volume?.owner).toEqual({ kind: 'flamekeeper', userId: 'amina' })
     expect(volume?.folderId).toBe('amina-folder')
+  })
+
+  it('expects nothing from a buffer volume that carries no expected values', () => {
+    const sources = sourcesOf({
+      bufferVolume: {
+        driveFolderId: 'buffer-folder',
+        expectedCount: null,
+        expectedBytes: null,
+      },
+    })
+    const buffer = sources.find((s) => s.key === 'buffer')
+    expect(buffer?.expected).toBeNull()
   })
 
   it('has nothing to list for a volume with no folder yet', () => {
@@ -652,5 +667,107 @@ describe('album totals from a listing', () => {
     expect(
       listingTotals(readAlbumListing({ entry, sources, now: NOW }))
     ).toBeNull()
+  })
+})
+
+describe('newerListingEntry', () => {
+  const entry = (listedAt: number) => ({
+    folderState: 'ok' as const,
+    sources: {
+      master: {
+        folderId: 'f',
+        stamp: '',
+        status: 'ok' as const,
+        listedAt,
+        failedAt: null,
+        files: [],
+      },
+    },
+  })
+
+  it('prefers the entry that was listed last', () => {
+    expect(newerListingEntry(entry(1), entry(2))).toEqual(entry(2))
+    expect(newerListingEntry(entry(5), entry(2))).toEqual(entry(5))
+  })
+
+  it('falls back to whichever entry exists', () => {
+    expect(newerListingEntry(null, entry(2))).toEqual(entry(2))
+    expect(newerListingEntry(entry(2), null)).toEqual(entry(2))
+    expect(newerListingEntry(null, null)).toBeNull()
+  })
+})
+
+describe('stamp-driven listing during an upload burst', () => {
+  const bufferSource = (changedAt: number | null, expectedCount = 3) =>
+    sourcesOf({
+      bufferVolume: {
+        driveFolderId: 'buffer-folder',
+        expectedCount,
+        expectedBytes: 300,
+        expectedChangedAt: changedAt,
+      },
+    })
+
+  const listedEntry = (listedAt: number): AlbumListingEntry =>
+    applyListingOutcomes({
+      sources: bufferSource(null, 2),
+      entry: null,
+      now: listedAt,
+      folderState: 'ok',
+      outcomes: {
+        buffer: {
+          kind: 'listed',
+          files: [file('a'), file('b')],
+          complete: true,
+        },
+        master: { kind: 'listed', files: [], complete: true },
+      },
+    })
+
+  const actionOf = (
+    changedAt: number | null,
+    now: number,
+    extra: { strictStamp?: boolean } = {}
+  ) =>
+    planListingRefresh({
+      sources: bufferSource(changedAt),
+      entry: listedEntry(NOW),
+      now,
+      ...extra,
+    }).actions.buffer
+
+  it('reuses a listing that is a few minutes old while uploads keep arriving', () => {
+    expect(actionOf(NOW + 110_000, NOW + 2 * 60_000)).toBe('reuse')
+  })
+
+  it('lists again once the burst has gone quiet, so a finished upload shows up', () => {
+    expect(actionOf(NOW + 60_000, NOW + 60_000 + LISTING_SETTLE_MS)).toBe(
+      'list'
+    )
+  })
+
+  it('lists again at most five minutes into a continuing burst', () => {
+    expect(
+      actionOf(NOW + LISTING_STAMP_THROTTLE_MS, NOW + LISTING_STAMP_THROTTLE_MS)
+    ).toBe('list')
+  })
+
+  it('lists at once for the duplicate check, which must see new uploads', () => {
+    expect(
+      actionOf(NOW + 110_000, NOW + 2 * 60_000, { strictStamp: true })
+    ).toBe('list')
+  })
+
+  it('lists at once when no upload time is known', () => {
+    expect(actionOf(null, NOW + 60_000)).toBe('list')
+  })
+
+  it('marks a throttled volume as behind its expected values', () => {
+    const volumes = readAlbumListing({
+      entry: listedEntry(NOW),
+      sources: bufferSource(NOW + 60_000),
+      now: NOW + 2 * 60_000,
+    }).volumes
+    expect(volumes.find((v) => v.key === 'buffer')?.stampStale).toBe(true)
   })
 })

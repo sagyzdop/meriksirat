@@ -142,10 +142,19 @@ describe('planCountWarning', () => {
     }
   )
 
-  it('never warns when another volume of the album is incomplete', () => {
+  it('still warns when another volume of the album could not be read', () => {
     const l = listing([
       bufferVolume([file('a')], { count: 3, bytes: 300 }),
       masterVolume({ status: 'failed' }),
+    ])
+    expect(
+      planCountWarning({ listing: l, viewer: ADMIN, now: NOW })?.volumes
+    ).toHaveLength(1)
+  })
+
+  it('never warns from a listing taken before the latest upload', () => {
+    const l = listing([
+      bufferVolume([file('a')], { count: 3, bytes: 300 }, { stampStale: true }),
     ])
     expect(planCountWarning({ listing: l, viewer: ADMIN, now: NOW })).toBeNull()
   })
