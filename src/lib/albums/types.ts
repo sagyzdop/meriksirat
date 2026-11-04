@@ -87,6 +87,10 @@ export const CreateUploadSessionSchema = z.object({
     .int()
     .positive()
     .max(5 * 1024 * 1024 * 1024),
+  md5: z
+    .string()
+    .regex(/^[0-9a-fA-F]{32}$/)
+    .optional(),
 })
 
 export type AlbumAccessLevel = 'none' | 'owner' | 'editor' | 'manager'

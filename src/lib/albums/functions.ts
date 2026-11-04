@@ -19,6 +19,7 @@ import type {
   AlbumListPage,
   UploadSession,
 } from './types'
+import { NEEDS_HASH_MESSAGE, planDuplicateCheck } from './upload-dedupe'
 import { defaultExpiry } from '@/lib/pool/expiry'
 import { BUFFER_OWNER_ID } from '@/lib/buffer/plan'
 
@@ -600,12 +601,9 @@ export const rotateEditTokenFn = createServerFn({ method: 'POST' })
 export const createUploadSessionFn = createServerFn({ method: 'POST' })
   .validator(CreateUploadSessionSchema)
   .handler(async ({ data }): Promise<UploadSession> => {
-    const { photo } = await import('@/db/schema')
-    const { and, eq } = await import('drizzle-orm')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
-    const { findDriveFileByName, getDriveFolderState } =
-      await import('@/lib/google/google-drive')
+    const { getDriveFolderState } = await import('@/lib/google/google-drive')
     const { startBufferUpload } = await import('@/lib/buffer/server')
 
     const { database, row, headers } = await albumContext(data.albumId, [
@@ -633,38 +631,12 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       )
     }
 
-    // Reject exact-name duplicates. Flamekeepers' photos are invisible to the
-    // master token, so the photo table is the source of truth; unindexed
-    // albums still hold master-owned files that only Drive knows about.
-    const duplicate = await database
-      .select({ id: photo.id })
-      .from(photo)
-      .where(
-        and(
-          eq(photo.albumId, row.id),
-          eq(photo.name, data.fileName),
-          eq(photo.state, 'live')
-        )
-      )
-      .get()
-    if (duplicate) {
+    const { loadAlbumListing } = await import('./listing-server')
+    const listing = await loadAlbumListing(database, row)
+    const check = planDuplicateCheck(data.size, data.md5, listing.files)
+    if (check.kind === 'needs-hash') throw new Error(NEEDS_HASH_MESSAGE)
+    if (check.kind === 'duplicate') {
       throw new Error(`Photo "${data.fileName}" already exists in this album`)
-    }
-    if (!row.photosIndexedAt) {
-      const existing = await findDriveFileByName(
-        accessToken,
-        data.fileName,
-        row.driveFolderId
-      )
-      if (existing) {
-        try {
-          const { registerDriveFileById } = await import('./photo-index')
-          await registerDriveFileById(database, accessToken, row, existing.id)
-        } catch (error) {
-          console.warn('Failed to register existing upload:', error)
-        }
-        throw new Error(`Photo "${data.fileName}" already exists in this album`)
-      }
     }
 
     return startBufferUpload(database, row, {

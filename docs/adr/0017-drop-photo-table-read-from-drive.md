@@ -53,7 +53,7 @@ and count-warning tickets must not act on one.
 
 ## Status
 
-Album pages read from these listings since [#18](https://github.com/sagyzdop/meriksirat/issues/18).
+Album pages read from these listings since [#18](https://github.com/sagyzdop/meriksirat/issues/18). Upload dedupe reads them too since [#20](https://github.com/sagyzdop/meriksirat/issues/20); the browser hashes a file only when a listed file has its size.
 The rest is not built yet. Stage 1 of [#15](https://github.com/sagyzdop/meriksirat/issues/15)
 removes the table. Until then, [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)
 describes favorites, expiry and flamekeeper moves, which still use the table.
