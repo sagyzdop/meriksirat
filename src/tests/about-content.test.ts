@@ -9,7 +9,7 @@ import { MIN_PLEDGE_BYTES } from '../lib/flamekeeper/rules'
 
 describe('become a flamekeeper button', () => {
   it('sends signed-in visitors to the sign-up and signed-out ones to login', () => {
-    expect(becomeFlamekeeperPath(true)).toBe('/profile')
+    expect(becomeFlamekeeperPath(true)).toBe('/become-flamekeeper')
     expect(becomeFlamekeeperPath(false)).toBe('/login')
   })
 })

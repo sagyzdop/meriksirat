@@ -167,11 +167,11 @@ you do not need it to use the site.
 
 ### How do I become a flamekeeper?
 
-Open the flamekeeper section of your profile. You will be asked for:
+Open the Become a flamekeeper page from your profile or the one-time invitation. It takes three short steps. You will be asked for:
 
 - your expected graduation month, which must be in the future,
-- your pledge, at least 1 GB (see below),
-- acceptance of the flamekeeper terms.
+- your pledge, at least 512 MB (see below),
+- nothing else: connecting your Drive means you agree to the [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
 
 Then connect the Google Drive account with the same `@nu.edu.kz` address you
 signed in with. The Platform asks only for access to the files it creates
@@ -179,7 +179,7 @@ signed in with. The Platform asks only for access to the files it creates
 
 ### How much do I need to pledge?
 
-The minimum pledge is 1 GB. The pledge is the most storage the Platform may use
+The minimum pledge is 512 MB. The pledge is the most storage the Platform may use
 in your Drive. You can change it at any time from your profile. A pledge is
 reserve space; flamekeepers hold no photos today.
 
@@ -199,7 +199,7 @@ Yes, at any time from your profile. Stopping ends your pledge, and the Platform
 places no photos in your Drive. You can also revoke the Platform's access at
 [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 Flamekeepers hold no photos today, so this does not affect any album. See [Privacy Policy](https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md)
-and [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md#14-flamekeepers).
+and [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
 
 ## Telegram Bot
 

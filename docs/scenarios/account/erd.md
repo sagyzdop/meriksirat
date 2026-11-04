@@ -48,6 +48,7 @@ erDiagram
         integer is_member
         integer onboarding_complete
         integer terms_accepted_at
+        integer flamekeeper_invitation_dismissed_at
         integer banned_at
         text telegram_chat_id
         text telegram_username

@@ -208,7 +208,7 @@ provisions shall remain in full force and effect.
 These terms apply in addition to the rest of this document if you become a
 flamekeeper (#savenuimg) by pledging part of your `@nu.edu.kz` Google Drive
 storage to the Platform. Flamekeeping is optional. Signing up never requires
-connecting a Drive, and you can become a flamekeeper later from your profile.
+connecting a Drive, and you can become a flamekeeper later from the Become a flamekeeper page.
 
 - **Storage.** New album photos are stored in the club-run Gmail account, not
   in your Drive. Flamekeepers hold no photos today; a pledge is reserve space.
@@ -223,7 +223,7 @@ connecting a Drive, and you can become a flamekeeper later from your profile.
   Platform can no longer use it. Flamekeepers hold no photos today, so this does
   not affect any album.
 - **Pledge.** Your pledge is the most storage the Platform may use, and it must
-  be at least 1 GB while you are flamekeeping. You can change it at any time,
+  be at least 512 MB while you are flamekeeping. You can change it at any time,
   or stop flamekeeping instead.
 - **Permission scope.** The Platform asks only for access to files it creates
   (`drive.file`) and cannot read the rest of your Drive.

@@ -49,7 +49,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         }
 
         const database = db(env.meriksirat_d1 as D1Database)
-        const failPath = '/profile'
+        const failPath = '/become-flamekeeper'
 
         if (!nonce) return redirectTo(origin, failPath, 'state')
         const key = `flamekeeper-oauth:${nonce}`

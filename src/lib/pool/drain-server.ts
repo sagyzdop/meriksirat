@@ -10,7 +10,6 @@ import {
 import { dropFlamekeeperGrant } from '@/lib/flamekeeper/tokens'
 import {
   MIN_PLEDGE_BYTES,
-  MIN_PLEDGE_GB,
   formatGb,
 } from '@/lib/flamekeeper/rules'
 import type { DrainStatus } from '@/lib/flamekeeper/types'
@@ -351,7 +350,7 @@ export async function changePledge(
     input.pledgedBytes < MIN_PLEDGE_BYTES &&
     input.pledgedBytes < row.pledgedBytes
   ) {
-    throw new Error(`Pledge at least ${MIN_PLEDGE_GB} GB`)
+    throw new Error(`Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
   }
   const hasPhotos = row.usedBytes > 0 && (await hasPhotosLeft(database, userId))
   const transition = planFlamekeeperEdit(row, input, now, hasPhotos)

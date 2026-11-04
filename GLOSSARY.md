@@ -165,7 +165,6 @@ _Avoid_: Donor, contributor, host
 
 **Pledge**:
 The maximum GB a flamekeeper lets the app use, at least 512 MB. A cap on what the app uses, not space set aside in Google.
-Not built yet (Stage 1): the minimum is 1 GB in today's code.
 _Avoid_: Allocation, quota
 
 **Pool**:
