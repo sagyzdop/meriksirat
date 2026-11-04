@@ -12,7 +12,7 @@
 > - A thrown `BudgetExhaustedError` is handled like any other error: logged as `Error in <step>:` and the run moves on.
 > - Later steps still run after the budget is empty. Each one checks its own costs, so most do nothing that needs an outside request.
 > - Every 5 minutes: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders`, in `bookings/`. `backfillAlbumPhotos` also runs here until the photo table is removed, see `albums-and-housekeeping/photo-backfill.md`.
-> - Every hour: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans` in `flamekeepers/` (start with `flamekeepers/steps-and-limits.md`), then `expireAlbums` (start with `albums-and-housekeeping/run-order.md`). After the steps, the Telegram bot is configured once per deploy, see `albums-and-housekeeping/bot-menu.md`.
+> - Every hour: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans` in `flamekeepers/` (start with `flamekeepers/steps-and-limits.md`), then `expireAlbums` (start with `albums-and-housekeeping/run-order.md`), then `checkBufferUsage` (`flamekeepers/buffer-usage.md`). After the steps, the Telegram bot is configured once per deploy, see `albums-and-housekeeping/bot-menu.md`.
 > - Every day: `graduateFlamekeepers`, in `flamekeepers/graduation-trigger.md`.
 > - Per-run caps inside a step (for example 3 ban cancellations or 3 graduation drains) apply per run, so on the hourly and daily schedules they now allow less work per day than on the old 5-minute schedule.
 
@@ -34,6 +34,7 @@ sequenceDiagram
     Worker->>Worker: drainFlamekeepers<br/>pool/drain-cron.ts<br/>runDrainMaintenance
     Worker->>Worker: finishBans<br/>pool/ban-server.ts runBanMaintenance
     Worker->>Worker: expireAlbums<br/>albums/expiry.ts runAlbumExpiry
+    Worker->>Worker: checkBufferUsage<br/>buffer/usage-server.ts<br/>runBufferUsageCheck
     Worker->>Worker: configureTelegramBot<br/>telegram/configure.ts<br/>only when the deployed version changed
     Cron->>Worker: scheduled every day at 03:00 UTC
     Worker->>Worker: new budget of 40

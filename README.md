@@ -87,7 +87,9 @@ New album photos upload to the buffer, the club-run Google account
 `nuimage.storage@gmail.com` (see [GLOSSARY.md](GLOSSARY.md#save-nu-image-savenuimg)
 and [ADR-0015](docs/adr/0015-buffer-is-stable-photo-storage.md)). Uploads fail
 with "Photo storage is not available right now" until it is connected. Nothing
-falls back to a flamekeeper.
+falls back to a flamekeeper. The Worker reads the account's Drive quota with the
+`drive.file` token, warns admins at 90% and refuses uploads at 100% (see
+[the scenario](docs/scenarios/cron/flamekeepers/buffer-usage.md)).
 
 The buffer uses the same OAuth client as production and holds two tokens:
 

@@ -34,6 +34,8 @@ import {
   getDeletionSuggestionsFn,
   type FreeSpaceSuggestion,
 } from './functions/free-space'
+import { getBufferUsageFn } from '@/lib/buffer/functions'
+import type { BufferUsageOverview } from '@/lib/buffer/functions'
 import { getPoolOverviewFn, type PoolOverview } from './functions/pool'
 import { getSettingsFn, type SettingsData } from './functions/settings'
 
@@ -145,6 +147,12 @@ export const adminDashboardQueries = {
     queryOptions({
       queryKey: [...adminDashboardQueries.all, 'pool'],
       queryFn: async (): Promise<PoolOverview> => getPoolOverviewFn(),
+    }),
+  buffer: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'buffer'],
+      queryFn: async (): Promise<BufferUsageOverview | null> =>
+        getBufferUsageFn(),
     }),
   clubCode: () =>
     queryOptions({

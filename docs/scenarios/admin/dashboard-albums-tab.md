@@ -2,13 +2,14 @@
 
 > **Question:** What does the dashboard Albums tab show, and who sees which part?
 >
-> **Answer:** The tab lists the club's most active album makers for the chosen date range, ranked by the albums they own plus the albums they co-authored, with search, sorting and paging. Admins also get a Free up space list of albums that could be expired, with unpinned albums that nobody favorited first. Managers see the ranking and the storage pool card but not the Free up space list. Nothing here changes data. Expiring an album is a separate action.
+> **Answer:** The tab lists the club's most active album makers for the chosen date range, ranked by the albums they own plus the albums they co-authored, with search, sorting and paging. Admins also get a Free up space list of albums that could be expired, with unpinned albums that nobody favorited first. Admins and managers also see a Buffer usage card (used, plan size and percent full, in red from 90 percent). Managers see the ranking and the storage pool card but not the Free up space list. Nothing here changes data. Expiring an album is a separate action.
 >
 > **Notes:**
 > - The tab loads its data only when it is opened. The default is 10 rows, sorted by album count, highest first.
 > - Only people with at least one album in the range appear in the ranking. The ranking counts deleted albums too, and the same date range as the Overview tab applies.
 > - The Free up space order is: albums with no favorites before favorited ones, then soonest expiry (never-expiring last), then biggest size. Pinned and deleted albums are left out.
-> - The pool card on this tab is documented in [../flamekeepers/admin-pool.md](../flamekeepers/admin-pool.md).
+> - The Buffer usage card reads the cached Drive quota (refreshed when older than 10 minutes) through getBufferUsageFn. See [../cron/flamekeepers/buffer-usage.md](../cron/flamekeepers/buffer-usage.md).
+- The pool card on this tab is documented in [../flamekeepers/admin-pool.md](../flamekeepers/admin-pool.md).
 > - Expiring an album from the list is in [expire-album-early.md](expire-album-early.md).
 
 ```mermaid
@@ -24,6 +25,8 @@ sequenceDiagram
     Worker->>D1: count albums owned or co-authored per user
     Note over Worker,D1: range filters album creation date<br/>users with no albums are left out
     Worker-->>Browser: users with albumCount and paging info
+    Browser->>Worker: getBufferUsageFn()
+    Note over Browser,Worker: buffer usage card
     Browser->>Worker: getPoolOverviewFn()
     Note over Browser,Worker: pool card, see flamekeepers/admin-pool.md
     opt person is an admin

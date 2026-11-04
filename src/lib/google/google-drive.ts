@@ -388,6 +388,28 @@ export async function getDriveAbout(accessToken: string): Promise<DriveAbout> {
   }
 }
 
+export interface DriveStorageQuota {
+  usageBytes: number
+  limitBytes: number | null
+}
+
+export async function getDriveStorageQuota(
+  accessToken: string
+): Promise<DriveStorageQuota> {
+  const response = await driveFetch(
+    accessToken,
+    `${API}/about?fields=storageQuota(usage,limit)`
+  )
+  const data = (await response.json()) as {
+    storageQuota?: { usage?: string; limit?: string }
+  }
+  const limit = Number(data.storageQuota?.limit)
+  return {
+    usageBytes: Number(data.storageQuota?.usage) || 0,
+    limitBytes: Number.isFinite(limit) && limit > 0 ? limit : null,
+  }
+}
+
 export async function batchDeleteDriveFiles(
   accessToken: string,
   fileIds: string[]

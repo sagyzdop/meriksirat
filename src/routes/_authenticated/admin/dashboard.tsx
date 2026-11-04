@@ -154,6 +154,11 @@ function RouteComponent() {
     enabled: search.tab === 'albums',
   })
 
+  const { data: buffer, isFetching: isBufferFetching } = useQuery({
+    ...adminDashboardQueries.buffer(),
+    enabled: search.tab === 'albums',
+  })
+
   const handleTabChange = (tab: DashboardTab) => {
     navigate({ to: '.', search: { ...search, tab } as never })
   }
@@ -199,6 +204,8 @@ function RouteComponent() {
       clubCode={clubCode}
       freeSpace={adminUser?.role === 'admin' ? (freeSpace ?? []) : undefined}
       freeSpaceLoading={isFreeSpaceFetching && !freeSpace}
+      buffer={buffer}
+      bufferLoading={isBufferFetching && buffer === undefined}
       pool={pool}
       poolLoading={isPoolFetching && !pool}
       canBroadcast={adminUser?.role === 'admin'}

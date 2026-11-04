@@ -2,7 +2,7 @@
 
 > **Question:** What happens when a photo upload fails, and when does the browser retry on its own?
 >
-> **Answer:** If the transfer to Drive fails or is cancelled, the browser decides whether to retry. Network errors, timeouts, Google answers 408, 429 or 5xx, a quota error, a failed confirmation and a failed session request caused by a network error are temporary: the job goes back in the queue and waits about 1, 2, 4 then 8 seconds (plus or minus 20 percent), for at most 5 attempts in total. After that the list shows "Upload failed after N attempts — retry manually" with a retry button. Any other Google answer fails at once with the message "Upload failed (STATUS)", where STATUS is Google's status number. "Storage quota exceeded" from the PUT is retried like a temporary failure.
+> **Answer:** If the transfer to Drive fails or is cancelled, the browser decides whether to retry. Network errors, timeouts, Google answers 408, 429 or 5xx, a failed confirmation and a failed session request caused by a network error are temporary: the job goes back in the queue and waits about 1, 2, 4 then 8 seconds (plus or minus 20 percent), for at most 5 attempts in total. After that the list shows "Upload failed after N attempts — retry manually" with a retry button. Any other Google answer fails at once with the message "Upload failed (STATUS)", where STATUS is Google's status number. A quota error from the PUT (403 storageQuotaExceeded) is not retried: the job fails at once with the storage-full message, the file stays queued in the browser, and the retry button works once an admin has made room.
 >
 > **Notes:**
 > - If the name already exists on the server when the session is requested (typically because an earlier attempt finished but its result was lost), the job is shown as done instead of failed.
@@ -27,7 +27,8 @@ sequenceDiagram
     else Session started
         B->>U: PUT file bytes to the upload address
         alt Google answers 403 storageQuotaExceeded
-            U-->>B: Quota error, treated as temporary
+            U-->>B: Quota error, permanent for now
+            B->>M: Job fails with the storage-full message
         else Network error, timeout, 408, 429 or 5xx
             U-->>B: Temporary failure
         else Any other status
