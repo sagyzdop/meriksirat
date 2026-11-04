@@ -7,7 +7,7 @@ import {
 } from '@/lib/auth/signup-domain'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
-import { useSearch } from '@tanstack/react-router'
+import { Link, useSearch } from '@tanstack/react-router'
 
 export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   const search = useSearch({ strict: false }) as { error?: string }
@@ -81,6 +81,10 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
       </FieldGroup>
 
       <FieldDescription className="px-6 text-center">
+        <Link to="/about" className="underline hover:text-primary">
+          About NU Image
+        </Link>
+        <br />
         Made by{' '}
         <a
           href="https://sagyzdop.com"

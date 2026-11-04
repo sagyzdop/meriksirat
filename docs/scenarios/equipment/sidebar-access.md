@@ -26,6 +26,10 @@
 >   to the login page.
 > - A missing clearance level counts as 0 in the sidebar. The
 >   server counts it as 1. Both are under 2.
+> - At the bottom of the sidebar every signed-in user sees one "About"
+>   link to `/about`. It replaces the old Help group, whose FAQ, Terms
+>   and Privacy links now sit on that page, see
+>   `../account/about-page.md`.
 > - Sign-in and onboarding are covered in `../account/access-gate.md`.
 
 ```mermaid

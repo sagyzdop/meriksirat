@@ -32,6 +32,7 @@
 >   seconds on its sign-in routes and 100 per 60 seconds on the
 >   others. The sign-in page shows no message when that stops
 >   a click.
+> - The login page links to the About page, see about-page.md.
 > - Sign-out is in sign-out.md.
 
 ```mermaid
