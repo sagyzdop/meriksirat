@@ -11,7 +11,7 @@
 > - Budget calls: `take(n)` is all or nothing and returns false when short. `takeUpTo(n)` grants what is left. `spend(n)` records a cost without checking. `require(n)` throws `BudgetExhaustedError`. `sub(cap)` hands a step a smaller slice of the same pool.
 > - A thrown `BudgetExhaustedError` is handled like any other error: logged as `Error in <step>:` and the run moves on.
 > - Later steps still run after the budget is empty. Each one checks its own costs, so most do nothing that needs an outside request.
-> - Every 5 minutes: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders`, in `bookings/`. `backfillAlbumPhotos` also runs here until the photo table is removed, see `albums-and-housekeeping/photo-backfill.md`.
+> - Every 5 minutes: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders`, in `bookings/`..
 > - Every hour: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans` in `flamekeepers/` (start with `flamekeepers/steps-and-limits.md`), then `expireAlbums` (start with `albums-and-housekeeping/run-order.md`), then `checkBufferUsage` (`flamekeepers/buffer-usage.md`). After the steps, the Telegram bot is configured once per deploy, see `albums-and-housekeeping/bot-menu.md`.
 > - Every day: `graduateFlamekeepers`, in `flamekeepers/graduation-trigger.md`.
 > - Per-run caps inside a step (for example 3 ban cancellations or 3 graduation endings) apply per run, so on the hourly and daily schedules they now allow less work per day than on the old 5-minute schedule.
@@ -26,7 +26,6 @@ sequenceDiagram
     Worker->>Worker: cancelUnstartedBookings<br/>src/lib/booking/cron.ts
     Worker->>Worker: updateOverdueBookings<br/>src/lib/booking/cron.ts
     Worker->>Worker: sendBookingReminders<br/>src/lib/booking/cron.ts
-    Worker->>Worker: backfillAlbumPhotos<br/>albums/photo-index.ts runPhotoBackfill
     Cron->>Worker: scheduled every hour
     Worker->>Worker: new budget of 40
     Worker->>Worker: checkFlamekeeperHealth<br/>pool/health-server.ts<br/>runFlamekeeperHealth

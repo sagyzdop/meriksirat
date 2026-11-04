@@ -357,13 +357,6 @@ export const album = sqliteTable(
     photoCount: integer('photo_count').default(0).notNull(),
     photoBytes: integer('photo_bytes').default(0).notNull(),
     favoriteCount: integer('favorite_count').default(0).notNull(),
-    photosIndexedAt: integer('photos_indexed_at', { mode: 'timestamp_ms' }),
-    photosIndexRequestedAt: integer('photos_index_requested_at', {
-      mode: 'timestamp_ms',
-    }),
-    photosIndexSkipped: text('photos_index_skipped', {
-      enum: ['trashed', 'missing'],
-    }),
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
     pinned: integer('pinned', { mode: 'boolean' }).default(false).notNull(),
     tombstoneReason: text('tombstone_reason', {
@@ -419,37 +412,6 @@ export const albumMember = sqliteTable(
       table.userId
     ),
     index('album_member_userId_idx').on(table.userId),
-  ]
-)
-
-export const photo = sqliteTable(
-  'photo',
-  {
-    id: text('id').primaryKey(),
-    albumId: text('album_id')
-      .notNull()
-      .references(() => album.id, { onDelete: 'cascade' }),
-    driveFileId: text('drive_file_id').notNull(),
-    name: text('name').notNull(),
-    bytes: integer('bytes').default(0).notNull(),
-    mimeType: text('mime_type').notNull(),
-    width: integer('width'),
-    height: integer('height'),
-    capturedAt: integer('captured_at', { mode: 'timestamp_ms' }),
-    exif: text('exif'),
-    flamekeeperUserId: text('flamekeeper_user_id'),
-    state: text('state', {
-      enum: ['live', 'moving', 'deleted', 'dropped'],
-    })
-      .default('live')
-      .notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-  },
-  (table) => [
-    index('photo_albumId_idx').on(table.albumId),
-    uniqueIndex('photo_driveFileId_idx').on(table.driveFileId),
   ]
 )
 
@@ -539,27 +501,10 @@ export const flamekeeper = sqliteTable(
     graduationPromptSentAt: integer('graduation_prompt_sent_at', {
       mode: 'timestamp_ms',
     }),
-    drainingDeadline: integer('draining_deadline', { mode: 'timestamp_ms' }),
-    drainReason: text('drain_reason', {
-      enum: ['opt_out', 'pledge', 'graduation', 'domain', 'ban'],
-    }),
-    drainReminderSentAt: integer('drain_reminder_sent_at', {
-      mode: 'timestamp_ms',
-    }),
-    drainAdminStartedAt: integer('drain_admin_started_at', {
-      mode: 'timestamp_ms',
-    }),
-    drainAdminRemindedAt: integer('drain_admin_reminded_at', {
-      mode: 'timestamp_ms',
-    }),
-    healthCursor: text('health_cursor'),
     lostSince: integer('lost_since', { mode: 'timestamp_ms' }),
     lostNotifiedAt: integer('lost_notified_at', { mode: 'timestamp_ms' }),
     lostFinalizedAt: integer('lost_finalized_at', { mode: 'timestamp_ms' }),
     healthCheckedAt: integer('health_checked_at', { mode: 'timestamp_ms' }),
-    leaderboardAnonymous: integer('leaderboard_anonymous', { mode: 'boolean' })
-      .default(false)
-      .notNull(),
     termsAcceptedAt: integer('terms_accepted_at', {
       mode: 'timestamp_ms',
     }).notNull(),
@@ -601,13 +546,6 @@ export const volume = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     permissionId: text('permission_id').notNull(),
     driveFolderId: text('drive_folder_id'),
-    releaseLastBlockedAt: integer('release_blocked_at', {
-      mode: 'timestamp_ms',
-    }),
-    releaseFirstBlockedAt: integer('release_blocked_since', {
-      mode: 'timestamp_ms',
-    }),
-    releaseAlertedAt: integer('release_alerted_at', { mode: 'timestamp_ms' }),
     droppedAt: integer('dropped_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -631,29 +569,6 @@ export const bufferVolume = sqliteTable('buffer_volume', {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
 })
-
-export const uploadReservation = sqliteTable(
-  'upload_reservation',
-  {
-    id: text('id').primaryKey(),
-    flamekeeperUserId: text('flamekeeper_user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    albumId: text('album_id')
-      .notNull()
-      .references(() => album.id, { onDelete: 'cascade' }),
-    bytes: integer('bytes').notNull(),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-  },
-  (table) => [
-    index('upload_reservation_flamekeeperUserId_idx').on(
-      table.flamekeeperUserId
-    ),
-  ]
-)
 
 export const settings = sqliteTable('settings', {
   id: text('id').primaryKey().default('global'),

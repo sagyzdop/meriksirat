@@ -1,14 +1,13 @@
 # How the housekeeping steps run
 
-> **Question:** When do the album expiry, photo backfill and bot menu
+> **Question:** When do the album expiry and bot menu
 > steps run, and how much can they do each time?
 >
 > **Answer:** Album expiry runs on the hourly trigger, as the last
 > step after the flamekeeper steps, and shares that run's budget of
 > 40 outside requests with them. The bot menu check runs right after
 > it, on the same trigger, and calls Telegram only once per deploy.
-> Photo backfill runs on the 5-minute trigger, after the booking
-> steps, and shares that run's budget. A step that cannot afford its
+> A step that cannot afford its
 > next request stops or skips that item and tries again on a later
 > run. If a step crashes, the error is logged and the next step
 > still runs.
@@ -26,8 +25,7 @@
 >   made by the cron. Messages sent from the website, such as the
 >   early expiry notice, are not part of it.
 > - Each step is in its own file here: expiry in
->   `expiry-plan.md`, backfill in `photo-backfill.md`, bot menu in
->   `bot-menu.md`.
+>   `expiry-plan.md`, bot menu in `bot-menu.md`.
 
 ```mermaid
 sequenceDiagram
@@ -36,9 +34,7 @@ sequenceDiagram
     participant Worker
     Cron->>Worker: scheduled(), every 5 minutes
     Worker->>Worker: runScheduled creates a budget of 40 requests
-    Note over Worker: Booking steps run first, see cron/overview.md
-    Worker->>Worker: backfillAlbumPhotos (runPhotoBackfill)
-    Note right of Worker: At most 5 albums and 500 photos.<br/>Also capped by a daily write budget
+    Note over Worker: Booking steps only, see cron/overview.md
     Cron->>Worker: scheduled(), every hour
     Worker->>Worker: runScheduled creates a new budget of 40 requests
     Note over Worker: Flamekeeper steps run first, see cron/overview.md

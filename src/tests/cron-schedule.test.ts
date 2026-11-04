@@ -19,7 +19,6 @@ describe('planScheduledRun', () => {
       'cancelUnstartedBookings',
       'updateOverdueBookings',
       'sendBookingReminders',
-      'backfillAlbumPhotos',
     ])
   })
 
@@ -49,6 +48,7 @@ describe('planScheduledRun', () => {
     )
     expect(all).not.toContain('notifyPublicAlbums')
     expect(all).not.toContain('cleanupStaleSignups')
+    expect(all).not.toContain('backfillAlbumPhotos')
   })
 
   it('checks the bot configuration only on the hourly trigger', () => {

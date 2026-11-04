@@ -6,7 +6,7 @@
 > **Answer:** Browsing reads equipment and category rows, limited by
 > the member's clearance level on the user row, plus the operating
 > hours in the settings row. Favorites read and write favorite rows
-> and the favorite count on the album, and can add photo rows.
+> and the favorite count on the album.
 > Equipment images live in R2. No KV data is used.
 >
 > **Notes:**
@@ -27,7 +27,6 @@
 erDiagram
     user ||--o{ favorite : makes
     album ||--o{ favorite : receives
-    album ||--o{ photo : contains
     category ||--o{ equipment : groups
     user {
         text id PK
@@ -63,13 +62,6 @@ erDiagram
         text title
         text drive_folder_id
         integer favorite_count
-        integer photos_indexed_at
-    }
-    photo {
-        text id PK
-        text album_id FK
-        text drive_file_id
-        text state "live, moving, deleted, dropped"
     }
     favorite {
         text user_id PK "FK to user"

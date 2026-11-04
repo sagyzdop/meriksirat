@@ -6,6 +6,9 @@ import {
   LISTING_STALE_LIMIT_MS,
   applyListingOutcomes,
   classifyListingError,
+  findListedFile,
+  findListedFileOwner,
+  listingTotals,
   listingPhotos,
   parseListingEntry,
   planListingRefresh,
@@ -550,5 +553,104 @@ describe('reading a cached entry', () => {
   it('round-trips an entry', () => {
     const entry = freshEntry(sourcesOf(), { buffer: [file('a')] })
     expect(parseListingEntry(JSON.stringify(entry))).toEqual(entry)
+  })
+})
+
+describe('who owns a file in the album', () => {
+  const sources = sourcesOf({ flamekeeperVolumes: [keeper('amina')] })
+  const listing = readAlbumListing({
+    entry: freshEntry(sources, {
+      buffer: [file('b1', { size: '300' })],
+      master: [file('m1')],
+      'flamekeeper:amina': [file('f1')],
+    }),
+    sources,
+    now: NOW,
+  })
+
+  it('names the owner whose token can act on a listed file', () => {
+    expect(findListedFileOwner(listing, 'b1')).toEqual({ kind: 'buffer' })
+    expect(findListedFileOwner(listing, 'm1')).toEqual({ kind: 'master' })
+    expect(findListedFileOwner(listing, 'f1')).toEqual({
+      kind: 'flamekeeper',
+      userId: 'amina',
+    })
+  })
+
+  it('knows nothing about a file the album does not list', () => {
+    expect(findListedFileOwner(listing, 'elsewhere')).toBeNull()
+    expect(findListedFile(listing, 'elsewhere')).toBeNull()
+  })
+
+  it('returns the listed file with its owner, so its size can be settled', () => {
+    expect(findListedFile(listing, 'b1')).toMatchObject({
+      owner: { kind: 'buffer' },
+      file: { id: 'b1', size: '300' },
+    })
+  })
+
+  it('does not treat a non-image in a folder as a photo of the album', () => {
+    const withPdf = readAlbumListing({
+      entry: freshEntry(sources, {
+        buffer: [file('doc', { mimeType: 'application/pdf' })],
+      }),
+      sources,
+      now: NOW,
+    })
+    expect(findListedFile(withPdf, 'doc')).toBeNull()
+  })
+})
+
+describe('album totals from a listing', () => {
+  const read = (
+    files: Record<string, ListingFile[]>,
+    outcomes?: Record<string, ListingOutcome>
+  ) => {
+    const sources = sourcesOf({ flamekeeperVolumes: [keeper('amina')] })
+    const entry = outcomes
+      ? applyListingOutcomes({
+          sources,
+          entry: freshEntry(sources, files),
+          now: NOW + 1,
+          folderState: 'ok',
+          outcomes,
+        })
+      : freshEntry(sources, files)
+    return readAlbumListing({ entry, sources, now: NOW + 1 })
+  }
+
+  it('counts the photos and bytes across every volume once all were listed', () => {
+    const listing = read({
+      buffer: [file('a', { size: '300' })],
+      master: [file('b', { size: '100' })],
+      'flamekeeper:amina': [file('c', { size: '50' })],
+    })
+    expect(listingTotals(listing)).toEqual({ count: 3, bytes: 450 })
+  })
+
+  it('is a real zero for an album that is empty everywhere', () => {
+    expect(listingTotals(read({}))).toEqual({ count: 0, bytes: 0 })
+  })
+
+  it('gives no totals while a volume could not be listed, so the stored ones are not overwritten with a low number', () => {
+    const listing = read(
+      { buffer: [file('a')] },
+      { buffer: { kind: 'failed' } }
+    )
+    expect(listingTotals(listing)).toBeNull()
+  })
+
+  it('gives no totals when the album folder is in the bin', () => {
+    const sources = sourcesOf()
+    const entry = applyListingOutcomes({
+      sources,
+      entry: null,
+      now: NOW,
+      folderState: 'trashed',
+      outcomes: {},
+    })
+    expect(
+      listingTotals(readAlbumListing({ entry, sources, now: NOW }))
+    ).toBeNull()
   })
 })

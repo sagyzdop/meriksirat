@@ -93,7 +93,7 @@ _Avoid_: Gallery, collection
 
 **Photo**:
 One image in an album, identified by its current Drive file ID, which changes when the photo moves to another account. Listed from Drive and cached, with no photo record of its own.
-Album pages read this way since #18. Not built yet (Stage 1, #15): the photo table still exists and still serves flamekeeper moves (expiry stopped using it in #21, favorites in #19). ADR-0017 removes it.
+The photo table was removed in #25 ([ADR-0017](docs/adr/0017-drop-photo-table-read-from-drive.md)). The album row keeps a photo count and byte total that uploads, deletes and complete listings maintain.
 _Avoid_: Image, file, picture
 
 **Volume**:

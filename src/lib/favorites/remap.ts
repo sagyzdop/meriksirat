@@ -1,6 +1,6 @@
 import { albumPhotoUrls } from '@/lib/albums/urls'
-import { driveFileToAlbumPhoto } from '@/lib/albums/photo-backfill'
-import type { DriveFileLike } from '@/lib/albums/photo-backfill'
+import { driveFileToAlbumPhoto } from '@/lib/albums/drive-photo'
+import type { DriveFileLike } from '@/lib/albums/drive-photo'
 import type { FavoritePhoto } from './types'
 
 export interface RemapInput {

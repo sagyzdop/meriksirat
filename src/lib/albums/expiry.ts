@@ -1,12 +1,10 @@
-import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db, type Database } from '@/db'
 import {
   album,
   albumMember,
   bufferVolume,
   favorite,
-  flamekeeper,
-  photo,
   user,
   volume,
 } from '@/db/schema'
@@ -115,7 +113,6 @@ export async function removeAlbum(
   await invalidateCachedDetailCore(row.id)
 
   if (options.tombstone) {
-    await database.delete(photo).where(eq(photo.albumId, row.id))
     await database.delete(favorite).where(eq(favorite.albumId, row.id))
     await database.delete(volume).where(eq(volume.albumId, row.id))
     await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))
@@ -146,26 +143,6 @@ export async function tombstoneGoneAlbum(
   database: Database,
   row: Pick<AlbumRecord, 'id' | 'driveFolderId' | 'ownerUserId' | 'deletedAt'>
 ): Promise<void> {
-  const held = await database
-    .select({
-      userId: photo.flamekeeperUserId,
-      bytes: sql<number>`SUM(${photo.bytes})`,
-    })
-    .from(photo)
-    .where(and(eq(photo.albumId, row.id), isNotNull(photo.flamekeeperUserId)))
-    .groupBy(photo.flamekeeperUserId)
-    .all()
-  for (const { userId, bytes } of held) {
-    if (!userId) continue
-    await database
-      .update(flamekeeper)
-      .set({
-        usedBytes: sql`MAX(${flamekeeper.usedBytes} - ${Number(bytes)}, 0)`,
-        driveUsageBytes: sql`MAX(${flamekeeper.driveUsageBytes} - ${Number(bytes)}, 0)`,
-      })
-      .where(eq(flamekeeper.userId, userId))
-  }
-  await database.delete(photo).where(eq(photo.albumId, row.id))
   await database.delete(favorite).where(eq(favorite.albumId, row.id))
   await database.delete(volume).where(eq(volume.albumId, row.id))
   await database.delete(bufferVolume).where(eq(bufferVolume.albumId, row.id))

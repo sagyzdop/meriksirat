@@ -30,11 +30,6 @@ export async function endFlamekeeping(
       state: 'drained',
       usedBytes: 0,
       driveUsageBytes: 0,
-      drainReason: null,
-      drainingDeadline: null,
-      drainReminderSentAt: null,
-      drainAdminStartedAt: null,
-      drainAdminRemindedAt: null,
       updatedAt: now,
     })
     .where(eq(flamekeeper.userId, userId))

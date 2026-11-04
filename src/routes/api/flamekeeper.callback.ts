@@ -134,7 +134,6 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
                 pledgedBytes: pending.pledgedBytes,
                 termsAcceptedAt: new Date(pending.termsAcceptedAt),
                 state: 'active',
-                drainingDeadline: null,
                 lostSince: null,
                 lostNotifiedAt: null,
                 lostFinalizedAt: null,

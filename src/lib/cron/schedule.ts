@@ -10,7 +10,6 @@ export type CronStepName =
   | 'cancelUnstartedBookings'
   | 'updateOverdueBookings'
   | 'sendBookingReminders'
-  | 'backfillAlbumPhotos'
   | 'checkFlamekeeperHealth'
   | 'maintainPool'
   | 'drainFlamekeepers'
@@ -34,7 +33,6 @@ const GROUPS: Record<
       'cancelUnstartedBookings',
       'updateOverdueBookings',
       'sendBookingReminders',
-      'backfillAlbumPhotos',
     ],
     configuresBot: false,
   },

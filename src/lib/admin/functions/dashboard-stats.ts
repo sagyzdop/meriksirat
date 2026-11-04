@@ -107,7 +107,6 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
         driveFolderId: album.driveFolderId,
         photoCount: album.photoCount,
         photoBytes: album.photoBytes,
-        photosIndexedAt: album.photosIndexedAt,
       })
       .from(album)
       .where(rangeWhere)
@@ -116,17 +115,17 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
     let photoCount = 0
     let totalBytes = 0
 
-    const unindexedAlbums: typeof rangeAlbums = []
+    const unsynced: typeof rangeAlbums = []
     for (const row of rangeAlbums) {
-      if (row.photosIndexedAt) {
+      if (row.photoCount > 0) {
         photoCount += row.photoCount
         totalBytes += row.photoBytes
       } else {
-        unindexedAlbums.push(row)
+        unsynced.push(row)
       }
     }
 
-    if (unindexedAlbums.length > 0) {
+    if (unsynced.length > 0) {
       const { getCachedListing } = await import('@/lib/albums/server')
       const { listedMasterFiles } = await import('@/lib/albums/listing')
       const { getGoogleAccessToken } =
@@ -136,8 +135,8 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
 
       // Reuse the per-album KV cache; only uncached albums hit the Drive API.
       const accessToken = await getGoogleAccessToken()
-      for (let i = 0; i < unindexedAlbums.length; i += 4) {
-        const chunk = unindexedAlbums.slice(i, i + 4)
+      for (let i = 0; i < unsynced.length; i += 4) {
+        const chunk = unsynced.slice(i, i + 4)
         await Promise.all(
           chunk.map(async (row) => {
             try {

@@ -8,7 +8,7 @@
 > - If the name already exists on the server when the session is requested (typically because an earlier attempt finished but its result was lost), the job is shown as done instead of failed.
 > - The retry button restarts with a fresh attempt count. Choosing the same file again replaces the failed job.
 > - Cancel aborts the transfer in progress and marks the job as cancelled (the list shows a tick labelled Cancelled).
-> - If the confirm step fails 3 times, the file may sit in the buffer's Volume folder without a photo row, and the retry uploads the photo again as a second file.
+> - If the confirm step fails 3 times, the file may sit in the buffer's Volume folder without being counted in the album's totals (the next complete listing corrects them), and the retry uploads the photo again as a second file.
 > - If Google answers with success but the reply has no file id, the browser skips the confirm step and shows the job as done.
 > - When the buffer is not set up or is full the session request fails with the message from upload-to-buffer.md and the job shows it as it is. There is no fallback to a flamekeeper.
 > - Limits: files up to 5 GB (the Worker refuses larger sizes), 2 uploads at once, 5 attempts per job.
