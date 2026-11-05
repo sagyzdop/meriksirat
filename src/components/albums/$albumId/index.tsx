@@ -44,6 +44,7 @@ import { expiryBannerDate, expiryLabel, tombstoneCopy } from '@/lib/pool/expiry'
 import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
 import { PhotoGrid } from '@/components/albums/photo-grid'
+import { AuthenticatedShell } from '@/components/root/authenticated-shell'
 import { PublicAlbumsLayout } from '@/components/albums/public-layout'
 import { useAsyncAction } from '@/hooks/use-async-action'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
@@ -194,7 +195,11 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
   }
 
   const renderPage = (content: React.ReactNode) =>
-    isLoggedIn ? content : <PublicAlbumsLayout>{content}</PublicAlbumsLayout>
+    authUser ? (
+      <AuthenticatedShell user={authUser}>{content}</AuthenticatedShell>
+    ) : (
+      <PublicAlbumsLayout user={null}>{content}</PublicAlbumsLayout>
+    )
 
   if (isLoading && !album) {
     return renderPage(

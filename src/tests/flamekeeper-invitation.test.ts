@@ -13,18 +13,9 @@ const nu: FlamekeeperInvitationUser = {
 }
 
 describe('showFlamekeeperInvitation', () => {
-  it('invites an NU user who has not been invited before', () => {
+  it('invites an NU user who has never flamekeeped', () => {
     expect(showFlamekeeperInvitation(nu)).toBe(true)
     expect(showFlamekeeperInvitation({ ...nu, isMember: true })).toBe(true)
-  })
-
-  it('stays gone once dismissed', () => {
-    expect(
-      showFlamekeeperInvitation({
-        ...nu,
-        invitationDismissedAt: new Date('2026-11-01'),
-      })
-    ).toBe(false)
   })
 
   it('never shows to alumni or other domains', () => {

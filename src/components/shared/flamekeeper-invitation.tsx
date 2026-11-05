@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,21 +14,42 @@ import {
   showFlamekeeperInvitation,
   type FlamekeeperInvitationUser,
 } from '@/lib/access/access-rules'
-import { dismissFlamekeeperInvitationFn } from '@/lib/user/functions'
+
+const STORAGE_KEY = 'meriksirat:flamekeeper-invitation-dismissed'
+
+function wasDismissed(): boolean {
+  try {
+    return window.sessionStorage.getItem(STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function rememberDismissed() {
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, 'true')
+  } catch {
+    // Without storage the dialog simply returns on the next page load.
+  }
+}
 
 export function FlamekeeperInvitation({
   user,
 }: {
-  user: FlamekeeperInvitationUser
+  user: FlamekeeperInvitationUser | null
 }) {
-  const [dismissed, setDismissed] = useState(false)
+  const [open, setOpen] = useState(false)
   const pathname = useLocation({ select: (location) => location.pathname })
   const onPage = pathname.startsWith('/become-flamekeeper')
-  const open = showFlamekeeperInvitation(user) && !dismissed && !onPage
+  const eligible = user === null || showFlamekeeperInvitation(user)
+
+  useEffect(() => {
+    if (eligible && !onPage && !wasDismissed()) setOpen(true)
+  }, [eligible, onPage])
 
   const dismiss = () => {
-    setDismissed(true)
-    dismissFlamekeeperInvitationFn().catch(() => setDismissed(false))
+    setOpen(false)
+    rememberDismissed()
   }
 
   return (

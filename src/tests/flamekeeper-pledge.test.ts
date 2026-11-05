@@ -22,40 +22,18 @@ describe('pledge choices', () => {
 
 describe('resolvePledge', () => {
   it('turns the selected button into bytes', () => {
-    expect(resolvePledge('1', '')).toEqual({ ok: true, bytes: GB, gb: 1 })
-    expect(resolvePledge('0.5', '')).toEqual({
+    expect(resolvePledge('1')).toEqual({ ok: true, bytes: GB, gb: 1 })
+    expect(resolvePledge('0.5')).toEqual({
       ok: true,
       bytes: MIN_PLEDGE_BYTES,
       gb: 0.5,
     })
-    expect(resolvePledge('5', '')).toMatchObject({ ok: true, bytes: 5 * GB })
+    expect(resolvePledge('5')).toMatchObject({ ok: true, bytes: 5 * GB })
   })
 
-  it('prefers a typed amount over the selected button', () => {
-    expect(resolvePledge('1', '12')).toEqual({
-      ok: true,
-      bytes: 12 * GB,
-      gb: 12,
-    })
-  })
-
-  it('accepts a typed amount down to exactly 512 MB', () => {
-    expect(resolvePledge('1', '0.5')).toMatchObject({ ok: true })
-  })
-
-  it('refuses a typed amount below 512 MB', () => {
-    const result = resolvePledge('1', '0.4')
-    expect(result.ok).toBe(false)
-    expect(result.ok === false && result.error).toMatch(/512 MB/)
-  })
-
-  it('refuses zero, negative, junk and too-large amounts', () => {
-    for (const typed of ['0', '-3', 'abc', '1e9', '5000']) {
-      expect(resolvePledge('1', typed).ok).toBe(false)
+  it('refuses anything that is not one of the six options', () => {
+    for (const choice of ['0', '0.4', '2.5', '6', '12', '-3', 'abc', '']) {
+      expect(resolvePledge(choice).ok).toBe(false)
     }
-  })
-
-  it('refuses when nothing is chosen', () => {
-    expect(resolvePledge('', '').ok).toBe(false)
   })
 })

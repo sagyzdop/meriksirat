@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import {
   Item,
   ItemContent,
-  ItemDescription,
   ItemTitle,
 } from '@/components/ui/item'
 import { submitClubCodeFn } from '@/lib/auth/onboarding'
@@ -39,7 +38,6 @@ export function JoinClubItem() {
     <Item variant="outline" size="sm">
       <ItemContent className="min-w-40">
         <ItemTitle>Join the club</ItemTitle>
-        <ItemDescription>Enter the club code.</ItemDescription>
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

@@ -21,6 +21,7 @@ interface PhotoGridProps {
   onSetCover?: (photo: AlbumPhoto) => void
   onDeletePhoto?: (photo: AlbumPhoto) => void
   favorites?: FavoritesControl
+  getAlbumId?: (photo: AlbumPhoto) => string | undefined
 }
 
 export function PhotoGrid({
@@ -30,6 +31,7 @@ export function PhotoGrid({
   onSetCover,
   onDeletePhoto,
   favorites,
+  getAlbumId,
 }: PhotoGridProps) {
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
 
@@ -106,6 +108,7 @@ export function PhotoGrid({
           onSetCover={onSetCover}
           onDeletePhoto={onDeletePhoto}
           favorites={favorites}
+          getAlbumId={getAlbumId}
         />
       )}
     </>

@@ -15,13 +15,8 @@ import {
 } from '@/components/ui/accordion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemMedia,
-  ItemTitle,
-} from '@/components/ui/item'
+import { Item, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { startDriveConnectFn } from '@/lib/flamekeeper/functions'
 import { DEFAULT_PLEDGE_CHOICE, resolvePledge } from '@/lib/flamekeeper/pledge'
@@ -31,8 +26,8 @@ import {
   graduationDateError,
 } from '@/lib/graduation-date'
 import { errorMessage } from '@/lib/utils'
-import { GraduationField } from './components/graduation-field'
-import { PledgeField } from './components/pledge-field'
+import { GraduationMonthInput } from '@/components/shared/graduation-month-input'
+import { PledgePicker } from '@/components/shared/pledge-picker'
 
 const ANSWERS = [
   {
@@ -51,20 +46,19 @@ const ANSWERS = [
     icon: Trash2,
     question: 'Can I delete them?',
     answer:
-      'Not by hand. Albums are managed in the app, and a photo that goes missing raises a warning for the album’s owner. If you stop, anything the club placed with you is cleared from your Drive.',
+      'Since the photos are stored in your account, you can delete them just like any other file in Google Drive. However, we ask you not to do that, as manually deleted photos will be lost. If you want to stop being a flamekeeper, you can disconnect the app and it will remove its files from your Drive.',
   },
   {
     icon: GraduationCap,
     question: 'What happens when I leave or graduate?',
     answer:
-      'Nothing to do on your side. Within 60 days of graduating your flame winds down by itself, and when you stop, the app’s access to your Drive ends.',
+      'Within 60 days before graduating, and when you stop being a flamekeeper, the app will start transfering photos stored in your Drive to the club accounts. We ask you to keep your account active and dont delete any files during this period. After the transfer is complete, the app’s access to your Drive will end.',
   },
 ]
 
-const RESERVE =
-  'Your pledge is reserve space. The club only uses it when an admin decides it is needed.'
+const RESERVE = 'Your pledge will be reserved and used as needed.'
 
-const STEPS = ['Good to know', 'Your pledge', 'Connect']
+const STEPS = ['FAQ', 'Your pledge', 'Connect']
 
 interface PageProps {
   graduationDate: string | null
@@ -74,13 +68,11 @@ interface PageProps {
 export function Page({ graduationDate, connectError }: PageProps) {
   const [step, setStep] = useState(0)
   const [choice, setChoice] = useState(DEFAULT_PLEDGE_CHOICE)
-  const [typed, setTyped] = useState('')
   const [date, setDate] = useState(graduationDate ?? '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const pledge = resolvePledge(choice, typed)
-  const pledgeError = pledge.ok ? null : pledge.error
+  const pledge = resolvePledge(choice)
   const dateError = date
     ? graduationDateError(date, { isFlamekeeper: true })
     : 'Choose your graduation month'
@@ -148,19 +140,31 @@ export function Page({ graduationDate, connectError }: PageProps) {
 
       {step === 1 && (
         <div className="space-y-6">
-          <PledgeField
-            choice={choice}
-            typed={typed}
-            error={pledgeError}
-            onChoiceChange={setChoice}
-            onTypedChange={setTyped}
-          />
-          <GraduationField
-            value={date}
-            error={date ? dateError : null}
-            prefilled={Boolean(graduationDate)}
-            onChange={setDate}
-          />
+          <div className="space-y-3">
+            <Label id="pledge-label">How much can you lend?</Label>
+            <PledgePicker value={choice} onChange={setChoice} />
+            <p className="text-sm text-muted-foreground">
+              You can change it later.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="graduation">When do you graduate?</Label>
+            <GraduationMonthInput
+              id="graduation"
+              value={date}
+              onValueChange={setDate}
+              aria-invalid={!!date && !!dateError}
+            />
+            <p
+              className={`text-sm ${date && dateError ? 'text-destructive' : 'text-muted-foreground'}`}
+            >
+              {date && dateError
+                ? dateError
+                : graduationDate && date === graduationDate
+                  ? 'Filled in from your profile.'
+                  : 'Month and year. It must be in the future.'}
+            </p>
+          </div>
         </div>
       )}
 
@@ -175,9 +179,6 @@ export function Page({ graduationDate, connectError }: PageProps) {
                 {pledge.ok ? formatGb(pledge.bytes) : '?'} until{' '}
                 {formatGraduationMonth(date) || '?'}
               </ItemTitle>
-              <ItemDescription>
-                Your pledge and graduation month.
-              </ItemDescription>
             </ItemContent>
           </Item>
           <div className="space-y-2">
@@ -202,20 +203,23 @@ export function Page({ graduationDate, connectError }: PageProps) {
               >
                 terms
               </a>
-              .
             </p>
           </div>
         </div>
       )}
 
       <div className="flex justify-between">
-        <Button
-          variant="ghost"
-          disabled={step === 0 || isSubmitting}
-          onClick={() => setStep(step - 1)}
-        >
-          Back
-        </Button>
+        {step > 0 ? (
+          <Button
+            variant="ghost"
+            disabled={isSubmitting}
+            onClick={() => setStep(step - 1)}
+          >
+            Back
+          </Button>
+        ) : (
+          <span />
+        )}
         {step < 2 && (
           <Button
             disabled={step === 1 && !valid}

@@ -29,20 +29,6 @@ const MONTH_NAMES = [
   'December',
 ]
 
-export function graduationDateFromPicked(picked: Date | undefined): string {
-  if (!picked || Number.isNaN(picked.getTime())) return ''
-  const year = String(picked.getFullYear()).padStart(4, '0')
-  const month = String(picked.getMonth() + 1).padStart(2, '0')
-  return `${year}-${month}-01`
-}
-
-export function graduationPickerDate(
-  date: string | null | undefined
-): Date | undefined {
-  if (!date || !DATE.test(date)) return undefined
-  return new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, 1)
-}
-
 export function formatGraduationMonth(date: string | null | undefined): string {
   if (!date || !DATE.test(date)) return ''
   const name = MONTH_NAMES[Number(date.slice(5, 7)) - 1]

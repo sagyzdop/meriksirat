@@ -4,12 +4,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Images,
   Info,
   Star,
   Trash2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,8 +39,10 @@ export function PhotoLightbox({
   onSetCover,
   onDeletePhoto,
   favorites,
+  getAlbumId,
 }: PhotoLightboxProps) {
   const photo = photos[index]
+  const albumId = getAlbumId?.(photo)
   const [chromeVisible, setChromeVisible] = React.useState(true)
   const [infoOpen, setInfoOpen] = React.useState(false)
   const [downloading, setDownloading] = React.useState(false)
@@ -176,6 +180,19 @@ export function PhotoLightbox({
           <ArrowLeft className="size-6" />
         </Button>
         <div className="pointer-events-auto flex items-center gap-1">
+          {albumId && (
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 hover:text-white"
+            >
+              <Link to="/albums/$albumId" params={{ albumId }}>
+                <Images className="size-5" />
+                Go to album
+              </Link>
+            </Button>
+          )}
           {canManage && onSetCover && (
             <Button
               variant="ghost"

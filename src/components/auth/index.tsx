@@ -1,4 +1,3 @@
-import { GalleryVerticalEnd } from 'lucide-react'
 import { authClient } from '@/lib/auth/auth-client'
 import { cn } from '@/lib/utils'
 import {
@@ -8,7 +7,7 @@ import {
 import { PRIVACY_URL, TERMS_URL } from '@/lib/flamekeeper/rules'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
-import { Link, useSearch } from '@tanstack/react-router'
+import { useSearch } from '@tanstack/react-router'
 
 export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   const search = useSearch({ strict: false }) as { error?: string }
@@ -29,16 +28,14 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
-        <a href="#" className="flex flex-col items-center gap-2 font-medium">
-          <div className="flex size-8 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-6" />
-          </div>
-          <span className="sr-only">MerikSirat</span>
-        </a>
-        <h1 className="text-xl font-bold">Welcome to MerikSirat</h1>
+        <img
+          src="/logo.png"
+          alt="NU Image logo"
+          className="size-12 shrink-0 rounded-md object-contain"
+        />
+        <h1 className="text-xl font-bold">Welcome to NU Image</h1>
         <FieldDescription className="text-center">
-          New accounts need an @nu.edu.kz or @alumni.nu.edu.kz Google account.
-          Existing accounts can keep signing in with theirs.
+          Use NU account
         </FieldDescription>
       </div>
 
@@ -50,8 +47,8 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
         )}
         {error === 'banned' && (
           <div className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
-            This account has been banned from MerikSirat. Contact an
-            administrator if you think this is a mistake.
+            This account has been banned from NU Image. Contact an administrator
+            if you think this is a mistake.
           </div>
         )}
         {error === SIGNUP_REFUSED_ERROR && (
@@ -76,7 +73,7 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
                 fill="currentColor"
               />
             </svg>
-            Continue with Google
+            Sign in with Google
           </Button>
           <FieldDescription className="text-center">
             By logging in you agree to the{' '}
@@ -97,26 +94,9 @@ export function Page({ className, ...props }: React.ComponentProps<'div'>) {
             >
               Privacy Policy
             </a>
-            .
           </FieldDescription>
         </Field>
       </FieldGroup>
-
-      <FieldDescription className="px-6 text-center">
-        <Link to="/about" className="underline hover:text-primary">
-          About NU Image
-        </Link>
-        <br />
-        Made by{' '}
-        <a
-          href="https://sagyzdop.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-primary"
-        >
-          sagyzdop
-        </a>
-      </FieldDescription>
     </div>
   )
 }

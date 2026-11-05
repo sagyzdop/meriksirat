@@ -17,6 +17,7 @@
 > a red message too.
 >
 > **Notes:**
+>
 > - Only creating an account checks the email domain. Existing
 >   accounts with any other domain can still sign in.
 > - The home page is `/onboarding` for a member who has not
@@ -73,7 +74,7 @@ sequenceDiagram
         alt user.bannedAt is set
             W->>D: Delete all sessions of this user
             W-->>B: Redirect to /login/?error=banned
-            B-->>P: Red box: This account has been banned from<br/>MerikSirat. Contact an administrator if you<br/>think this is a mistake.
+            B-->>P: Red box: This account has been banned from<br/>NU Image. Contact an administrator if you<br/>think this is a mistake.
         else status is Inactive
             W->>D: Delete all sessions of this user
             W-->>B: Redirect to /login/?error=account_inactive

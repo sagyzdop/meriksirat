@@ -2,7 +2,7 @@ export const GB = 1024 * 1024 * 1024
 export const MB = 1024 * 1024
 export const MIN_PLEDGE_BYTES = 512 * MB
 export const MIN_PLEDGE_GB = MIN_PLEDGE_BYTES / GB
-export const MAX_PLEDGE_GB = 1024
+export const PLEDGE_OPTIONS_GB = [0.5, 1, 2, 3, 4, 5]
 export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 export const FLAMEKEEPER_SCOPES = [DRIVE_FILE_SCOPE, 'openid', 'email']
 export const TERMS_URL =
@@ -28,7 +28,7 @@ export function formatGb(bytes: number): string {
 }
 
 export function isValidPledgeGb(gb: number): boolean {
-  return Number.isFinite(gb) && gb >= MIN_PLEDGE_GB && gb <= MAX_PLEDGE_GB
+  return PLEDGE_OPTIONS_GB.includes(gb)
 }
 
 export function isValidGraduationDate(

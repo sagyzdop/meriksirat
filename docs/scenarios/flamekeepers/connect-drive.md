@@ -2,12 +2,12 @@
 
 > **Question:** What happens when someone fills in the Become a flamekeeper page and presses Connect Google Drive?
 >
-> **Answer:** The page at `/become-flamekeeper` has three steps: plain answers, the pledge and graduation month, then Connect. Only @nu.edu.kz accounts that are not flamekeeping (and not the club account) can open it; anyone else is sent to `/profile`. The pledge is one of six buttons (512 MB, 1 GB selected, 2 to 5 GB) or a typed number of GB, and the graduation month comes from a month and year picker, prefilled from the saved one. On Connect the browser asks the server to start the connection. The server refuses the club account and anyone who cannot sign up, remembers the pledge for 10 minutes under a random code and returns a Google consent link, and the browser goes to Google. There is no terms box: the page says connecting means agreeing to the terms, with one link to the Terms of Service.
+> **Answer:** The page at `/become-flamekeeper` has three steps: plain answers, the pledge and graduation month, then Connect. Only @nu.edu.kz accounts that are not flamekeeping (and not the club account) can open it; anyone else is sent to `/profile`. The pledge is one of six buttons (512 MB, 1 GB selected, 2 to 5 GB) and the graduation month comes from a month and year input, prefilled from the saved one. On Connect the browser asks the server to start the connection. The server refuses the club account and anyone who cannot sign up, remembers the pledge for 10 minutes under a random code and returns a Google consent link, and the browser goes to Google. There is no terms box: the page says connecting means agreeing to the terms, with one link to the Terms of Service.
 >
 > **Notes:**
 > - The pledge is only stored in KV at this point. No flamekeeper
 >   row exists until Google comes back, see drive-callback.md.
-> - Pledge limits are 512 MB to 1024 GB. The graduation date is
+> - The pledge must be one of 512 MB, 1, 2, 3, 4 or 5 GB. The graduation date is
 >   stored as the first of the chosen month (`YYYY-MM-01`) and must
 >   be after now, so the current month is refused.
 > - Reconnecting a lost flamekeeper uses the same function in
@@ -33,8 +33,8 @@ sequenceDiagram
     participant KV
     participant GO as Google OAuth
     P->>Browser: Choose pledge and month,<br/>press Connect Google Drive
-    alt Pledge outside 512 MB to 1024 GB
-        Browser-->>P: "The smallest pledge is 512 MB."
+    alt Pledge not one of the six options
+        Browser-->>P: "Choose how much you can lend."
     else Date not a future day
         Browser-->>P: "Enter an expected graduation month<br/>in the future."
     else Form is valid

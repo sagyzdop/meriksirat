@@ -61,7 +61,7 @@ export function aboutCopy() {
       {
         id: 'albums',
         title: 'How long albums last',
-        body: `Albums stay up for ${years} years after the event. Owners are reminded ${first} and ${second} days before an album goes, so there is time to download it. Admins can pin the albums worth keeping longer.`,
+        body: `Albums stay up for ${years} years after the event (subject to change). Owners are reminded ${first} and ${second} days before an album goes, so there is time to download it. Admins can pin the albums worth keeping longer.`,
       },
       {
         id: 'help',

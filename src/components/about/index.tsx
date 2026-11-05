@@ -51,7 +51,7 @@ export function Page() {
         <h1 className="mt-6 text-4xl font-semibold tracking-tight">
           Keeping the flame alive
         </h1>
-        <div className="mt-12 space-y-12">
+        <div className="mt-12 space-y-8">
           {sections.map((section) => (
             <section key={section.id} id={section.id} className="scroll-mt-20">
               <h2 className="text-2xl font-semibold">{section.title}</h2>

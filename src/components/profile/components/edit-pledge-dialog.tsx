@@ -9,16 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { PledgePicker } from '@/components/shared/pledge-picker'
 import { updateFlamekeeperFn } from '@/lib/flamekeeper/functions'
-import {
-  MIN_PLEDGE_BYTES,
-  MIN_PLEDGE_GB,
-  formatGb,
-  bytesToGb,
-  isValidPledgeGb,
-} from '@/lib/flamekeeper/rules'
+import { DEFAULT_PLEDGE_CHOICE, resolvePledge } from '@/lib/flamekeeper/pledge'
+import { bytesToGb } from '@/lib/flamekeeper/rules'
 import { useAsyncAction } from '@/hooks/use-async-action'
 
 interface EditPledgeDialogProps {
@@ -36,17 +30,19 @@ export function EditPledgeDialog({
   graduationDate,
   onSaved,
 }: EditPledgeDialogProps) {
-  const [pledge, setPledge] = useState(
-    String(Math.round(bytesToGb(pledgedBytes) * 10) / 10)
-  )
+  const [pledge, setPledge] = useState(() => {
+    const current = String(bytesToGb(pledgedBytes))
+    return resolvePledge(current).ok ? current : DEFAULT_PLEDGE_CHOICE
+  })
   const { pending: isSaving, run } = useAsyncAction()
 
   const handleSave = async () => {
-    const pledgeGb = Number(pledge)
-    if (!isValidPledgeGb(pledgeGb)) {
-      toast.error(`Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
+    const resolved = resolvePledge(pledge)
+    if (!resolved.ok) {
+      toast.error(resolved.error)
       return
     }
+    const pledgeGb = resolved.gb
     if (!graduationDate) {
       toast.error('Enter your graduation month first')
       return
@@ -68,17 +64,7 @@ export function EditPledgeDialog({
             How much of your NU Drive you lend to the club.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="editPledge">Pledge (GB)</Label>
-          <Input
-            id="editPledge"
-            type="number"
-            min={MIN_PLEDGE_GB}
-            step="0.5"
-            value={pledge}
-            onChange={(e) => setPledge(e.target.value)}
-          />
-        </div>
+        <PledgePicker value={pledge} onChange={setPledge} />
         <DialogFooter>
           <Button
             variant="outline"

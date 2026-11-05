@@ -68,7 +68,11 @@ export function Page() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <PhotoGrid photos={photos} favorites={favorites} />
+        <PhotoGrid
+          photos={photos}
+          favorites={favorites}
+          getAlbumId={(photo) => albumByPhoto.get(photo.id)}
+        />
       )}
     </PageContainer>
   )

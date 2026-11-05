@@ -1,11 +1,6 @@
 import { z } from 'zod'
 import type { FlamekeeperState } from '@/lib/access/access-rules'
-import {
-  MAX_PLEDGE_GB,
-  MIN_PLEDGE_BYTES,
-  MIN_PLEDGE_GB,
-  formatGb,
-} from './rules'
+import { isValidPledgeGb } from './rules'
 
 export interface MyFlamekeeper {
   state: FlamekeeperState
@@ -37,8 +32,7 @@ export interface StopStatus {
 
 const pledgeGb = z
   .number()
-  .min(MIN_PLEDGE_GB, `Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
-  .max(MAX_PLEDGE_GB, `Pledge at most ${MAX_PLEDGE_GB} GB`)
+  .refine(isValidPledgeGb, 'Choose one of the pledge options')
 
 const graduationDate = z
   .string()

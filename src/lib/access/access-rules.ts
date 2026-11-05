@@ -65,7 +65,6 @@ export function getAccessRules(user: AccessUser): AccessRules {
 }
 
 export interface FlamekeeperInvitationUser extends AccessUser {
-  invitationDismissedAt?: Date | string | number | null
   isMaster?: boolean
 }
 
@@ -74,7 +73,6 @@ export function showFlamekeeperInvitation(
 ): boolean {
   return (
     !user.isMaster &&
-    !user.invitationDismissedAt &&
     (user.flamekeeperState ?? null) === null &&
     getAccessRules(user).canBecomeFlamekeeper
   )

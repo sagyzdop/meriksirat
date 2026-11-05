@@ -21,6 +21,9 @@ describe('pledge', () => {
     expect(isValidPledgeGb(0.49)).toBe(false)
     expect(isValidPledgeGb(0.5)).toBe(true)
     expect(isValidPledgeGb(1)).toBe(true)
+    expect(isValidPledgeGb(5)).toBe(true)
+    expect(isValidPledgeGb(2.5)).toBe(false)
+    expect(isValidPledgeGb(6)).toBe(false)
     expect(isValidPledgeGb(NaN)).toBe(false)
   })
 

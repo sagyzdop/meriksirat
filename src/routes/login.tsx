@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Page } from '@/components/auth'
+import { PublicAlbumsFooter } from '@/components/albums/public-layout'
 import { getUserFn } from '@/lib/user'
 import { homePath } from '@/lib/access/access-rules'
 
@@ -16,8 +17,11 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Page />
+    <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1 items-center justify-center">
+        <Page />
+      </div>
+      <PublicAlbumsFooter />
     </div>
   )
 }

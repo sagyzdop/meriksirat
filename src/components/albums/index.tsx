@@ -1,8 +1,9 @@
-import { useNavigate, useSearch } from '@tanstack/react-router'
-import { Images } from 'lucide-react'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { Heart, Images } from 'lucide-react'
 import { albumQueries } from '@/lib/albums'
 import type { AlbumListFilters } from '@/lib/albums'
 import type { UserProfile } from '@/lib/user/types'
+import { Button } from '@/components/ui/button'
 import { AuthenticatedShell } from '@/components/root/authenticated-shell'
 import { PublicAlbumsLayout } from '@/components/albums/public-layout'
 import { InfiniteAlbumGroupedList } from '@/components/albums/album-sections'
@@ -41,7 +42,20 @@ export function PublicAlbumsIndex({ user }: PublicAlbumsIndexProps) {
 
   const content = (
     <PageContainer>
-      <PageHeader title="Albums" description={<SplashText />} />
+      <PageHeader
+        title="Albums"
+        description={<SplashText />}
+        actions={
+          user && (
+            <Button asChild variant="secondary">
+              <Link to="/favorites">
+                <Heart />
+                My Favorites
+              </Link>
+            </Button>
+          )
+        }
+      />
 
       <AlbumToolbar
         filters={filters}
