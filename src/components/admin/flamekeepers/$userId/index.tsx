@@ -45,7 +45,7 @@ import { formatGb } from '@/lib/flamekeeper/rules'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { formatGraduationMonth } from '@/lib/graduation-date'
 import { lostDeadline } from '@/lib/pool/health'
-import { STATE_VARIANT } from '../components/flamekeeper-columns'
+import { StateBadge } from '../components/state-badge'
 
 const formatDate = (value: string | number | Date | null | undefined) => {
   if (!value) return '—'
@@ -226,9 +226,7 @@ export function Page({
               <Table>
                 <TableBody>
                   <DetailRow label="State">
-                    <Badge variant={STATE_VARIANT[flamekeeper.state]}>
-                      {flamekeeper.state}
-                    </Badge>
+                    <StateBadge state={flamekeeper.state} />
                   </DetailRow>
                   <DetailRow label="Pledged">
                     {formatGb(flamekeeper.pledgedBytes)}

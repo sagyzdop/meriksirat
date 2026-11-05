@@ -1,6 +1,4 @@
-// PROTOTYPE: the dashboard "Free up space" list, rebuilt as a data table with
-// an expiry date range picker for the flamekeepers admin screen.
-import { useMemo, useState } from 'react'
+import * as React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { DateRange } from 'react-day-picker'
@@ -17,26 +15,12 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
-import { Section } from '@/components/layout/section'
 import { useAsyncAction } from '@/hooks/use-async-action'
 import { expireAlbumNowFn } from '@/lib/admin/functions/free-space'
 import type { FreeSpaceSuggestion } from '@/lib/admin/functions/free-space'
 import { formatBytes } from '@/components/admin/dashboard/components/album-storage-cards'
-
-interface OffloadPanelProps {
-  suggestions: FreeSpaceSuggestion[]
-  isLoading?: boolean
-  compact?: boolean
-}
+import { relativeTime } from '../issues'
 
 function dayStart(date: Date) {
   const copy = new Date(date)
@@ -50,17 +34,22 @@ function dayEnd(date: Date) {
   return copy.getTime()
 }
 
-export function OffloadPanel({
+interface ReclaimQueueProps {
+  suggestions: FreeSpaceSuggestion[]
+  isLoading?: boolean
+}
+
+export function ReclaimQueue({
   suggestions,
   isLoading = false,
-  compact = false,
-}: OffloadPanelProps) {
+}: ReclaimQueueProps) {
   const queryClient = useQueryClient()
-  const [range, setRange] = useState<DateRange | undefined>()
-  const [target, setTarget] = useState<FreeSpaceSuggestion | null>(null)
+  const [range, setRange] = React.useState<DateRange | undefined>()
+  const [target, setTarget] = React.useState<FreeSpaceSuggestion | null>(null)
   const { pending: isExpiring, run } = useAsyncAction()
+  const now = React.useMemo(() => new Date(), [])
 
-  const visible = useMemo(() => {
+  const visible = React.useMemo(() => {
     if (!range?.from) return suggestions
     const from = dayStart(range.from)
     const to = range.to ? dayEnd(range.to) : dayEnd(range.from)
@@ -71,12 +60,19 @@ export function OffloadPanel({
     })
   }, [range, suggestions])
 
+  const reclaimableBytes = visible.reduce(
+    (total, suggestion) => total + suggestion.photoBytes,
+    0
+  )
+
   const handleExpire = async () => {
     if (!target) return
     await run(async () => {
       const result = await expireAlbumNowFn({ data: { albumId: target.id } })
       toast.success(
-        `"${target.title}" will be deleted in 7 days. ${result.notified} ${result.notified === 1 ? 'person' : 'people'} notified.`
+        `"${target.title}" will be deleted in 7 days. ${result.notified} ${
+          result.notified === 1 ? 'person' : 'people'
+        } notified.`
       )
       await queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] })
       await queryClient.invalidateQueries({ queryKey: ['albums'] })
@@ -85,78 +81,82 @@ export function OffloadPanel({
   }
 
   return (
-    <Section
-      title="Albums to offload"
-      description={
-        compact
-          ? 'Candidates for early expiry, filtered by expiry date.'
-          : 'Unpinned albums nobody favorited come first, then favorited ones; each group by soonest expiry, then largest size. Expiring an album now gives its owner and everyone who favorited a photo in it 7 days’ notice.'
-      }
-      actions={
+    <section aria-label="Space to reclaim" className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">
+            Space to reclaim
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Expiring an album deletes it in 7 days and notifies its owner and
+            everyone who favorited a photo in it.
+          </p>
+        </div>
         <DateRangeFilter
           from={range?.from?.toISOString()}
           to={range?.to?.toISOString()}
           onChange={setRange}
         />
-      }
-      spacing="compact"
-    >
+      </div>
+
       {isLoading ? (
-        <Skeleton className="h-40 w-full rounded-md" />
+        <Skeleton className="h-24 w-full rounded-md" />
       ) : visible.length === 0 ? (
-        <p className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
           {range?.from
             ? 'No albums expire in that range.'
-            : 'No albums to suggest.'}
+            : 'Nothing to reclaim right now.'}
         </p>
       ) : (
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Album</TableHead>
-                <TableHead className="whitespace-nowrap">Expires</TableHead>
-                <TableHead className="whitespace-nowrap">Size</TableHead>
-                <TableHead className="whitespace-nowrap">Favorites</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((suggestion) => (
-                <TableRow key={suggestion.id}>
-                  <TableCell className="font-medium">
+        <>
+          <p className="text-xs text-muted-foreground">
+            {visible.length} album{visible.length === 1 ? '' : 's'} ·{' '}
+            {formatBytes(reclaimableBytes)} reclaimable
+          </p>
+          <ul className="max-h-[420px] divide-y overflow-y-auto border-y">
+            {visible.map((suggestion) => (
+              <li
+                key={suggestion.id}
+                className="flex items-center gap-3 py-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
                     {suggestion.title}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {suggestion.expiresAt
-                      ? new Date(suggestion.expiresAt).toLocaleDateString(
-                          'en-US',
-                          {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          }
-                        )
-                      : 'Never'}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {formatBytes(suggestion.photoBytes)}
-                  </TableCell>
-                  <TableCell>{suggestion.favoriteCount}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTarget(suggestion)}
-                    >
-                      Expire now
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {suggestion.expiresAt ? (
+                      <>
+                        Expires{' '}
+                        {relativeTime(new Date(suggestion.expiresAt), now)}
+                        {' · '}
+                        {new Date(suggestion.expiresAt).toLocaleDateString(
+                          undefined,
+                          { month: 'short', day: 'numeric', year: 'numeric' }
+                        )}
+                      </>
+                    ) : (
+                      'Never expires'
+                    )}
+                    {' · '}
+                    {suggestion.favoriteCount}{' '}
+                    {suggestion.favoriteCount === 1 ? 'favorite' : 'favorites'}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm tabular-nums">
+                  {formatBytes(suggestion.photoBytes)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setTarget(suggestion)}
+                >
+                  Expire
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <AlertDialog
@@ -187,6 +187,6 @@ export function OffloadPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Section>
+    </section>
   )
 }

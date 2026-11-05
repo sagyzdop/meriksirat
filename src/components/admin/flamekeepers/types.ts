@@ -1,8 +1,7 @@
+import { USER_STATUSES } from '@/lib/user/types'
+
 export const FLAMEKEEPER_SORT_KEYS = [
   'name',
-  'status',
-  'state',
-  'pledgedBytes',
   'usedBytes',
   'graduationDate',
   'createdAt',
@@ -10,16 +9,17 @@ export const FLAMEKEEPER_SORT_KEYS = [
 
 export type FlamekeeperSortKey = (typeof FLAMEKEEPER_SORT_KEYS)[number]
 
-export const FLAMEKEEPER_VARIANTS = ['A', 'B', 'C'] as const
+export const FLAMEKEEPER_SORT_OPTIONS = [
+  { value: 'createdAt:desc', label: 'Recently added' },
+  { value: 'name:asc', label: 'Name' },
+  { value: 'usedBytes:desc', label: 'Most used' },
+  { value: 'graduationDate:asc', label: 'Graduation' },
+] as const
 
-export type FlamekeeperVariant = (typeof FLAMEKEEPER_VARIANTS)[number]
-
-export interface FlamekeeperTableFilters {
+export interface FlamekeeperFilters {
   search?: string
-  status?: string[]
-  page: number
-  limit: number
+  status?: (typeof USER_STATUSES)[number]
+  attention?: '1'
   sortBy: FlamekeeperSortKey
   sortOrder: 'asc' | 'desc'
-  variant: FlamekeeperVariant
 }
