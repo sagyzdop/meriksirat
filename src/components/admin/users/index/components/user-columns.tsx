@@ -32,7 +32,7 @@ interface InlineSelectProps {
   onValueChange: (value: string) => void
 }
 
-function InlineSelect({
+export function InlineSelect({
   value,
   placeholder,
   options,

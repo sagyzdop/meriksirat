@@ -1,21 +1,27 @@
-// Flamekeepers page: the loader fetches the roster, pool stats and reclaim
-// suggestions up front; filters and sorting are applied client-side.
+// PROTOTYPE ROUTE: dedicated flamekeepers admin screen. The route hosts three
+// switchable layouts; the loader already fetches the data each of them needs.
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { Page } from '@/components/admin/flamekeepers'
-import { FLAMEKEEPER_SORT_KEYS } from '@/components/admin/flamekeepers/types'
+import {
+  FLAMEKEEPER_SORT_KEYS,
+  FLAMEKEEPER_VARIANTS,
+} from '@/components/admin/flamekeepers/types'
 import { adminDashboardQueries } from '@/lib/admin/dashboard-queries'
 import { flamekeeperQueries } from '@/lib/flamekeeper/queries'
+import { stringArrayParam } from '@/lib/search-params'
 import { USER_STATUSES } from '@/lib/user/types'
 
 const searchSchema = z.object({
   search: z.string().optional(),
-  status: z.enum(USER_STATUSES).optional(),
-  attention: z.enum(['1']).optional(),
+  status: stringArrayParam(z.enum(USER_STATUSES)),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
   sortBy: z.enum(FLAMEKEEPER_SORT_KEYS).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  variant: z.enum(FLAMEKEEPER_VARIANTS).default('A'),
 })
 
 export const Route = createFileRoute('/_authenticated/admin/flamekeepers/')({
