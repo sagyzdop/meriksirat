@@ -17,10 +17,18 @@ export interface AdminFlamekeeperRow {
   email: string
   image: string | null
   isMember: boolean
+  role: string | null
+  clearanceLevel: number | null
+  status: string | null
+  albumCount: number
   state: FlamekeeperState
   pledgedBytes: number
   usedBytes: number
+  driveUsageBytes: number
   graduationDate: string | null
+  graduationConfirmedAt: Date | null
+  healthCheckedAt: Date | null
+  lostSince: Date | null
   bannedAt: Date | null
   banReason: string | null
   createdAt: Date

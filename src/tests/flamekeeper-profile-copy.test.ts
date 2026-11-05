@@ -26,7 +26,7 @@ describe('flamekeeperPresentation', () => {
   it('thanks a flamekeeper with nothing stored, with a pulse and the pledge line', () => {
     const view = flamekeeperPresentation(pledged('active'))
     expect(view.title).toBe("You're keeping the flame alive")
-    expect(view.description).toBe('Thank you for your pledge.')
+    expect(view.description).toBe('Thank you for your service 🫡🇰🇿')
     expect(view.icon).toBe('ember')
     expect(view.action).toBeNull()
     expect(view.pledge).toEqual({ line: '0 GB of 5 GB pledged', percent: 0 })

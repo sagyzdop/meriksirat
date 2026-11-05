@@ -4,11 +4,7 @@ import { cn } from '@/lib/utils'
 const tabClass =
   'inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors'
 
-export function UserTabs({
-  active,
-}: {
-  active: 'members' | 'flamekeepers' | 'alumni'
-}) {
+export function UserTabs({ active }: { active: 'members' | 'alumni' }) {
   return (
     <nav
       aria-label="User groups"
@@ -24,17 +20,6 @@ export function UserTabs({
         )}
       >
         Members
-      </Link>
-      <Link
-        to="/admin/flamekeepers"
-        className={cn(
-          tabClass,
-          active === 'flamekeepers'
-            ? 'bg-background shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        )}
-      >
-        Flamekeepers
       </Link>
       <Link
         to="/admin/alumni"

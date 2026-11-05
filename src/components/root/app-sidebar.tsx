@@ -3,6 +3,7 @@ import {
   Info,
   Layers,
   Camera,
+  Flame,
   ShieldCheck,
   Users,
   Tags,
@@ -88,6 +89,11 @@ const data = {
       title: 'User Management',
       url: '/admin/users',
       icon: Users,
+    },
+    {
+      title: 'Flamekeepers',
+      url: '/admin/flamekeepers',
+      icon: Flame,
     },
     {
       title: 'Birthdays',

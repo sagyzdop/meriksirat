@@ -60,7 +60,7 @@ export function flamekeeperPresentation(
     default:
       return {
         title: "You're keeping the flame alive",
-        description: 'Thank you for your pledge.',
+        description: 'Thank you for your service 🫡🇰🇿',
         icon: flamekeeper.usedBytes > 0 ? 'flame' : 'ember',
         action: null,
         pledge,
