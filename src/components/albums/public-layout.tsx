@@ -37,7 +37,13 @@ export function PublicAlbumsHeader({
             NU Image
           </span>
         </Link>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3">
+          <Link
+            to="/about"
+            className="text-sm text-muted-foreground underline transition-colors hover:text-primary"
+          >
+            About
+          </Link>
           <ThemeToggle />
           {menuUser ? (
             <UserMenu user={menuUser} onLogout={onLogout} />
@@ -55,7 +61,7 @@ export function PublicAlbumsHeader({
 export function PublicAlbumsFooter() {
   return (
     <footer className="border-t">
-      <div className="mx-auto grid w-full max-w-7xl items-center justify-items-center gap-3 px-4 py-4 md:h-16 md:grid-cols-3 md:py-0 md:px-8">
+      <div className="mx-auto grid w-full max-w-7xl items-center justify-items-center gap-3 px-4 py-4 md:h-16 md:grid-cols-2 md:py-0 md:px-8">
         <p className="text-sm text-muted-foreground md:justify-self-start">
           Made by{' '}
           <a
@@ -67,12 +73,6 @@ export function PublicAlbumsFooter() {
             sagyzdop
           </a>
         </p>
-        <Link
-          to="/about"
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-        >
-          About
-        </Link>
         <div className="flex items-center gap-4 md:justify-self-end">
           <span className="text-sm text-muted-foreground">Follow NU Image</span>
           <a
