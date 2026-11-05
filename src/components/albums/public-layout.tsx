@@ -21,7 +21,7 @@ export function PublicAlbumsHeader({
   onLogout: () => void
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b">
+    <header className="sticky top-0 z-30 border-b bg-background">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
         <Link
           to="/albums"
