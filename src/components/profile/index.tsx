@@ -1,3 +1,6 @@
+import { Link } from '@tanstack/react-router'
+import { Heart } from 'lucide-react'
+import { Item, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getAccessRules } from '@/lib/access/access-rules'
 import type { MyFlamekeeper } from '@/lib/flamekeeper/types'
@@ -47,7 +50,7 @@ export function Page({
     'U'
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-10 px-4 py-8">
+    <div className="mx-auto w-full max-w-2xl space-y-10 px-4 pt-8 pb-24">
       <div className="flex flex-col items-center gap-3 text-center">
         <Avatar className="size-24">
           <AvatarImage src={user.image || undefined} alt="" />
@@ -60,6 +63,17 @@ export function Page({
           </p>
         </div>
       </div>
+
+      <Item asChild variant="outline" size="sm">
+        <Link to="/favorites">
+          <ItemMedia>
+            <Heart className="size-4 text-muted-foreground" />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>My Favorites</ItemTitle>
+          </ItemContent>
+        </Link>
+      </Item>
 
       {rules.showFlamekeeperSection && (
         <FlamekeeperSection

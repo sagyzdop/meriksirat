@@ -1,4 +1,4 @@
-import { LogOut, UserCircle } from 'lucide-react'
+import { Heart, LogOut, UserCircle } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -75,6 +75,12 @@ export function UserMenu({
             <Link to="/profile" aria-label="Go to account settings">
               <UserCircle aria-hidden="true" />
               Account
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/favorites">
+              <Heart aria-hidden="true" />
+              My Favorites
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
