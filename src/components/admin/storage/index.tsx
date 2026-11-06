@@ -166,7 +166,8 @@ function CapItem({ capBytes }: { capBytes: number }) {
       <ItemContent>
         <Label htmlFor="flamekeeper-cap">Per-account cap (GB)</Label>
         <ItemDescription>
-          The most Drive space one flamekeeper may lend.
+          The app stops using a flamekeeper's account once its total Drive usage
+          reaches this. Pledges are separate: 0.5, 1, 2, 3, 4 or 5 GB.
         </ItemDescription>
       </ItemContent>
       <ItemActions>
@@ -205,17 +206,17 @@ export function Page({
         description="Buffer and flamekeeper capacity"
       />
 
-      <div className="max-w-2xl space-y-8">
+      <div className="max-w-2xl space-y-10">
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Buffer</h2>
-          <ItemGroup>
+          <ItemGroup className="gap-2">
             <BufferItem usage={buffer} isLoading={bufferLoading} />
           </ItemGroup>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Flamekeepers</h2>
-          <ItemGroup>
+          <ItemGroup className="gap-2">
             {pool ? (
               <>
                 <PoolItem pool={pool} />

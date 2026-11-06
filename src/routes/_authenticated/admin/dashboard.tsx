@@ -10,6 +10,7 @@ import { adminDashboardQueries } from '@/lib/admin/dashboard-queries'
 const searchSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  tab: z.enum(['bookings', 'albums']).default('bookings'),
 })
 
 export const Route = createFileRoute('/_authenticated/admin/dashboard')({
@@ -54,6 +55,7 @@ function RouteComponent() {
   return (
     <Page
       search={search}
+      tab={search.tab}
       stats={stats}
       statsLoading={isStatsFetching && !stats}
       alerts={alerts ?? []}
@@ -70,17 +72,17 @@ function DashboardPending() {
         title="Dashboard"
         description="Bookings and album storage for the selected range"
       />
-      <div className="max-w-2xl space-y-8">
+      <div className="max-w-2xl space-y-10">
         <div className="flex justify-end">
           <Skeleton className="h-8 w-64" />
         </div>
-        <div className="space-y-2">
-          <Skeleton className="h-6 w-28" />
-          <Skeleton className="h-64 w-full rounded-lg" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-6 w-20" />
-          <Skeleton className="h-28 w-full rounded-lg" />
+        <div className="space-y-6">
+          <Skeleton className="h-9 w-52" />
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full rounded-lg" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </div>
         </div>
       </div>
     </PageContainer>

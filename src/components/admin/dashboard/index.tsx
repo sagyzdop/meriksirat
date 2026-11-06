@@ -22,6 +22,7 @@ import {
   ItemTitle,
 } from '@/components/ui/item'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
@@ -37,6 +38,7 @@ import { DashboardHeaderActions } from './components/header-actions'
 
 interface PageProps {
   search: AdminDashboardRange
+  tab: 'bookings' | 'albums'
   stats?: AdminDashboardStats
   statsLoading: boolean
   alerts: DashboardAlert[]
@@ -116,6 +118,7 @@ function StatItem({
 
 export function Page({
   search,
+  tab,
   stats,
   statsLoading,
   alerts,
@@ -123,6 +126,10 @@ export function Page({
   canBroadcast,
 }: PageProps) {
   const navigate = useNavigate()
+
+  const handleTabChange = (value: string) => {
+    navigate({ to: '.', search: { ...search, tab: value } as never })
+  }
 
   const handleRangeChange = (range: { from?: Date; to?: Date } | undefined) => {
     navigate({
@@ -159,7 +166,7 @@ export function Page({
         }
       />
 
-      <div className="max-w-2xl space-y-8">
+      <div className="max-w-2xl space-y-10">
         <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-end">
           {hasCustomRange && (
             <Button
@@ -179,35 +186,40 @@ export function Page({
           />
         </div>
 
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Bookings</h2>
-          <ItemGroup>
-            {bookingStats.map(({ key, label, icon }) => (
-              <StatItem
-                key={key}
-                icon={icon}
-                label={label}
-                value={stats?.bookingStats[key].toLocaleString()}
-                isLoading={statsLoading}
-              />
-            ))}
-          </ItemGroup>
-        </section>
+        <Tabs value={tab} onValueChange={handleTabChange} className="gap-6">
+          <TabsList variant="line">
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="albums">Albums</TabsTrigger>
+          </TabsList>
 
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Albums</h2>
-          <ItemGroup>
-            {albumStats.map(({ key, label, icon, format }) => (
-              <StatItem
-                key={key}
-                icon={icon}
-                label={label}
-                value={stats ? format(stats.albumStorage[key]) : undefined}
-                isLoading={statsLoading}
-              />
-            ))}
-          </ItemGroup>
-        </section>
+          <TabsContent value="bookings">
+            <ItemGroup className="gap-2">
+              {bookingStats.map(({ key, label, icon }) => (
+                <StatItem
+                  key={key}
+                  icon={icon}
+                  label={label}
+                  value={stats?.bookingStats[key].toLocaleString()}
+                  isLoading={statsLoading}
+                />
+              ))}
+            </ItemGroup>
+          </TabsContent>
+
+          <TabsContent value="albums">
+            <ItemGroup className="gap-2">
+              {albumStats.map(({ key, label, icon, format }) => (
+                <StatItem
+                  key={key}
+                  icon={icon}
+                  label={label}
+                  value={stats ? format(stats.albumStorage[key]) : undefined}
+                  isLoading={statsLoading}
+                />
+              ))}
+            </ItemGroup>
+          </TabsContent>
+        </Tabs>
       </div>
     </PageContainer>
   )

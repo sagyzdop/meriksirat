@@ -64,7 +64,8 @@ function CapEditor({ capBytes }: { capBytes: number }) {
         <div className="space-y-1">
           <Label htmlFor="flamekeeper-admin-cap">Per-account cap (GB)</Label>
           <p className="text-xs text-muted-foreground">
-            The most Drive space one flamekeeper may lend.
+            The app stops using a flamekeeper's account once its total Drive
+            usage reaches this. Pledges are separate: 0.5, 1, 2, 3, 4 or 5 GB.
           </p>
         </div>
         <div className="flex gap-2">
