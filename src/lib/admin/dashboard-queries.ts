@@ -5,7 +5,6 @@ import {
 } from './functions/dashboard-stats'
 import {
   exportUsersFn,
-  getAdminMostActiveUsersFn,
   getAdminUserAlbumsFn,
   getViolationsFn,
 } from './functions/dashboard-users'
@@ -23,9 +22,7 @@ import type {
   BroadcastResult,
   DashboardAlert,
   ExportUsersFilters,
-  MostActiveUsersFilters,
   PaginatedAdminUserAlbumsResponse,
-  PaginatedMostActiveUsersResponse,
   PaginatedViolationsResponse,
   ViolationsFilters,
 } from './dashboard-types'
@@ -38,46 +35,6 @@ import { getBufferUsageFn } from '@/lib/buffer/functions'
 import type { BufferUsageOverview } from '@/lib/buffer/functions'
 import { getPoolOverviewFn, type PoolOverview } from './functions/pool'
 import { getSettingsFn, type SettingsData } from './functions/settings'
-
-/**
- * Dashboard tabs, in display order. Single source shared by the route's
- * search schema and the page's tab bar so the `?tab=` keys never drift.
- */
-export const DASHBOARD_TABS = [
-  'overview',
-  'albums',
-  'violations',
-  'settings',
-] as const
-
-export type DashboardTab = (typeof DASHBOARD_TABS)[number]
-
-/**
- * Search params owned by the dashboard route. Each table on the page owns a
- * prefixed set so the URL keeps working while both tables are rendered.
- */
-export interface DashboardSearchParams {
-  startDate?: string
-  endDate?: string
-  tab?: DashboardTab
-  activePage?: number
-  activeLimit?: number
-  activeSortBy?: 'albumCount' | 'firstName' | 'email' | 'createdAt'
-  activeSortOrder?: 'asc' | 'desc'
-  activeSearch?: string
-  violationPage?: number
-  violationLimit?: number
-  violationSortBy?:
-    | 'firstName'
-    | 'email'
-    | 'role'
-    | 'status'
-    | 'cancelledInStartWindowCount'
-    | 'overdueCount'
-  violationSortOrder?: 'asc' | 'desc'
-  violationSearch?: string
-  violationType?: ('auto-cancelled' | 'overdue')[]
-}
 
 /**
  * Resolves an optional date range to concrete ISO strings. When a bound is
@@ -119,12 +76,6 @@ export const adminDashboardQueries = {
       refetchInterval: 60_000,
       queryFn: async (): Promise<DashboardAlert[]> =>
         getAdminDashboardAlertsFn(),
-    }),
-  mostActive: (filters: MostActiveUsersFilters) =>
-    queryOptions({
-      queryKey: [...adminDashboardQueries.all, 'most-active', filters],
-      queryFn: async (): Promise<PaginatedMostActiveUsersResponse> =>
-        getAdminMostActiveUsersFn({ data: filters }),
     }),
   violations: (filters: ViolationsFilters) =>
     queryOptions({

@@ -23,6 +23,9 @@ import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AuthenticatedAdminAlbumsRouteImport } from './routes/_authenticated/admin/albums'
 import { Route as AuthenticatedAdminBirthdaysRouteImport } from './routes/_authenticated/admin/birthdays'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
+import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
+import { Route as AuthenticatedAdminStorageRouteImport } from './routes/_authenticated/admin/storage'
+import { Route as AuthenticatedAdminViolationsRouteImport } from './routes/_authenticated/admin/violations'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings/index'
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
@@ -117,6 +120,24 @@ const AuthenticatedAdminDashboardRoute =
   AuthenticatedAdminDashboardRouteImport.update({
     id: '/dashboard',
     path: '/dashboard',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminSettingsRoute =
+  AuthenticatedAdminSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminStorageRoute =
+  AuthenticatedAdminStorageRouteImport.update({
+    id: '/storage',
+    path: '/storage',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminViolationsRoute =
+  AuthenticatedAdminViolationsRouteImport.update({
+    id: '/violations',
+    path: '/violations',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedBookingsIndexRoute =
@@ -263,6 +284,9 @@ export interface FileRoutesByFullPath {
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/admin/storage': typeof AuthenticatedAdminStorageRoute
+  '/admin/violations': typeof AuthenticatedAdminViolationsRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -300,6 +324,9 @@ export interface FileRoutesByTo {
   '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/admin/storage': typeof AuthenticatedAdminStorageRoute
+  '/admin/violations': typeof AuthenticatedAdminViolationsRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -339,6 +366,9 @@ export interface FileRoutesById {
   '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/_authenticated/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
+  '/_authenticated/admin/storage': typeof AuthenticatedAdminStorageRoute
+  '/_authenticated/admin/violations': typeof AuthenticatedAdminViolationsRoute
   '/_authenticated/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/_authenticated/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -378,6 +408,9 @@ export interface FileRouteTypes {
     | '/admin/albums'
     | '/admin/birthdays'
     | '/admin/dashboard'
+    | '/admin/settings'
+    | '/admin/storage'
+    | '/admin/violations'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
@@ -415,6 +448,9 @@ export interface FileRouteTypes {
     | '/admin/albums'
     | '/admin/birthdays'
     | '/admin/dashboard'
+    | '/admin/settings'
+    | '/admin/storage'
+    | '/admin/violations'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
@@ -453,6 +489,9 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/albums'
     | '/_authenticated/admin/birthdays'
     | '/_authenticated/admin/dashboard'
+    | '/_authenticated/admin/settings'
+    | '/_authenticated/admin/storage'
+    | '/_authenticated/admin/violations'
     | '/_authenticated/bookings/new'
     | '/_authenticated/equipment/$'
     | '/api/auth/$'
@@ -589,6 +628,27 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/settings': {
+      id: '/_authenticated/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/storage': {
+      id: '/_authenticated/admin/storage'
+      path: '/storage'
+      fullPath: '/admin/storage'
+      preLoaderRoute: typeof AuthenticatedAdminStorageRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/violations': {
+      id: '/_authenticated/admin/violations'
+      path: '/violations'
+      fullPath: '/admin/violations'
+      preLoaderRoute: typeof AuthenticatedAdminViolationsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/bookings/': {
@@ -752,6 +812,9 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAlbumsRoute: typeof AuthenticatedAdminAlbumsRoute
   AuthenticatedAdminBirthdaysRoute: typeof AuthenticatedAdminBirthdaysRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
+  AuthenticatedAdminStorageRoute: typeof AuthenticatedAdminStorageRoute
+  AuthenticatedAdminViolationsRoute: typeof AuthenticatedAdminViolationsRoute
   AuthenticatedAdminEquipmentNewRoute: typeof AuthenticatedAdminEquipmentNewRoute
   AuthenticatedAdminFlamekeepersUserIdRoute: typeof AuthenticatedAdminFlamekeepersUserIdRoute
   AuthenticatedAdminUsersUserIdRoute: typeof AuthenticatedAdminUsersUserIdRoute
@@ -769,6 +832,9 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAlbumsRoute: AuthenticatedAdminAlbumsRoute,
   AuthenticatedAdminBirthdaysRoute: AuthenticatedAdminBirthdaysRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+  AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
+  AuthenticatedAdminStorageRoute: AuthenticatedAdminStorageRoute,
+  AuthenticatedAdminViolationsRoute: AuthenticatedAdminViolationsRoute,
   AuthenticatedAdminEquipmentNewRoute: AuthenticatedAdminEquipmentNewRoute,
   AuthenticatedAdminFlamekeepersUserIdRoute:
     AuthenticatedAdminFlamekeepersUserIdRoute,

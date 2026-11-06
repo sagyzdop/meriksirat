@@ -59,6 +59,8 @@ function getPageName(pathname: string): string {
       if (segments[1] === 'albums') return 'Album Management'
       if (segments[1] === 'categories') return 'Category Management'
       if (segments[1] === 'bookings') return 'Booking Oversight'
+      if (segments[1] === 'storage') return 'Storage'
+      if (segments[1] === 'violations') return 'Violations'
       if (segments[1] === 'settings') return 'Admin Settings'
       return 'Admin'
 

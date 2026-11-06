@@ -12,11 +12,11 @@ import type { SettingsData } from '@/lib/admin/functions/settings'
 import { minutesToTime, timeToMinutes } from '@/lib/booking/operating-hours'
 import { cn } from '@/lib/utils'
 
-interface SettingsTabProps {
+interface SettingsFormProps {
   settings: SettingsData
 }
 
-export function SettingsTab({ settings }: SettingsTabProps) {
+export function SettingsForm({ settings }: SettingsFormProps) {
   const queryClient = useQueryClient()
 
   const [globalBookingNote, setGlobalBookingNote] = useState(
@@ -57,8 +57,6 @@ export function SettingsTab({ settings }: SettingsTabProps) {
         },
       })
       toast.success('Settings updated successfully')
-      // Prefix invalidation: settings feed the dashboard stats and the
-      // booking availability window, so both trees refetch together.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
         queryClient.invalidateQueries({ queryKey: ['bookings'] }),
@@ -156,7 +154,7 @@ export function SettingsTab({ settings }: SettingsTabProps) {
   )
 }
 
-export function SettingsTabSkeleton() {
+export function SettingsFormSkeleton() {
   return (
     <div className="max-w-2xl space-y-6">
       <div className="space-y-2">

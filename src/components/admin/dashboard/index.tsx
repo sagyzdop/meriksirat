@@ -1,80 +1,125 @@
 import { useNavigate } from '@tanstack/react-router'
+import {
+  CalendarCheck2,
+  CalendarClock,
+  CalendarDays,
+  CalendarOff,
+  CalendarPlus,
+  CalendarX,
+  FolderOpen,
+  HardDrive,
+  Images,
+  TimerReset,
+  type LucideIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
-import { BookingStatCards } from './components/booking-stat-cards'
-import { AlbumStorageCards } from './components/album-storage-cards'
-import { DashboardHeaderActions } from './components/header-actions'
-import { MostActiveUsersTable } from './components/most-active-users-table'
-import { ViolationsTable } from './components/violations-table'
-import { ClubCodeCard } from './components/club-code-card'
-import { FreeSpacePanel } from './components/free-space-panel'
-import { BufferCard } from './components/buffer-card'
-import { PoolCard } from './components/pool-card'
-import type { BufferUsageOverview } from '@/lib/buffer/functions'
-import type { PoolOverview } from '@/lib/admin/functions/pool'
-import type { FreeSpaceSuggestion } from '@/lib/admin/functions/free-space'
-import { SettingsTab, SettingsTabSkeleton } from './components/settings-tab'
+import { formatBytes } from '@/lib/format'
 import { effectiveDashboardRange } from '@/lib/admin/dashboard-queries'
 import type {
-  DashboardSearchParams,
-  DashboardTab,
-} from '@/lib/admin/dashboard-queries'
-import type {
+  AdminDashboardRange,
   AdminDashboardStats,
+  BookingStats,
   DashboardAlert,
-  PaginatedMostActiveUsersResponse,
-  PaginatedViolationsResponse,
 } from '@/lib/admin/dashboard-types'
-import type { SettingsData } from '@/lib/admin/functions/settings'
+import { DashboardHeaderActions } from './components/header-actions'
 
 interface PageProps {
-  search: DashboardSearchParams
-  tab: DashboardTab
-  onTabChange: (tab: DashboardTab) => void
+  search: AdminDashboardRange
   stats?: AdminDashboardStats
   statsLoading: boolean
   alerts: DashboardAlert[]
   alertsLoading: boolean
-  mostActive: PaginatedMostActiveUsersResponse
-  mostActiveLoading: boolean
-  violations: PaginatedViolationsResponse
-  violationsLoading: boolean
-  settings?: SettingsData
-  settingsLoading: boolean
-  clubCode?: string
-  freeSpace?: FreeSpaceSuggestion[]
-  freeSpaceLoading: boolean
-  buffer?: BufferUsageOverview | null
-  bufferLoading: boolean
-  pool?: PoolOverview
-  poolLoading: boolean
   canBroadcast: boolean
+}
+
+const bookingStats: Array<{
+  key: keyof BookingStats
+  label: string
+  icon: LucideIcon
+}> = [
+  { key: 'total', label: 'Total', icon: CalendarDays },
+  { key: 'booked', label: 'Booked', icon: CalendarPlus },
+  { key: 'active', label: 'Active', icon: CalendarCheck2 },
+  { key: 'overdue', label: 'Overdue', icon: TimerReset },
+  { key: 'returned', label: 'Returned', icon: CalendarClock },
+  { key: 'cancelled', label: 'Cancelled', icon: CalendarX },
+  { key: 'partially_returned', label: 'Partially Returned', icon: CalendarOff },
+]
+
+const albumStats: Array<{
+  key: 'albumCount' | 'photoCount' | 'totalBytes'
+  label: string
+  icon: LucideIcon
+  format: (value: number) => string
+}> = [
+  {
+    key: 'albumCount',
+    label: 'Albums',
+    icon: FolderOpen,
+    format: (value) => value.toLocaleString(),
+  },
+  {
+    key: 'photoCount',
+    label: 'Photos',
+    icon: Images,
+    format: (value) => value.toLocaleString(),
+  },
+  {
+    key: 'totalBytes',
+    label: 'Storage Used',
+    icon: HardDrive,
+    format: formatBytes,
+  },
+]
+
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+  isLoading,
+}: {
+  icon: LucideIcon
+  label: string
+  value?: string
+  isLoading: boolean
+}) {
+  return (
+    <Item variant="outline" size="sm">
+      <ItemMedia variant="icon">
+        <Icon />
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>{label}</ItemTitle>
+      </ItemContent>
+      {isLoading && value === undefined ? (
+        <Skeleton className="h-4 w-12" />
+      ) : (
+        <ItemDescription className="font-semibold tabular-nums text-foreground">
+          {value}
+        </ItemDescription>
+      )}
+    </Item>
+  )
 }
 
 export function Page({
   search,
-  tab,
-  onTabChange,
   stats,
   statsLoading,
   alerts,
   alertsLoading,
-  mostActive,
-  mostActiveLoading,
-  violations,
-  violationsLoading,
-  settings,
-  settingsLoading,
-  clubCode,
-  freeSpace,
-  freeSpaceLoading,
-  buffer,
-  bufferLoading,
-  pool,
-  poolLoading,
   canBroadcast,
 }: PageProps) {
   const navigate = useNavigate()
@@ -86,8 +131,6 @@ export function Page({
         ...search,
         startDate: range?.from ? range.from.toISOString() : undefined,
         endDate: range?.to ? range.to.toISOString() : undefined,
-        activePage: 1,
-        violationPage: 1,
       } as never,
     })
   }
@@ -95,31 +138,18 @@ export function Page({
   const resetRange = () => {
     navigate({
       to: '.',
-      search: {
-        ...search,
-        startDate: undefined,
-        endDate: undefined,
-        activePage: 1,
-        violationPage: 1,
-      } as never,
+      search: { ...search, startDate: undefined, endDate: undefined } as never,
     })
   }
 
   const hasCustomRange = Boolean(search.startDate || search.endDate)
-
-  // Default (no custom range) = the current month. Surfacing the resolved
-  // range in the picker keeps the label and calendar selection in sync with
-  // what the dashboard is actually showing.
-  const effectiveRange = effectiveDashboardRange({
-    startDate: search.startDate,
-    endDate: search.endDate,
-  })
+  const effectiveRange = effectiveDashboardRange(search)
 
   return (
     <PageContainer>
       <PageHeader
         title="Dashboard"
-        description="Monitor bookings, album storage, user activity, and club health"
+        description="Bookings and album storage for the selected range"
         actions={
           <DashboardHeaderActions
             alerts={alerts}
@@ -129,131 +159,55 @@ export function Page({
         }
       />
 
-      <div className="space-y-6">
-        <Tabs
-          value={tab}
-          onValueChange={(value) => onTabChange(value as DashboardTab)}
-          className="gap-4"
-        >
-          <TabsList variant="line">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="albums">Albums</TabsTrigger>
-            <TabsTrigger value="violations">Violations</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+      <div className="max-w-2xl space-y-8">
+        <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-end">
+          {hasCustomRange && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-full text-muted-foreground md:w-auto"
+              onClick={resetRange}
+            >
+              Reset range
+            </Button>
+          )}
+          <DateRangeFilter
+            from={effectiveRange.startDate}
+            to={effectiveRange.endDate}
+            onChange={handleRangeChange}
+            className="w-full md:w-auto"
+          />
+        </div>
 
-          <TabsContent value="overview">
-            <div className="space-y-4">
-              <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-end">
-                {hasCustomRange && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-full text-muted-foreground md:w-auto"
-                    onClick={resetRange}
-                  >
-                    Reset range
-                  </Button>
-                )}
-                <DateRangeFilter
-                  from={effectiveRange.startDate}
-                  to={effectiveRange.endDate}
-                  onChange={handleRangeChange}
-                  className="w-full md:w-auto"
-                />
-              </div>
-              <BookingStatCards
-                stats={stats?.bookingStats}
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">Bookings</h2>
+          <ItemGroup>
+            {bookingStats.map(({ key, label, icon }) => (
+              <StatItem
+                key={key}
+                icon={icon}
+                label={label}
+                value={stats?.bookingStats[key].toLocaleString()}
                 isLoading={statsLoading}
               />
-              <AlbumStorageCards
-                stats={stats?.albumStorage}
+            ))}
+          </ItemGroup>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">Albums</h2>
+          <ItemGroup>
+            {albumStats.map(({ key, label, icon, format }) => (
+              <StatItem
+                key={key}
+                icon={icon}
+                label={label}
+                value={stats ? format(stats.albumStorage[key]) : undefined}
                 isLoading={statsLoading}
               />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="albums" className="space-y-4">
-            <BufferCard usage={buffer} isLoading={bufferLoading} />
-            <PoolCard
-              pool={pool}
-              isLoading={poolLoading}
-              canEditCap={canBroadcast}
-            />
-            {freeSpace ? (
-              <FreeSpacePanel
-                suggestions={freeSpace}
-                isLoading={freeSpaceLoading}
-              />
-            ) : null}
-            <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center md:justify-end">
-              {hasCustomRange && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-full text-muted-foreground md:w-auto"
-                  onClick={resetRange}
-                >
-                  Reset range
-                </Button>
-              )}
-              <DateRangeFilter
-                from={effectiveRange.startDate}
-                to={effectiveRange.endDate}
-                onChange={handleRangeChange}
-                className="w-full md:w-auto"
-              />
-            </div>
-            <MostActiveUsersTable
-              users={mostActive.users}
-              pagination={mostActive.pagination}
-              filters={{
-                startDate: search.startDate,
-                endDate: search.endDate,
-                search: search.activeSearch,
-                page: search.activePage ?? 1,
-                limit: search.activeLimit ?? 10,
-                sortBy: search.activeSortBy ?? 'albumCount',
-                sortOrder: search.activeSortOrder ?? 'desc',
-              }}
-              search={search}
-              isLoading={mostActiveLoading}
-            />
-          </TabsContent>
-
-          <TabsContent value="violations">
-            <div className="space-y-4">
-              <ViolationsTable
-                users={violations.users}
-                pagination={violations.pagination}
-                filters={{
-                  violationType: search.violationType,
-                  search: search.violationSearch,
-                  page: search.violationPage ?? 1,
-                  limit: search.violationLimit ?? 10,
-                  sortBy:
-                    search.violationSortBy ?? 'cancelledInStartWindowCount',
-                  sortOrder: search.violationSortOrder ?? 'desc',
-                }}
-                search={search}
-                isLoading={violationsLoading}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <div className="space-y-4">
-              {canBroadcast && clubCode ? (
-                <ClubCodeCard clubCode={clubCode} />
-              ) : null}
-              {settings ? (
-                <SettingsTab settings={settings} />
-              ) : settingsLoading ? (
-                <SettingsTabSkeleton />
-              ) : null}
-            </div>
-          </TabsContent>
-        </Tabs>
+            ))}
+          </ItemGroup>
+        </section>
       </div>
     </PageContainer>
   )

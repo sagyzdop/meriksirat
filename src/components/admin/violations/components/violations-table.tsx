@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-table'
 import { useNavigate } from '@tanstack/react-router'
 
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -19,37 +20,59 @@ import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import { SearchInput } from '@/components/shared/search-input'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
+import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
 import { useScopedServerTableSorting } from '@/components/shared/data-table/use-scoped-server-table-sorting'
-import type { DashboardSearchParams } from '@/lib/admin/dashboard-queries'
 import type {
-  MostActiveUser,
-  MostActiveUsersFilters,
+  ViolationType,
+  ViolationRow,
+  ViolationsFilters,
 } from '@/lib/admin/dashboard-types'
 import type { PaginationMeta } from '@/lib/pagination'
 
-interface MostActiveUsersTableProps {
-  users: MostActiveUser[]
+export interface ViolationsSearchParams {
+  violationPage?: number
+  violationLimit?: number
+  violationSortBy?: ViolationsFilters['sortBy']
+  violationSortOrder?: 'asc' | 'desc'
+  violationSearch?: string
+  violationType?: ViolationType[]
+}
+
+interface ViolationsTableProps {
+  users: ViolationRow[]
   pagination: PaginationMeta
-  filters: MostActiveUsersFilters
-  search: DashboardSearchParams
+  filters: ViolationsFilters
+  search: ViolationsSearchParams
   isLoading?: boolean
 }
 
-export function MostActiveUsersTable({
+const violationTypeOptions = [
+  { value: 'auto-cancelled', label: 'Auto-cancelled' },
+  { value: 'overdue', label: 'Overdue' },
+]
+
+const roleStyles: Record<string, string> = {
+  admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  manager:
+    'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  user: '',
+}
+
+export function ViolationsTable({
   users,
   pagination,
   filters,
   search,
   isLoading = false,
-}: MostActiveUsersTableProps) {
+}: ViolationsTableProps) {
   const navigate = useNavigate()
   const { sorting, handleSortingChange } = useScopedServerTableSorting(search, {
-    prefix: 'active',
+    prefix: 'violation',
     sortBy: filters.sortBy,
     sortOrder: filters.sortOrder,
   })
 
-  const columns = React.useMemo<ColumnDef<MostActiveUser>[]>(
+  const columns = React.useMemo<ColumnDef<ViolationRow>[]>(
     () => [
       {
         accessorKey: 'firstName',
@@ -66,23 +89,63 @@ export function MostActiveUsersTable({
         },
       },
       {
-        accessorKey: 'email',
+        accessorKey: 'role',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Email" />
+          <DataTableColumnHeader column={column} title="Role" />
+        ),
+        cell: ({ row }) => {
+          const role = row.original.role
+          if (!role) return <span className="text-muted-foreground">—</span>
+          const label = role.charAt(0).toUpperCase() + role.slice(1)
+          return (
+            <Badge variant="outline" className={roleStyles[role]}>
+              {label}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Status" />
+        ),
+        cell: ({ row }) => row.original.status ?? '—',
+      },
+      {
+        accessorKey: 'cancelledInStartWindowCount',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Auto-cancelled" />
         ),
         cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.original.email}</span>
+          <span className="tabular-nums">
+            {row.original.cancelledInStartWindowCount}
+          </span>
         ),
       },
       {
-        accessorKey: 'albumCount',
+        accessorKey: 'overdueCount',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Albums" />
+          <DataTableColumnHeader column={column} title="Overdue" />
         ),
         cell: ({ row }) => (
-          <span className="font-semibold tabular-nums">
-            {row.original.albumCount}
-          </span>
+          <span className="tabular-nums">{row.original.overdueCount}</span>
+        ),
+      },
+      {
+        id: 'violationTypes',
+        header: 'Violation Types',
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.violationTypes.map((type) => (
+              <Badge
+                key={type}
+                variant="outline"
+                className="text-muted-foreground"
+              >
+                {type === 'auto-cancelled' ? 'Auto-cancelled' : 'Overdue'}
+              </Badge>
+            ))}
+          </div>
         ),
       },
     ],
@@ -113,8 +176,22 @@ export function MostActiveUsersTable({
         to: '.',
         search: {
           ...search,
-          activeSearch: value || undefined,
-          activePage: 1,
+          violationSearch: value || undefined,
+          violationPage: 1,
+        } as never,
+      })
+    },
+    [search, navigate]
+  )
+
+  const handleTypeFilterChange = React.useCallback(
+    (values: string[] | undefined) => {
+      navigate({
+        to: '.',
+        search: {
+          ...search,
+          violationType: values && values.length > 0 ? values : undefined,
+          violationPage: 1,
         } as never,
       })
     },
@@ -125,7 +202,7 @@ export function MostActiveUsersTable({
     (page: number) => {
       navigate({
         to: '.',
-        search: { ...search, activePage: page } as never,
+        search: { ...search, violationPage: page } as never,
       })
     },
     [search, navigate]
@@ -135,7 +212,7 @@ export function MostActiveUsersTable({
     (limit: number) => {
       navigate({
         to: '.',
-        search: { ...search, activeLimit: limit, activePage: 1 } as never,
+        search: { ...search, violationLimit: limit, violationPage: 1 } as never,
       })
     },
     [search, navigate]
@@ -143,12 +220,20 @@ export function MostActiveUsersTable({
 
   return (
     <div className="space-y-4">
-      <SearchInput
-        placeholder="Search users by name or email..."
-        value={filters.search}
-        onChange={handleSearchChange}
-        className="h-8 w-full sm:w-[280px]"
-      />
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <SearchInput
+          placeholder="Search users by name or email..."
+          value={filters.search}
+          onChange={handleSearchChange}
+          className="h-8 w-full sm:w-[280px]"
+        />
+        <DataTableFacetedFilter
+          title="Type"
+          options={violationTypeOptions}
+          selectedValues={filters.violationType ?? []}
+          onSelectionChange={handleTypeFilterChange}
+        />
+      </div>
       <div className="relative rounded-md border overflow-x-auto">
         {isLoading && <LoadingOverlay />}
         <Table>

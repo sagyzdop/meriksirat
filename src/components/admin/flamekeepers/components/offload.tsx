@@ -35,7 +35,7 @@ import { DateRangeFilter } from '@/components/shared/date-range-filter'
 import { useAsyncAction } from '@/hooks/use-async-action'
 import { expireAlbumNowFn } from '@/lib/admin/functions/free-space'
 import type { FreeSpaceSuggestion } from '@/lib/admin/functions/free-space'
-import { formatBytes } from '@/components/admin/dashboard/components/album-storage-cards'
+import { formatBytes } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 function dayStart(date: Date) {
