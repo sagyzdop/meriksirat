@@ -1,5 +1,3 @@
-// PROTOTYPE: the variant A data table, with bulk selection and the clearance
-// dialog removed. Filters, sorting, pagination and row click stay.
 import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -17,13 +15,6 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -32,9 +23,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
+import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
+import { useServerTableSorting } from '@/components/shared/data-table/use-server-table-sorting'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import { SearchInput } from '@/components/shared/search-input'
-import { useServerTableSorting } from '@/components/shared/data-table/use-server-table-sorting'
 import {
   BanUserDialog,
   UnbanUserDialog,
@@ -74,22 +66,9 @@ export function FlamekeeperTable({
   const { sorting, handleSortingChange } = useServerTableSorting(filters)
 
   const filteredRows = React.useMemo(() => {
-    const needle = filters.search?.trim().toLowerCase()
-    return rows.filter((fk) => {
-      if (needle) {
-        const haystack = `${fk.name} ${fk.email}`.toLowerCase()
-        if (!haystack.includes(needle)) return false
-      }
-      if (
-        filters.status &&
-        filters.status.length > 0 &&
-        !filters.status.includes(fk.status ?? '')
-      ) {
-        return false
-      }
-      return true
-    })
-  }, [rows, filters.search, filters.status])
+    if (!filters.status || filters.status.length === 0) return rows
+    return rows.filter((fk) => filters.status!.includes(fk.status ?? ''))
+  }, [rows, filters.status])
 
   const handleUpdateStatus = React.useCallback(
     async (userId: string, status: string) => {
@@ -196,6 +175,20 @@ export function FlamekeeperTable({
     })
   }
 
+  const handlePageChange = (page: number) => {
+    navigate({
+      to: '.',
+      search: { ...filters, page },
+    })
+  }
+
+  const handlePageSizeChange = (limit: number) => {
+    navigate({
+      to: '.',
+      search: { ...filters, limit, page: 1 },
+    })
+  }
+
   const isFiltered =
     (filters.status && filters.status.length > 0) || Boolean(filters.search)
 
@@ -207,7 +200,6 @@ export function FlamekeeperTable({
         limit: filters.limit,
         sortBy: 'createdAt',
         sortOrder: 'desc',
-        variant: filters.variant,
       },
     })
   }
@@ -219,10 +211,10 @@ export function FlamekeeperTable({
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput
-          placeholder="Search name or email..."
+          placeholder="Search flamekeepers by name or email..."
           value={filters.search}
           onChange={handleSearchChange}
-          className="h-8 w-full sm:w-[220px] lg:w-[280px]"
+          className="h-8 w-full sm:w-[280px]"
         />
         <DataTableFacetedFilter
           title="Status"
@@ -305,68 +297,14 @@ export function FlamekeeperTable({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-3 px-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {filteredRows.length}{' '}
-          {filteredRows.length === 1 ? 'flamekeeper' : 'flamekeepers'}
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Rows</span>
-            <Select
-              value={String(filters.limit)}
-              onValueChange={(value) =>
-                handlePaginationChange({
-                  pageIndex: 0,
-                  pageSize: Number(value),
-                })
-              }
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((size) => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <span className="text-sm text-muted-foreground">
-            Page {Math.min(filters.page, pageCount)} of {pageCount}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                handlePaginationChange({
-                  pageIndex: Math.max(0, filters.page - 2),
-                  pageSize: filters.limit,
-                })
-              }
-              disabled={filters.page <= 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                handlePaginationChange({
-                  pageIndex: filters.page,
-                  pageSize: filters.limit,
-                })
-              }
-              disabled={filters.page >= pageCount}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ServerDataTablePagination
+        page={Math.min(filters.page, pageCount)}
+        totalPages={pageCount}
+        limit={filters.limit}
+        totalCount={filteredRows.length}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       {banRow && (
         <BanUserDialog

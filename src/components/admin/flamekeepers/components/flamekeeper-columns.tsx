@@ -1,5 +1,3 @@
-// PROTOTYPE: table columns, close to the original variant A. Member badge and
-// bulk selection removed; the rest is the same information.
 import type { ColumnDef } from '@tanstack/react-table'
 import { ShieldBan, ShieldCheck } from 'lucide-react'
 
@@ -49,6 +47,7 @@ export const createFlamekeeperColumns = ({
           <div className="flex flex-col">
             <span className="flex items-center gap-2 font-medium">
               {fk.name || 'No name'}
+              {fk.isMember && <Badge variant="secondary">Member</Badge>}
               {fk.bannedAt && (
                 <Badge variant="destructive" title={fk.banReason ?? undefined}>
                   Banned
