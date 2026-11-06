@@ -17,10 +17,7 @@ export interface AdminFlamekeeperRow {
   email: string
   image: string | null
   isMember: boolean
-  role: string | null
-  clearanceLevel: number | null
   status: string | null
-  albumCount: number
   state: FlamekeeperState
   pledgedBytes: number
   usedBytes: number

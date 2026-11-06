@@ -29,7 +29,7 @@ export function ServerDataTablePagination({
   page,
   totalPages,
   limit,
-  selectedCount = 0,
+  selectedCount,
   totalCount = 0,
   pageSizeOptions = [10, 20, 30, 40, 50],
   onPageChange,
@@ -38,7 +38,9 @@ export function ServerDataTablePagination({
   return (
     <div className="flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
-        {selectedCount} of {totalCount} row(s) selected.
+        {selectedCount === undefined
+          ? `${totalCount} row${totalCount === 1 ? '' : 's'}`
+          : `${selectedCount} of ${totalCount} row(s) selected.`}
       </div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
         <div className="flex items-center space-x-2">
