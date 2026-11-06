@@ -5,10 +5,10 @@ import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-import { Section } from '@/components/layout/section'
 import { Table, TableBody } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,6 +96,7 @@ export function Page({
   const [showResetDialog, setShowResetDialog] = useState(false)
   const { pending: isResetting, run } = useAsyncAction()
   const [showBanDialog, setShowBanDialog] = useState(false)
+  const [tab, setTab] = useState('details')
   const userName = fullName(user) || user.email
 
   const hasViolations =
@@ -112,9 +113,29 @@ export function Page({
 
   return (
     <PageContainer>
-      <PageHeader title="Member Details" onBack={goBack} />
-      <div className="space-y-8">
-        <Section spacing="compact">
+      <PageHeader
+        title="Member Details"
+        onBack={goBack}
+        actions={
+          canBan &&
+          (user.bannedAt || user.id !== viewerId) && (
+            <Button
+              variant={user.bannedAt ? 'outline' : 'destructive'}
+              onClick={() => setShowBanDialog(true)}
+            >
+              {user.bannedAt ? 'Unban member' : 'Ban member'}
+            </Button>
+          )
+        }
+      />
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
+        <TabsList variant="line">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="albums">Albums</TabsTrigger>
+          <TabsTrigger value="violations">Violations</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details">
           <div className="relative rounded-md border overflow-x-auto">
             <Table>
               <TableBody>
@@ -196,28 +217,24 @@ export function Page({
               </TableBody>
             </Table>
           </div>
-        </Section>
+        </TabsContent>
 
-        {canBan && (user.bannedAt || user.id !== viewerId) && (
-          <Section
-            title="Ban"
-            description="Banning blocks sign-in, cancels upcoming bookings, removes album folder access and starts moving any photos they hold."
-            spacing="compact"
-          >
-            <Button
-              variant={user.bannedAt ? 'outline' : 'destructive'}
-              onClick={() => setShowBanDialog(true)}
-            >
-              {user.bannedAt ? 'Unban member' : 'Ban member'}
-            </Button>
-          </Section>
-        )}
+        <TabsContent value="albums">
+          <UserAlbumsTable
+            albums={albums}
+            pagination={albumsPagination}
+            filters={{
+              page: albumsSearch.albumPage,
+              limit: albumsSearch.albumLimit,
+              sortBy: albumsSearch.albumSortBy,
+              sortOrder: albumsSearch.albumSortOrder,
+            }}
+            search={albumsSearch}
+            isLoading={albumsIsLoading}
+          />
+        </TabsContent>
 
-        <Section
-          title="Booking Violations"
-          description="Counters incremented when the member's bookings are auto-cancelled for not starting, or returned late."
-          spacing="compact"
-        >
+        <TabsContent value="violations" className="space-y-4">
           <div className="relative rounded-md border overflow-x-auto">
             <Table>
               <TableBody>
@@ -231,36 +248,15 @@ export function Page({
             </Table>
           </div>
 
-          <div className="pt-4">
-            <Button
-              variant="outline"
-              disabled={!hasViolations || isResetting}
-              onClick={() => setShowResetDialog(true)}
-            >
-              Clear Violations
-            </Button>
-          </div>
-        </Section>
-
-        <Section
-          title="Albums"
-          description="Albums this member owns or co-authored."
-          spacing="compact"
-        >
-          <UserAlbumsTable
-            albums={albums}
-            pagination={albumsPagination}
-            filters={{
-              page: albumsSearch.albumPage,
-              limit: albumsSearch.albumLimit,
-              sortBy: albumsSearch.albumSortBy,
-              sortOrder: albumsSearch.albumSortOrder,
-            }}
-            search={albumsSearch}
-            isLoading={albumsIsLoading}
-          />
-        </Section>
-      </div>
+          <Button
+            variant="outline"
+            disabled={!hasViolations || isResetting}
+            onClick={() => setShowResetDialog(true)}
+          >
+            Clear Violations
+          </Button>
+        </TabsContent>
+      </Tabs>
 
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent>

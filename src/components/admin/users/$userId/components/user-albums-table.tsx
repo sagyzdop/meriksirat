@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/table'
 import { Images } from 'lucide-react'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
-import { SearchInput } from '@/components/shared/search-input'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { useScopedServerTableSorting } from '@/components/shared/data-table/use-scoped-server-table-sorting'
@@ -137,20 +136,6 @@ export function UserAlbumsTable({
     getCoreRowModel: getCoreRowModel(),
   })
 
-  const handleSearchChange = React.useCallback(
-    (value: string) => {
-      navigate({
-        to: '.',
-        search: {
-          ...search,
-          albumSearch: value || undefined,
-          albumPage: 1,
-        } as never,
-      })
-    },
-    [search, navigate]
-  )
-
   const handlePageChange = React.useCallback(
     (page: number) => {
       navigate({
@@ -173,12 +158,6 @@ export function UserAlbumsTable({
 
   return (
     <div className="space-y-4">
-      <SearchInput
-        placeholder="Search albums by title..."
-        value={search.albumSearch}
-        onChange={handleSearchChange}
-        className="h-8 w-full sm:w-[280px]"
-      />
       <div className="relative rounded-md border overflow-x-auto">
         {isLoading && <LoadingOverlay />}
         <Table>
