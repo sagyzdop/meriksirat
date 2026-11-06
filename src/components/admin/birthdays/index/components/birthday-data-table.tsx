@@ -12,7 +12,6 @@ import {
 import { useNavigate } from '@tanstack/react-router'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -22,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { SearchInput } from '@/components/shared/search-input'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { useServerTableSorting } from '@/components/shared/data-table/use-server-table-sorting'
@@ -168,10 +168,10 @@ export function BirthdayDataTable({
       {/* Filters - Responsive layout */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-1">
-          <Input
+          <SearchInput
             placeholder="Search members by name or email..."
-            value={filters.search || ''}
-            onChange={(event) => handleSearchChange(event.target.value)}
+            value={filters.search}
+            onChange={handleSearchChange}
             className="h-8 w-full sm:w-[200px] lg:w-[300px]"
           />
           <div className="flex flex-wrap gap-2">

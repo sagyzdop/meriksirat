@@ -10,10 +10,8 @@ import {
 } from '@tanstack/react-table'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { useDebounce } from '@/hooks/use-debounce'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -27,6 +25,7 @@ import { ServerDataTablePagination } from '@/components/shared/data-table/server
 import { useServerTableSorting } from '@/components/shared/data-table/use-server-table-sorting'
 import { BulkEditClearanceDialog } from '@/components/shared/bulk-edit-clearance-dialog'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { SearchInput } from '@/components/shared/search-input'
 import { Shield, X } from 'lucide-react'
 import {
   EquipmentWithCategory,
@@ -82,34 +81,6 @@ export function EquipmentDataTable({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
-  const searchQueryValue = filters.searchQuery || ''
-  const [localSearchValue, setLocalSearchValue] =
-    React.useState(searchQueryValue)
-  const debouncedSearchValue = useDebounce(localSearchValue, 300)
-  const filtersRef = React.useRef(filters)
-
-  React.useEffect(() => {
-    filtersRef.current = filters
-  }, [filters])
-
-  // Trigger search change when debounced value changes
-  React.useEffect(() => {
-    if (debouncedSearchValue === searchQueryValue) return
-    const currentFilters = filtersRef.current
-    navigate({
-      to: '.',
-      search: {
-        ...currentFilters,
-        searchQuery: debouncedSearchValue || undefined,
-        page: 1,
-      },
-    })
-  }, [debouncedSearchValue, searchQueryValue, navigate])
-
-  // Update local value when searchQuery prop changes (e.g., on page navigation)
-  React.useEffect(() => {
-    setLocalSearchValue(searchQueryValue)
-  }, [searchQueryValue])
 
   const { sorting, handleSortingChange } = useServerTableSorting(filters)
 
@@ -240,10 +211,19 @@ export function EquipmentDataTable({
       {/* Filters - Responsive layout */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-1">
-          <Input
+          <SearchInput
             placeholder="Search equipment by name or description..."
-            value={localSearchValue}
-            onChange={(event) => setLocalSearchValue(event.target.value)}
+            value={filters.searchQuery}
+            onChange={(value) =>
+              navigate({
+                to: '.',
+                search: {
+                  ...filters,
+                  searchQuery: value || undefined,
+                  page: 1,
+                },
+              })
+            }
             className="h-8 w-full sm:w-[200px] lg:w-[300px]"
           />
           <div className="flex flex-wrap gap-2">

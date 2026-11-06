@@ -95,7 +95,7 @@ export function DashboardHeaderActions({
           <DropdownMenuItem asChild>
             <Link to="/admin/users">
               <Users />
-              View All Users
+              View All Members
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
@@ -113,7 +113,7 @@ export function DashboardHeaderActions({
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setExportOpen(true)}>
             <Download />
-            Export Users
+            Export Members
           </DropdownMenuItem>
           {canBroadcast && (
             <DropdownMenuItem onSelect={() => setBroadcastOpen(true)}>

@@ -2,7 +2,6 @@ import { createUserColumns, UserField } from './components/user-columns'
 import { UserDataTable } from './components/user-data-table'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-import { UserTabs } from '@/components/admin/users/components/user-tabs'
 import { ExportUsersDialog } from '@/components/shared/export-users-dialog'
 import { updateUserAdminFn } from '@/lib/user'
 import { useQueryClient } from '@tanstack/react-query'
@@ -51,8 +50,8 @@ export function Page({
 
   const description =
     pagination.totalCount > 0
-      ? `Managing ${pagination.totalCount} user${pagination.totalCount === 1 ? '' : 's'}`
-      : 'No users found'
+      ? `Managing ${pagination.totalCount} member${pagination.totalCount === 1 ? '' : 's'}`
+      : 'No members found'
 
   const handleUpdateField = async (
     userId: string,
@@ -69,9 +68,9 @@ export function Page({
         data: { userId, ...data },
       })
       await queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success('User updated')
+      toast.success('Member updated')
     } catch (error) {
-      toast.error('Failed to update user', {
+      toast.error('Failed to update member', {
         description: errorMessage(error, 'An error occurred'),
       })
     }
@@ -85,11 +84,10 @@ export function Page({
   return (
     <PageContainer>
       <PageHeader
-        title="Manage Users"
+        title="Member Management"
         description={description}
         actions={<ExportUsersDialog filters={filters as ExportUsersFilters} />}
       />
-      <UserTabs active="members" />
       <UserDataTable
         data={users}
         columns={columns}

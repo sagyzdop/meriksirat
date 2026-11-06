@@ -331,7 +331,6 @@ export function Page({
             albums={albums}
             pagination={albumsPagination}
             filters={{
-              search: albumsSearch.albumSearch,
               page: albumsSearch.albumPage,
               limit: albumsSearch.albumLimit,
               sortBy: albumsSearch.albumSortBy,

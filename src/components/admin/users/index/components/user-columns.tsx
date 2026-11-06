@@ -132,7 +132,7 @@ export const createUserColumns = ({
           value={role}
           placeholder="—"
           options={[
-            { value: 'user', label: 'User' },
+            { value: 'user', label: 'Member' },
             {
               value: 'manager',
               label: 'Manager',

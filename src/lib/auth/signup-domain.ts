@@ -30,5 +30,3 @@ export function isAllowedSignupEmail(
 export function isAlumniEmail(email: string | null | undefined): boolean {
   return signupKind(email) === 'alumni'
 }
-
-export const ALUMNI_EMAIL_LIKE = `%@${ALUMNI_DOMAIN}`

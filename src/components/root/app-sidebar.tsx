@@ -86,7 +86,7 @@ const data = {
       icon: ShieldCheck,
     },
     {
-      title: 'User Management',
+      title: 'Member Management',
       url: '/admin/users',
       icon: Users,
     },

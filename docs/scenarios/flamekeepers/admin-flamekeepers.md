@@ -1,10 +1,11 @@
 # Browse flamekeepers as an admin
 
-> **Question:** What does an admin or manager see on the Flamekeepers tab of Manage Users?
+> **Question:** What does an admin or manager see on the Flamekeepers page?
 >
 > **Answer:** The page lists every flamekeeper, newest signup first, with name, email, state, pledge, usage, and graduation date. Typing in the search box filters by name or email. Only admins and managers can open it. Admins also get a Ban button on each row except their own, and an Unban button on banned rows.
 >
 > **Notes:**
+>
 > - At most 500 rows are returned. The search text lives in the
 >   address bar as ?search=. It matches the account name, first
 >   name, last name and email.

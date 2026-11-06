@@ -112,7 +112,7 @@ export function Page({
 
   return (
     <PageContainer>
-      <PageHeader title="User Details" onBack={goBack} />
+      <PageHeader title="Member Details" onBack={goBack} />
       <div className="space-y-8">
         <Section spacing="compact">
           <div className="relative rounded-md border overflow-x-auto">
@@ -122,7 +122,7 @@ export function Page({
                   <div className="flex items-center gap-3">
                     <UserAvatar
                       image={user.image}
-                      name={fullName(user) || user.email || 'User'}
+                      name={fullName(user) || user.email || 'Member'}
                       className="size-8"
                     />
                     <span>{fullName(user) || '—'}</span>
@@ -190,7 +190,7 @@ export function Page({
                 <DetailRow label="Member Since">
                   {formatDate(user.createdAt.getTime())}
                 </DetailRow>
-                <DetailRow label="User ID" valueClassName="whitespace-nowrap">
+                <DetailRow label="Member ID" valueClassName="whitespace-nowrap">
                   {user.id}
                 </DetailRow>
               </TableBody>
@@ -208,14 +208,14 @@ export function Page({
               variant={user.bannedAt ? 'outline' : 'destructive'}
               onClick={() => setShowBanDialog(true)}
             >
-              {user.bannedAt ? 'Unban user' : 'Ban user'}
+              {user.bannedAt ? 'Unban member' : 'Ban member'}
             </Button>
           </Section>
         )}
 
         <Section
           title="Booking Violations"
-          description="Counters incremented when the user's bookings are auto-cancelled for not starting, or returned late."
+          description="Counters incremented when the member's bookings are auto-cancelled for not starting, or returned late."
           spacing="compact"
         >
           <div className="relative rounded-md border overflow-x-auto">
@@ -244,14 +244,13 @@ export function Page({
 
         <Section
           title="Albums"
-          description="Albums this user owns or co-authored."
+          description="Albums this member owns or co-authored."
           spacing="compact"
         >
           <UserAlbumsTable
             albums={albums}
             pagination={albumsPagination}
             filters={{
-              search: albumsSearch.albumSearch,
               page: albumsSearch.albumPage,
               limit: albumsSearch.albumLimit,
               sortBy: albumsSearch.albumSortBy,
@@ -268,8 +267,8 @@ export function Page({
           <AlertDialogHeader>
             <AlertDialogTitle>Clear Violations</AlertDialogTitle>
             <AlertDialogDescription>
-              Reset this user's violation counters to zero? This will not affect
-              any past or current bookings.
+              Reset this member's violation counters to zero? This will not
+              affect any past or current bookings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

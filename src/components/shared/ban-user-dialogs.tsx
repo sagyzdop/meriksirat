@@ -50,7 +50,7 @@ export function BanUserDialog({
       setReason('')
       onOpenChange(false)
       await refresh()
-    }, 'Failed to ban user')
+    }, 'Failed to ban member')
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -81,7 +81,7 @@ export function BanUserDialog({
             }}
             disabled={isBanning || !reason.trim()}
           >
-            {isBanning ? 'Banning...' : 'Ban user'}
+            {isBanning ? 'Banning...' : 'Ban member'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -104,7 +104,7 @@ export function UnbanUserDialog({
       toast.success(`${userName} was unbanned`)
       onOpenChange(false)
       await refresh()
-    }, 'Failed to unban user')
+    }, 'Failed to unban member')
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

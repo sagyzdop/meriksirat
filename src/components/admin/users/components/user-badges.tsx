@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge'
 
 const formatRole = (role: string | null | undefined) => {
   if (!role) return '—'
+  if (role === 'user') return 'Member'
   return role.charAt(0).toUpperCase() + role.slice(1)
 }
 

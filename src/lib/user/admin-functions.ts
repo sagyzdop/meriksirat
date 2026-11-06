@@ -2,7 +2,6 @@ import type { SQL } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import {
   AdminUserFiltersSchema,
-  AdminAlumniFiltersSchema,
   UpdateUserAdminSchema,
   GetUserByIdSchema,
   BulkUpdateUserClearanceSchema,
@@ -103,60 +102,6 @@ export const getAdminUsersFn = createServerFn({ method: 'GET' })
     }
 
     return result
-  })
-
-export const getAdminAlumniFn = createServerFn({ method: 'GET' })
-  .validator(AdminAlumniFiltersSchema)
-  .handler(async ({ data }) => {
-    const { adminContext } = await import('@/lib/admin/server')
-    const { userSearch } = await import('@/lib/user/search')
-    const { ALUMNI_EMAIL_LIKE } = await import('@/lib/auth/signup-domain')
-    const { user } = await import('@/db/schema')
-    const { like, and, count, desc, asc } = await import('drizzle-orm')
-
-    const { database } = await adminContext(['admin', 'manager'])
-
-    const conditions: (SQL | undefined)[] = [
-      like(user.email, ALUMNI_EMAIL_LIKE),
-    ]
-    if (data.search) {
-      conditions.push(userSearch(data.search))
-    }
-    const where = and(...conditions)
-
-    const sortColumn = {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      createdAt: user.createdAt,
-    }[data.sortBy]
-    const orderBy =
-      data.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn)
-
-    const [totalCountResult, users] = await Promise.all([
-      database.select({ count: count() }).from(user).where(where),
-      database
-        .select({
-          id: user.id,
-          email: user.email,
-          image: user.image,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          isMember: user.isMember,
-          createdAt: user.createdAt,
-        })
-        .from(user)
-        .where(where)
-        .orderBy(orderBy)
-        .limit(data.limit)
-        .offset((data.page - 1) * data.limit),
-    ])
-
-    const totalCount = totalCountResult[0]?.count || 0
-    return {
-      users,
-      pagination: buildPagination(totalCount, data.page, data.limit),
-    }
   })
 
 export const updateUserAdminFn = createServerFn({ method: 'POST' })

@@ -20,7 +20,7 @@ and organizations.
 
 - **Dashboard**: Overview of bookings, equipment usage, and system statistics
 - **Equipment Management**: Add, edit, and manage equipment with categories and clearance levels
-- **User Management**: Control user access, roles, and clearance levels
+- **Member Management**: Control member access, roles, and clearance levels
 - **Booking Oversight**: Monitor all bookings, handle overdue equipment, and manage conflicts
 - **Album Management**: Oversee public and member albums
 - **Settings**: Configure operating hours, booking limits, and global notifications

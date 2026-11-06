@@ -16,7 +16,6 @@ import { X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -34,6 +33,7 @@ import {
 } from '@/components/ui/table'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { SearchInput } from '@/components/shared/search-input'
 import { useServerTableSorting } from '@/components/shared/data-table/use-server-table-sorting'
 import {
   BanUserDialog,
@@ -218,10 +218,10 @@ export function FlamekeeperTable({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <Input
+        <SearchInput
           placeholder="Search name or email..."
-          value={filters.search || ''}
-          onChange={(event) => handleSearchChange(event.target.value)}
+          value={filters.search}
+          onChange={handleSearchChange}
           className="h-8 w-full sm:w-[220px] lg:w-[280px]"
         />
         <DataTableFacetedFilter

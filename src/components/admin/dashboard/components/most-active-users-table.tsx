@@ -7,7 +7,6 @@ import {
 } from '@tanstack/react-table'
 import { useNavigate } from '@tanstack/react-router'
 
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -17,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { SearchInput } from '@/components/shared/search-input'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { useScopedServerTableSorting } from '@/components/shared/data-table/use-scoped-server-table-sorting'
@@ -143,10 +143,10 @@ export function MostActiveUsersTable({
 
   return (
     <div className="space-y-4">
-      <Input
+      <SearchInput
         placeholder="Search users by name or email..."
-        value={filters.search || ''}
-        onChange={(event) => handleSearchChange(event.target.value)}
+        value={filters.search}
+        onChange={handleSearchChange}
         className="h-8 w-full sm:w-[280px]"
       />
       <div className="relative rounded-md border overflow-x-auto">

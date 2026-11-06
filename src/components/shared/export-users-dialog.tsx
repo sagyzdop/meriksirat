@@ -27,11 +27,11 @@ export function ExportUsersDialog({
   return (
     <ExportCsvDialog
       {...props}
-      noun="user"
-      description="Download a CSV of all users matching the current filters. The export includes every matching user, not just the current page."
+      noun="member"
+      description="Download a CSV of all members matching the current filters. The export includes every matching member, not just the current page."
       fields={USER_EXPORT_FIELDS}
       defaultKeys={DEFAULT_USER_EXPORT_KEYS}
-      fileName="users-export.csv"
+      fileName="members-export.csv"
       load={async () => {
         const query = adminDashboardQueries.userExport(filters)
         return (

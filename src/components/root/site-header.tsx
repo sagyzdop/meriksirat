@@ -54,7 +54,7 @@ function getPageName(pathname: string): string {
     case 'admin':
       if (segments.length === 1) return 'Admin'
       if (segments[1] === 'dashboard') return 'Admin Dashboard'
-      if (segments[1] === 'users') return 'User Management'
+      if (segments[1] === 'users') return 'Member Management'
       if (segments[1] === 'equipment') return 'Equipment Management'
       if (segments[1] === 'albums') return 'Album Management'
       if (segments[1] === 'categories') return 'Category Management'

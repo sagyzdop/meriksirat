@@ -7,7 +7,6 @@ import {
 } from '@tanstack/react-table'
 import { useNavigate } from '@tanstack/react-router'
 
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -18,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { SearchInput } from '@/components/shared/search-input'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
@@ -212,10 +212,10 @@ export function ViolationsTable({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <Input
+        <SearchInput
           placeholder="Search users by name or email..."
-          value={filters.search || ''}
-          onChange={(event) => handleSearchChange(event.target.value)}
+          value={filters.search}
+          onChange={handleSearchChange}
           className="h-8 w-full sm:w-[280px]"
         />
         <DataTableFacetedFilter

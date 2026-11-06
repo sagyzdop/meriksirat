@@ -5,6 +5,7 @@
 > **Answer:** The person ticks rows in the Members table or the Equipment table, presses Edit Clearance with the count, picks a level from 1 to 10 and presses Update All. The server sets that level on every ticked row. A toast says how many rows were updated, the ticks are cleared and the list reloads. For members the level is the clearance they hold. For equipment it is the clearance a member needs to book it.
 >
 > **Notes:**
+>
 > - Both tables share one dialog, titled Bulk Edit Clearance Level.
 > - Ids that do not exist are silently ignored, and the count in the toast is the number of ticked rows.
 > - The level starts unset, and the form blocks the submit until one from 1 to 10 is chosen.
@@ -41,9 +42,9 @@ sequenceDiagram
         end
     end
     alt succeeded
-        Browser-->>Person: toast "Updated clearance level for<br/>N user(s)" or "N equipment item(s)"
+        Browser-->>Person: toast "Updated clearance level for<br/>N member(s)" or "N equipment item(s)"
         Browser->>Browser: clear ticks, refresh users or equipment admin-list queries
     else failed
-        Browser-->>Person: toast "Failed to update users" or<br/>"Failed to update equipment" with the reason
+        Browser-->>Person: toast "Failed to update members" or<br/>"Failed to update equipment" with the reason
     end
 ```

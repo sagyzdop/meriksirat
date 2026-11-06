@@ -1,8 +1,6 @@
-import * as React from 'react'
 import { X } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useDebounce } from '@/hooks/use-debounce'
+import { SearchInput } from '@/components/shared/search-input'
 import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-filter'
 import type { AlbumListFilters, AlbumOwnershipFilter } from '@/lib/albums'
 
@@ -26,21 +24,6 @@ export function AlbumToolbar({
   onFiltersChange,
   showOwnership = true,
 }: AlbumToolbarProps) {
-  const [localSearch, setLocalSearch] = React.useState(filters.search)
-  const debouncedSearch = useDebounce(localSearch, 300)
-
-  // Keep the input in sync when the URL param changes (e.g. reset).
-  React.useEffect(() => {
-    setLocalSearch(filters.search)
-  }, [filters.search])
-
-  React.useEffect(() => {
-    if (debouncedSearch !== filters.search) {
-      onFiltersChange({ search: debouncedSearch })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch])
-
   // Multi-select semantics: the faceted filter toggles individual values and
   // an empty array (or undefined) means no filter.
   const ownershipSelected = filters.ownership ?? []
@@ -50,10 +33,10 @@ export function AlbumToolbar({
 
   return (
     <div className="-mt-2 mb-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <Input
+      <SearchInput
         placeholder="Search albums by title or description..."
-        value={localSearch}
-        onChange={(event) => setLocalSearch(event.target.value)}
+        value={filters.search}
+        onChange={(search) => onFiltersChange({ search })}
         className="h-8 w-full sm:w-[220px] lg:w-[300px]"
       />
       <div className="flex flex-wrap items-center gap-2">
