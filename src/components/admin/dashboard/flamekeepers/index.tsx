@@ -79,9 +79,7 @@ export function Page({ stats, statsLoading }: PageProps) {
           <Link to="/admin/flamekeepers">Flamekeepers</Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link to={'/admin/settings/flamekeepers' as string}>
-            Flamekeeper settings
-          </Link>
+          <Link to="/admin/settings/flamekeepers">Flamekeeper settings</Link>
         </Button>
       </div>
     </div>

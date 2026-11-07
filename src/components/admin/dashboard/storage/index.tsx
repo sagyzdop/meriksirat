@@ -32,7 +32,7 @@ export function Page({ stats, statsLoading }: PageProps) {
         </p>
       ) : null}
       <Button variant="outline" asChild>
-        <Link to={'/admin/settings/storage' as string}>Storage settings</Link>
+        <Link to="/admin/settings/storage">Storage settings</Link>
       </Button>
     </div>
   )

@@ -35,6 +35,8 @@ import type {
   ViolationsFilters,
 } from './dashboard-types'
 import { getClubCodeFn } from './functions/club-code'
+import { getBufferUsageFn } from '@/lib/buffer/functions'
+import type { BufferUsageOverview } from '@/lib/buffer/functions'
 import { getPoolOverviewFn, type PoolOverview } from './functions/pool'
 import { getSettingsFn, type SettingsData } from './functions/settings'
 
@@ -101,6 +103,12 @@ export const adminDashboardQueries = {
       queryKey: [...adminDashboardQueries.all, 'storage'],
       staleTime: 60_000,
       queryFn: async (): Promise<StorageStats> => getStorageStatsFn(),
+    }),
+  buffer: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'buffer'],
+      queryFn: async (): Promise<BufferUsageOverview | null> =>
+        getBufferUsageFn(),
     }),
   alerts: () =>
     queryOptions({
