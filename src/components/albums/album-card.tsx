@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Images, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardDescription,
@@ -7,13 +8,15 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import type { AlbumSummary } from '@/lib/albums'
+import { albumStorageWarning } from '@/lib/albums/warning'
 import { PhotoImage } from './photo-image'
 
 interface AlbumCardProps {
   album: AlbumSummary
+  showWarning?: boolean
 }
 
-export function AlbumCard({ album }: AlbumCardProps) {
+export function AlbumCard({ album, showWarning }: AlbumCardProps) {
   const primaryAuthor = album.authors[0]?.name
   const coAuthorCount = Math.max(album.authors.length - 1, 0)
   const authorsLabel = primaryAuthor
@@ -40,6 +43,15 @@ export function AlbumCard({ album }: AlbumCardProps) {
           <div className="bg-muted flex h-full w-full items-center justify-center">
             <Images className="text-muted-foreground/50 size-10" />
           </div>
+        )}
+        {showWarning && albumStorageWarning(album.eventDate, new Date()) && (
+          <Badge
+            variant="secondary"
+            className="absolute top-2 left-2"
+            title="Over 2 years old; may be deleted if storage runs low"
+          >
+            2+ years
+          </Badge>
         )}
       </div>
 

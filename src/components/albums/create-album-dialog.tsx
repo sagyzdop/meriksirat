@@ -39,21 +39,28 @@ export function CreateAlbumDialog({
 }: CreateAlbumDialogProps) {
   const [values, setValues] = React.useState(EMPTY)
   const { pending, run } = useAsyncAction()
+  const [submitted, setSubmitted] = React.useState(false)
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
+    const { eventDate } = values
+    if (!eventDate) {
+      setSubmitted(true)
+      return
+    }
     void run(async () => {
       await createAlbumFn({
         data: {
           title: values.title.trim(),
           description: values.description.trim() || '',
           event: values.event.trim(),
-          eventDate: toDateOnlyString(values.eventDate!),
+          eventDate: toDateOnlyString(eventDate),
         },
       })
       toast.success('Album created')
       onOpenChange(false)
       setValues(EMPTY)
+      setSubmitted(false)
       onCreated?.()
     }, 'Failed to create album')
   }
@@ -73,6 +80,7 @@ export function CreateAlbumDialog({
             values={values}
             onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
             hints
+            eventDateError={submitted}
           />
           <DialogFooter>
             <Button
