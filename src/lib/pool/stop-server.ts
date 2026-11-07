@@ -1,13 +1,13 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { flamekeeper, user } from '@/db/schema'
+import { flamekeeper, user, volume } from '@/db/schema'
 import { dropFlamekeeperGrant } from '@/lib/flamekeeper/tokens'
 import { MIN_PLEDGE_BYTES, formatGb } from '@/lib/flamekeeper/rules'
 import type { StopStatus } from '@/lib/flamekeeper/types'
 import { siteOrigin } from '@/lib/format'
 import { graduationDateError } from '@/lib/graduation-date'
 import { planGraduation } from './graduation'
-import { planOptOut, type StopPlan, type StopReason } from './stop'
+import { planEnd, planOptOut, type StopPlan, type StopReason } from './stop'
 
 export async function loadFlamekeeperState(database: Database, userId: string) {
   const row = await database
@@ -22,7 +22,20 @@ export async function endFlamekeeping(
   database: Database,
   userId: string,
   now: Date = new Date()
-): Promise<void> {
+): Promise<'draining' | 'drained'> {
+  const held = await database
+    .select({ id: volume.id })
+    .from(volume)
+    .where(eq(volume.flamekeeperUserId, userId))
+    .limit(1)
+    .get()
+  if (planEnd(held ? 1 : 0) === 'draining') {
+    await database
+      .update(flamekeeper)
+      .set({ state: 'draining', updatedAt: now })
+      .where(and(eq(flamekeeper.userId, userId), ne(flamekeeper.state, 'lost')))
+    return 'draining'
+  }
   await dropFlamekeeperGrant(database, userId)
   await database
     .update(flamekeeper)
@@ -33,6 +46,7 @@ export async function endFlamekeeping(
       updatedAt: now,
     })
     .where(eq(flamekeeper.userId, userId))
+  return 'drained'
 }
 
 export async function applyStopPlan(
@@ -60,7 +74,8 @@ export async function optOutFlamekeeper(
   const row = await loadFlamekeeperState(database, userId)
   if (!row) throw new Error('You are not a flamekeeper')
   const stopped = await applyStopPlan(database, userId, planOptOut(row), now)
-  return { state: stopped ? 'drained' : row.state }
+  if (!stopped) return { state: row.state }
+  return { state: (await loadFlamekeeperState(database, userId))!.state }
 }
 
 export async function changePledge(

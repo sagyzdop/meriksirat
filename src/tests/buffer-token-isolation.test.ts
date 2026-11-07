@@ -28,8 +28,9 @@ describe('the buffer full-scope token', () => {
     ])
   })
 
-  it('is imported by no other module', () => {
+  it('is imported only by the server-side move code', () => {
     expect(filesMentioning('getBufferFullAccessToken')).toEqual([
+      'src/lib/albums/storage-server.ts',
       'src/lib/buffer/full-token.ts',
     ])
   })
