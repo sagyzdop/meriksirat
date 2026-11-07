@@ -10,7 +10,6 @@ import {
   CreateUploadSessionSchema,
   DeletePhotoSchema,
   RemoveMemberSchema,
-  SetAlbumPinnedSchema,
   SetCoverPhotoSchema,
   UpdateAlbumSchema,
 } from './types'
@@ -25,7 +24,6 @@ import {
   duplicateMessage,
   planDuplicateCheck,
 } from './upload-dedupe'
-import { defaultExpiry } from '@/lib/pool/expiry'
 
 type Database = ReturnType<(typeof import('@/db'))['db']>
 
@@ -124,7 +122,6 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       description: data.description ?? '',
       event: data.event,
       eventDate: new Date(data.eventDate),
-      expiresAt: defaultExpiry(new Date(data.eventDate)),
       driveFolderId: folder.id,
       editShareToken: newShareToken(),
     })
@@ -392,7 +389,7 @@ export const deleteGoneAlbumFn = createServerFn({ method: 'POST' })
     const { getDriveFolderState } = await import('@/lib/google/google-drive')
     const { folderCheckVerdict, canDeleteGoneAlbum } =
       await import('./folder-warning')
-    const { tombstoneGoneAlbum } = await import('./expiry')
+    const { tombstoneGoneAlbum } = await import('./remove')
 
     const {
       database,
@@ -466,12 +463,11 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     if (data.description !== undefined) updates.description = data.description
     if (data.event !== undefined) updates.event = data.event
     if (data.eventDate !== undefined) {
-      updates.eventDate = data.eventDate ? new Date(data.eventDate) : null
-      if (data.eventDate && !row.pinned) {
-        updates.expiresAt = defaultExpiry(new Date(data.eventDate))
-        updates.expiryReminder30SentAt = null
-        updates.expiryReminder7SentAt = null
+      const eventDate = new Date(data.eventDate)
+      if (!data.eventDate.trim() || Number.isNaN(eventDate.getTime())) {
+        throw new Error('Event date is required')
       }
+      updates.eventDate = eventDate
     }
 
     if (Object.keys(updates).length > 0) {
@@ -510,35 +506,10 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
-export const setAlbumPinnedFn = createServerFn({ method: 'POST' })
-  .validator(SetAlbumPinnedSchema)
-  .handler(async ({ data }) => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
-    const { eq } = await import('drizzle-orm')
-    const { getSessionUser } = await import('./server')
-
-    const currentUser = await getSessionUser(getRequestHeaders())
-    if (!currentUser || currentUser.role !== 'admin') {
-      throw new Error('Only admins can pin albums')
-    }
-
-    const database = db(env.meriksirat_d1 as D1Database)
-    await loadAlbum(database, data.albumId)
-    await database
-      .update(album)
-      .set({ pinned: data.pinned, updatedAt: new Date() })
-      .where(eq(album.id, data.albumId))
-
-    return { success: true }
-  })
-
 export const deleteAlbumFn = createServerFn({ method: 'POST' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }) => {
-    const { removeAlbum } = await import('./expiry')
+    const { removeAlbum } = await import('./remove')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
 

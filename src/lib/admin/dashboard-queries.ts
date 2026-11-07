@@ -27,10 +27,6 @@ import type {
   ViolationsFilters,
 } from './dashboard-types'
 import { getClubCodeFn } from './functions/club-code'
-import {
-  getDeletionSuggestionsFn,
-  type FreeSpaceSuggestion,
-} from './functions/free-space'
 import { getBufferUsageFn } from '@/lib/buffer/functions'
 import type { BufferUsageOverview } from '@/lib/buffer/functions'
 import { getPoolOverviewFn, type PoolOverview } from './functions/pool'
@@ -87,12 +83,6 @@ export const adminDashboardQueries = {
     queryOptions({
       queryKey: [...adminDashboardQueries.all, 'settings'],
       queryFn: async (): Promise<SettingsData> => getSettingsFn(),
-    }),
-  freeSpace: () =>
-    queryOptions({
-      queryKey: [...adminDashboardQueries.all, 'free-space'],
-      queryFn: async (): Promise<FreeSpaceSuggestion[]> =>
-        getDeletionSuggestionsFn(),
     }),
   pool: () =>
     queryOptions({

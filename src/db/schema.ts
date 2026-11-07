@@ -357,27 +357,17 @@ export const album = sqliteTable(
     photoCount: integer('photo_count').default(0).notNull(),
     photoBytes: integer('photo_bytes').default(0).notNull(),
     favoriteCount: integer('favorite_count').default(0).notNull(),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
-    pinned: integer('pinned', { mode: 'boolean' }).default(false).notNull(),
     tombstoneReason: text('tombstone_reason', {
-      enum: [
-        'expired',
-        'flamekeeper_left',
-        'flamekeeper_lost',
-        'no_space',
-        'folder_deleted',
-      ],
+      enum: ['folder_deleted', 'flamekeeper_left', 'flamekeeper_lost'],
     }),
     deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
-    expiryReminder30SentAt: integer('expiry_reminder_30_sent_at', {
-      mode: 'timestamp_ms',
-    }),
-    expiryReminder7SentAt: integer('expiry_reminder_7_sent_at', {
+    rescuedAt: integer('rescued_at', { mode: 'timestamp_ms' }),
+    scheduledDeletionAt: integer('scheduled_deletion_at', {
       mode: 'timestamp_ms',
     }),
     editShareToken: text('edit_share_token').notNull().unique(),
     event: text('event').notNull().default(''),
-    eventDate: integer('event_date', { mode: 'timestamp_ms' }),
+    eventDate: integer('event_date', { mode: 'timestamp_ms' }).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
@@ -388,7 +378,7 @@ export const album = sqliteTable(
   },
   (table) => [
     index('album_ownerUserId_idx').on(table.ownerUserId),
-    index('album_expiresAt_idx').on(table.expiresAt),
+    index('album_scheduledDeletionAt_idx').on(table.scheduledDeletionAt),
   ]
 )
 
@@ -583,6 +573,16 @@ export const settings = sqliteTable('settings', {
     .default(21474836480)
     .notNull(),
   poolLowAlertedAt: integer('pool_low_alerted_at', { mode: 'timestamp_ms' }),
+  bufferLimitBytes: integer('buffer_limit_bytes')
+    .default(5497558138880)
+    .notNull(),
+  bufferAlertPercent: integer('buffer_alert_percent').default(90).notNull(),
+  albumDeletionNoticeDays: integer('album_deletion_notice_days')
+    .default(14)
+    .notNull(),
+  poolLowAlertPercent: integer('pool_low_alert_percent').default(10).notNull(),
+  lostGraceDays: integer('lost_grace_days').default(7).notNull(),
+  graduationPromptDays: integer('graduation_prompt_days').default(60).notNull(),
 
   // Dedicated Google Calendar for member birthdays (overrides the default)
   birthdaysCalendarId: text('birthdays_calendar_id'),

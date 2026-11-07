@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
-import type { TombstoneReason } from '@/lib/pool/expiry'
+import type { TombstoneReason } from '@/lib/albums/tombstone'
 import type { CountWarning } from './count-warning'
 
 export const ALBUM_CREATE_MIN_CLEARANCE = 3
@@ -46,12 +46,7 @@ export const UpdateAlbumSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200).optional(),
   description: z.string().max(1000).optional(),
   event: z.string().min(1, 'Event is required').max(200).optional(),
-  eventDate: z.string().optional(),
-})
-
-export const SetAlbumPinnedSchema = z.object({
-  albumId: z.string(),
-  pinned: z.boolean(),
+  eventDate: z.string().min(1, 'Event date is required').optional(),
 })
 
 export const ClaimEditAccessSchema = z.object({
@@ -154,7 +149,7 @@ export interface AlbumSummary {
   title: string
   description: string
   event: string
-  eventDate: string | null
+  eventDate: string
   driveFolderId: string
   coverFileId: string | null
   coverUrl: string | null
@@ -163,6 +158,12 @@ export interface AlbumSummary {
   ownership: 'owner' | 'co-author'
   coAuthorCount: number
   authors: AlbumAuthor[]
+}
+
+export interface AlbumStorage {
+  holder: 'buffer' | 'flamekeeper' | 'none'
+  flamekeeperUserId: string | null
+  flamekeeperName: string | null
 }
 
 export interface AlbumDetail extends AlbumSummary {
@@ -174,8 +175,9 @@ export interface AlbumDetail extends AlbumSummary {
    * permanently deleted in Drive, `trashed` means it is sitting in the bin.
    */
   folderState: AlbumFolderState
-  expiresAt: string | null
-  pinned: boolean
+  rescuedAt: string | null
+  scheduledDeletionAt: string | null
+  storage: AlbumStorage
   tombstone: { reason: TombstoneReason; deletedAt: string } | null
   /**
    * Fewer photos listed than a volume expects. Only set for the album owner

@@ -1,17 +1,7 @@
 import * as React from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  CalendarClock,
-  FolderOpen,
-  Images,
-  Pin,
-  PinOff,
-  Share2,
-  Users,
-} from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
+import { FolderOpen, Images, Share2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -31,7 +21,6 @@ import {
   albumViewUrl,
   claimEditAccessFn,
   deletePhotoFn,
-  setAlbumPinnedFn,
   setCoverPhotoFn,
 } from '@/lib/albums'
 import type { AlbumPhoto } from '@/lib/albums'
@@ -40,7 +29,7 @@ import { useAlbumFavorites } from '@/lib/favorites/use-album-favorites'
 import { useUploads, revealUploadDetails } from '@/lib/albums/upload-manager'
 import { driveFolderUrl } from '@/lib/albums/urls'
 import { formatUtcDate } from '@/lib/format'
-import { expiryBannerDate, expiryLabel, tombstoneCopy } from '@/lib/pool/expiry'
+import { tombstoneCopy } from '@/lib/albums/tombstone'
 import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
 import { PhotoGrid } from '@/components/albums/photo-grid'
@@ -174,15 +163,6 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
       invalidate()
     }, 'Failed to delete photo')
 
-  const handleTogglePin = () => {
-    if (!album) return
-    return run(async () => {
-      await setAlbumPinnedFn({ data: { albumId, pinned: !album.pinned } })
-      toast.success(album.pinned ? 'Album unpinned' : 'Album pinned')
-      invalidate()
-    }, 'Failed to update pin')
-  }
-
   const handleAlbumDeleted = () => {
     queryClient.invalidateQueries({
       queryKey: albumQueries.all,
@@ -259,20 +239,6 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
     )
   }
 
-  const bannerDate = expiryBannerDate(
-    {
-      expiresAt: album.expiresAt ? new Date(album.expiresAt) : null,
-      pinned: album.pinned,
-      deletedAt: null,
-    },
-    new Date()
-  )
-
-  const expiryText = expiryLabel({
-    expiresAt: album.expiresAt ? new Date(album.expiresAt) : null,
-    pinned: album.pinned,
-  })
-
   return renderPage(
     <PageContainer>
       <PageHeader
@@ -294,21 +260,6 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
                 </a>
               </Button>
             )}
-            {authUser?.role === 'admin' && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleTogglePin}
-                title={
-                  album.pinned
-                    ? 'Let this album expire normally'
-                    : 'Keep this album past its expiry'
-                }
-              >
-                {album.pinned ? <PinOff /> : <Pin />}
-                {album.pinned ? 'Unpin' : 'Pin'}
-              </Button>
-            )}
             {!canManage && (
               <Button
                 type="button"
@@ -324,45 +275,14 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         }
       />
 
-      {bannerDate && (
-        <Alert className="mb-6">
-          <CalendarClock />
-          <AlertTitle>
-            Will be deleted on {formatUtcDate(bannerDate.toISOString())}
-          </AlertTitle>
-          <AlertDescription>
-            There is no backup. Download the photos you want to keep before
-            then.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="-mt-2 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Users className="size-4" />
           {album.authors.map((a) => a.name).join(', ')}
         </span>
         <span aria-hidden="true">·</span>
-        {album.pinned && (
-          <>
-            <Badge variant="outline" className="gap-1">
-              <Pin className="size-3" />
-              Pinned
-            </Badge>
-            <span aria-hidden="true">·</span>
-          </>
-        )}
         <span>Created {formatUtcDate(album.createdAt)}</span>
         <span aria-hidden="true">·</span>
-        {!album.pinned && expiryText && (
-          <>
-            <span className="flex items-center gap-1.5">
-              <CalendarClock className="size-4" />
-              {expiryText}
-            </span>
-            <span aria-hidden="true">·</span>
-          </>
-        )}
         <span>
           {album.photos.length} photo{album.photos.length !== 1 ? 's' : ''}
         </span>

@@ -5,7 +5,6 @@ import {
   settleTeardown,
 } from '@/lib/albums/teardown'
 import type { TeardownSource } from '@/lib/albums/teardown'
-import { expiryLabel } from '@/lib/pool/expiry'
 
 const files = (...ids: string[]) => ids.map((id) => ({ id, bytes: 10 }))
 const buffer = { kind: 'buffer' } as const
@@ -144,22 +143,5 @@ describe('deleteAllowance', () => {
     expect(deleteAllowance(5)).toBe(100)
     expect(deleteAllowance(4)).toBe(0)
     expect(deleteAllowance(0)).toBe(0)
-  })
-})
-
-describe('expiryLabel', () => {
-  const date = new Date('2027-03-10T12:00:00Z')
-  it('gives a clear date for an expiring album', () => {
-    expect(expiryLabel({ expiresAt: date, pinned: false })).toBe(
-      'Expires on March 10, 2027'
-    )
-  })
-  it('says a pinned album is kept', () => {
-    expect(expiryLabel({ expiresAt: date, pinned: true })).toBe(
-      'Pinned, kept past its expiry'
-    )
-  })
-  it('is empty without a date', () => {
-    expect(expiryLabel({ expiresAt: null, pinned: false })).toBeNull()
   })
 })

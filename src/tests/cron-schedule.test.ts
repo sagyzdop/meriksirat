@@ -28,7 +28,7 @@ describe('planScheduledRun', () => {
       'maintainPool',
       'drainFlamekeepers',
       'finishBans',
-      'expireAlbums',
+      'deleteScheduledAlbums',
       'checkBufferUsage',
     ])
   })

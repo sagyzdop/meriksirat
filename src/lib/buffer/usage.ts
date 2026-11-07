@@ -1,7 +1,5 @@
 import { BUFFER_FULL_MESSAGE } from './messages'
 
-export const BUFFER_WARN_FRACTION = 0.9
-
 export type BufferLevel = 'ok' | 'warn' | 'full'
 export type BufferMarker = 'warn' | 'full'
 
@@ -10,17 +8,63 @@ export interface BufferUsage {
   limitBytes: number | null
 }
 
-export function bufferUsageLevel(usage: BufferUsage): BufferLevel {
+export interface BufferOverview {
+  usedBytes: number
+  availableLimitBytes: number | null
+  configuredLimitBytes: number
+  limitBytes: number | null
+  percent: number | null
+  level: BufferLevel
+}
+
+export function effectiveLimitBytes(
+  configuredLimitBytes: number,
+  availableLimitBytes: number | null
+): number | null {
+  const limits = [configuredLimitBytes, availableLimitBytes].filter(
+    (n): n is number => typeof n === 'number' && n > 0
+  )
+  return limits.length > 0 ? Math.min(...limits) : null
+}
+
+export function bufferUsageLevel(
+  usage: BufferUsage,
+  alertPercent: number
+): BufferLevel {
   const { usedBytes, limitBytes } = usage
   if (!limitBytes || limitBytes <= 0) return 'ok'
   if (usedBytes >= limitBytes) return 'full'
-  if (usedBytes >= limitBytes * BUFFER_WARN_FRACTION) return 'warn'
+  if (usedBytes >= (limitBytes * alertPercent) / 100) return 'warn'
   return 'ok'
 }
 
-export function usagePercent(usage: BufferUsage): number | null {
-  if (!usage.limitBytes || usage.limitBytes <= 0) return null
-  return Math.min(100, Math.round((100 * usage.usedBytes) / usage.limitBytes))
+export function usagePercent(
+  usedBytes: number,
+  configuredLimitBytes: number
+): number | null {
+  if (configuredLimitBytes <= 0) return null
+  return Math.min(100, Math.round((100 * usedBytes) / configuredLimitBytes))
+}
+
+export function buildBufferOverview(
+  usage: BufferUsage,
+  settings: { bufferLimitBytes: number; bufferAlertPercent: number }
+): BufferOverview {
+  const limitBytes = effectiveLimitBytes(
+    settings.bufferLimitBytes,
+    usage.limitBytes
+  )
+  return {
+    usedBytes: usage.usedBytes,
+    availableLimitBytes: usage.limitBytes,
+    configuredLimitBytes: settings.bufferLimitBytes,
+    limitBytes,
+    percent: usagePercent(usage.usedBytes, settings.bufferLimitBytes),
+    level: bufferUsageLevel(
+      { usedBytes: usage.usedBytes, limitBytes },
+      settings.bufferAlertPercent
+    ),
+  }
 }
 
 export function planBufferAlert(
@@ -39,9 +83,11 @@ export function bufferBannerVisible(
   return level !== 'ok' && email.trim().toLowerCase().endsWith('@nu.edu.kz')
 }
 
-export function bufferUploadBlock(usage: BufferUsage | null): string | null {
-  if (!usage) return null
-  return bufferUsageLevel(usage) === 'full' ? BUFFER_FULL_MESSAGE : null
+export function bufferUploadBlock(
+  overview: Pick<BufferOverview, 'level'> | null
+): string | null {
+  if (!overview) return null
+  return overview.level === 'full' ? BUFFER_FULL_MESSAGE : null
 }
 
 export const USAGE_REWRITE_MS = 6 * 60 * 60 * 1000

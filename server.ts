@@ -145,8 +145,10 @@ const STEPS: Record<CronStepName, () => Promise<Step>> = {
     import('./src/lib/pool/drain-cron').then((m) => m.runDrainMaintenance),
   finishBans: () =>
     import('./src/lib/pool/ban-server').then((m) => m.runBanMaintenance),
-  expireAlbums: () =>
-    import('./src/lib/albums/expiry').then((m) => m.runAlbumExpiry),
+  deleteScheduledAlbums: () =>
+    import('./src/lib/albums/scheduled-deletion').then(
+      (m) => m.runScheduledDeletion
+    ),
   checkBufferUsage: () =>
     import('./src/lib/buffer/usage-server').then((m) => m.runBufferUsageCheck),
   graduateFlamekeepers: () =>

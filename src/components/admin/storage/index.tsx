@@ -26,7 +26,6 @@ import {
 } from '@/lib/admin/functions/pool'
 import { bytesToGb, formatGb } from '@/lib/flamekeeper/rules'
 import { formatBytes } from '@/lib/format'
-import { BUFFER_WARN_FRACTION } from '@/lib/buffer/usage'
 import { POOL_LOW_FRACTION, isPoolLow } from '@/lib/pool/placement'
 import { cn } from '@/lib/utils'
 import type { BufferUsageOverview } from '@/lib/buffer/functions'
@@ -74,12 +73,10 @@ function BufferItem({
               {usage.level === 'full'
                 ? 'Uploads are paused until space is freed.'
                 : usage.level === 'warn'
-                  ? `Over ${BUFFER_WARN_FRACTION * 100}% full. Free up space or recruit flamekeepers.`
-                  : `${formatBytes(usage.usedBytes)} of ${
-                      usage.limitBytes
-                        ? formatBytes(usage.limitBytes)
-                        : 'unknown'
-                    } used`}
+                  ? 'Nearly full. Schedule albums for deletion or recruit flamekeepers.'
+                  : `${formatBytes(usage.usedBytes)} of ${formatBytes(
+                      usage.configuredLimitBytes
+                    )} used`}
             </ItemDescription>
             <Progress value={usage.percent ?? 0} className="h-1" />
           </>
@@ -231,7 +228,7 @@ export function Page({
           {pool && isPoolLow(pool) ? (
             <p className="text-sm text-destructive">
               Free space is below {POOL_LOW_FRACTION * 100}% of the pledge.
-              Recruit flamekeepers or free up space.
+              Recruit flamekeepers or schedule albums for deletion.
             </p>
           ) : null}
         </section>

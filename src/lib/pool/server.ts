@@ -102,7 +102,7 @@ export async function runPoolMaintenance(
     const result = await sendAdminsTelegramResult(
       database,
       env.TELEGRAM_BOT_TOKEN,
-      `#savenuimg pool is low: ${formatGb(stats.freeBytes)} free of ${formatGb(stats.pledgedBytes)} pledged across ${stats.flamekeepers} flamekeepers. Recruit flamekeepers or free up space.`,
+      `#savenuimg pool is low: ${formatGb(stats.freeBytes)} free of ${formatGb(stats.pledgedBytes)} pledged across ${stats.flamekeepers} flamekeepers. Recruit flamekeepers or schedule albums for deletion.`,
       budget
     )
     if (result !== 'sent') return

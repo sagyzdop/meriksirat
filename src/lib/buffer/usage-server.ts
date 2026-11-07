@@ -1,4 +1,5 @@
 import { db } from '@/db'
+import { loadSettings } from '@/lib/booking/load-settings'
 import { getDriveStorageQuota } from '@/lib/google/google-drive'
 import type { Budget } from '@/lib/cron/budget'
 import { formatGb } from '@/lib/flamekeeper/rules'
@@ -6,11 +7,11 @@ import { sendAdminsTelegramResult } from '@/lib/pool/server'
 import { planBufferUpload } from './plan'
 import { withBufferToken } from './tokens'
 import {
-  bufferUsageLevel,
+  buildBufferOverview,
   planBufferAlert,
   planUsageWrite,
-  usagePercent,
   type BufferMarker,
+  type BufferOverview,
   type BufferUsage,
 } from './usage'
 
@@ -100,14 +101,55 @@ async function readMarker(store: KVNamespace): Promise<BufferMarker | null> {
   return value === 'warn' || value === 'full' ? value : null
 }
 
-function alertText(usage: BufferUsage): string {
-  const percent = usagePercent(usage)
-  const used = formatGb(usage.usedBytes)
-  const limit = usage.limitBytes ? formatGb(usage.limitBytes) : 'its limit'
-  if (bufferUsageLevel(usage) === 'full') {
-    return `#savenuimg buffer is full (${used} of ${limit}). Uploads are paused until space is freed. Use Free up space on the dashboard.`
+export interface BufferLimitSettings {
+  bufferLimitBytes: number
+  bufferAlertPercent: number
+}
+
+export async function loadBufferLimitSettings(
+  database: ReturnType<typeof db>
+): Promise<BufferLimitSettings> {
+  const row = await loadSettings(database)
+  return {
+    bufferLimitBytes: row.bufferLimitBytes,
+    bufferAlertPercent: row.bufferAlertPercent,
   }
-  return `#savenuimg buffer is ${percent}% full (${used} of ${limit}). Uploads stop at 100%. Free up space on the dashboard or recruit flamekeepers.`
+}
+
+async function workerDatabase(): Promise<ReturnType<typeof db>> {
+  const { env } = await import('cloudflare:workers')
+  return db(env.meriksirat_d1 as D1Database)
+}
+
+export async function toBufferOverview(
+  usage: BufferUsage
+): Promise<BufferOverview> {
+  return buildBufferOverview(
+    usage,
+    await loadBufferLimitSettings(await workerDatabase())
+  )
+}
+
+export async function getBufferOverview(
+  maxAgeMs: number
+): Promise<(BufferOverview & { checkedAt: number }) | null> {
+  const usage = await getBufferUsage(maxAgeMs)
+  if (!usage) return null
+  return { ...(await toBufferOverview(usage)), checkedAt: usage.checkedAt }
+}
+
+function alertText(overview: BufferOverview, alertPercent: number): string {
+  const used = formatGb(overview.usedBytes)
+  const configured = formatGb(overview.configuredLimitBytes)
+  const available =
+    overview.availableLimitBytes === null
+      ? 'unknown'
+      : formatGb(overview.availableLimitBytes)
+  const limits = `Configured limit ${configured}, available in Drive ${available}.`
+  if (overview.level === 'full') {
+    return `#savenuimg buffer is full (${used} used). ${limits} Uploads are paused until space is freed or the limit is raised.`
+  }
+  return `#savenuimg buffer passed ${alertPercent}% (${used} used, ${overview.percent}% of the configured limit). ${limits} Uploads stop when it is full. Schedule albums for deletion, recruit flamekeepers or raise the limit.`
 }
 
 /** Hourly step: warn admins once each time the buffer crosses 90% or 100%. */
@@ -133,13 +175,16 @@ export async function runBufferUsageCheck(
     }
   }
 
+  const database = db(env.meriksirat_d1)
+  const limits = await loadBufferLimitSettings(database)
+  const overview = buildBufferOverview(usage, limits)
   const marker = await readMarker(store)
-  const plan = planBufferAlert(bufferUsageLevel(usage), marker)
+  const plan = planBufferAlert(overview.level, marker)
   if (plan.notify) {
     const result = await sendAdminsTelegramResult(
-      db(env.meriksirat_d1),
+      database,
       env.TELEGRAM_BOT_TOKEN,
-      alertText(usage),
+      alertText(overview, limits.bufferAlertPercent),
       budget
     )
     if (result !== 'sent') return

@@ -1,5 +1,4 @@
 import { MIN_PLEDGE_BYTES, TERMS_URL } from '@/lib/flamekeeper/rules'
-import { EXPIRY_YEARS, REMINDER_WINDOWS_DAYS } from '@/lib/pool/expiry'
 
 const MB = 1024 * 1024
 const GB = 1024 * MB
@@ -35,17 +34,7 @@ export function formatMinPledge(bytes: number): string {
   return `${Math.round(bytes / MB)} MB`
 }
 
-const YEAR_WORDS: Record<number, string> = {
-  1: 'one',
-  2: 'two',
-  3: 'three',
-  4: 'four',
-  5: 'five',
-}
-
 export function aboutCopy() {
-  const years = YEAR_WORDS[EXPIRY_YEARS] ?? String(EXPIRY_YEARS)
-  const { first, second } = REMINDER_WINDOWS_DAYS
   return {
     sections: [
       {
@@ -61,7 +50,7 @@ export function aboutCopy() {
       {
         id: 'albums',
         title: 'How long albums last',
-        body: `Albums stay up for ${years} years after the event (subject to change). Owners are reminded ${first} and ${second} days before an album goes, so there is time to download it. Admins can pin the albums worth keeping longer.`,
+        body: 'Albums stay up until they are deleted. If an album is scheduled for deletion, it is deleted only after the notice period, so there is time to download it.',
       },
       {
         id: 'help',
