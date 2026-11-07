@@ -14,7 +14,7 @@ export type CronStepName =
   | 'maintainPool'
   | 'drainFlamekeepers'
   | 'finishBans'
-  | 'expireAlbums'
+  | 'deleteScheduledAlbums'
   | 'checkBufferUsage'
   | 'graduateFlamekeepers'
 
@@ -42,7 +42,7 @@ const GROUPS: Record<
       'maintainPool',
       'drainFlamekeepers',
       'finishBans',
-      'expireAlbums',
+      'deleteScheduledAlbums',
       'checkBufferUsage',
     ],
     configuresBot: true,

@@ -301,12 +301,12 @@ function readVolume(
   const status: ListingStatus = !source.listable
     ? 'unavailable'
     : (usable?.status ?? 'failed')
-  const expired =
+  const stale =
     status !== 'ok' &&
     (usable?.listedAt === null ||
       usable?.listedAt === undefined ||
       now - usable.listedAt > LISTING_STALE_LIMIT_MS)
-  const files = expired ? [] : (usable?.files ?? []).filter(isImage)
+  const files = stale ? [] : (usable?.files ?? []).filter(isImage)
   return {
     key: source.key,
     owner: source.owner,

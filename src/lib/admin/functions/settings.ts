@@ -9,6 +9,12 @@ export const UpdateSettingsSchema = z.object({
   birthdaysCalendarId: z.string().optional(),
   operatingHoursStart: z.number().min(0).max(1439).optional(),
   operatingHoursEnd: z.number().min(0).max(1439).optional(),
+  bufferLimitBytes: z.number().min(1).max(1_000_000).optional(),
+  bufferAlertPercent: z.number().int().min(1).max(100).optional(),
+  albumDeletionNoticeDays: z.number().int().min(1).max(365).optional(),
+  poolLowAlertPercent: z.number().int().min(1).max(100).optional(),
+  lostGraceDays: z.number().int().min(1).max(365).optional(),
+  graduationPromptDays: z.number().int().min(1).max(730).optional(),
 })
 
 /** The global settings row as returned by getSettingsFn. */
@@ -18,6 +24,12 @@ export interface SettingsData {
   birthdaysCalendarId: string | null
   operatingHoursStart: number | null
   operatingHoursEnd: number | null
+  bufferLimitBytes: number
+  bufferAlertPercent: number
+  albumDeletionNoticeDays: number
+  poolLowAlertPercent: number
+  lostGraceDays: number
+  graduationPromptDays: number
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -100,6 +112,27 @@ export const updateSettingsFn = createServerFn({ method: 'POST' })
     }
     if (data.operatingHoursEnd !== undefined) {
       updateData.operatingHoursEnd = data.operatingHoursEnd
+    }
+    if (data.bufferLimitBytes !== undefined) {
+      const { gbToBytes } = await import('@/lib/flamekeeper/rules')
+      const { getBufferUsage } = await import('@/lib/buffer/usage-server')
+      const limitBytes = Math.round(gbToBytes(data.bufferLimitBytes))
+      const usage = await getBufferUsage(10 * 60 * 1000)
+      if (usage && limitBytes < usage.usedBytes) {
+        throw new Error(
+          'The buffer ceiling cannot be lower than the space already used'
+        )
+      }
+      updateData.bufferLimitBytes = limitBytes
+    }
+    for (const key of [
+      'bufferAlertPercent',
+      'albumDeletionNoticeDays',
+      'poolLowAlertPercent',
+      'lostGraceDays',
+      'graduationPromptDays',
+    ] as const) {
+      if (data[key] !== undefined) updateData[key] = data[key]
     }
 
     const result = await database

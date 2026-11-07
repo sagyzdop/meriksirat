@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { album, albumMember, user } from '@/db/schema'
+import { album, albumMember, user, volume } from '@/db/schema'
 import { planCountWarning } from './count-warning'
 import { listingPhotos } from './listing'
 import { loadAlbumListing } from './listing-server'
@@ -9,7 +9,9 @@ import type {
   AlbumAuthor,
   AlbumDetail,
   AlbumPhoto,
+  AlbumStorage,
 } from './types'
+import { albumStorageHolder } from './status'
 import { albumCoverUrl } from './urls'
 
 export type AlbumRecord = typeof album.$inferSelect
@@ -65,7 +67,7 @@ export async function buildAlbumCore(
     title: row.title,
     description: row.description ?? '',
     event: row.event ?? '',
-    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
+    eventDate: row.eventDate.toISOString(),
     driveFolderId: row.driveFolderId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -93,6 +95,25 @@ export async function loadAlbumDetail(
       .where(eq(album.id, row.id))
   }
 
+  const volumes = await database
+    .select({
+      flamekeeperUserId: volume.flamekeeperUserId,
+      droppedAt: volume.droppedAt,
+      name: user.name,
+    })
+    .from(volume)
+    .leftJoin(user, eq(user.id, volume.flamekeeperUserId))
+    .where(eq(volume.albumId, row.id))
+    .all()
+  const holder = albumStorageHolder(volumes)
+  const held = volumes.find((v) => !v.droppedAt && v.flamekeeperUserId)
+  const storage: AlbumStorage = {
+    holder,
+    flamekeeperUserId:
+      holder === 'flamekeeper' ? held!.flamekeeperUserId : null,
+    flamekeeperName: holder === 'flamekeeper' ? (held!.name ?? null) : null,
+  }
+
   const ownership =
     currentUser && core.ownerUserId === currentUser.id ? 'owner' : 'co-author'
   return {
@@ -114,8 +135,11 @@ export async function loadAlbumDetail(
     ownership,
     access,
     editShareToken: access !== 'none' ? row.editShareToken : null,
-    expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
-    pinned: !!row.pinned,
+    rescuedAt: row.rescuedAt ? row.rescuedAt.toISOString() : null,
+    scheduledDeletionAt: row.scheduledDeletionAt
+      ? row.scheduledDeletionAt.toISOString()
+      : null,
+    storage,
     tombstone: null,
     countWarning: currentUser
       ? planCountWarning({
@@ -137,7 +161,7 @@ export function buildTombstoneDetail(row: AlbumRecord): AlbumDetail {
     title: row.title,
     description: '',
     event: row.event ?? '',
-    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
+    eventDate: row.eventDate.toISOString(),
     driveFolderId: '',
     coverFileId: null,
     coverUrl: null,
@@ -150,10 +174,11 @@ export function buildTombstoneDetail(row: AlbumRecord): AlbumDetail {
     access: 'none',
     editShareToken: null,
     folderState: 'ok',
-    expiresAt: null,
-    pinned: false,
+    rescuedAt: null,
+    scheduledDeletionAt: null,
+    storage: { holder: 'none', flamekeeperUserId: null, flamekeeperName: null },
     tombstone: {
-      reason: row.tombstoneReason ?? 'expired',
+      reason: row.tombstoneReason!,
       deletedAt: (row.deletedAt ?? row.updatedAt).toISOString(),
     },
     countWarning: null,

@@ -88,7 +88,7 @@ function toAlbumSummary(
     title: row.title,
     description: row.description ?? '',
     event: row.event ?? '',
-    eventDate: row.eventDate ? row.eventDate.toISOString() : null,
+    eventDate: row.eventDate.toISOString(),
     driveFolderId: row.driveFolderId,
     coverFileId: row.coverFileId,
     coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,

@@ -23,7 +23,7 @@ import {
 } from './plan'
 import { withBufferToken } from './tokens'
 import { bufferUploadBlock } from './usage'
-import { getBufferUsage } from './usage-server'
+import { getBufferOverview } from './usage-server'
 
 const UPLOAD_USAGE_MAX_AGE_MS = 10 * 60 * 1000
 
@@ -134,7 +134,7 @@ export async function startBufferUpload(
   }
 
   const blocked = bufferUploadBlock(
-    await getBufferUsage(UPLOAD_USAGE_MAX_AGE_MS)
+    await getBufferOverview(UPLOAD_USAGE_MAX_AGE_MS)
   )
   if (blocked) throw new Error(blocked)
 

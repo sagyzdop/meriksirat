@@ -28,9 +28,9 @@ describe('about copy', () => {
     expect(text).toContain(formatMinPledge(MIN_PLEDGE_BYTES))
   })
 
-  it('states the album lifetime and reminder days the code uses', () => {
-    expect(text).toContain('two years')
-    expect(text).toContain('30 and 7 days')
+  it('says albums stay up until they are deleted', () => {
+    expect(text).toContain('until they are deleted')
+    expect(text).not.toContain('two years')
   })
 })
 
