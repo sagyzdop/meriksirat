@@ -30,10 +30,7 @@ import {
   StatusBadge,
 } from '@/components/admin/users/components/user-badges'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import {
-  UserAlbumsTable,
-  type AlbumSearch,
-} from './components/user-albums-table'
+import { UserAlbumsTab, type AlbumSearch } from './components/user-albums-tab'
 import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
 import type { PaginationMeta } from '@/lib/pagination'
 import { DetailRow } from '@/components/shared/detail-row'
@@ -220,15 +217,9 @@ export function Page({
         </TabsContent>
 
         <TabsContent value="albums">
-          <UserAlbumsTable
+          <UserAlbumsTab
             albums={albums}
             pagination={albumsPagination}
-            filters={{
-              page: albumsSearch.albumPage,
-              limit: albumsSearch.albumLimit,
-              sortBy: albumsSearch.albumSortBy,
-              sortOrder: albumsSearch.albumSortOrder,
-            }}
             search={albumsSearch}
             isLoading={albumsIsLoading}
           />

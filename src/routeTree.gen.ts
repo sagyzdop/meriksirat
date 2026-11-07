@@ -35,6 +35,8 @@ import { Route as AuthenticatedMyAlbumsIndexRouteImport } from './routes/_authen
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiFlamekeeperCallbackRouteImport } from './routes/api/flamekeeper.callback'
 import { Route as ApiImagesSplatRouteImport } from './routes/api/images.$'
+import { Route as AuthenticatedAdminAlbumsIndexRouteImport } from './routes/_authenticated/admin/albums/index'
+import { Route as AuthenticatedAdminAlbumsAlbumIdRouteImport } from './routes/_authenticated/admin/albums/$albumId'
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings/index'
 import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/_authenticated/admin/categories/index'
 import { Route as AuthenticatedAdminDashboardIndexRouteImport } from './routes/_authenticated/admin/dashboard/index'
@@ -203,6 +205,18 @@ const ApiImagesSplatRoute = ApiImagesSplatRouteImport.update({
   path: '/api/images/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminAlbumsIndexRoute =
+  AuthenticatedAdminAlbumsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminAlbumsRoute,
+  } as any)
+const AuthenticatedAdminAlbumsAlbumIdRoute =
+  AuthenticatedAdminAlbumsAlbumIdRouteImport.update({
+    id: '/$albumId',
+    path: '/$albumId',
+    getParentRoute: () => AuthenticatedAdminAlbumsRoute,
+  } as any)
 const AuthenticatedAdminBookingsIndexRoute =
   AuthenticatedAdminBookingsIndexRouteImport.update({
     id: '/bookings/',
@@ -365,7 +379,7 @@ export interface FileRoutesByFullPath {
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
-  '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
+  '/admin/albums': typeof AuthenticatedAdminAlbumsRouteWithChildren
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRouteWithChildren
   '/admin/settings': typeof AuthenticatedAdminSettingsRouteWithChildren
@@ -380,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/equipment/': typeof AuthenticatedEquipmentIndexRoute
   '/favorites/': typeof AuthenticatedFavoritesIndexRoute
   '/my-albums/': typeof AuthenticatedMyAlbumsIndexRoute
+  '/admin/albums/$albumId': typeof AuthenticatedAdminAlbumsAlbumIdRoute
   '/admin/dashboard/albums': typeof AuthenticatedAdminDashboardAlbumsRoute
   '/admin/dashboard/bookings': typeof AuthenticatedAdminDashboardBookingsRoute
   '/admin/dashboard/flamekeepers': typeof AuthenticatedAdminDashboardFlamekeepersRoute
@@ -394,6 +409,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings/storage': typeof AuthenticatedAdminSettingsStorageRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
+  '/admin/albums/': typeof AuthenticatedAdminAlbumsIndexRoute
   '/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
   '/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
   '/admin/dashboard/': typeof AuthenticatedAdminDashboardIndexRoute
@@ -417,7 +433,6 @@ export interface FileRoutesByTo {
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums': typeof AlbumsIndexRoute
-  '/admin/albums': typeof AuthenticatedAdminAlbumsRoute
   '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
   '/admin/violations': typeof AuthenticatedAdminViolationsRoute
@@ -430,6 +445,7 @@ export interface FileRoutesByTo {
   '/equipment': typeof AuthenticatedEquipmentIndexRoute
   '/favorites': typeof AuthenticatedFavoritesIndexRoute
   '/my-albums': typeof AuthenticatedMyAlbumsIndexRoute
+  '/admin/albums/$albumId': typeof AuthenticatedAdminAlbumsAlbumIdRoute
   '/admin/dashboard/albums': typeof AuthenticatedAdminDashboardAlbumsRoute
   '/admin/dashboard/bookings': typeof AuthenticatedAdminDashboardBookingsRoute
   '/admin/dashboard/flamekeepers': typeof AuthenticatedAdminDashboardFlamekeepersRoute
@@ -444,6 +460,7 @@ export interface FileRoutesByTo {
   '/admin/settings/storage': typeof AuthenticatedAdminSettingsStorageRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
+  '/admin/albums': typeof AuthenticatedAdminAlbumsIndexRoute
   '/admin/bookings': typeof AuthenticatedAdminBookingsIndexRoute
   '/admin/categories': typeof AuthenticatedAdminCategoriesIndexRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardIndexRoute
@@ -469,7 +486,7 @@ export interface FileRoutesById {
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
-  '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRoute
+  '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRouteWithChildren
   '/_authenticated/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRouteWithChildren
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRouteWithChildren
@@ -484,6 +501,7 @@ export interface FileRoutesById {
   '/_authenticated/equipment/': typeof AuthenticatedEquipmentIndexRoute
   '/_authenticated/favorites/': typeof AuthenticatedFavoritesIndexRoute
   '/_authenticated/my-albums/': typeof AuthenticatedMyAlbumsIndexRoute
+  '/_authenticated/admin/albums/$albumId': typeof AuthenticatedAdminAlbumsAlbumIdRoute
   '/_authenticated/admin/dashboard/albums': typeof AuthenticatedAdminDashboardAlbumsRoute
   '/_authenticated/admin/dashboard/bookings': typeof AuthenticatedAdminDashboardBookingsRoute
   '/_authenticated/admin/dashboard/flamekeepers': typeof AuthenticatedAdminDashboardFlamekeepersRoute
@@ -498,6 +516,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/settings/storage': typeof AuthenticatedAdminSettingsStorageRoute
   '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/_authenticated/bookings_/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
+  '/_authenticated/admin/albums/': typeof AuthenticatedAdminAlbumsIndexRoute
   '/_authenticated/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
   '/_authenticated/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
   '/_authenticated/admin/dashboard/': typeof AuthenticatedAdminDashboardIndexRoute
@@ -538,6 +557,7 @@ export interface FileRouteTypes {
     | '/equipment/'
     | '/favorites/'
     | '/my-albums/'
+    | '/admin/albums/$albumId'
     | '/admin/dashboard/albums'
     | '/admin/dashboard/bookings'
     | '/admin/dashboard/flamekeepers'
@@ -552,6 +572,7 @@ export interface FileRouteTypes {
     | '/admin/settings/storage'
     | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
+    | '/admin/albums/'
     | '/admin/bookings/'
     | '/admin/categories/'
     | '/admin/dashboard/'
@@ -575,7 +596,6 @@ export interface FileRouteTypes {
     | '/albums/$albumId'
     | '/api/telegram'
     | '/albums'
-    | '/admin/albums'
     | '/admin/birthdays'
     | '/admin/storage'
     | '/admin/violations'
@@ -588,6 +608,7 @@ export interface FileRouteTypes {
     | '/equipment'
     | '/favorites'
     | '/my-albums'
+    | '/admin/albums/$albumId'
     | '/admin/dashboard/albums'
     | '/admin/dashboard/bookings'
     | '/admin/dashboard/flamekeepers'
@@ -602,6 +623,7 @@ export interface FileRouteTypes {
     | '/admin/settings/storage'
     | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
+    | '/admin/albums'
     | '/admin/bookings'
     | '/admin/categories'
     | '/admin/dashboard'
@@ -641,6 +663,7 @@ export interface FileRouteTypes {
     | '/_authenticated/equipment/'
     | '/_authenticated/favorites/'
     | '/_authenticated/my-albums/'
+    | '/_authenticated/admin/albums/$albumId'
     | '/_authenticated/admin/dashboard/albums'
     | '/_authenticated/admin/dashboard/bookings'
     | '/_authenticated/admin/dashboard/flamekeepers'
@@ -655,6 +678,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/settings/storage'
     | '/_authenticated/admin/users/$userId'
     | '/_authenticated/bookings_/$bookingId/edit'
+    | '/_authenticated/admin/albums/'
     | '/_authenticated/admin/bookings/'
     | '/_authenticated/admin/categories/'
     | '/_authenticated/admin/dashboard/'
@@ -866,6 +890,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiImagesSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/albums/': {
+      id: '/_authenticated/admin/albums/'
+      path: '/'
+      fullPath: '/admin/albums/'
+      preLoaderRoute: typeof AuthenticatedAdminAlbumsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminAlbumsRoute
+    }
+    '/_authenticated/admin/albums/$albumId': {
+      id: '/_authenticated/admin/albums/$albumId'
+      path: '/$albumId'
+      fullPath: '/admin/albums/$albumId'
+      preLoaderRoute: typeof AuthenticatedAdminAlbumsAlbumIdRouteImport
+      parentRoute: typeof AuthenticatedAdminAlbumsRoute
+    }
     '/_authenticated/admin/bookings/': {
       id: '/_authenticated/admin/bookings/'
       path: '/bookings'
@@ -1044,6 +1082,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminAlbumsRouteChildren {
+  AuthenticatedAdminAlbumsAlbumIdRoute: typeof AuthenticatedAdminAlbumsAlbumIdRoute
+  AuthenticatedAdminAlbumsIndexRoute: typeof AuthenticatedAdminAlbumsIndexRoute
+}
+
+const AuthenticatedAdminAlbumsRouteChildren: AuthenticatedAdminAlbumsRouteChildren =
+  {
+    AuthenticatedAdminAlbumsAlbumIdRoute: AuthenticatedAdminAlbumsAlbumIdRoute,
+    AuthenticatedAdminAlbumsIndexRoute: AuthenticatedAdminAlbumsIndexRoute,
+  }
+
+const AuthenticatedAdminAlbumsRouteWithChildren =
+  AuthenticatedAdminAlbumsRoute._addFileChildren(
+    AuthenticatedAdminAlbumsRouteChildren,
+  )
+
 interface AuthenticatedAdminDashboardRouteChildren {
   AuthenticatedAdminDashboardAlbumsRoute: typeof AuthenticatedAdminDashboardAlbumsRoute
   AuthenticatedAdminDashboardBookingsRoute: typeof AuthenticatedAdminDashboardBookingsRoute
@@ -1104,7 +1158,7 @@ const AuthenticatedAdminSettingsRouteWithChildren =
   )
 
 interface AuthenticatedAdminRouteChildren {
-  AuthenticatedAdminAlbumsRoute: typeof AuthenticatedAdminAlbumsRoute
+  AuthenticatedAdminAlbumsRoute: typeof AuthenticatedAdminAlbumsRouteWithChildren
   AuthenticatedAdminBirthdaysRoute: typeof AuthenticatedAdminBirthdaysRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRouteWithChildren
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRouteWithChildren
@@ -1124,7 +1178,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
-  AuthenticatedAdminAlbumsRoute: AuthenticatedAdminAlbumsRoute,
+  AuthenticatedAdminAlbumsRoute: AuthenticatedAdminAlbumsRouteWithChildren,
   AuthenticatedAdminBirthdaysRoute: AuthenticatedAdminBirthdaysRoute,
   AuthenticatedAdminDashboardRoute:
     AuthenticatedAdminDashboardRouteWithChildren,

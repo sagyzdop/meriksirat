@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { albumCoverUrl } from '@/lib/albums/urls'
 import {
   AdminUserAlbumsFiltersSchema,
   ExportUsersFiltersSchema,
@@ -7,7 +6,6 @@ import {
   ViolationsFiltersSchema,
 } from '../dashboard-types'
 import type {
-  AdminUserAlbum,
   AdminUserExport,
   MostActiveUser,
   PaginatedAdminUserAlbumsResponse,
@@ -196,80 +194,10 @@ export const getAdminUserAlbumsFn = createServerFn({ method: 'GET' })
   .validator(AdminUserAlbumsFiltersSchema)
   .handler(async ({ data }): Promise<PaginatedAdminUserAlbumsResponse> => {
     const { adminContext } = await import('@/lib/admin/server')
-    const { album, albumMember } = await import('@/db/schema')
-    const { eq, and, or, inArray, isNull, like, asc, desc, sql } =
-      await import('drizzle-orm')
-
+    const { listAdminAlbums } = await import('@/lib/albums/admin-list')
     const { database } = await adminContext(['admin', 'manager'])
-
-    // D1 caps bound parameters at 100/query, so membership is expressed as a
-    // subquery rather than an in-memory id list.
-    const memberAlbums = database
-      .select({ albumId: albumMember.albumId })
-      .from(albumMember)
-      .where(eq(albumMember.userId, data.userId))
-
-    const conditions: import('drizzle-orm').SQL[] = [isNull(album.deletedAt)]
-    conditions.push(
-      or(eq(album.ownerUserId, data.userId), inArray(album.id, memberAlbums))!
-    )
-
-    const search = (data.search ?? '').trim()
-    if (search) {
-      conditions.push(like(album.title, `%${search}%`))
-    }
-
-    const whereClause = and(...conditions)
-    const offset = (data.page - 1) * data.limit
-    const coAuthorCountExpr = sql<number>`count(${albumMember.id})`
-    const dir = data.sortOrder === 'desc' ? desc : asc
-    const orderBy =
-      data.sortBy === 'title'
-        ? dir(album.title)
-        : data.sortBy === 'coAuthorCount'
-          ? dir(coAuthorCountExpr)
-          : dir(album.createdAt)
-
-    const [countRows, pageRows] = await Promise.all([
-      database
-        .select({ id: album.id })
-        .from(album)
-        .leftJoin(albumMember, eq(albumMember.albumId, album.id))
-        .where(whereClause)
-        .groupBy(album.id)
-        .all(),
-      database
-        .select({
-          id: album.id,
-          title: album.title,
-          createdAt: album.createdAt,
-          coverFileId: album.coverFileId,
-          coAuthorCount: coAuthorCountExpr,
-        })
-        .from(album)
-        .leftJoin(albumMember, eq(albumMember.albumId, album.id))
-        .where(whereClause)
-        .groupBy(album.id)
-        .orderBy(orderBy)
-        .limit(data.limit)
-        .offset(offset)
-        .all(),
-    ])
-
-    const albums: AdminUserAlbum[] = pageRows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      createdAt: row.createdAt.toISOString(),
-      coAuthorCount: Number(row.coAuthorCount),
-      coverUrl: row.coverFileId ? albumCoverUrl(row.coverFileId) : null,
-    }))
-
-    const totalCount = countRows.length
-
-    return {
-      albums,
-      pagination: buildPagination(totalCount, data.page, data.limit),
-    }
+    const { userId, ...filters } = data
+    return listAdminAlbums(database, filters, userId)
   })
 
 export const exportUsersFn = createServerFn({ method: 'GET' })

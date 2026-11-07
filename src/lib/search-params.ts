@@ -61,3 +61,33 @@ export function booleanArrayParam() {
     }, z.array(z.boolean()))
     .optional()
 }
+
+const dateOnlyParam = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .optional()
+  .catch(undefined)
+
+export const ADMIN_ALBUM_SORT_FIELDS = [
+  'title',
+  'eventDate',
+  'createdAt',
+  'photoCount',
+  'photoBytes',
+] as const
+
+export const AdminAlbumFiltersShape = {
+  search: z.string().optional(),
+  status: stringArrayParam(z.enum(['rescued', 'scheduled_deletion'])),
+  storage: stringArrayParam(z.enum(['buffer', 'flamekeeper'])),
+  startDate: dateOnlyParam,
+  endDate: dateOnlyParam,
+}
+
+export const AdminAlbumSearchSchema = z.object({
+  ...AdminAlbumFiltersShape,
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(10),
+  sortBy: z.enum(ADMIN_ALBUM_SORT_FIELDS).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+})
