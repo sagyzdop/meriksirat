@@ -19,3 +19,7 @@ export function planOptOut(fk: StoppableFlamekeeper): StopPlan {
 export function planBan(fk: StoppableFlamekeeper | null): StopPlan {
   return !fk || fk.state === 'drained' ? { kind: 'none' } : { kind: 'stop' }
 }
+
+export function planEnd(heldVolumes: number): 'draining' | 'drained' {
+  return heldVolumes > 0 ? 'draining' : 'drained'
+}
