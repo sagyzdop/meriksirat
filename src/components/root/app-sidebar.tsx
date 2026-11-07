@@ -12,7 +12,6 @@ import {
   FolderOpen,
   Heart,
   Cake,
-  HardDrive,
   TriangleAlert,
   Settings,
 } from 'lucide-react'
@@ -122,11 +121,6 @@ const data = {
       title: 'Album Management',
       url: '/admin/albums',
       icon: Images,
-    },
-    {
-      title: 'Storage',
-      url: '/admin/storage',
-      icon: HardDrive,
     },
     {
       title: 'Violations',

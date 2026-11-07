@@ -1,7 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
 import {
   getAdminDashboardAlertsFn,
-  getAdminDashboardStatsFn,
+  getAlbumStatsFn,
+  getBookingStatsFn,
+  getFlamekeeperStatsFn,
+  getMemberStatsFn,
+  getStorageStatsFn,
 } from './functions/dashboard-stats'
 import {
   exportUsersFn,
@@ -15,7 +19,11 @@ import {
 import type {
   AdminAlbumExport,
   AdminDashboardRange,
-  AdminDashboardStats,
+  AlbumStorageStats,
+  BookingStats,
+  FlamekeeperStats,
+  MemberStats,
+  StorageStats,
   AdminUserAlbumsFilters,
   AdminUserExport,
   BroadcastMessage,
@@ -27,8 +35,6 @@ import type {
   ViolationsFilters,
 } from './dashboard-types'
 import { getClubCodeFn } from './functions/club-code'
-import { getBufferUsageFn } from '@/lib/buffer/functions'
-import type { BufferUsageOverview } from '@/lib/buffer/functions'
 import { getPoolOverviewFn, type PoolOverview } from './functions/pool'
 import { getSettingsFn, type SettingsData } from './functions/settings'
 
@@ -50,21 +56,51 @@ export function effectiveDashboardRange(range: AdminDashboardRange = {}): {
 
 export const adminDashboardQueries = {
   all: ['admin-dashboard'] as const,
-  stats: (range: AdminDashboardRange = {}) =>
+  bookings: (range: AdminDashboardRange = {}) =>
     queryOptions({
-      // The key must be built from the raw range inputs, not the computed
-      // dates: `effectiveDashboardRange` falls back to `new Date()` for
-      // missing bounds, which would produce a new millisecond-precision ISO
-      // string on every render and cause an infinite refetch loop.
       queryKey: [
         ...adminDashboardQueries.all,
-        'stats',
-        range.startDate ?? 'default-start',
-        range.endDate ?? 'default-end',
+        'bookings',
+        {
+          startDate: range.startDate ?? 'default-start',
+          endDate: range.endDate ?? 'default-end',
+        },
       ],
       staleTime: 60_000,
-      queryFn: async (): Promise<AdminDashboardStats> =>
-        getAdminDashboardStatsFn({ data: effectiveDashboardRange(range) }),
+      queryFn: async (): Promise<BookingStats> =>
+        getBookingStatsFn({ data: effectiveDashboardRange(range) }),
+    }),
+  albums: (range: AdminDashboardRange = {}) =>
+    queryOptions({
+      queryKey: [
+        ...adminDashboardQueries.all,
+        'albums',
+        {
+          startDate: range.startDate ?? 'default-start',
+          endDate: range.endDate ?? 'default-end',
+        },
+      ],
+      staleTime: 60_000,
+      queryFn: async (): Promise<AlbumStorageStats> =>
+        getAlbumStatsFn({ data: effectiveDashboardRange(range) }),
+    }),
+  members: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'members'],
+      staleTime: 60_000,
+      queryFn: async (): Promise<MemberStats> => getMemberStatsFn(),
+    }),
+  flamekeepers: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'flamekeepers'],
+      staleTime: 60_000,
+      queryFn: async (): Promise<FlamekeeperStats> => getFlamekeeperStatsFn(),
+    }),
+  storage: () =>
+    queryOptions({
+      queryKey: [...adminDashboardQueries.all, 'storage'],
+      staleTime: 60_000,
+      queryFn: async (): Promise<StorageStats> => getStorageStatsFn(),
     }),
   alerts: () =>
     queryOptions({
@@ -88,12 +124,6 @@ export const adminDashboardQueries = {
     queryOptions({
       queryKey: [...adminDashboardQueries.all, 'pool'],
       queryFn: async (): Promise<PoolOverview> => getPoolOverviewFn(),
-    }),
-  buffer: () =>
-    queryOptions({
-      queryKey: [...adminDashboardQueries.all, 'buffer'],
-      queryFn: async (): Promise<BufferUsageOverview | null> =>
-        getBufferUsageFn(),
     }),
   clubCode: () =>
     queryOptions({

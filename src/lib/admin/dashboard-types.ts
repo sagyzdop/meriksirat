@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import type { PaginationMeta } from '@/lib/pagination'
+import type { BufferUsageOverview } from '@/lib/buffer/functions'
+import type { PoolOverview } from './functions/pool'
 
 // ---------------------------------------------------------------------------
 // Dashboard data range
@@ -29,22 +31,33 @@ export interface BookingStats {
   partially_returned: number
 }
 
-export interface AlbumsPerMonthPoint {
-  /** `YYYY-MM` key. */
-  month: string
-  count: number
-}
-
 export interface AlbumStorageStats {
   albumCount: number
   photoCount: number
   totalBytes: number
 }
 
-export interface AdminDashboardStats {
-  albumsPerMonth: AlbumsPerMonthPoint[]
-  bookingStats: BookingStats
-  albumStorage: AlbumStorageStats
+export interface MemberStats {
+  total: number
+  newThisMonth: number
+  onboardingIncomplete: number
+  telegramUnlinked: number
+  roles: Record<'user' | 'manager' | 'admin', number>
+  clearance: Array<{ level: number; count: number }>
+}
+
+export interface StorageStats {
+  buffer: BufferUsageOverview | null
+  pool: PoolOverview
+}
+
+export interface FlamekeeperStats {
+  states: Record<'active' | 'full' | 'draining' | 'lost' | 'drained', number>
+  pledgedBytes: number
+  usedBytes: number
+  freeBytes: number
+  capBytes: number
+  poolLow: boolean
 }
 
 // ---------------------------------------------------------------------------
