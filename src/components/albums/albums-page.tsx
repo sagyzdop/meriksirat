@@ -91,6 +91,7 @@ export function AlbumsPage({
       ) : (
         <InfiniteAlbumGroupedList
           albums={albums}
+          showWarning={mode === 'mine'}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}

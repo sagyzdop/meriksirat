@@ -5,6 +5,7 @@ import { AlbumCard } from './album-card'
 
 interface AlbumGroupedListProps {
   albums: AlbumSummary[]
+  showWarning?: boolean
 }
 
 interface YearSection {
@@ -57,7 +58,10 @@ export function groupAlbumsByYearMonth(albums: AlbumSummary[]): YearSection[] {
     }))
 }
 
-export function AlbumGroupedList({ albums }: AlbumGroupedListProps) {
+export function AlbumGroupedList({
+  albums,
+  showWarning,
+}: AlbumGroupedListProps) {
   const sections = React.useMemo(() => groupAlbumsByYearMonth(albums), [albums])
 
   if (sections.length === 0) return null
@@ -82,7 +86,11 @@ export function AlbumGroupedList({ albums }: AlbumGroupedListProps) {
                 </h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {monthAlbums.map((album) => (
-                    <AlbumCard key={album.id} album={album} />
+                    <AlbumCard
+                      key={album.id}
+                      album={album}
+                      showWarning={showWarning}
+                    />
                   ))}
                 </div>
               </div>
@@ -96,6 +104,7 @@ export function AlbumGroupedList({ albums }: AlbumGroupedListProps) {
 
 interface InfiniteAlbumGroupedListProps {
   albums: AlbumSummary[]
+  showWarning?: boolean
   hasNextPage: boolean
   isFetchingNextPage: boolean
   fetchNextPage: () => void
@@ -107,6 +116,7 @@ interface InfiniteAlbumGroupedListProps {
  */
 export function InfiniteAlbumGroupedList({
   albums,
+  showWarning,
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
@@ -128,7 +138,7 @@ export function InfiniteAlbumGroupedList({
 
   return (
     <div>
-      <AlbumGroupedList albums={albums} />
+      <AlbumGroupedList albums={albums} showWarning={showWarning} />
       <div ref={sentinelRef} aria-hidden="true" className="h-px" />
       {isFetchingNextPage && (
         <div className="flex justify-center py-8 text-muted-foreground">

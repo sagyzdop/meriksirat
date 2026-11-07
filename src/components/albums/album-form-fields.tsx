@@ -11,13 +11,14 @@ export interface AlbumFormValues {
 }
 
 export const isAlbumFormComplete = (values: AlbumFormValues) =>
-  !!values.title.trim() && !!values.event.trim() && !!values.eventDate
+  !!values.title.trim() && !!values.event.trim()
 
 interface AlbumFormFieldsProps {
   idPrefix: string
   values: AlbumFormValues
   onChange: (patch: Partial<AlbumFormValues>) => void
   hints?: boolean
+  eventDateError?: boolean
 }
 
 export function AlbumFormFields({
@@ -25,6 +26,7 @@ export function AlbumFormFields({
   values,
   onChange,
   hints,
+  eventDateError,
 }: AlbumFormFieldsProps) {
   return (
     <>
@@ -56,6 +58,11 @@ export function AlbumFormFields({
           value={values.eventDate}
           onChange={(eventDate) => onChange({ eventDate })}
         />
+        {eventDateError && !values.eventDate && (
+          <p role="alert" className="text-sm text-destructive">
+            Event date is required
+          </p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-description`}>Description</Label>

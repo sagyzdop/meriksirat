@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FolderOpen, Images, Share2, Users } from 'lucide-react'
+import { FolderOpen, Images, Share2, TriangleAlert, Users } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -32,6 +33,9 @@ import { formatUtcDate } from '@/lib/format'
 import { tombstoneCopy } from '@/lib/albums/tombstone'
 import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
+import { AlbumStatusBadge } from '@/components/albums/album-status-badge'
+import { AlbumStorageBadge } from '@/components/albums/album-storage-badge'
+import { albumStorageWarning } from '@/lib/albums/warning'
 import { PhotoGrid } from '@/components/albums/photo-grid'
 import { AuthenticatedShell } from '@/components/root/authenticated-shell'
 import { PublicAlbumsLayout } from '@/components/albums/public-layout'
@@ -286,7 +290,29 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         <span>
           {album.photos.length} photo{album.photos.length !== 1 ? 's' : ''}
         </span>
+        {album.access === 'manager' && (
+          <AlbumStorageBadge storage={album.storage} />
+        )}
+        {canManage && (
+          <AlbumStatusBadge
+            rescuedAt={album.rescuedAt}
+            scheduledDeletionAt={album.scheduledDeletionAt}
+          />
+        )}
+        {canManage && album.scheduledDeletionAt && (
+          <span>Deletes {formatUtcDate(album.scheduledDeletionAt)}</span>
+        )}
       </div>
+
+      {albumStorageWarning(album.eventDate, new Date()) && (
+        <Alert className="mb-6">
+          <TriangleAlert />
+          <AlertDescription>
+            This album is over 2 years old and may be deleted if storage runs
+            low.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {canManage && (
         <div className="mb-6">

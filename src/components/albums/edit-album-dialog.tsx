@@ -61,6 +61,7 @@ function EditAlbumForm({
     eventDate: album.eventDate ? new Date(album.eventDate) : undefined,
     description: album.description,
   }))
+  const [submitted, setSubmitted] = React.useState(false)
 
   return (
     <>
@@ -73,12 +74,17 @@ function EditAlbumForm({
       <form
         onSubmit={(e) => {
           e.preventDefault()
+          if (!values.eventDate) {
+            setSubmitted(true)
+            return
+          }
           onSave(values)
         }}
         className="space-y-4"
       >
         <AlbumFormFields
           idPrefix="album"
+          eventDateError={submitted}
           values={values}
           onChange={(patch) => setValues((v) => ({ ...v, ...patch }))}
         />
