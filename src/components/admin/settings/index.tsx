@@ -1,36 +1,43 @@
+import { Link, useLocation } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
-import { ClubCodeCard } from './components/club-code-card'
-import { SettingsForm, SettingsFormSkeleton } from './components/settings-form'
-import type { SettingsData } from '@/lib/admin/functions/settings'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-interface PageProps {
-  settings?: SettingsData
-  settingsLoading: boolean
-  clubCode?: string
-  canBroadcast: boolean
-}
+const TABS = [
+  { value: 'members', label: 'Members', to: '/admin/settings/members' },
+  { value: 'bookings', label: 'Bookings', to: '/admin/settings/bookings' },
+  { value: 'albums', label: 'Albums', to: '/admin/settings/albums' },
+  { value: 'storage', label: 'Storage', to: '/admin/settings/storage' },
+  {
+    value: 'flamekeepers',
+    label: 'Flamekeepers',
+    to: '/admin/settings/flamekeepers',
+  },
+] as const
 
-export function Page({
-  settings,
-  settingsLoading,
-  clubCode,
-  canBroadcast,
-}: PageProps) {
+export function Page({ children }: { children: ReactNode }) {
+  const pathname = useLocation({ select: (location) => location.pathname })
+  const active = pathname.split('/').filter(Boolean).pop() ?? 'members'
+
   return (
     <PageContainer>
       <PageHeader
         title="Settings"
-        description="Club code, booking note and operating hours"
+        description="Members, bookings, albums, storage and flamekeepers"
       />
-      <div className="max-w-2xl space-y-4">
-        {canBroadcast && clubCode ? <ClubCodeCard clubCode={clubCode} /> : null}
-        {settings ? (
-          <SettingsForm settings={settings} />
-        ) : settingsLoading ? (
-          <SettingsFormSkeleton />
-        ) : null}
-      </div>
+      <Tabs value={active} className="gap-4">
+        <div className="overflow-x-auto">
+          <TabsList>
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} asChild>
+                <Link to={tab.to}>{tab.label}</Link>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+      </Tabs>
+      <div className="max-w-2xl space-y-6">{children}</div>
     </PageContainer>
   )
 }
