@@ -2,29 +2,13 @@ import type { SQL } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import { AdminDashboardRangeSchema } from '../dashboard-types'
 import type {
-  AdminDashboardStats,
+  AlbumStorageStats,
   BookingStats,
   DashboardAlert,
+  FlamekeeperStats,
+  MemberStats,
+  StorageStats,
 } from '../dashboard-types'
-
-function monthKey(date: Date): string {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
-}
-
-/** Ordered `YYYY-MM` keys covering every month from `start` to `end` inclusive. */
-function monthKeysBetween(start: Date, end: Date): string[] {
-  const keys: string[] = []
-  const cursor = new Date(
-    Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1)
-  )
-  const endKey = monthKey(end)
-  while (monthKey(cursor) <= endKey) {
-    keys.push(monthKey(cursor))
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1)
-    if (keys.length > 120) break // safety valve against malformed ranges
-  }
-  return keys
-}
 
 export function resolveRange(
   startDate?: string,
@@ -42,42 +26,17 @@ export function resolveRange(
   return { start, endOfRange }
 }
 
-export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
+export const getBookingStatsFn = createServerFn({ method: 'GET' })
   .validator(AdminDashboardRangeSchema)
-  .handler(async ({ data }): Promise<AdminDashboardStats> => {
+  .handler(async ({ data }): Promise<BookingStats> => {
     const { adminContext } = await import('@/lib/admin/server')
-    const { album, booking } = await import('@/db/schema')
-    const { and, gte, isNull, lte, sql } = await import('drizzle-orm')
+    const { booking } = await import('@/db/schema')
+    const { and, gte, lte, sql } = await import('drizzle-orm')
 
     const { database } = await adminContext(['admin', 'manager'])
 
     const { start, endOfRange } = resolveRange(data.startDate, data.endDate)
-    const rangeWhere = and(
-      gte(album.createdAt, start),
-      lte(album.createdAt, endOfRange),
-      isNull(album.deletedAt)
-    )
-
-    const albumRows = await database
-      .select({ createdAt: album.createdAt })
-      .from(album)
-      .where(rangeWhere)
-      .all()
-
-    const byMonth = new Map<string, number>()
-    for (const key of monthKeysBetween(start, endOfRange)) {
-      byMonth.set(key, 0)
-    }
-    for (const row of albumRows) {
-      const key = monthKey(row.createdAt)
-      byMonth.set(key, (byMonth.get(key) ?? 0) + 1)
-    }
-    const albumsPerMonth = [...byMonth.entries()].map(([month, count]) => ({
-      month,
-      count,
-    }))
-
-    const bookingRows = await database
+    const rows = await database
       .select({ status: booking.status, count: sql<number>`count(*)` })
       .from(booking)
       .where(
@@ -86,7 +45,7 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       .groupBy(booking.status)
       .all()
 
-    const bookingStats: BookingStats = {
+    const stats: BookingStats = {
       total: 0,
       booked: 0,
       active: 0,
@@ -95,12 +54,24 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       cancelled: 0,
       partially_returned: 0,
     }
-    for (const row of bookingRows) {
+    for (const row of rows) {
       const key = row.status as keyof BookingStats
-      if (key in bookingStats) bookingStats[key] = Number(row.count)
-      bookingStats.total += Number(row.count)
+      if (key in stats) stats[key] = Number(row.count)
+      stats.total += Number(row.count)
     }
+    return stats
+  })
 
+export const getAlbumStatsFn = createServerFn({ method: 'GET' })
+  .validator(AdminDashboardRangeSchema)
+  .handler(async ({ data }): Promise<AlbumStorageStats> => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { album } = await import('@/db/schema')
+    const { and, gte, isNull, lte } = await import('drizzle-orm')
+
+    const { database } = await adminContext(['admin', 'manager'])
+
+    const { start, endOfRange } = resolveRange(data.startDate, data.endDate)
     const rangeAlbums = await database
       .select({
         id: album.id,
@@ -109,7 +80,13 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
         photoBytes: album.photoBytes,
       })
       .from(album)
-      .where(rangeWhere)
+      .where(
+        and(
+          gte(album.eventDate, start),
+          lte(album.eventDate, endOfRange),
+          isNull(album.deletedAt)
+        )
+      )
       .all()
 
     let photoCount = 0
@@ -133,7 +110,6 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       const { listDriveFolderFiles, DriveNotFoundError } =
         await import('@/lib/google/google-drive')
 
-      // Reuse the per-album KV cache; only uncached albums hit the Drive API.
       const accessToken = await getGoogleAccessToken()
       for (let i = 0; i < unsynced.length; i += 4) {
         const chunk = unsynced.slice(i, i + 4)
@@ -168,16 +144,113 @@ export const getAdminDashboardStatsFn = createServerFn({ method: 'GET' })
       }
     }
 
-    return {
-      albumsPerMonth,
-      bookingStats,
-      albumStorage: {
-        albumCount: rangeAlbums.length,
-        photoCount,
-        totalBytes,
-      },
-    }
+    return { albumCount: rangeAlbums.length, photoCount, totalBytes }
   })
+
+export const getMemberStatsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<MemberStats> => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { user } = await import('@/db/schema')
+    const { eq, gte, isNull, or, sql } = await import('drizzle-orm')
+
+    const { database } = await adminContext(['admin', 'manager'])
+
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const [totals, roleRows, clearanceRows] = await Promise.all([
+      database
+        .select({
+          total: sql<number>`count(*)`,
+          newThisMonth: sql<number>`count(case when ${gte(user.createdAt, monthStart)} then 1 end)`,
+          onboardingIncomplete: sql<number>`count(case when ${or(eq(user.onboardingComplete, false), isNull(user.onboardingComplete))} then 1 end)`,
+          telegramUnlinked: sql<number>`count(case when ${or(isNull(user.telegramChatId), eq(user.telegramChatId, ''))} then 1 end)`,
+        })
+        .from(user)
+        .get(),
+      database
+        .select({ role: user.role, count: sql<number>`count(*)` })
+        .from(user)
+        .groupBy(user.role)
+        .all(),
+      database
+        .select({ level: user.clearanceLevel, count: sql<number>`count(*)` })
+        .from(user)
+        .groupBy(user.clearanceLevel)
+        .all(),
+    ])
+
+    const roles: MemberStats['roles'] = { user: 0, manager: 0, admin: 0 }
+    for (const row of roleRows) {
+      roles[row.role ?? 'user'] += Number(row.count)
+    }
+
+    return {
+      total: Number(totals?.total ?? 0),
+      newThisMonth: Number(totals?.newThisMonth ?? 0),
+      onboardingIncomplete: Number(totals?.onboardingIncomplete ?? 0),
+      telegramUnlinked: Number(totals?.telegramUnlinked ?? 0),
+      roles,
+      clearance: clearanceRows
+        .map((row) => ({ level: row.level ?? 1, count: Number(row.count) }))
+        .sort((a, b) => a.level - b.level),
+    }
+  }
+)
+
+export const getFlamekeeperStatsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<FlamekeeperStats> => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { flamekeeper } = await import('@/db/schema')
+    const { sql } = await import('drizzle-orm')
+    const { loadCapBytes, loadPoolFlamekeepers } =
+      await import('@/lib/pool/server')
+    const { isPoolLow, poolStats } = await import('@/lib/pool/placement')
+
+    const { database } = await adminContext(['admin', 'manager'])
+
+    const [stateRows, fks, capBytes] = await Promise.all([
+      database
+        .select({ state: flamekeeper.state, count: sql<number>`count(*)` })
+        .from(flamekeeper)
+        .groupBy(flamekeeper.state)
+        .all(),
+      loadPoolFlamekeepers(database),
+      loadCapBytes(database),
+    ])
+
+    const states: FlamekeeperStats['states'] = {
+      active: 0,
+      full: 0,
+      draining: 0,
+      lost: 0,
+      drained: 0,
+    }
+    for (const row of stateRows) states[row.state] = Number(row.count)
+
+    const stats = poolStats(fks, capBytes)
+    return {
+      states,
+      pledgedBytes: stats.pledgedBytes,
+      usedBytes: stats.usedBytes,
+      freeBytes: stats.freeBytes,
+      capBytes,
+      poolLow: isPoolLow(stats),
+    }
+  }
+)
+
+export const getStorageStatsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<StorageStats> => {
+    const { getBufferUsageFn } = await import('@/lib/buffer/functions')
+    const { getPoolOverviewFn } = await import('./pool')
+    const [buffer, pool] = await Promise.all([
+      getBufferUsageFn(),
+      getPoolOverviewFn(),
+    ])
+    return { buffer, pool }
+  }
+)
 
 export const getAdminDashboardAlertsFn = createServerFn({
   method: 'GET',

@@ -1,67 +1,37 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { z } from 'zod'
 import { Page } from '@/components/admin/dashboard'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { adminDashboardQueries } from '@/lib/admin/dashboard-queries'
 
-const searchSchema = z.object({
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  tab: z.enum(['bookings', 'albums']).default('bookings'),
-})
-
 export const Route = createFileRoute('/_authenticated/admin/dashboard')({
   component: RouteComponent,
   pendingComponent: DashboardPending,
-  validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({
-    startDate: search.startDate,
-    endDate: search.endDate,
-  }),
-  loader: async ({ deps, context }) => {
+  loader: async ({ context }) => {
     try {
-      await Promise.all([
-        context.queryClient.ensureQueryData(
-          adminDashboardQueries.stats({
-            startDate: deps.startDate,
-            endDate: deps.endDate,
-          })
-        ),
-        context.queryClient.ensureQueryData(adminDashboardQueries.alerts()),
-      ])
+      await context.queryClient.ensureQueryData(adminDashboardQueries.alerts())
     } catch (error) {
-      console.error('[Dashboard Route Loader] Failed to load dashboard:', error)
+      console.error('[Dashboard Route Loader] Failed to load alerts:', error)
     }
   },
 })
 
 function RouteComponent() {
-  const search = Route.useSearch()
   const { adminUser } = Route.useRouteContext()
-
-  const { data: stats, isFetching: isStatsFetching } = useQuery(
-    adminDashboardQueries.stats({
-      startDate: search.startDate,
-      endDate: search.endDate,
-    })
-  )
   const { data: alerts, isFetching: isAlertsFetching } = useQuery(
     adminDashboardQueries.alerts()
   )
 
   return (
     <Page
-      search={search}
-      tab={search.tab}
-      stats={stats}
-      statsLoading={isStatsFetching && !stats}
       alerts={alerts ?? []}
       alertsLoading={isAlertsFetching && !alerts}
       canBroadcast={adminUser?.role === 'admin'}
-    />
+    >
+      <Outlet />
+    </Page>
   )
 }
 
@@ -70,19 +40,14 @@ function DashboardPending() {
     <PageContainer>
       <PageHeader
         title="Dashboard"
-        description="Bookings and album storage for the selected range"
+        description="Bookings, albums, members and storage at a glance"
       />
-      <div className="max-w-2xl space-y-10">
-        <div className="flex justify-end">
-          <Skeleton className="h-8 w-64" />
-        </div>
-        <div className="space-y-6">
-          <Skeleton className="h-9 w-52" />
-          <div className="space-y-2">
-            <Skeleton className="h-12 w-full rounded-lg" />
-            <Skeleton className="h-12 w-full rounded-lg" />
-            <Skeleton className="h-12 w-full rounded-lg" />
-          </div>
+      <div className="max-w-2xl space-y-6">
+        <Skeleton className="h-9 w-80" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
         </div>
       </div>
     </PageContainer>
