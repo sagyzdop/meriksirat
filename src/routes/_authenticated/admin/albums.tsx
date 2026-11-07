@@ -1,25 +1,30 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { AlbumListFiltersSchema, albumQueries } from '@/lib/albums'
-import { AdminAlbums } from '@/components/albums/admin'
+import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { ExportAlbumsDialog } from '@/components/shared/export-albums-dialog'
 
 export const Route = createFileRoute('/_authenticated/admin/albums')({
-  validateSearch: AlbumListFiltersSchema,
-  loaderDeps: ({ search }) => ({ filters: search }),
-  loader: async ({ context, deps }) => {
-    const queryClient = context.queryClient
-    try {
-      await queryClient.ensureInfiniteQueryData({
-        ...albumQueries.manage(deps.filters),
-        revalidateIfStale: true,
-      })
-    } catch (error) {
-      console.error('Failed to load albums:', error)
-    }
-  },
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  const search = Route.useSearch()
-  return <AdminAlbums search={search} />
+  const isDetail = useRouterState({
+    select: (state) =>
+      state.matches.some(
+        (match) => match.routeId === '/_authenticated/admin/albums/$albumId'
+      ),
+  })
+
+  return (
+    <PageContainer>
+      {!isDetail && (
+        <PageHeader
+          title="Manage Albums"
+          description="Photo albums across the club, with where each one is stored."
+          actions={<ExportAlbumsDialog />}
+        />
+      )}
+      <Outlet />
+    </PageContainer>
+  )
 }

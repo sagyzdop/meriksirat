@@ -14,11 +14,14 @@ import {
   UpdateAlbumSchema,
 } from './types'
 import type {
+  AdminAlbumListResponse,
   AlbumAccessLevel,
+  AlbumAuthorRow,
   AlbumDetail,
   AlbumListPage,
   UploadSession,
 } from './types'
+import { AdminAlbumSearchSchema } from '@/lib/search-params'
 import {
   NEEDS_HASH_MESSAGE,
   duplicateMessage,
@@ -218,37 +221,77 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
   })
 
 export const getAllAlbumsFn = createServerFn({ method: 'GET' })
-  .validator(AlbumListQuerySchema)
-  .handler(async ({ data }): Promise<AlbumListPage> => {
-    const { getRequestHeaders } = await import('@tanstack/react-start/server')
-    const { env } = await import('cloudflare:workers')
-    const { db } = await import('@/db')
-    const { album } = await import('@/db/schema')
-    const { eq, ne } = await import('drizzle-orm')
-    const { getSessionUser } = await import('./server')
-    const { listAlbumsPaginated } = await import('./list')
+  .validator(AdminAlbumSearchSchema)
+  .handler(async ({ data }): Promise<AdminAlbumListResponse> => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { listAdminAlbums } = await import('./admin-list')
+    const { database } = await adminContext(['admin', 'manager'])
+    return listAdminAlbums(database, data)
+  })
 
-    const headers = getRequestHeaders()
-    const currentUser = await getSessionUser(headers)
-    if (
-      !currentUser ||
-      (currentUser.role !== 'admin' && currentUser.role !== 'manager')
-    ) {
-      return { albums: [], nextCursor: null }
+export const getAlbumAuthorsFn = createServerFn({ method: 'GET' })
+  .validator(AlbumIdSchema)
+  .handler(async ({ data }): Promise<AlbumAuthorRow[]> => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { album, albumMember, user } = await import('@/db/schema')
+    const { asc, eq } = await import('drizzle-orm')
+    const { database } = await adminContext(['admin', 'manager'])
+
+    const row = await database
+      .select({ ownerUserId: album.ownerUserId })
+      .from(album)
+      .where(eq(album.id, data.albumId))
+      .get()
+    if (!row) return []
+
+    const columns = {
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      role: user.role,
+      status: user.status,
+      clearanceLevel: user.clearanceLevel,
+      telegramUsername: user.telegramUsername,
+      telegramChatId: user.telegramChatId,
     }
-    const me = currentUser.id
+    const [owner, members] = await Promise.all([
+      database
+        .select(columns)
+        .from(user)
+        .where(eq(user.id, row.ownerUserId))
+        .get(),
+      database
+        .select(columns)
+        .from(albumMember)
+        .innerJoin(user, eq(albumMember.userId, user.id))
+        .where(eq(albumMember.albumId, data.albumId))
+        .orderBy(asc(albumMember.createdAt))
+        .all(),
+    ])
 
-    const database = db(env.meriksirat_d1 as D1Database)
-
-    return listAlbumsPaginated({
-      database,
-      ownershipWhere: (ownership) =>
-        ownership === 'owner'
-          ? eq(album.ownerUserId, me)
-          : ne(album.ownerUserId, me),
-      me,
-      query: data,
+    const toRow = (
+      u: NonNullable<typeof owner>,
+      authorRole: AlbumAuthorRow['authorRole']
+    ): AlbumAuthorRow => ({
+      userId: u.userId,
+      name: u.name,
+      email: u.email,
+      image: u.image,
+      authorRole,
+      role: u.role,
+      status: u.status,
+      clearanceLevel: u.clearanceLevel,
+      telegramUsername: u.telegramUsername,
+      telegramLinked: !!u.telegramChatId,
     })
+
+    return [
+      ...(owner ? [toRow(owner, 'owner')] : []),
+      ...members
+        .filter((m) => m.userId !== row.ownerUserId)
+        .map((m) => toRow(m, 'co-author')),
+    ]
   })
 
 export const getAlbumFn = createServerFn({ method: 'GET' })

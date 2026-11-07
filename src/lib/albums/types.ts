@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { stringArrayParam } from '@/lib/search-params'
+import type { AdminAlbumSearchSchema } from '@/lib/search-params'
+import type { PaginationMeta } from '@/lib/pagination'
 import type { TombstoneReason } from '@/lib/albums/tombstone'
 import type { CountWarning } from './count-warning'
 
@@ -164,6 +166,44 @@ export interface AlbumStorage {
   holder: 'buffer' | 'flamekeeper' | 'none'
   flamekeeperUserId: string | null
   flamekeeperName: string | null
+}
+
+export type AdminAlbumListFilters = z.infer<typeof AdminAlbumSearchSchema>
+export type AdminAlbumListInput = z.input<typeof AdminAlbumSearchSchema>
+
+export interface AdminAlbumRow {
+  id: string
+  title: string
+  description: string
+  event: string
+  eventDate: string
+  ownerUserId: string
+  ownerName: string | null
+  ownerEmail: string | null
+  photoCount: number
+  photoBytes: number
+  createdAt: string
+  rescuedAt: string | null
+  scheduledDeletionAt: string | null
+  storage: AlbumStorage
+}
+
+export interface AdminAlbumListResponse {
+  albums: AdminAlbumRow[]
+  pagination: PaginationMeta
+}
+
+export interface AlbumAuthorRow {
+  userId: string
+  name: string
+  email: string
+  image: string | null
+  authorRole: 'owner' | 'co-author'
+  role: 'user' | 'manager' | 'admin' | null
+  status: string | null
+  clearanceLevel: number | null
+  telegramUsername: string | null
+  telegramLinked: boolean
 }
 
 export interface AlbumDetail extends AlbumSummary {

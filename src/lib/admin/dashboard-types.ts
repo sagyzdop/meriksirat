@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import type { PaginationMeta } from '@/lib/pagination'
+import { AdminAlbumSearchSchema } from '@/lib/search-params'
+import type { AdminAlbumRow } from '@/lib/albums/types'
 import type { BufferUsageOverview } from '@/lib/buffer/functions'
 import type { PoolOverview } from './functions/pool'
 
@@ -156,28 +158,16 @@ export interface PaginatedViolationsResponse {
 // User albums (admin user detail)
 // ---------------------------------------------------------------------------
 
-export const AdminUserAlbumsFiltersSchema = z.object({
+export const AdminUserAlbumsFiltersSchema = AdminAlbumSearchSchema.extend({
   userId: z.string(),
-  search: z.string().optional(),
   page: z.coerce.number().min(1).optional().default(1),
   limit: z.coerce.number().min(1).max(100).optional().default(10),
-  sortBy: z
-    .enum(['title', 'createdAt', 'coAuthorCount'])
-    .optional()
-    .default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
-export type AdminUserAlbumsFilters = z.infer<
+export type AdminUserAlbumsFilters = z.input<
   typeof AdminUserAlbumsFiltersSchema
 >
 
-export interface AdminUserAlbum {
-  id: string
-  title: string
-  createdAt: string
-  coAuthorCount: number
-  coverUrl: string | null
-}
+export type AdminUserAlbum = AdminAlbumRow
 
 export interface PaginatedAdminUserAlbumsResponse {
   albums: AdminUserAlbum[]

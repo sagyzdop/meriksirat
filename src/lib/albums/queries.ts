@@ -1,11 +1,15 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import {
   getAllAlbumsFn,
+  getAlbumAuthorsFn,
   getAlbumFn,
   getMyAlbumsFn,
   getPublicAlbumsFn,
 } from './functions'
 import type {
+  AdminAlbumListInput,
+  AdminAlbumListResponse,
+  AlbumAuthorRow,
   AlbumDetail,
   AlbumListFilters,
   AlbumListPage,
@@ -50,15 +54,20 @@ export const albumQueries = {
         }),
       getNextPageParam: (last) => last.nextCursor,
     }),
-  manage: (filters: AlbumListQueryInput = {}) =>
-    infiniteQueryOptions({
-      queryKey: [...albumQueries.all, 'manage', normalizeFilters(filters)],
+  manage: (filters: AdminAlbumListInput = {}) =>
+    queryOptions({
+      queryKey: [...albumQueries.all, 'manage', filters],
       staleTime: 0,
       refetchOnWindowFocus: true,
-      initialPageParam: null as string | null,
-      queryFn: async ({ pageParam }): Promise<AlbumListPage> =>
-        await getAllAlbumsFn({ data: { ...filters, cursor: pageParam } }),
-      getNextPageParam: (last) => last.nextCursor,
+      queryFn: async (): Promise<AdminAlbumListResponse> =>
+        await getAllAlbumsFn({ data: filters }),
+    }),
+  authors: (albumId: string) =>
+    queryOptions({
+      queryKey: [...albumQueries.all, 'authors', albumId],
+      staleTime: 0,
+      queryFn: async (): Promise<AlbumAuthorRow[]> =>
+        await getAlbumAuthorsFn({ data: { albumId } }),
     }),
   detail: (albumId: string) =>
     queryOptions({
