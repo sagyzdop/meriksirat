@@ -9,7 +9,8 @@ flowchart TD
     C --> D[finishBans]
     D --> E[deleteScheduledAlbums]
     E --> F[checkBufferUsage]
-    F --> G[Telegram bot configuration]
+    F --> F2[switchBuffer]
+    F2 --> G[Telegram bot configuration]
 ```
 
 What does the health check do?

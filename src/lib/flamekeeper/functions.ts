@@ -63,6 +63,12 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
     if (isMasterEmail(session.user.email, process.env.GOOGLE_MASTER_EMAIL)) {
       throw new Error(MASTER_FLAMEKEEPER_MESSAGE)
     }
+    const { bufferEmails } = await import('@/lib/buffer/grant')
+    const { isBufferEmail, BUFFER_ACCOUNT_MESSAGE } =
+      await import('@/lib/buffer/grant-rules')
+    if (isBufferEmail(session.user.email, await bufferEmails(database))) {
+      throw new Error(BUFFER_ACCOUNT_MESSAGE)
+    }
 
     const clientId = process.env.GOOGLE_CLIENT_ID
     if (!clientId) throw new Error('GOOGLE_CLIENT_ID not set')

@@ -7,8 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { authClient } from '@/lib/auth/auth-client'
 import type { AlbumSummary } from '@/lib/albums'
+import { useAlbumHearts } from '@/lib/favorites/use-album-hearts'
 import { albumStorageWarning } from '@/lib/albums/warning'
+import { AlbumHeartButton } from './album-heart-button'
 import { PhotoImage } from './photo-image'
 
 interface AlbumCardProps {
@@ -17,6 +20,8 @@ interface AlbumCardProps {
 }
 
 export function AlbumCard({ album, showWarning }: AlbumCardProps) {
+  const { data: session } = authClient.useSession()
+  const hearts = useAlbumHearts(!!session?.user)
   const primaryAuthor = album.authors[0]?.name
   const coAuthorCount = Math.max(album.authors.length - 1, 0)
   const authorsLabel = primaryAuthor
@@ -65,6 +70,15 @@ export function AlbumCard({ album, showWarning }: AlbumCardProps) {
           <span className="truncate">{authorsLabel}</span>
         </p>
       </CardHeader>
+      <div className="relative z-20 px-4">
+        <AlbumHeartButton
+          hearted={hearts?.isHearted(album.id) ?? false}
+          count={album.heartCount}
+          disabled={!hearts}
+          onToggle={() => hearts?.toggle(album.id)}
+          className="-ml-2"
+        />
+      </div>
     </Card>
   )
 }

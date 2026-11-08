@@ -161,6 +161,7 @@ export interface AlbumSummary {
   ownership: 'owner' | 'co-author'
   coAuthorCount: number
   authors: AlbumAuthor[]
+  heartCount: number
 }
 
 export interface AlbumStorage {

@@ -34,6 +34,12 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (newUser) => {
+          const { bufferEmails } = await import('@/lib/buffer/grant')
+          const { isBufferEmail, BUFFER_ACCOUNT_MESSAGE } =
+            await import('@/lib/buffer/grant-rules')
+          if (isBufferEmail(newUser.email, await bufferEmails())) {
+            throw new APIError('FORBIDDEN', { message: BUFFER_ACCOUNT_MESSAGE })
+          }
           const plan = planNewAccount(newUser.email, new Date())
           if (!plan.ok) {
             throw new APIError('FORBIDDEN', { message: plan.error })

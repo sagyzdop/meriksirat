@@ -37,7 +37,7 @@ export type ListingFile = DriveFileMeta
 
 export type ListingOwner =
   | { kind: 'master' }
-  | { kind: 'buffer' }
+  | { kind: 'buffer'; grantId?: string | null }
   | { kind: 'flamekeeper'; userId: string }
 
 export interface ListingSource {

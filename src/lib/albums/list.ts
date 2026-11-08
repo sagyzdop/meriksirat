@@ -99,6 +99,7 @@ function toAlbumSummary(
       (me && row.ownerUserId === me ? 'owner' : 'co-author'),
     coAuthorCount: (row.members ?? []).length,
     authors,
+    heartCount: row.heartCount,
   }
 }
 

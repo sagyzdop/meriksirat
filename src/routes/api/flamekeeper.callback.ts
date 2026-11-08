@@ -98,6 +98,15 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         ) {
           return redirectTo(origin, failPath, 'master')
         }
+        const { bufferEmails } = await import('@/lib/buffer/grant')
+        const { isBufferEmail } = await import('@/lib/buffer/grant-rules')
+        const reserved = await bufferEmails(database)
+        if (
+          isBufferEmail(session.user.email, reserved) ||
+          isBufferEmail(identity?.email, reserved)
+        ) {
+          return redirectTo(origin, failPath, 'master')
+        }
         if (
           !identity?.email_verified ||
           !driveAccountMatches(identity.email, session.user.email)

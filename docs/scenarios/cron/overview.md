@@ -25,7 +25,7 @@ sequenceDiagram
 | Schedule | Steps | Detail |
 | --- | --- | --- |
 | `*/5 * * * *` | `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders` | [every-5-min.md](every-5-min.md) |
-| `0 * * * *` | `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `deleteScheduledAlbums`, `checkBufferUsage`, then bot configuration | [hourly.md](hourly.md) |
+| `0 * * * *` | `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `deleteScheduledAlbums`, `checkBufferUsage`, `switchBuffer`, then bot configuration | [hourly.md](hourly.md) |
 | `0 3 * * *` | `graduateFlamekeepers` | [daily.md](daily.md) |
 
 Each trigger is its own Worker invocation with its own budget of 40 outside requests (`RUN_SUBREQUEST_BUDGET`), under the Worker limit of 50. Calendar, Telegram, Drive, Google OAuth and email calls count. D1 queries do not.

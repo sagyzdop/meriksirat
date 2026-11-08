@@ -161,6 +161,7 @@ export async function loadAlbumDetail(
 export function buildTombstoneDetail(row: AlbumRecord): AlbumDetail {
   return {
     id: row.id,
+    heartCount: row.heartCount,
     ownerUserId: row.ownerUserId,
     title: row.title,
     description: '',

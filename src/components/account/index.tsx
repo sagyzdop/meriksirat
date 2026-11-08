@@ -64,7 +64,7 @@ export function Page({
       </div>
 
       <Item asChild variant="outline" size="sm">
-        <Link to="/favorites">
+        <Link to="/favorites/photos">
           <ItemMedia>
             <Heart className="size-4 text-muted-foreground" />
           </ItemMedia>

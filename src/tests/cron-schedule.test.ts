@@ -30,6 +30,7 @@ describe('planScheduledRun', () => {
       'finishBans',
       'deleteScheduledAlbums',
       'checkBufferUsage',
+      'switchBuffer',
     ])
   })
 

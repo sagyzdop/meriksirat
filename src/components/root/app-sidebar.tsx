@@ -65,7 +65,7 @@ const data = {
         },
         {
           title: 'My Favorites',
-          url: '/favorites',
+          url: '/favorites/photos',
           icon: Heart,
         },
       ],
@@ -184,7 +184,8 @@ export function AppSidebar({
           {
             title: 'Albums',
             items: data.navGroups[1].items.filter(
-              (item) => item.url === '/albums' || item.url === '/favorites'
+              (item) =>
+                item.url === '/albums' || item.url === '/favorites/photos'
             ),
           },
         ]

@@ -1,18 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { favoriteQueries } from '@/lib/favorites'
-import { Page } from '@/components/favorites'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/favorites/')({
-  loader: async ({ context }) => {
-    try {
-      await context.queryClient.ensureQueryData(favoriteQueries.mine())
-    } catch (error) {
-      console.error('Failed to load favorites:', error)
-    }
+  beforeLoad: () => {
+    throw redirect({ to: '/favorites/photos', replace: true })
   },
-  component: RouteComponent,
 })
-
-function RouteComponent() {
-  return <Page />
-}

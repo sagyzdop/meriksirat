@@ -17,6 +17,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBecomeFlamekeeperRouteImport } from './routes/_authenticated/become-flamekeeper'
+import { Route as AuthenticatedFavoritesRouteImport } from './routes/_authenticated/favorites'
 import { Route as AlbumsIndexRouteImport } from './routes/albums/index'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums/$albumId'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
@@ -29,8 +30,11 @@ import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenti
 import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
 import { Route as AuthenticatedEquipmentSplatRouteImport } from './routes/_authenticated/equipment/$'
 import { Route as AuthenticatedFavoritesIndexRouteImport } from './routes/_authenticated/favorites/index'
+import { Route as AuthenticatedFavoritesAlbumsRouteImport } from './routes/_authenticated/favorites/albums'
+import { Route as AuthenticatedFavoritesPhotosRouteImport } from './routes/_authenticated/favorites/photos'
 import { Route as AuthenticatedMyAlbumsIndexRouteImport } from './routes/_authenticated/my-albums/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiBufferCallbackRouteImport } from './routes/api/buffer.callback'
 import { Route as ApiFlamekeeperCallbackRouteImport } from './routes/api/flamekeeper.callback'
 import { Route as ApiImagesSplatRouteImport } from './routes/api/images.$'
 import { Route as AuthenticatedAdminAlbumsIndexRouteImport } from './routes/_authenticated/admin/albums/index'
@@ -103,6 +107,11 @@ const AuthenticatedBecomeFlamekeeperRoute =
     path: '/become-flamekeeper',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedFavoritesRoute = AuthenticatedFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AlbumsIndexRoute = AlbumsIndexRouteImport.update({
   id: '/albums/',
   path: '/albums/',
@@ -168,9 +177,21 @@ const AuthenticatedEquipmentSplatRoute =
   } as any)
 const AuthenticatedFavoritesIndexRoute =
   AuthenticatedFavoritesIndexRouteImport.update({
-    id: '/favorites/',
-    path: '/favorites/',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedFavoritesRoute,
+  } as any)
+const AuthenticatedFavoritesAlbumsRoute =
+  AuthenticatedFavoritesAlbumsRouteImport.update({
+    id: '/albums',
+    path: '/albums',
+    getParentRoute: () => AuthenticatedFavoritesRoute,
+  } as any)
+const AuthenticatedFavoritesPhotosRoute =
+  AuthenticatedFavoritesPhotosRouteImport.update({
+    id: '/photos',
+    path: '/photos',
+    getParentRoute: () => AuthenticatedFavoritesRoute,
   } as any)
 const AuthenticatedMyAlbumsIndexRoute =
   AuthenticatedMyAlbumsIndexRouteImport.update({
@@ -181,6 +202,11 @@ const AuthenticatedMyAlbumsIndexRoute =
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBufferCallbackRoute = ApiBufferCallbackRouteImport.update({
+  id: '/api/buffer/callback',
+  path: '/api/buffer/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFlamekeeperCallbackRoute = ApiFlamekeeperCallbackRouteImport.update({
@@ -376,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AuthenticatedAccountRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
+  '/favorites': typeof AuthenticatedFavoritesRouteWithChildren
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
@@ -385,7 +412,10 @@ export interface FileRoutesByFullPath {
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
+  '/favorites/albums': typeof AuthenticatedFavoritesAlbumsRoute
+  '/favorites/photos': typeof AuthenticatedFavoritesPhotosRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/buffer/callback': typeof ApiBufferCallbackRoute
   '/api/flamekeeper/callback': typeof ApiFlamekeeperCallbackRoute
   '/api/images/$': typeof ApiImagesSplatRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
@@ -436,7 +466,10 @@ export interface FileRoutesByTo {
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
+  '/favorites/albums': typeof AuthenticatedFavoritesAlbumsRoute
+  '/favorites/photos': typeof AuthenticatedFavoritesPhotosRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/buffer/callback': typeof ApiBufferCallbackRoute
   '/api/flamekeeper/callback': typeof ApiFlamekeeperCallbackRoute
   '/api/images/$': typeof ApiImagesSplatRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
@@ -483,6 +516,7 @@ export interface FileRoutesById {
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
+  '/_authenticated/favorites': typeof AuthenticatedFavoritesRouteWithChildren
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
@@ -492,7 +526,10 @@ export interface FileRoutesById {
   '/_authenticated/admin/storage': typeof AuthenticatedAdminStorageRoute
   '/_authenticated/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/_authenticated/equipment/$': typeof AuthenticatedEquipmentSplatRoute
+  '/_authenticated/favorites/albums': typeof AuthenticatedFavoritesAlbumsRoute
+  '/_authenticated/favorites/photos': typeof AuthenticatedFavoritesPhotosRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/buffer/callback': typeof ApiBufferCallbackRoute
   '/api/flamekeeper/callback': typeof ApiFlamekeeperCallbackRoute
   '/api/images/$': typeof ApiImagesSplatRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
@@ -539,6 +576,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/become-flamekeeper'
+    | '/favorites'
     | '/albums/$albumId'
     | '/api/telegram'
     | '/albums/'
@@ -548,7 +586,10 @@ export interface FileRouteTypes {
     | '/admin/storage'
     | '/bookings/new'
     | '/equipment/$'
+    | '/favorites/albums'
+    | '/favorites/photos'
     | '/api/auth/$'
+    | '/api/buffer/callback'
     | '/api/flamekeeper/callback'
     | '/api/images/$'
     | '/bookings/'
@@ -599,7 +640,10 @@ export interface FileRouteTypes {
     | '/admin/storage'
     | '/bookings/new'
     | '/equipment/$'
+    | '/favorites/albums'
+    | '/favorites/photos'
     | '/api/auth/$'
+    | '/api/buffer/callback'
     | '/api/flamekeeper/callback'
     | '/api/images/$'
     | '/bookings'
@@ -645,6 +689,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account'
     | '/_authenticated/admin'
     | '/_authenticated/become-flamekeeper'
+    | '/_authenticated/favorites'
     | '/albums/$albumId'
     | '/api/telegram'
     | '/albums/'
@@ -654,7 +699,10 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/storage'
     | '/_authenticated/bookings/new'
     | '/_authenticated/equipment/$'
+    | '/_authenticated/favorites/albums'
+    | '/_authenticated/favorites/photos'
     | '/api/auth/$'
+    | '/api/buffer/callback'
     | '/api/flamekeeper/callback'
     | '/api/images/$'
     | '/_authenticated/bookings/'
@@ -702,6 +750,7 @@ export interface RootRouteChildren {
   ApiTelegramRoute: typeof ApiTelegramRoute
   AlbumsIndexRoute: typeof AlbumsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBufferCallbackRoute: typeof ApiBufferCallbackRoute
   ApiFlamekeeperCallbackRoute: typeof ApiFlamekeeperCallbackRoute
   ApiImagesSplatRoute: typeof ApiImagesSplatRoute
 }
@@ -762,6 +811,13 @@ declare module '@tanstack/react-router' {
       path: '/become-flamekeeper'
       fullPath: '/become-flamekeeper'
       preLoaderRoute: typeof AuthenticatedBecomeFlamekeeperRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/favorites': {
+      id: '/_authenticated/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof AuthenticatedFavoritesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/albums/': {
@@ -843,10 +899,24 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/favorites/': {
       id: '/_authenticated/favorites/'
-      path: '/favorites'
+      path: '/'
       fullPath: '/favorites/'
       preLoaderRoute: typeof AuthenticatedFavoritesIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedFavoritesRoute
+    }
+    '/_authenticated/favorites/albums': {
+      id: '/_authenticated/favorites/albums'
+      path: '/albums'
+      fullPath: '/favorites/albums'
+      preLoaderRoute: typeof AuthenticatedFavoritesAlbumsRouteImport
+      parentRoute: typeof AuthenticatedFavoritesRoute
+    }
+    '/_authenticated/favorites/photos': {
+      id: '/_authenticated/favorites/photos'
+      path: '/photos'
+      fullPath: '/favorites/photos'
+      preLoaderRoute: typeof AuthenticatedFavoritesPhotosRouteImport
+      parentRoute: typeof AuthenticatedFavoritesRoute
     }
     '/_authenticated/my-albums/': {
       id: '/_authenticated/my-albums/'
@@ -860,6 +930,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/buffer/callback': {
+      id: '/api/buffer/callback'
+      path: '/api/buffer/callback'
+      fullPath: '/api/buffer/callback'
+      preLoaderRoute: typeof ApiBufferCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/flamekeeper/callback': {
@@ -1209,15 +1286,33 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedFavoritesRouteChildren {
+  AuthenticatedFavoritesAlbumsRoute: typeof AuthenticatedFavoritesAlbumsRoute
+  AuthenticatedFavoritesPhotosRoute: typeof AuthenticatedFavoritesPhotosRoute
+  AuthenticatedFavoritesIndexRoute: typeof AuthenticatedFavoritesIndexRoute
+}
+
+const AuthenticatedFavoritesRouteChildren: AuthenticatedFavoritesRouteChildren =
+  {
+    AuthenticatedFavoritesAlbumsRoute: AuthenticatedFavoritesAlbumsRoute,
+    AuthenticatedFavoritesPhotosRoute: AuthenticatedFavoritesPhotosRoute,
+    AuthenticatedFavoritesIndexRoute: AuthenticatedFavoritesIndexRoute,
+  }
+
+const AuthenticatedFavoritesRouteWithChildren =
+  AuthenticatedFavoritesRoute._addFileChildren(
+    AuthenticatedFavoritesRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedBecomeFlamekeeperRoute: typeof AuthenticatedBecomeFlamekeeperRoute
+  AuthenticatedFavoritesRoute: typeof AuthenticatedFavoritesRouteWithChildren
   AuthenticatedBookingsNewRoute: typeof AuthenticatedBookingsNewRoute
   AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
   AuthenticatedBookingsIndexRoute: typeof AuthenticatedBookingsIndexRoute
   AuthenticatedEquipmentIndexRoute: typeof AuthenticatedEquipmentIndexRoute
-  AuthenticatedFavoritesIndexRoute: typeof AuthenticatedFavoritesIndexRoute
   AuthenticatedMyAlbumsIndexRoute: typeof AuthenticatedMyAlbumsIndexRoute
   AuthenticatedBookingsBookingIdEditRoute: typeof AuthenticatedBookingsBookingIdEditRoute
   AuthenticatedBookingsBookingIdIndexRoute: typeof AuthenticatedBookingsBookingIdIndexRoute
@@ -1227,11 +1322,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedBecomeFlamekeeperRoute: AuthenticatedBecomeFlamekeeperRoute,
+  AuthenticatedFavoritesRoute: AuthenticatedFavoritesRouteWithChildren,
   AuthenticatedBookingsNewRoute: AuthenticatedBookingsNewRoute,
   AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,
   AuthenticatedBookingsIndexRoute: AuthenticatedBookingsIndexRoute,
   AuthenticatedEquipmentIndexRoute: AuthenticatedEquipmentIndexRoute,
-  AuthenticatedFavoritesIndexRoute: AuthenticatedFavoritesIndexRoute,
   AuthenticatedMyAlbumsIndexRoute: AuthenticatedMyAlbumsIndexRoute,
   AuthenticatedBookingsBookingIdEditRoute:
     AuthenticatedBookingsBookingIdEditRoute,
@@ -1253,6 +1348,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTelegramRoute: ApiTelegramRoute,
   AlbumsIndexRoute: AlbumsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBufferCallbackRoute: ApiBufferCallbackRoute,
   ApiFlamekeeperCallbackRoute: ApiFlamekeeperCallbackRoute,
   ApiImagesSplatRoute: ApiImagesSplatRoute,
 }

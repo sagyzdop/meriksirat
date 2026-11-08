@@ -41,7 +41,7 @@ export function withListingOwnerToken<T>(
     case 'master':
       return withGoogleToken(run, budget)
     case 'buffer':
-      return withBufferToken(run, budget)
+      return withBufferToken(run, budget, owner.grantId)
     case 'flamekeeper':
       return withFlamekeeperToken(database, owner.userId, run, budget)
   }

@@ -16,6 +16,7 @@ export type CronStepName =
   | 'finishBans'
   | 'deleteScheduledAlbums'
   | 'checkBufferUsage'
+  | 'switchBuffer'
   | 'graduateFlamekeepers'
 
 export interface ScheduledRunPlan {
@@ -44,6 +45,7 @@ const GROUPS: Record<
       'finishBans',
       'deleteScheduledAlbums',
       'checkBufferUsage',
+      'switchBuffer',
     ],
     configuresBot: true,
   },

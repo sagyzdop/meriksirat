@@ -151,6 +151,8 @@ const STEPS: Record<CronStepName, () => Promise<Step>> = {
     ),
   checkBufferUsage: () =>
     import('./src/lib/buffer/usage-server').then((m) => m.runBufferUsageCheck),
+  switchBuffer: () =>
+    import('./src/lib/buffer/switch-server').then((m) => m.runBufferSwitchStep),
   graduateFlamekeepers: () =>
     import('./src/lib/pool/graduation-server').then(
       (m) => m.runGraduationMaintenance

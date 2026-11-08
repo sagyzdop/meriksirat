@@ -78,7 +78,7 @@ export function UserMenu({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to="/favorites">
+            <Link to="/favorites/photos">
               <Heart aria-hidden="true" />
               My Favorites
             </Link>

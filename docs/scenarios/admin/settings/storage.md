@@ -2,6 +2,28 @@
 
 `/admin/settings/storage` has a Buffer section (admins and managers) and a Flamekeepers section (admins only). Definitions: [GLOSSARY](../../../../GLOSSARY.md) (Buffer, Pool).
 
+## How is the buffer account connected, switched or recovered?
+
+```mermaid
+flowchart TD
+    A[Admin presses Connect] --> B[Google consent, full drive scope]
+    B --> C{Account allowed?}
+    C -- master, user or flamekeeper --> X[Refused with a message]
+    C -- same as buffer --> R[Replace token, state ok]
+    C -- env account, first time --> AD[Store grant, adopt existing volumes]
+    C -- different account --> P[Store as pending]
+    P --> H[Hourly switchBuffer or Copy more now]
+    H --> V[Copy each album's volumes, verify, swap]
+    V --> F{Albums left?}
+    F -- yes --> H
+    F -- no --> FL[Pending becomes active, old becomes retiring for 7 days]
+    P --> CX[Cancel: staged copies dropped, nothing changes]
+```
+
+- Only admins connect or cancel. The account must not be registered in the app, a flamekeeper or the master.
+- A grant has a state: `ok`, `auth_failed` (revoked), `quota_full` or `missing` (volume folder gone). Anything but `ok` pauses uploads, adds a dashboard alert and sends one Telegram message. Reconnecting the same account clears it. Nothing switches or deletes automatically.
+- Volume folders are named `V01<id>`, numbered per album.
+
 ## How are the buffer limit and alert set, and when are admins warned?
 
 ```mermaid

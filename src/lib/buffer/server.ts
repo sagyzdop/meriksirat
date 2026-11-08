@@ -13,6 +13,7 @@ import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { isImage } from '@/lib/albums/drive-photo'
 import { getCachedListing } from '@/lib/albums/server'
 import { newId } from '@/lib/albums/ids'
+import { nextVolumeNumber } from '@/lib/albums/volume-number'
 import { hasOffloadPending } from '@/lib/albums/offload-pending'
 import { isBufferSourceKey, volumeIdFromSourceKey } from '@/lib/albums/listing'
 import { pickVolumeWithRoom } from '@/lib/albums/volume-limit'
@@ -20,9 +21,9 @@ import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
 import {
   bufferUploadMessage,
   decideMissingVolumeFolder,
-  planBufferUpload,
   planVolumeSetup,
 } from './plan'
+import { clearState, getBufferPlan, setBufferGrantState } from './grant'
 import { MOVING_ALBUM_MESSAGE, OFFLOADED_ALBUM_MESSAGE } from './messages'
 import { withBufferToken } from './tokens'
 import { bufferUploadBlock } from './usage'
@@ -41,10 +42,12 @@ export async function ensureBufferVolume(
   database: Database,
   masterToken: string,
   albumRow: { id: string; driveFolderId: string },
-  bufferEmail: string,
+  buffer: { email: string; grantId: string | null },
   incomingBytes: number,
-  pendingBytes: Map<string, number> = new Map()
+  pendingBytes: Map<string, number> = new Map(),
+  attempt = 0
 ): Promise<{ volumeId: string; folderId: string }> {
+  const bufferEmail = buffer.email
   const loadAll = () =>
     database
       .select({
@@ -73,29 +76,55 @@ export async function ensureBufferVolume(
   let volumeId = existing?.id ?? null
   let folderId = existing?.driveFolderId ?? null
   if (setup.create) {
+    const number = await nextVolumeNumber(database, albumRow.id)
     const created = await createDriveFolder(
       masterToken,
-      volumeFolderName(newId(6)),
+      volumeFolderName(number, newId(6)),
       albumRow.driveFolderId
     )
     const newVolumeId = volumeId ?? newId(10)
-    const claimed = existing
-      ? await database
-          .update(volume)
-          .set({ driveFolderId: created.id, permissionId: '' })
-          .where(
-            and(
-              eq(volume.id, existing.id),
-              sql`${volume.driveFolderId} IS NULL`
+    let claimed: { meta?: { changes?: number } }
+    try {
+      claimed = existing
+        ? await database
+            .update(volume)
+            .set({
+              driveFolderId: created.id,
+              permissionId: '',
+              number: sql`COALESCE(${volume.number}, ${number})`,
+            })
+            .where(
+              and(
+                eq(volume.id, existing.id),
+                sql`${volume.driveFolderId} IS NULL`
+              )
             )
-          )
-      : await database.insert(volume).values({
-          id: newVolumeId,
-          albumId: albumRow.id,
-          driveFolderId: created.id,
-          expectedCount: 0,
-          expectedBytes: 0,
-        })
+        : await database.insert(volume).values({
+            id: newVolumeId,
+            albumId: albumRow.id,
+            driveFolderId: created.id,
+            number,
+            bufferGrantId: buffer.grantId,
+            expectedCount: 0,
+            expectedBytes: 0,
+          })
+    } catch (error) {
+      try {
+        await deleteDriveFile(masterToken, created.id)
+      } catch (cleanup) {
+        console.warn('Failed to delete a spare buffer volume folder:', cleanup)
+      }
+      if (attempt >= 2) throw error
+      return ensureBufferVolume(
+        database,
+        masterToken,
+        albumRow,
+        buffer,
+        incomingBytes,
+        pendingBytes,
+        attempt + 1
+      )
+    }
     if ((claimed.meta?.changes ?? 0) > 0) {
       volumeId = newVolumeId
       folderId = created.id
@@ -177,7 +206,7 @@ export async function startBufferUpload(
   albumRow: { id: string; driveFolderId: string },
   file: { name: string; mimeType: string; bytes: number; origin?: string }
 ): Promise<{ uploadUrl: string }> {
-  const plan = planBufferUpload(process.env)
+  const plan = await getBufferPlan(database)
   if (plan.kind === 'unavailable') {
     console.warn(
       `Buffer is not configured, missing: ${plan.missing.join(', ')}`
@@ -197,18 +226,23 @@ export async function startBufferUpload(
   while (true) {
     try {
       const { volumeId, folderId } = await withGoogleToken((token) =>
-        ensureBufferVolume(database, token, albumRow, plan.email, file.bytes)
+        ensureBufferVolume(database, token, albumRow, plan, file.bytes)
       )
       currentVolumeId = volumeId
-      const uploadUrl = await withBufferToken((token) =>
-        mintResumableUpload(token, {
-          name: file.name,
-          folderId,
-          mimeType: file.mimeType,
-          size: file.bytes,
-          origin: file.origin,
-        })
+      const uploadUrl = await withBufferToken(
+        (token) =>
+          mintResumableUpload(token, {
+            name: file.name,
+            folderId,
+            mimeType: file.mimeType,
+            size: file.bytes,
+            origin: file.origin,
+          }),
+        undefined,
+        plan.grantId
       )
+      if (plan.grantId)
+        await clearState(plan.grantId, 'missing').catch(() => {})
       return { uploadUrl }
     } catch (error) {
       if (error instanceof DriveNotFoundError) {
@@ -222,6 +256,9 @@ export async function startBufferUpload(
           await forgetBufferVolumeFolder(database, currentVolumeId)
           retried = true
           continue
+        }
+        if (plan.grantId) {
+          await setBufferGrantState(plan.grantId, 'missing').catch(() => {})
         }
         throw new Error(
           'The album storage folder could not be found in Google Drive, so uploads are paused.'

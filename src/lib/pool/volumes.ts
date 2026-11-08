@@ -4,8 +4,8 @@ export function rotateIds<T>(ids: T[], turn: number): T[] {
   return [...ids.slice(start), ...ids.slice(0, start)]
 }
 
-export function volumeFolderName(shortId: string): string {
-  return `Volume ${shortId}`
+export function volumeFolderName(number: number, shortId: string): string {
+  return `V${String(number).padStart(2, '0')}${shortId}`
 }
 
 export function albumBlockedAlertText(

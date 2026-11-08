@@ -348,6 +348,7 @@ export const album = sqliteTable(
     photoCount: integer('photo_count').default(0).notNull(),
     photoBytes: integer('photo_bytes').default(0).notNull(),
     favoriteCount: integer('favorite_count').default(0).notNull(),
+    heartCount: integer('heart_count').default(0).notNull(),
     tombstoneReason: text('tombstone_reason', {
       enum: ['folder_deleted', 'flamekeeper_left', 'flamekeeper_lost'],
     }),
@@ -416,6 +417,25 @@ export const favorite = sqliteTable(
       table.albumId,
       table.driveFileId
     ),
+  ]
+)
+
+export const albumFavorite = sqliteTable(
+  'album_favorite',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    albumId: text('album_id')
+      .notNull()
+      .references(() => album.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.albumId] }),
+    index('album_favorite_albumId_idx').on(table.albumId),
   ]
 )
 
@@ -529,6 +549,8 @@ export const volume = sqliteTable(
     }),
     permissionId: text('permission_id').default('').notNull(),
     driveFolderId: text('drive_folder_id'),
+    number: integer('number'),
+    bufferGrantId: text('buffer_grant_id'),
     droppedAt: integer('dropped_at', { mode: 'timestamp_ms' }),
     // NULL on legacy rows, which never raise the fewer-photos warning.
     expectedCount: integer('expected_count'),
@@ -549,6 +571,43 @@ export const volume = sqliteTable(
       .on(table.albumId)
       .where(sql`${table.flamekeeperUserId} IS NULL`),
     index('volume_flamekeeperUserId_idx').on(table.flamekeeperUserId),
+    uniqueIndex('volume_albumId_number_idx')
+      .on(table.albumId, table.number)
+      .where(sql`${table.number} IS NOT NULL`),
+    index('volume_bufferGrantId_idx').on(table.bufferGrantId),
+  ]
+)
+
+export const bufferGrant = sqliteTable(
+  'buffer_grant',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    refreshToken: text('refresh_token').notNull(),
+    scopes: text('scopes').notNull(),
+    status: text('status', {
+      enum: ['active', 'pending', 'retiring'],
+    }).notNull(),
+    state: text('state', {
+      enum: ['ok', 'auth_failed', 'quota_full', 'missing'],
+    })
+      .default('ok')
+      .notNull(),
+    stateChangedAt: integer('state_changed_at', { mode: 'timestamp_ms' }),
+    alertedState: text('alerted_state'),
+    retireAfter: integer('retire_after', { mode: 'timestamp_ms' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('buffer_grant_one_active_idx')
+      .on(table.status)
+      .where(sql`${table.status} IN ('active', 'pending')`),
   ]
 )
 

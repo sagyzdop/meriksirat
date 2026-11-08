@@ -7,8 +7,9 @@ import {
 } from '@/lib/pool/volumes'
 
 describe('volumeFolderName', () => {
-  it('is neutral and carries no personal data', () => {
-    expect(volumeFolderName('Ab3dE9')).toBe('Volume Ab3dE9')
+  it('pads the number to two digits so folders sort in order', () => {
+    expect(volumeFolderName(1, 'Ab3dE9')).toBe('V01Ab3dE9')
+    expect(volumeFolderName(12, 'Ab3dE9')).toBe('V12Ab3dE9')
   })
 })
 

@@ -1,7 +1,24 @@
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import { withTokenRetry } from '@/lib/google/token-retry'
+import {
+  clearState,
+  peekActiveGrantId,
+  resolveBufferGrant,
+  setBufferGrantState,
+} from './grant'
+import { stateForError } from './grant-rules'
 
 const TOKEN_TTL_MS = 50 * 60 * 1000
+
+export class BufferRefreshError extends Error {
+  constructor(
+    message: string,
+    readonly revoked: boolean
+  ) {
+    super(message)
+    this.name = 'BufferRefreshError'
+  }
+}
 
 export async function refreshBufferAccessToken(
   refreshToken: string
@@ -22,46 +39,73 @@ export async function refreshBufferAccessToken(
     }),
   })
   if (!response.ok) {
-    throw new Error(
-      `Failed to refresh buffer access token: ${await response.text()}`
+    const body = await response.text()
+    throw new BufferRefreshError(
+      `Failed to refresh buffer access token: ${body}`,
+      response.status === 400 || response.status === 401
     )
   }
   const data = (await response.json()) as { access_token: string }
   return data.access_token
 }
 
-let cachedToken: string | null = null
-let cachedAt = 0
+const cache = new Map<string, { token: string; at: number }>()
 
-function hasCached(): boolean {
-  return !!cachedToken && Date.now() - cachedAt < TOKEN_TTL_MS
+function keyOf(grantId?: string | null): string {
+  return grantId ?? peekActiveGrantId()
 }
 
-export async function getBufferAccessToken(): Promise<string> {
-  const refreshToken = process.env.GOOGLE_BUFFER_REFRESH_TOKEN
-  if (!refreshToken) throw new Error('GOOGLE_BUFFER_REFRESH_TOKEN not set')
-  if (cachedToken && hasCached()) return cachedToken
-  cachedToken = await refreshBufferAccessToken(refreshToken)
-  cachedAt = Date.now()
-  return cachedToken
+function hasCached(grantId?: string | null): boolean {
+  const hit = cache.get(keyOf(grantId))
+  return !!hit && Date.now() - hit.at < TOKEN_TTL_MS
 }
 
-export function forgetBufferAccessToken(): void {
-  cachedToken = null
-  cachedAt = 0
+export async function getBufferAccessToken(
+  grantId?: string | null
+): Promise<string> {
+  const grant = await resolveBufferGrant(grantId)
+  if (!grant) throw new Error('Buffer account is not connected')
+  const hit = cache.get(grant.id)
+  if (hit && Date.now() - hit.at < TOKEN_TTL_MS) return hit.token
+  try {
+    const token = await refreshBufferAccessToken(grant.refreshToken)
+    cache.set(grant.id, { token, at: Date.now() })
+    await clearState(grant.id, 'auth_failed').catch(() => undefined)
+    return token
+  } catch (error) {
+    if (error instanceof BufferRefreshError && error.revoked) {
+      await setBufferGrantState(grant.id, 'auth_failed').catch(() => undefined)
+    }
+    throw error
+  }
 }
 
-export function withBufferToken<T>(
+export function forgetBufferAccessToken(grantId?: string | null): void {
+  cache.delete(keyOf(grantId))
+}
+
+export async function withBufferToken<T>(
   run: (token: string) => Promise<T>,
-  budget?: Budget
+  budget?: Budget,
+  grantId?: string | null
 ): Promise<T> {
-  return withTokenRetry(
-    {
-      getToken: getBufferAccessToken,
-      forget: forgetBufferAccessToken,
-      hasCached,
-      canRetry: () => takeIfBudgeted(budget, 2),
-    },
-    run
-  )
+  try {
+    return await withTokenRetry(
+      {
+        getToken: () => getBufferAccessToken(grantId),
+        forget: () => forgetBufferAccessToken(grantId),
+        hasCached: () => hasCached(grantId),
+        canRetry: () => takeIfBudgeted(budget, 2),
+      },
+      run
+    )
+  } catch (error) {
+    const state = stateForError(error)
+    if (state && state !== 'auth_failed') {
+      const grant = await resolveBufferGrant(grantId).catch(() => null)
+      if (grant)
+        await setBufferGrantState(grant.id, state).catch(() => undefined)
+    }
+    throw error
+  }
 }

@@ -9,9 +9,13 @@ import {
   user,
   volume,
 } from '@/db/schema'
-import { getBufferFullAccessToken } from '@/lib/buffer/full-token'
-import { planBufferUpload } from '@/lib/buffer/plan'
-import { forgetBufferAccessToken, withBufferToken } from '@/lib/buffer/tokens'
+import { getBufferPlan } from '@/lib/buffer/grant'
+import { nextVolumeNumber } from './volume-number'
+import {
+  forgetBufferAccessToken,
+  getBufferAccessToken,
+  withBufferToken,
+} from '@/lib/buffer/tokens'
 import { getBufferOverview } from '@/lib/buffer/usage-server'
 import { createBudget, type Budget } from '@/lib/cron/budget'
 import {
@@ -200,7 +204,7 @@ export async function previewMoves(
   return planMoves({ albums: inputs, target, candidates })
 }
 
-async function recordRemaps(
+export async function recordRemaps(
   database: Database,
   albumId: string,
   pairs: OffloadCopy[]
@@ -243,7 +247,7 @@ async function dropEmptyFolder(
   }
 }
 
-async function afterMove(
+export async function afterMove(
   albumId: string,
   driveFolderId: string
 ): Promise<void> {
@@ -290,6 +294,7 @@ export async function cleanDroppedVolumes(
       albumId: volume.albumId,
       flamekeeperUserId: volume.flamekeeperUserId,
       driveFolderId: volume.driveFolderId,
+      bufferGrantId: volume.bufferGrantId,
       droppedAt: volume.droppedAt,
       state: flamekeeper.state,
     })
@@ -327,7 +332,7 @@ export async function cleanDroppedVolumes(
 
     const owner: ListingOwner = row.flamekeeperUserId
       ? { kind: 'flamekeeper', userId: row.flamekeeperUserId }
-      : { kind: 'buffer' }
+      : { kind: 'buffer', grantId: row.bufferGrantId }
     try {
       if (row.driveFolderId) {
         const folderId = row.driveFolderId
@@ -371,9 +376,10 @@ async function ensureRescueVolume(
   database: Database,
   albumRow: { id: string; driveFolderId: string },
   volumeId: string,
-  bufferEmail: string,
+  buffer: { email: string; grantId: string | null },
   budget?: Budget
 ): Promise<{ volumeId: string; folderId: string }> {
+  const bufferEmail = buffer.email
   const existing = await database
     .select({ driveFolderId: volume.driveFolderId })
     .from(volume)
@@ -385,10 +391,11 @@ async function ensureRescueVolume(
   if (budget && !budget.take(2)) {
     throw new Error('Out of budget, continues next run')
   }
+  const number = await nextVolumeNumber(database, albumRow.id)
   const setup = await withGoogleToken(async (master) => {
     const created = await createDriveFolder(
       master,
-      volumeFolderName(newId(6)),
+      volumeFolderName(number, newId(6)),
       albumRow.driveFolderId
     )
     const permissionId = await shareWithWriter(master, created.id, bufferEmail)
@@ -397,13 +404,14 @@ async function ensureRescueVolume(
   const values = {
     driveFolderId: setup.folderId,
     permissionId: setup.permissionId,
+    bufferGrantId: buffer.grantId,
     droppedAt: new Date(),
     expectedCount: 0,
     expectedBytes: 0,
   }
   await database
     .insert(volume)
-    .values({ id: volumeId, albumId: albumRow.id, ...values })
+    .values({ id: volumeId, albumId: albumRow.id, number, ...values })
     .onConflictDoUpdate({ target: volume.id, set: values })
   return { volumeId, folderId: setup.folderId }
 }
@@ -506,12 +514,12 @@ export async function rescueAlbumVolume(
     return { ok: false, reason: 'No flamekeeper holds this album' }
   }
 
-  const plan = planBufferUpload(process.env)
+  const plan = await getBufferPlan(database)
   if (plan.kind === 'unavailable') return { ok: false, reason: plan.message }
 
   try {
     await markRescueStarted(albumId)
-    const token = await getBufferFullAccessToken()
+    const token = await getBufferAccessToken(plan.grantId)
     const sources: {
       holder: (typeof holders)[number]
       files: FileIdentity[]
@@ -545,7 +553,7 @@ export async function rescueAlbumVolume(
         database,
         albumRow,
         `r${index}-${holders[0].id}`,
-        plan.email,
+        plan,
         budget
       )
       const existing = await listIdentities(token, dest.folderId, budget)
@@ -685,7 +693,7 @@ export async function startOffload(
     loadPlacementCandidates(database),
   ])
   const free = new Map(candidates.map((c) => [c.userId, c.freeBytes]))
-  const plan = planBufferUpload(process.env)
+  const plan = await getBufferPlan(database)
   if (plan.kind === 'unavailable') throw new Error(plan.message)
 
   const budget = createBudget(REQUEST_BUDGET)
@@ -808,10 +816,11 @@ async function createOffloadVolume(
     .get()
   if (!owner) throw new Error('A flamekeeper in this move no longer exists')
   if (!budget.take(3)) throw new Error('Too many folders at once, try again')
+  const number = await nextVolumeNumber(database, albumRow.id)
   const setup = await withGoogleToken(async (master) => {
     const created = await createDriveFolder(
       master,
-      volumeFolderName(newId(6)),
+      volumeFolderName(number, newId(6)),
       albumRow.driveFolderId
     )
     const writer = await shareFolderWith(
@@ -831,7 +840,7 @@ async function createOffloadVolume(
   }
   await database
     .insert(volume)
-    .values({ id: dest.volumeId, albumId: albumRow.id, ...values })
+    .values({ id: dest.volumeId, albumId: albumRow.id, number, ...values })
     .onConflictDoUpdate({ target: volume.id, set: values })
   dest.volumeFolderId = setup.folderId
   dest.permissionId = setup.permissionId
@@ -843,7 +852,7 @@ export async function mintOffloadUploads(
 ): Promise<OffloadMint> {
   const pending = await readOffloadPending(input.albumId)
   if (!pending) throw new Error(EXPIRED)
-  const plan = planBufferUpload(process.env)
+  const plan = await getBufferPlan(database)
   if (plan.kind === 'unavailable') throw new Error(plan.message)
   const albumRow = await database
     .select({ id: album.id, driveFolderId: album.driveFolderId })

@@ -393,5 +393,24 @@ export const getAdminDashboardAlertsFn = createServerFn({
     })
   }
 
+  try {
+    const { listBufferGrants } = await import('@/lib/buffer/grant')
+    const { BUFFER_STATE_LABELS } = await import('@/lib/buffer/grant-rules')
+    const broken = (await listBufferGrants(database)).find(
+      (g) => g.status !== 'retiring' && g.state !== 'ok'
+    )
+    if (broken) {
+      alerts.unshift({
+        id: 'buffer-state',
+        severity: 'danger',
+        title: `Buffer account ${broken.email}: ${BUFFER_STATE_LABELS[broken.state]}`,
+        message: 'Uploads and buffer photos are affected until this is fixed.',
+        href: '/admin/settings/storage',
+      })
+    }
+  } catch {
+    // alert is best effort
+  }
+
   return alerts
 })

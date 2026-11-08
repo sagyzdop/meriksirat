@@ -1,7 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import { AlbumIdSchema } from '@/lib/albums/types'
-import { SetFavoriteSchema } from './types'
+import { SetAlbumHeartSchema, SetFavoriteSchema } from './types'
 import type { FavoriteRef } from './logic'
+import type { AlbumSummary } from '@/lib/albums/types'
 import type { FavoritePhoto } from './types'
 
 async function sessionAndDb(headers: Headers) {
@@ -160,3 +161,94 @@ export const listMyFavoritesFn = createServerFn({ method: 'GET' }).handler(
     return planFavoriteList({ favorites: rows, listings })
   }
 )
+
+export const listHeartedAlbumIdsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<string[]> => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { albumFavorite } = await import('@/db/schema')
+    const { eq } = await import('drizzle-orm')
+
+    const { database, sessionUser } = await sessionAndDb(getRequestHeaders())
+    if (!sessionUser) return []
+    const rows = await database
+      .select({ albumId: albumFavorite.albumId })
+      .from(albumFavorite)
+      .where(eq(albumFavorite.userId, sessionUser.id))
+      .all()
+    return rows.map((r) => r.albumId)
+  }
+)
+
+export const listHeartedAlbumsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<AlbumSummary[]> => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { albumFavorite } = await import('@/db/schema')
+    const { sql } = await import('drizzle-orm')
+    const { listAlbumsPaginated } = await import('@/lib/albums/list')
+    const { loadAccessRules } = await import('@/lib/access/server')
+
+    const { database, sessionUser } = await sessionAndDb(getRequestHeaders())
+    if (!sessionUser) return []
+    const rules = await loadAccessRules(database, sessionUser.id).catch(
+      () => null
+    )
+    if (!rules?.canFavorite) return []
+
+    const page = await listAlbumsPaginated({
+      database,
+      me: sessionUser.id,
+      baseWhere: sql`EXISTS (SELECT 1 FROM ${albumFavorite} WHERE ${albumFavorite.userId} = ${sessionUser.id} AND ${albumFavorite.albumId} = album.id)`,
+      query: { limit: 100, cursor: null, search: '', ownership: [] },
+    })
+    return page.albums
+  }
+)
+
+export const setAlbumHeartFn = createServerFn({ method: 'POST' })
+  .validator(SetAlbumHeartSchema)
+  .handler(async ({ data }) => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { album, albumFavorite } = await import('@/db/schema')
+    const { and, eq, isNull, sql } = await import('drizzle-orm')
+
+    const { database, sessionUser } =
+      await requireFavoriter(getRequestHeaders())
+
+    const albumRow = await database
+      .select({ id: album.id })
+      .from(album)
+      .where(and(eq(album.id, data.albumId), isNull(album.deletedAt)))
+      .get()
+    if (!albumRow) throw new Error('Album not found')
+
+    const isHearted = sql`EXISTS (SELECT 1 FROM ${albumFavorite} WHERE ${albumFavorite.userId} = ${sessionUser.id} AND ${albumFavorite.albumId} = ${albumRow.id})`
+
+    if (data.hearted) {
+      await database.batch([
+        database
+          .update(album)
+          .set({ heartCount: sql`${album.heartCount} + 1` })
+          .where(and(eq(album.id, albumRow.id), sql`NOT ${isHearted}`)),
+        database
+          .insert(albumFavorite)
+          .values({ userId: sessionUser.id, albumId: albumRow.id })
+          .onConflictDoNothing(),
+      ])
+    } else {
+      await database.batch([
+        database
+          .update(album)
+          .set({ heartCount: sql`MAX(${album.heartCount} - 1, 0)` })
+          .where(and(eq(album.id, albumRow.id), isHearted)),
+        database
+          .delete(albumFavorite)
+          .where(
+            and(
+              eq(albumFavorite.userId, sessionUser.id),
+              eq(albumFavorite.albumId, albumRow.id)
+            )
+          ),
+      ])
+    }
+    return { albumId: albumRow.id, hearted: data.hearted }
+  })

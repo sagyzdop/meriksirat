@@ -27,11 +27,13 @@ import {
 import type { AlbumPhoto } from '@/lib/albums'
 import { getAccessRules } from '@/lib/access/access-rules'
 import { useAlbumFavorites } from '@/lib/favorites/use-album-favorites'
+import { useAlbumHearts } from '@/lib/favorites/use-album-hearts'
 import { useUploads, revealUploadDetails } from '@/lib/albums/upload-manager'
 import { driveFolderUrl } from '@/lib/albums/urls'
 import { formatUtcDate } from '@/lib/format'
 import { tombstoneCopy } from '@/lib/albums/tombstone'
 import type { UserProfile } from '@/lib/user/types'
+import { AlbumHeartButton } from '@/components/albums/album-heart-button'
 import { AlbumManager } from '@/components/albums/album-manager'
 import { AlbumStatusBadge } from '@/components/albums/album-status-badge'
 import { AlbumStatusLegend } from '@/components/albums/album-status-legend'
@@ -68,6 +70,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
       }).canFavorite
     : false
   const favorites = useAlbumFavorites(albumId, canFavorite)
+  const hearts = useAlbumHearts(canFavorite)
 
   const invalidate = React.useCallback(() => {
     queryClient.invalidateQueries({
@@ -252,6 +255,13 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         onBack={isLoggedIn ? goBack : undefined}
         actions={
           <>
+            <AlbumHeartButton
+              hearted={hearts?.isHearted(albumId) ?? false}
+              count={album.heartCount}
+              disabled={!hearts}
+              onToggle={() => hearts?.toggle(albumId)}
+              className="border"
+            />
             {album.photos.length > 0 && (
               <Button asChild variant="secondary">
                 <a

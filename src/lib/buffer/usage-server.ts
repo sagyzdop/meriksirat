@@ -1,10 +1,19 @@
+import { eq } from 'drizzle-orm'
 import { db } from '@/db'
+import { bufferGrant } from '@/db/schema'
 import { loadSettings } from '@/lib/booking/load-settings'
 import { getDriveStorageQuota } from '@/lib/google/google-drive'
 import type { Budget } from '@/lib/cron/budget'
 import { formatGb } from '@/lib/flamekeeper/rules'
 import { sendAdminsTelegramResult } from '@/lib/pool/server'
-import { planBufferUpload } from './plan'
+import {
+  forgetBufferGrantRows,
+  getBufferPlan,
+  listBufferGrants,
+  setBufferGrantState,
+} from './grant'
+import { bufferStateAlertText } from './grant-rules'
+import { getBufferAccessToken } from './tokens'
 import { withBufferToken } from './tokens'
 import {
   buildBufferOverview,
@@ -87,7 +96,7 @@ export async function getBufferUsage(
       ? lastUsage
       : stored
   if (cached && Date.now() - cached.checkedAt < maxAgeMs) return cached
-  if (planBufferUpload(process.env).kind === 'unavailable') return cached
+  if ((await getBufferPlan()).kind === 'unavailable') return cached
   try {
     return await refreshBufferUsage()
   } catch (error) {
@@ -161,7 +170,9 @@ export async function runBufferUsageCheck(
   },
   budget: Budget
 ): Promise<void> {
-  if (planBufferUpload(process.env).kind === 'unavailable') return
+  const database = db(env.meriksirat_d1)
+  await checkBufferState(env, database, budget)
+  if ((await getBufferPlan(database)).kind === 'unavailable') return
 
   const store = env.meriksirat_kv as KVNamespace
   let usage = await readBufferUsage()
@@ -175,9 +186,17 @@ export async function runBufferUsageCheck(
     }
   }
 
-  const database = db(env.meriksirat_d1)
   const limits = await loadBufferLimitSettings(database)
   const overview = buildBufferOverview(usage, limits)
+  const grants = await listBufferGrants(database)
+  const live = grants.find((g) => g.status === 'active')
+  if (live) {
+    if (overview.level === 'full') {
+      await setBufferGrantState(live.id, 'quota_full', database)
+    } else if (live.state === 'quota_full') {
+      await setBufferGrantState(live.id, 'ok', database)
+    }
+  }
   const marker = await readMarker(store)
   const plan = planBufferAlert(overview.level, marker)
   if (plan.notify) {
@@ -192,4 +211,45 @@ export async function runBufferUsageCheck(
   if (plan.marker === marker) return
   if (plan.marker) await store.put(MARKER_KEY, plan.marker)
   else await store.delete(MARKER_KEY)
+}
+
+async function checkBufferState(
+  env: {
+    meriksirat_d1: D1Database
+    TELEGRAM_BOT_TOKEN?: string
+  },
+  database: ReturnType<typeof db>,
+  budget: Budget
+): Promise<void> {
+  const grants = (await listBufferGrants(database)).filter(
+    (g) => g.status !== 'retiring'
+  )
+  for (const grant of grants) {
+    if (grant.state === 'auth_failed' && budget.take(1)) {
+      try {
+        await getBufferAccessToken(grant.id)
+      } catch {
+        // still failing
+      }
+    }
+  }
+  const fresh = (await listBufferGrants(database)).filter(
+    (g) => g.status !== 'retiring'
+  )
+  for (const grant of fresh) {
+    if (grant.state === 'ok' || grant.alertedState === grant.state) continue
+    if (!budget.take(2)) return
+    const result = await sendAdminsTelegramResult(
+      database,
+      env.TELEGRAM_BOT_TOKEN,
+      bufferStateAlertText(grant.state, grant.email),
+      budget
+    )
+    if (result !== 'sent') continue
+    await database
+      .update(bufferGrant)
+      .set({ alertedState: grant.state })
+      .where(eq(bufferGrant.id, grant.id))
+    forgetBufferGrantRows()
+  }
 }

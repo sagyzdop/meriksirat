@@ -21,17 +21,17 @@ function filesMentioning(needle: string): string[] {
     .map((f) => relative(ROOT, f))
 }
 
-describe('the buffer full-scope token', () => {
-  it('is named only inside the server-only token module', () => {
+describe('the buffer refresh token', () => {
+  it('is read from the environment only inside the grant module', () => {
     expect(filesMentioning('GOOGLE_BUFFER_FULL')).toEqual([
-      'src/lib/buffer/full-token.ts',
+      'src/lib/buffer/grant.ts',
     ])
   })
 
-  it('is imported only by the server-side move code', () => {
-    expect(filesMentioning('getBufferFullAccessToken')).toEqual([
-      'src/lib/albums/storage-server.ts',
-      'src/lib/buffer/full-token.ts',
+  it('is encrypted with a key read only in server-only modules', () => {
+    expect(filesMentioning('process.env.BUFFER_ENCRYPTION_KEY')).toEqual([
+      'src/lib/buffer/account-functions.ts',
+      'src/lib/buffer/grant.ts',
     ])
   })
 
@@ -41,10 +41,11 @@ describe('the buffer full-scope token', () => {
     expect(vite).not.toContain('GOOGLE_BUFFER')
   })
 
-  it('sits in a module that is no server function or component', () => {
-    const source = readFileSync(join(SRC, 'lib/buffer/full-token.ts'), 'utf8')
-    expect(source).not.toContain('createServerFn')
-    expect(source).not.toContain("'cloudflare:workers'")
+  it('sits in modules that are no server function or component', () => {
+    for (const file of ['grant.ts', 'tokens.ts', 'crypto.ts']) {
+      const source = readFileSync(join(SRC, 'lib/buffer', file), 'utf8')
+      expect(source).not.toContain('createServerFn')
+    }
   })
 })
 

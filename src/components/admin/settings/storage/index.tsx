@@ -12,6 +12,7 @@ import {
   ItemDescription,
   ItemGroup,
 } from '@/components/ui/item'
+import { BufferAccount } from './buffer-account'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { BufferUsage, PoolUsage } from '@/components/shared/storage-usage'
@@ -31,6 +32,8 @@ interface PageProps {
   bufferLoading: boolean
   pool?: PoolOverview
   canEditCap: boolean
+  connected?: boolean
+  connectError?: string
 }
 
 function gbString(bytes: number) {
@@ -178,13 +181,21 @@ function FlamekeeperForm({
   )
 }
 
-export function Page({ buffer, bufferLoading, pool, canEditCap }: PageProps) {
+export function Page({
+  buffer,
+  bufferLoading,
+  pool,
+  canEditCap,
+  connected,
+  connectError,
+}: PageProps) {
   const { data: settings } = useQuery(adminDashboardQueries.settings())
 
   return (
     <>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Buffer</h2>
+        <BufferAccount connected={connected} connectError={connectError} />
         {settings && buffer !== undefined ? (
           <BufferForm settings={settings} usage={buffer} />
         ) : bufferLoading || !settings ? (

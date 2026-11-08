@@ -44,7 +44,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 
 - Local: `.env` (see `.env.example`). Production builds read `wrangler.jsonc` bindings; secrets via wrangler secrets.
 - Set `DEV=true` locally to auto-skip the Telegram onboarding step.
-- Buffer account tokens (`GOOGLE_BUFFER_REFRESH_TOKEN` drive.file, `GOOGLE_BUFFER_FULL_REFRESH_TOKEN` full `drive`, server-only, only `src/lib/buffer/full-token.ts` may name it): setup in README "Connecting the buffer account". Uploads go to the buffer and fail when it is unavailable; never fall back to flamekeepers.
+- Buffer account: connected by an admin in Settings > Storage, refresh token stored encrypted in `buffer_grant` (`BUFFER_ENCRYPTION_KEY` secret), one `drive` scope. `GOOGLE_BUFFER_*` env vars are only a fallback while no grant is stored; token code lives in `src/lib/buffer/{grant,tokens}.ts`. Uploads go to the buffer and fail when it is unavailable; never fall back to flamekeepers. Setup in README "Connecting the buffer account".
 - Google master tokens (`GOOGLE_MASTER_ACCESS_TOKEN`/`GOOGLE_MASTER_REFRESH_TOKEN`) expire; refresh with `scripts/google-mint-token.mjs` (see also `scripts/cleanup-gcal.mjs`).
 
 ## Cron / scheduled work
@@ -52,7 +52,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 `server.ts` handles three Cron Triggers and picks the steps from `controller.cron`. The schedule strings, step groups and per-trigger budgets live in `src/lib/cron/schedule.ts` and must match `crons` in `wrangler.jsonc` character for character (a test checks this). Each trigger gets its own budget. Overview: `docs/scenarios/cron/overview.md`.
 
 - `*/5 * * * *`: `cancelUnstartedBookings`, `updateOverdueBookings`, `sendBookingReminders` (4 idempotent Telegram reminders, each tracks a `*_sent_at` column).
-- `0 * * * *`: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `deleteScheduledAlbums`, `checkBufferUsage`, then the Telegram bot configuration, which calls Telegram only when the deployed version (`CF_VERSION_METADATA.id`) differs from the KV marker `telegram-bot:configured-version`.
+- `0 * * * *`: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `deleteScheduledAlbums`, `checkBufferUsage`, `switchBuffer` (copies albums to a pending buffer account, then flips it active), then the Telegram bot configuration, which calls Telegram only when the deployed version (`CF_VERSION_METADATA.id`) differs from the KV marker `telegram-bot:configured-version`.
 - `0 3 * * *`: `graduateFlamekeepers`.
 
 Flamekeepers hold photos only after an admin offload (Move to Flamekeepers, `src/lib/albums/storage-server.ts`, browser relay in `offload-client.ts`). `maintainPool` sets Full/Active from each flamekeeper's room and sends the pool-low alert (threshold is the admin "% used" setting, default 90). `drainFlamekeepers` moves Draining flamekeepers' volumes back to the buffer with the buffer's full token, copies Lost flamekeepers' volumes the same way, and cleans dropped volumes (rows with `dropped_at`, whose files are originals or partial copies to delete). Stop, graduation, domain change and ban end flamekeeping at once when nothing is held, otherwise move to Draining (`src/lib/pool/stop-server.ts`). Scenarios: `docs/scenarios/admin/albums/storage.md`, `docs/scenarios/kv/album-offload.md`.

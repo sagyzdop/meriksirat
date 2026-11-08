@@ -36,6 +36,35 @@ export function planBufferUpload(
   }
 }
 
+export type BufferPlan =
+  | { kind: 'buffer'; email: string; grantId: string | null }
+  | { kind: 'unavailable'; message: string; missing: string[] }
+
+export function planBufferSource(input: {
+  env: Record<string, string | undefined>
+  active: { id: string; email: string; state: string } | null
+}): BufferPlan {
+  if (input.active) {
+    const missing = (['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const)
+      .filter((name) => !input.env[name]?.trim())
+      .map(String)
+    if (missing.length > 0 || input.active.state === 'auth_failed') {
+      return {
+        kind: 'unavailable',
+        message: BUFFER_UNAVAILABLE_MESSAGE,
+        missing,
+      }
+    }
+    return {
+      kind: 'buffer',
+      email: input.active.email,
+      grantId: input.active.id,
+    }
+  }
+  const legacy = planBufferUpload(input.env)
+  return legacy.kind === 'buffer' ? { ...legacy, grantId: null } : legacy
+}
+
 export interface VolumeFolderState {
   driveFolderId: string | null
   permissionId: string

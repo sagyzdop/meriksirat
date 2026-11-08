@@ -91,28 +91,37 @@ falls back to a flamekeeper. The Worker reads the account's Drive quota with the
 `drive.file` token, warns admins at 90% and refuses uploads at 100% (see
 [the scenario](docs/scenarios/kv/buffer-usage.md)).
 
-The buffer uses the same OAuth client as production and holds two tokens:
+The buffer is a Google account an admin connects in Admin > Settings > Storage.
+It uses the same OAuth client as production, one token with the full `drive`
+scope. The app stores that token encrypted in D1 (`buffer_grant`); the browser
+never receives it ([ADR-0021](docs/adr/0021-buffer-account-is-a-stored-grant.md)).
 
-| Env or secret | Scope | Used for |
-|---|---|---|
-| `GOOGLE_BUFFER_REFRESH_TOKEN` | `drive.file` | Every upload. The Worker mints a resumable upload address with it; the browser never receives the token. |
-| `GOOGLE_BUFFER_FULL_REFRESH_TOKEN` | full `drive` | Server-only: copies photos from flamekeepers back to the buffer (Move to Buffer, drains, lost flamekeepers) ([ADR-0016](docs/adr/0016-drains-run-on-server-with-buffer-full-token.md)). Read only by `src/lib/buffer/full-token.ts`. |
-| `GOOGLE_BUFFER_EMAIL` | none | Optional, defaults to `nuimage.storage@gmail.com`. |
+| Env or secret | Used for |
+|---|---|
+| `BUFFER_ENCRYPTION_KEY` | Required. Worker secret that encrypts the stored token. Losing it means reconnecting the account. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | The shared OAuth client. |
+| `GOOGLE_BUFFER_REFRESH_TOKEN`, `GOOGLE_BUFFER_FULL_REFRESH_TOKEN`, `GOOGLE_BUFFER_EMAIL` | Fallback only, used while no account is connected in the app. Once the account is connected they can be removed. |
 
 Setup:
 
-1. In Google Cloud Console, check that the OAuth consent screen allows a
-   `gmail.com` account (user type External; in Testing mode, add the buffer as a
-   test user) and that `http://localhost:8788/oauth` is an authorized redirect
-   URI on the OAuth client.
-2. With `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`, run
-   `node scripts/google-mint-token.mjs --account buffer-upload` and sign in as
-   the buffer. Put the printed token in `.env` as `GOOGLE_BUFFER_REFRESH_TOKEN`.
-   The script prints the account it got; stop if it is not the buffer.
-3. Run `node scripts/google-mint-token.mjs --account buffer-full`, sign in as the
-   buffer again, and keep the printed token as `GOOGLE_BUFFER_FULL_REFRESH_TOKEN`.
-4. In production, set both with `wrangler secret put`. Never put either in a
-   `vars` block or any `VITE_` variable.
+1. In Google Cloud Console, check that the OAuth consent screen allows the buffer
+   account (user type External; in Testing mode, add it as a test user) and that
+   `<your origin>/api/buffer/callback` is an authorized redirect URI on the
+   OAuth client (for example `http://localhost:3000/api/buffer/callback`).
+2. Set `BUFFER_ENCRYPTION_KEY` (`openssl rand -base64 32`) in `.env`, and in
+   production with `wrangler secret put BUFFER_ENCRYPTION_KEY`.
+3. Sign in as an admin, open Settings > Storage and press Connect. Pick the
+   buffer account and allow full Drive access. Connecting the account the env
+   tokens already point at adopts the existing albums with no copying.
+4. To change the buffer, connect a different account. Albums are copied to it in
+   the background (hourly, or "Copy more now"); uploads keep using the old
+   account until every album is copied, then the new one takes over. Cancel
+   discards the copies and changes nothing. The old account's originals are
+   removed 7 days after the switch.
+
+If the buffer loses access (revoked, password reset), uploads pause, admins get
+an alert and a Telegram message, and reconnecting the same account restores
+everything. Nothing switches or deletes on its own.
 
 Minting a token does not revoke the master account's grant. Never revoke the app
 on the master account at myaccount.google.com/permissions: it shares the OAuth

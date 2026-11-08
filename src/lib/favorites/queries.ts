@@ -1,6 +1,12 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getAlbumFavoritesFn, listMyFavoritesFn } from './functions'
+import {
+  getAlbumFavoritesFn,
+  listHeartedAlbumIdsFn,
+  listHeartedAlbumsFn,
+  listMyFavoritesFn,
+} from './functions'
 import type { FavoriteRef } from './logic'
+import type { AlbumSummary } from '@/lib/albums/types'
 import type { FavoritePhoto } from './types'
 
 export const favoriteQueries = {
@@ -17,5 +23,17 @@ export const favoriteQueries = {
       staleTime: 30_000,
       queryFn: async (): Promise<FavoriteRef[]> =>
         await getAlbumFavoritesFn({ data: { albumId } }),
+    }),
+  heartedAlbums: () =>
+    queryOptions({
+      queryKey: [...favoriteQueries.all, 'albums', 'mine'],
+      staleTime: 0,
+      queryFn: async (): Promise<AlbumSummary[]> => await listHeartedAlbumsFn(),
+    }),
+  heartedAlbumIds: () =>
+    queryOptions({
+      queryKey: [...favoriteQueries.all, 'albums', 'ids'],
+      staleTime: 30_000,
+      queryFn: async (): Promise<string[]> => await listHeartedAlbumIdsFn(),
     }),
 }
