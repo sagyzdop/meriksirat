@@ -84,6 +84,7 @@ erDiagram
         text id PK
         integer flamekeeper_cap_bytes
         integer pool_low_alerted_at
+        integer pool_low_alert_percent
     }
     booking {
         integer id PK

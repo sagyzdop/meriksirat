@@ -2,7 +2,7 @@
 
 > **Question:** What happens when an admin or manager presses Sync to Calendar on the Birthdays page?
 >
-> **Answer:** The server makes the birthdays Google Calendar match the member list. Each Active or Board member with a readable birthday gets one yearly all-day event named with a cake and their name. Missing events are created, events with a wrong date are corrected and events for people who no longer qualify are deleted. A toast shows how many were created, updated and deleted. The same sync also runs by itself whenever a member's status changes.
+> **Answer:** The server makes the birthdays Google Calendar match the member list. Each Active member with a readable birthday gets one yearly all-day event named with a cake and their name. Missing events are created, events with a wrong date are corrected and events for people who no longer qualify are deleted. A toast shows how many were created, updated and deleted. The same sync also runs by itself whenever a member's status changes.
 >
 > **Notes:**
 > - The calendar is the ID saved in the dashboard Settings, or a built-in default when that field is empty, see [dashboard-settings.md](dashboard-settings.md).
@@ -24,7 +24,7 @@ sequenceDiagram
     Browser-->>Person: button shows "Syncing..."
     Browser->>Worker: syncBirthdaysToCalendarFn()
     Worker->>D1: read calendar id from settings
-    Worker->>D1: Active and Board members with a birthday
+    Worker->>D1: Active members with a birthday
     Worker->>Calendar: list existing birthday events, master token
     alt listing fails
         Worker-->>Browser: error

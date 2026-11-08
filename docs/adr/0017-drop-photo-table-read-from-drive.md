@@ -62,8 +62,7 @@ and count-warning tickets must not act on one.
 ## One volume table
 
 #17 first stored the buffer's volumes in a separate `buffer_volume` table, next to the older flamekeeper `volume` table that had no expected count or bytes. The spec asks for one table, so that split is gone. Since migration 0037 there is one `volume` table. A row whose
-`flamekeeper_user_id` is NULL is the buffer's volume (one per album, enforced by
-a partial unique index); its expected count and bytes are filled. Legacy
+`flamekeeper_user_id` is NULL is a buffer volume (an album can have several, each at most 256 MB; [ADR-0019](0019-256mb-volumes-several-per-holder.md)); its expected count and bytes are filled. Legacy
 flamekeeper rows keep NULL expected values and never raise the warning.
 `expected_changed_at` records the last confirm or delete, so the listing can tell
 an upload burst from a quiet album.

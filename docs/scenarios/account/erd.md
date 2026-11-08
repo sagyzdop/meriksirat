@@ -3,7 +3,7 @@
 > **Question:** Which tables do the account scenarios read and
 > write?
 >
-> **Answer:** Sign-in, onboarding, profile and deletion work on
+> **Answer:** Sign-in, onboarding, My Account and deletion work on
 > the user table and its sign-in helpers (session and account).
 > Telegram linking uses telegram_link_token, joining the club
 > reads settings.club_code, and a flamekeeper row decides whether

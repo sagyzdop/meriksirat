@@ -72,8 +72,9 @@ erDiagram
         text drive_file_id PK
     }
     volume {
-        text album_id PK
-        text flamekeeper_user_id PK
+        text id PK
+        text album_id FK
+        text flamekeeper_user_id FK
         text drive_folder_id
     }
     session {

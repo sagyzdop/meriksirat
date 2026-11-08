@@ -21,7 +21,7 @@
 >   minutes after it, and only while the booking has not started.
 > - Only club members reach this page. The details table has a
 >   "Booked by" row with the member's own name, linking to their
->   profile.
+>   member detail page.
 > - The page is built when opened. A booking whose window opens
 >   later keeps its old buttons until the page is reloaded.
 > - Status badges are colored from the stored status. The admin

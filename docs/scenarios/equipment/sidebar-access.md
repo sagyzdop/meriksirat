@@ -7,7 +7,7 @@
 > level. "Equipment Booking" is greyed out with a lock for clearance
 > under 2, and "My Albums" for clearance under 3. A hover text and a
 > line under the group explain what is needed. Non-members see only
-> "All Public Albums" and "My Favorites", and are sent to the profile
+> "All Public Albums" and "My Favorites", and are sent to the My Account
 > page if they try any other address.
 >
 > **Notes:**
@@ -21,7 +21,7 @@
 >   request access."
 > - "My Bookings" and "My Favorites" are never locked for members.
 > - Admin links appear for the roles admin and manager only.
-> - Non-members may open the profile and favorites pages, including
+> - Non-members may open the My Account and favorites pages, including
 >   anything below them in the address.
 > - A banned user has no valid session, so the page check sends them
 >   to the login page.
@@ -48,7 +48,7 @@ sequenceDiagram
         B-->>M: Redirect to /login
     else Onboarding not finished
         B-->>M: Redirect to /onboarding
-    else Not a member and page not profile or favorites
+    else Not a member and page not account or favorites
         B-->>M: Redirect to /account
     else Allowed
         B->>B: build sidebar from membership and clearance

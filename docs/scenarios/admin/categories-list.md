@@ -2,7 +2,7 @@
 
 > **Question:** How do admins and managers see the equipment categories and change their order?
 >
-> **Answer:** The Manage Categories page lists every category with its description and how many pieces of equipment it holds, ordered by its sort number and then its name. Dragging a row to a new place renumbers all categories from 0 in the new order and sends them to the server in one call. A toast says "Category order updated successfully". If saving fails the list jumps back to the old order and a toast says "Failed to update category order".
+> **Answer:** The Categories tab of the Equipment area (/admin/equipment/categories) lists every category with its description and how many pieces of equipment it holds, ordered by its sort number and then its name. Dragging a row to a new place renumbers all categories from 0 in the new order and sends them to the server in one call. A toast says "Category order updated successfully". If saving fails the list jumps back to the old order and a toast says "Failed to update category order".
 >
 > **Notes:**
 > - If the list cannot be loaded the page shows an empty list. The error is only logged.
@@ -19,7 +19,7 @@ sequenceDiagram
     participant Worker
     participant D1
 
-    Person->>Browser: open /admin/categories
+    Person->>Browser: open /admin/equipment/categories
     Browser->>Worker: getCategoriesWithCountFn()
     Worker->>D1: categories with equipment counts, by sort order then name
     alt load fails

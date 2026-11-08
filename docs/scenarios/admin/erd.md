@@ -8,7 +8,7 @@
 >
 > - KV: the key album:list:{driveFolderId} holds the album's listings and folder state (ok, trashed or missing) with a TTL of 8 days. The dashboard only reads it, and never writes it.
 > - R2: equipment images are stored under equipment-images/{equipmentId}-{time in ms}.{jpeg, png or webp}. They have no expiry, and replaced images are not removed.
-> - The settings table has one row, with id global. It also holds the flamekeeper cap, set from the pool card, see [../flamekeepers/admin-pool.md](../flamekeepers/admin-pool.md).
+> - The settings table has one row, with id global. It also holds the flamekeeper cap and the Pool-low alert percent, set in Settings, Storage, see [../flamekeepers/admin-pool.md](../flamekeepers/admin-pool.md).
 > - Only the columns these scenarios use are listed.
 
 ```mermaid
@@ -94,6 +94,9 @@ erDiagram
         integer favorite_count
         integer expires_at
         integer pinned
+        integer rescued_at "status Rescued"
+        integer scheduled_deletion_at "status Scheduled for deletion"
+        text tombstone_reason "Lost when flamekeeper_lost, flamekeeper_left or folder_deleted"
         integer expiry_reminder_30_sent_at
         integer expiry_reminder_7_sent_at
         integer deleted_at
@@ -109,9 +112,11 @@ erDiagram
         text state "active, full, draining, lost, drained"
     }
     volume {
-        text album_id PK,FK
-        text flamekeeper_user_id PK,FK
-        text drive_folder_id
+        text id PK
+        text album_id FK
+        text flamekeeper_user_id FK "NULL means the buffer holds it"
+        text drive_folder_id "at most 256 MB, several per holder per album"
+        integer dropped_at
     }
     favorite {
         text user_id PK,FK

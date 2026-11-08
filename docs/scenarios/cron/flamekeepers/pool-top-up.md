@@ -4,9 +4,10 @@
 > and when are admins told that pledged space is running low?
 >
 > **Answer:** maintainPool puts any flamekeeper still marked full
-> back to active, and checks whether the free space of the pool
-> is under 10% of what was pledged (or nothing is pledged at
-> all). If so, and no alert is already out, every admin with
+> back to active, and checks whether the used share of the pool
+> has reached the Pool-low alert percentage (default 90, set in
+> Settings, Storage tab) of what was pledged (or nothing is
+> pledged at all). If so, and no alert is already out, every admin with
 > Telegram gets a low-space message. When space recovers, the
 > alert is re-armed so it can fire again later. It adds no new
 > flamekeepers or space by itself.
@@ -40,12 +41,12 @@ sequenceDiagram
 
     Cron->>Worker: maintainPool
     Worker->>D1: set state = active where state = full
-    Worker->>D1: load active flamekeepers, the cap and poolLowAlertedAt
-    Worker->>Worker: poolStats and poolAlert:<br/>low means free under 10% of pledged or pledged is 0
+    Worker->>D1: load active flamekeepers, the cap, poolLowAlertPercent and poolLowAlertedAt
+    Worker->>Worker: poolStats and poolAlert:<br/>low means used share of pledged is at or above the<br/>alert percent (default 90) or pledged is 0
     alt low and no alert sent yet
         Worker->>D1: load admins that have a Telegram chat id
         Worker->>Worker: take 1 request per admin<br/>if not affordable, try again next run
-        Worker->>Telegram: #35;savenuimg pool is low: X GB free of Y GB pledged<br/>across N flamekeepers. Recruit flamekeepers or free up space.
+        Worker->>Telegram: #35;savenuimg pool is low: X GB used and Z GB free of Y GB pledged<br/>across N flamekeepers. Recruit flamekeepers or free up space.
         Worker->>D1: set settings.poolLowAlertedAt = now
     else not low and an alert was sent before
         Worker->>D1: set settings.poolLowAlertedAt = null (re-arm)

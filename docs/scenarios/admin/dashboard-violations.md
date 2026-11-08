@@ -1,8 +1,8 @@
-# Dashboard Violations List
+# Violations List
 
 > **Question:** How does an admin or manager find members who keep missing pickups or returning late?
 >
-> **Answer:** The Violations tab lists every user whose auto-cancelled count or overdue count is above zero, with the two counts, role and status. It can be filtered by violation type, searched by name or email, sorted and paged. Clicking a row opens that member's detail page, where the counters can be cleared.
+> **Answer:** The Violations tab (/admin/members/violations) of Club Members lists every user whose auto-cancelled count or overdue count is above zero, with the two counts, role and status. It can be filtered by violation type, searched by name or email, sorted and paged. Clicking a row opens that member's detail page, where the counters can be cleared.
 >
 > **Notes:**
 > - Choosing both violation types is the same as choosing none, because the list already shows users with either one.
@@ -19,7 +19,7 @@ sequenceDiagram
     participant Worker
     participant D1
 
-    Person->>Browser: open the Violations tab
+    Person->>Browser: open /admin/members/violations
     Browser->>Worker: getViolationsFn(violationType, search, page, sort)
     Worker->>D1: users with auto-cancelled or overdue count above 0
     opt exactly one violation type chosen
@@ -35,6 +35,6 @@ sequenceDiagram
     Browser->>Worker: getViolationsFn(new filters)
     Worker-->>Browser: new page
     Person->>Browser: click a row
-    Browser-->>Person: open /admin/users/userId
+    Browser-->>Person: open /admin/members/userId
     Note over Browser: see member-detail.md
 ```

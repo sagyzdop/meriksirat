@@ -7,7 +7,7 @@
 > flamekeeper as finalized (lostFinalizedAt) so the step stops
 > looking at them. No photos are held on flamekeepers, so no
 > album loses photos or is hidden. The flamekeeper stays lost and
-> can still reconnect from the profile page, which makes them
+> can still reconnect from the My Account page, which makes them
 > active again.
 >
 > **Notes:**

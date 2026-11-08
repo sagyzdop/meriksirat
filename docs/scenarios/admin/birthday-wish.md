@@ -2,7 +2,7 @@
 
 > **Question:** When do members see a Happy Birthday pop-up, and who is named in it?
 >
-> **Answer:** Every signed-in member sees a Happy Birthday pop-up once per browser session when at least one Active or Board member has a birthday today and has agreed to be congratulated. It names all of today's birthday people: "Today is the birthday of A, B. Happy Birthday!". If nobody qualifies, nothing appears.
+> **Answer:** Every signed-in member sees a Happy Birthday pop-up once per browser session when at least one Active member has a birthday today and has agreed to be congratulated. It names all of today's birthday people: "Today is the birthday of A, B. Happy Birthday!". If nobody qualifies, nothing appears.
 >
 > **Notes:**
 > - This is the one function in this folder that is not limited to admins and managers. Every signed-in member needs it, so it only requires a session. Without a session it returns nothing.
@@ -25,7 +25,7 @@ sequenceDiagram
     alt no session
         Worker-->>Browser: null
     else signed in
-        Worker->>D1: Active and Board members who want congratulations
+        Worker->>D1: Active members who want congratulations
         Worker->>Worker: keep those whose birthday month and day are today
         alt nobody today
             Worker-->>Browser: null

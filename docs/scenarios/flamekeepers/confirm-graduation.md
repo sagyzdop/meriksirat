@@ -5,7 +5,7 @@
 > **Answer:** Pressing Yes on the "Still graduating in ..." row saves the same pledge and date again and records the confirmation time, which starts a new 365-day wait. To change the date instead, the flamekeeper edits the Graduating field. If the confirmed date is already under 60 days away (or past), the same save also ends flamekeeping at once.
 >
 > **Notes:**
-> - The question appears on the profile card once 365 days have
+> - The question appears on the Flamekeeper section once 365 days have
 >   passed since the last confirmation (or since signing up if
 >   there was none). It never appears for drained or lost
 >   flamekeepers.

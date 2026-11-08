@@ -5,6 +5,7 @@
 > **Answer:** If any booking that is still booked, active, overdue or partly returned includes the item, it is not deleted. It is switched to inactive so it can no longer be booked and existing bookings carry on, and the page says so. If there is no such booking, the row is deleted for good. Either way the person sees a green message and is taken back to the equipment list.
 >
 > **Notes:**
+> - Bulk delete: tick rows on the Equipment page and press Delete (N). `bulkDeleteEquipmentFn` deletes only equipment that has never appeared in any booking and skips the rest, leaving them unchanged and not switching them off. The toast reads "N deleted, M skipped (has bookings)".
 > - The confirm dialog already warns about this: "If this equipment has active bookings, it will be marked as inactive instead of being deleted to preserve booking history."
 > - After the inactive result the page waits 2 seconds before leaving, and after a real delete 1.5 seconds.
 > - Only the booking statuses listed above count as active. Returned and cancelled bookings do not trigger the switch-off, so the code then tries a real delete. Every booking item keeps a link to its equipment with no automatic clean-up, so the database may refuse that delete for equipment that was ever booked. The person would then see the red message with the database error.

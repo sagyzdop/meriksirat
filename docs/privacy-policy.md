@@ -120,7 +120,7 @@ regulations require it.
 
 - You may ask to see or correct your personal data by contacting an
   administrator.
-- Flamekeepers may stop lending storage at any time from their profile. Stopping
+- Flamekeepers may stop lending storage at any time from their My Account page. Stopping
   ends your pledge, and the Platform places no photos in your Drive.
 - Flamekeepers may also revoke the Platform's Drive access at
   [myaccount.google.com/permissions](https://myaccount.google.com/permissions).

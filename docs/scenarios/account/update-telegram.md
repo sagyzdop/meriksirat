@@ -1,7 +1,7 @@
 # Updating the linked Telegram username
 
-> **Question:** What happens when a member clicks "Update
-> Telegram" on their profile?
+> **Question:** What happens when a member clicks "Link" next to
+> Telegram on the My Account page?
 >
 > **Answer:** The app prepares a one-time bot link and opens it
 > in a new tab, with the message "Open Telegram and tap Start to
@@ -15,7 +15,7 @@
 > - Unlike the onboarding call, this one does not check whether
 >   Telegram is already linked.
 > - The bot also sets onboardingComplete when it links the chat.
-> - The profile page does not refresh by itself after the bot
+> - The My Account page does not refresh by itself after the bot
 >   finishes. The new username shows after the next reload.
 > - If the Telegram account has no username, the saved username
 >   is left as it was.
@@ -34,7 +34,7 @@ sequenceDiagram
     participant W as Worker
     participant D as D1
     participant T as Telegram
-    P->>B: Click Update Telegram
+    P->>B: Click Link
     B-->>P: Button reads Opening...
     B->>W: getTelegramUpdateLinkUrlFn()
     W->>D: Find unexpired telegram_link_token or insert a new one

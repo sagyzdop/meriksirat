@@ -15,7 +15,7 @@ whatever their email.
 ### What do I do after I sign up?
 
 To book equipment and create albums you must be a club member. Enter the club
-code on your profile whenever you are ready. You will then be asked for your
+code on your My Account page whenever you are ready. You will then be asked for your
 name, date of birth, NU ID, major and graduation month, and to link your
 Telegram account.
 
@@ -25,7 +25,7 @@ time.
 ### Do I have to become a flamekeeper?
 
 No. Flamekeeping is optional and never part of signing up. Only `@nu.edu.kz`
-accounts can become flamekeepers, and you can do it from your profile at any
+accounts can become flamekeepers, and you can do it from your My Account page at any
 time. See [Flamekeepers](#flamekeepers).
 
 ### Why do I need to link Telegram?
@@ -39,7 +39,7 @@ return equipment with photo verification. See [Telegram Bot](user/telegram-bot.m
 Club members cannot. Their accounts and activity records are retained
 permanently for equipment accountability purposes. If you need your account
 deactivated, contact an administrator. If you are not a club member, you can
-delete your account from your profile once you have stopped flamekeeping and
+delete your account from your My Account page once you have stopped flamekeeping and
 any photos the Platform stored in your Drive have been moved. See [Terms of
 Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
 
@@ -167,7 +167,7 @@ you do not need it to use the site.
 
 ### How do I become a flamekeeper?
 
-Open the Become a flamekeeper page from your profile or the one-time invitation. It takes three short steps. You will be asked for:
+Open the Become a flamekeeper page from your My Account page or the one-time invitation. It takes three short steps. You will be asked for:
 
 - your expected graduation month, which must be in the future,
 - your pledge, at least 512 MB (see below),
@@ -180,7 +180,7 @@ signed in with. The Platform asks only for access to the files it creates
 ### How much do I need to pledge?
 
 The minimum pledge is 512 MB. The pledge is the most storage the Platform may use
-in your Drive. You can change it at any time from your profile. A pledge is
+in your Drive. You can change it at any time from your My Account page. A pledge is
 reserve space; flamekeepers hold no photos today.
 
 ### Will my photos be stored in my Drive?
@@ -195,7 +195,7 @@ other file in your Drive.
 
 ### Can I stop flamekeeping?
 
-Yes, at any time from your profile. Stopping ends your pledge, and the Platform
+Yes, at any time from your My Account page. Stopping ends your pledge, and the Platform
 places no photos in your Drive. You can also revoke the Platform's access at
 [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 Flamekeepers hold no photos today, so this does not affect any album. See [Privacy Policy](https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md)
@@ -258,9 +258,9 @@ Check the equipment's availability calendar to find an open window.
 
 ### My Telegram bot isn't responding
 
-Make sure your Telegram account is linked. Go to your profile page and check
+Make sure your Telegram account is linked. Go to your My Account page and check
 the Telegram connection status. If it's not linked, use the link provided on
-your profile to connect.
+your My Account page to connect.
 
 ### The equipment I returned still shows as active
 

@@ -18,7 +18,7 @@
 >   equipment name (alphabetically first item). Page size at most
 >   100 per request.
 > - Only club members reach this page. Anyone else is sent to
->   their profile page.
+>   their My Account page.
 > - Each row can be ticked, and "Cancel Selected" cancels the
 >   ticked bookings, see cancel-booking.md.
 > - Date filter: start date keeps bookings starting on or after it.

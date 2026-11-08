@@ -1,8 +1,8 @@
 # Club Settings
 
-> **Question:** How does an admin or manager change the booking note, the birthdays calendar or the daily opening hours?
+> **Question:** How does an admin or manager change the booking note, the birthdays calendar, the daily opening hours or the storage alerts?
 >
-> **Answer:** On the dashboard Settings tab the person edits the global booking note, the birthdays calendar ID and the start and end of the daily booking window, then presses Save Settings. The Save Settings button is disabled when either time is empty or the start is not before the end, and a red box says why. On success a toast says "Settings updated successfully" and the dashboard and booking data reload.
+> **Answer:** The Settings page (/admin/settings) has line tabs Bookings, Albums, Members, Flamekeepers and Storage, each with its own Save button, and number settings are shown as rows (Items) with a label, helper text and an input. The Bookings tab holds the global booking note and the start and end of the daily booking window, the Members tab the birthdays calendar ID (and the club code, see club-code.md), the Albums tab the scheduled deletion period in days, the Flamekeepers tab the lost-flamekeeper grace and graduation prompt lead in days, and the Storage tab the Buffer limit and Buffer alert (% used) and, for admins, the Flamekeepers per-account cap and the Pool-low alert (% used, default 90, range 50 to 99). The Pool-low alert fires when the used share of the pledged space reaches that percentage, see ../cron/flamekeepers/pool-top-up.md. The Bookings form below is the example; the Save button is disabled when either time is empty or the start is not before the end, and a red box says why. The Save Settings button is disabled when either time is empty or the start is not before the end, and a red box says why. On success a toast says "Settings updated successfully" and the dashboard and booking data reload.
 >
 > **Notes:**
 > - The settings are one shared row. If it does not exist yet, opening the tab creates it with an empty note and hours 00:00 to 23:59.
@@ -19,7 +19,7 @@ sequenceDiagram
     participant Worker
     participant D1
 
-    Person->>Browser: open the Settings tab
+    Person->>Browser: open /admin/settings
     Browser->>Worker: getSettingsFn()
     Worker->>D1: read settings row global
     opt row missing
@@ -32,7 +32,7 @@ sequenceDiagram
     else start is not before end
         Browser-->>Person: red box "Start time must be before<br/>end time", Save disabled
     else form is valid
-        Browser->>Worker: updateSettingsFn(note, calendarId, start, end)
+        Browser->>Worker: updateSettingsFn(changed fields)
         alt start is not before end on the server
             Worker-->>Browser: error "Operating hours start must be before end time"
             Browser-->>Person: toast with that error

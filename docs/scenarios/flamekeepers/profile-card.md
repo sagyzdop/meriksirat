@@ -1,8 +1,8 @@
-# See the Flamekeeper section on the profile page
+# See the Flamekeeper section on the My Account page
 
 > **Question:** What does a person see in the Flamekeeper section on /account for each flamekeeper state?
 >
-> **Answer:** The profile page loads the person's flamekeeper record. The section only appears for people who have a record or who could sign up (an @nu.edu.kz account that is not flamekeeping). It starts with one muted row holding the Lucide fire icon, a title and a description, and the copy depends on the state. Someone with no record, or a drained one, sees "Keep the flame alive" and a Become a flamekeeper button. An active or full flamekeeper sees "You're keeping the flame alive", a "x GB of y GB pledged" row with a thin bar and Edit, and a Stop flamekeeping row. A draining flamekeeper sees "Your flame is winding down" and the pledge row without buttons. A lost flamekeeper sees "We lost touch with your Drive" with a Reconnect Drive button.
+> **Answer:** The My Account page loads the person's flamekeeper record. The section only appears for people who have a record or who could sign up (an @nu.edu.kz account that is not flamekeeping). It starts with one muted row holding the Lucide fire icon, a title and a description, and the copy depends on the state. Someone with no record, or a drained one, sees "Keep the flame alive" and a Become a flamekeeper button. An active or full flamekeeper sees "You're keeping the flame alive", a "x GB of y GB pledged" row with a thin bar and Edit, and a Stop flamekeeping row. A draining flamekeeper sees "Your flame is winding down" and the pledge row without buttons. A lost flamekeeper sees "We lost touch with your Drive" with a Reconnect Drive button.
 >
 > **Notes:**
 >
@@ -16,10 +16,10 @@
 >   `src/lib/flamekeeper/profile-copy.ts`.
 > - Which rows show is decided by `getAccessRules`: Edit and Stop
 >   only while the state is active or full.
-> - A flamekeeper who is not a member sees no About you or Contact
+> - A flamekeeper who is not a member sees no Personal Information
 >   section and their Graduating field sits in this section,
 >   saved as in [../account/profile-edit.md](../account/profile-edit.md).
->   A member edits Graduating under About you.
+>   A member edits Graduating under Personal Information.
 > - The text never mentions where photos are kept or that they
 >   move. The draining state only survives on records left by
 >   earlier code; the hourly drainFlamekeepers step ends them, see

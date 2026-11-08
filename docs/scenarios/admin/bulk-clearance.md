@@ -1,4 +1,4 @@
-# Bulk Edit Clearance Level
+# Bulk Edit Equipment And Member Rows
 
 > **Question:** How does an admin or manager set the clearance level for many members, or many pieces of equipment, in one go?
 >
@@ -7,6 +7,7 @@
 > **Notes:**
 >
 > - Both tables share one dialog, titled Bulk Edit Clearance Level.
+> - The Equipment table has three more bulk buttons beside Edit Clearance: Edit Category and Edit Status each open a dialog with one select (category, or Active/Inactive) and save with `bulkUpdateEquipmentCategoryFn` or `bulkUpdateEquipmentStatusFn`; the toast reads "Updated category for N equipment item(s)" or "Updated status for N equipment item(s)". Delete is in [delete-equipment.md](delete-equipment.md).
 > - Ids that do not exist are silently ignored, and the count in the toast is the number of ticked rows.
 > - The level starts unset, and the form blocks the submit until one from 1 to 10 is chosen.
 > - An empty list of ids is refused with "No user IDs provided" or "No equipment IDs provided". The Edit Clearance button appears only once at least one row is ticked.

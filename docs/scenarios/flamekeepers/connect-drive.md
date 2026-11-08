@@ -17,7 +17,7 @@
 >   with offline access and a forced consent screen. The sign-in
 >   email is passed as a login hint.
 > - Why the club account is refused is in master-account.md.
-> - The profile card, the About button, the low-space banner and a
+> - The Flamekeeper section, the About button, the low-space banner and a
 >   one-time invitation all link here. The invitation is a dialog
 >   shown once to @nu.edu.kz users who have never had a flamekeeper
 >   record; either button stores `user.flamekeeper_invitation_dismissed_at`

@@ -19,8 +19,8 @@ and organizations.
 ### For Administrators
 
 - **Dashboard**: Overview of bookings, equipment usage, and system statistics
-- **Equipment Management**: Add, edit, and manage equipment with categories and clearance levels
-- **Member Management**: Control member access, roles, and clearance levels
+- **Equipment**: Add, edit, and bulk edit equipment, with categories and clearance levels
+- **Club Members**: Control member access, roles, status (Active, Inactive, Alumni) and clearance levels, with birthdays and violations
 - **Booking Oversight**: Monitor all bookings, handle overdue equipment, and manage conflicts
 - **Album Management**: Oversee public and member albums
 - **Settings**: Configure operating hours, booking limits, and global notifications

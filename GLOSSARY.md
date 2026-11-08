@@ -82,10 +82,18 @@ A member's permission tier: `user`, `manager`, or `admin`.
 _Avoid_: Type
 
 **Member status**:
-A member's club standing: Active, Inactive, or Alumni.
+A member's club standing: Active, Inactive, or Alumni. Separate from flamekeeper state and from a ban ([ADR-0020](docs/adr/0020-member-status-separate-from-flamekeeper-state-and-ban.md)).
 _Avoid_: User state
 
 ### Albums
+
+**Album status**:
+Derived, never stored, with six values. Precedence: Lost, Deleted, Scheduled for deletion, Rescued, Unhealthy, Healthy ([ADR-0018](docs/adr/0018-album-status-is-derived-with-six-statuses.md)). Lost is a deletion whose reason is a lost or departed flamekeeper or a deleted Drive folder. Unhealthy means a live volume sits on a lost or partially lost flamekeeper.
+_Avoid_: Album state (that is **Folder state**)
+
+**Storage holder**:
+Who holds an album's live volumes: the buffer or flamekeepers, never both.
+_Avoid_: Owner, location
 
 **Album**:
 A photo gallery: one public folder in the club's master Google Drive account, whose photos are held in volumes on the buffer, and on flamekeepers only after an offload.
@@ -160,6 +168,8 @@ _Avoid_: Storage account, main account, master
 **Flamekeeper**:
 An `@nu.edu.kz` user who pledges optional reserve storage from their Google Drive to the club. Holds no photos when they sign up, since new uploads go to the buffer; they hold photos only after an admin offloads some to them. May also be a member.
 Not built yet: offload is Stage 2 (#15), so until then a flamekeeper's Drive grant sits unused. Uploads no longer go to flamekeepers (#17), and the old placement, drain and relay code was removed in #24; the last `dev` commit containing it is `2565826`. Stopping, graduating, a domain change and a ban end flamekeeping at once, dropping the grant, because nothing is held.
+Flamekeeper status shown to admins: Active, Full, Draining, Lost, Stopped (the `drained` state), or Banned. The state is system-managed and read-only for admins; Banned overrides it, since a ban is account-wide. Not the same as **Member status**.
+Flamekeeper listings key their sources as `flamekeeper:<volumeId>` and `buffer:<id>`.
 _Avoid_: Donor, contributor, host
 
 **Pledge**:
@@ -167,7 +177,7 @@ The maximum GB a flamekeeper lets the app use, at least 512 MB. A cap on what th
 _Avoid_: Allocation, quota
 
 **Pool**:
-The total free pledged space across all active flamekeepers, used only to pick offload destinations. Uploads never use the pool; they go to the buffer, and stop when the buffer is full.
+The total free pledged space across all active flamekeepers, used only to pick offload destinations. The pool-low alert fires when "% used" reaches the admin setting (default 90), which the hourly `maintainPool` step reads. Uploads never use the pool; they go to the buffer, and stop when the buffer is full.
 Not built yet (Stage 2): offload is the only user of the pool.
 _Avoid_: Storage, capacity
 

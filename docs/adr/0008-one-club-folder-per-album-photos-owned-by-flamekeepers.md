@@ -6,7 +6,7 @@
 > New uploads go to the buffer, not to flamekeepers, so flamekeepers hold photos
 > only after an offload (Stage 2). The photo table, its backfill and the
 > `dropped` state are removed, and favorites and covers follow the Drive file ID.
-> The 256 MB unit is removed in favour of one volume per album per account. The
+> The 256 MB unit was removed, then brought back as a size cap per volume, so an album can hold several volumes per account ([ADR-0019](0019-256mb-volumes-several-per-holder.md)). The
 > album folder, the volume subfolders and the sharing rule stay. The rescue of a
 > lost flamekeeper's photos is pending its live test. The text below is the
 > original decision, kept for history. Uploads follow ADR-0015 since

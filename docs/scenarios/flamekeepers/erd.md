@@ -56,8 +56,9 @@ erDiagram
         integer last_refresh_at "last refresh"
     }
     volume {
-        text album_id PK "FK to album.id"
-        text flamekeeper_user_id PK "FK to user.id"
+        text id PK
+        text album_id FK "FK to album.id"
+        text flamekeeper_user_id FK "NULL means the buffer holds it"
         text drive_folder_id "folder in the flamekeeper Drive"
         text permission_id "share permission"
         integer dropped_at "set when the folder is dropped"

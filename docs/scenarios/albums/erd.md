@@ -2,7 +2,7 @@
 
 > **Question:** Which tables, KV keys and Drive folders do the album scenarios read and write?
 >
-> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in Drive, read through cached listings (there is no photo table, see [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md)). The album row keeps a photo count and byte total that uploads, deletes and listing refreshes maintain. Favorites are keyed by album and Drive file id, and the settings row holds the per-flamekeeper storage cap. Each album has one or more buffer volume rows (volume rows with no flamekeeper, each capped at 256 MB) with the expected photo count and bytes, and photos that flamekeepers hold from before the buffer sit in one volume row per flamekeeper, with those two left empty. Copies of album pages and Drive listings sit in KV. No R2 storage is used for albums.
+> **Answer:** Albums are stored in the album table with their co-authors in album_member and their photos in Drive, read through cached listings (there is no photo table, see [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md)). The album row keeps a photo count and byte total that uploads, deletes and listing refreshes maintain. Favorites are keyed by album and Drive file id, and the settings row holds the per-flamekeeper storage cap. Each album has one or more buffer volume rows (volume rows with no flamekeeper, each capped at 256 MB, and a holder may hold several volumes of one album) with the expected photo count and bytes, and photos that flamekeepers hold from before the buffer sit in one volume row per flamekeeper, with those two left empty. Copies of album pages and Drive listings sit in KV. No R2 storage is used for albums.
 >
 > **Notes:**
 > - KV `album:detail:ALBUM_ID`: shared album page core (title, event, authors), TTL 6 hours, plus a 30 s per-Worker memory copy.
@@ -45,6 +45,8 @@ erDiagram
         integer favorite_count
         integer expires_at
         integer pinned
+        integer rescued_at "status Rescued"
+        integer scheduled_deletion_at "status Scheduled for deletion"
         text tombstone_reason "expired, flamekeeper_left, flamekeeper_lost, no_space, folder_deleted"
         integer deleted_at
         integer expiry_reminder_30_sent_at

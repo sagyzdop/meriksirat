@@ -4,11 +4,11 @@ What the app does, from a click, Telegram tap or cron run through to what the pe
 
 | Folder | Covers |
 |---|---|
-| [account](account/) | Sign-in, onboarding, profile, deleting an account, the About page |
+| [account](account/) | Sign-in, onboarding, My Account, deleting an account, the About page |
 | [equipment](equipment/) | Browsing equipment, availability, favorites, images |
 | [bookings](bookings/) | Bookings on the website, for members and admins |
 | [telegram](telegram/) | The bot and the club channel log |
-| [admin](admin/) | Dashboard, members, bans, categories, equipment, birthdays |
+| [admin](admin/) | Dashboard, club members, bans, equipment and categories, birthdays, albums, settings |
 | [albums](albums/) | Albums, uploads, deleting, folder warnings |
 | [flamekeepers](flamekeepers/) | Connecting a Drive, stepping down, moving photos, the pool |
 | [cron](cron/) | The 5-minute, hourly and daily runs: start at [overview](cron/overview.md), then bookings, flamekeepers, albums and housekeeping |

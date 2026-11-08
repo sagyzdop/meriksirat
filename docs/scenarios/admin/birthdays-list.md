@@ -2,10 +2,10 @@
 
 > **Question:** How does an admin or manager see whose birthday is coming up?
 >
-> **Answer:** The Birthdays page lists every Active or Board member with a birthday on file, with the date of their next birthday and the age they turn. It can be searched by name or email, filtered by the Congratulate column (yes or no), sorted and paged, 50 rows per page. By default the nearest birthday comes first, and dates wrap around the end of the year.
+> **Answer:** The Birthdays tab (/admin/members/birthdays) lists every Active member with a birthday on file, with the date of their next birthday and the age they turn. It can be searched by name or email, filtered by the Congratulate column (yes or no), sorted and paged, 50 rows per page. By default the nearest birthday comes first, and dates wrap around the end of the year.
 >
 > **Notes:**
-> - Only the statuses Active and Board count. A member whose stored birthday does not contain a full year-month-day date is left out.
+> - Only the Active status counts, so Inactive and Alumni members are left out. A member whose stored birthday does not contain a full year-month-day date is left out.
 > - Today's birthday counts as upcoming and shows today's date.
 > - The age is the year of the next birthday minus the birth year.
 > - Sorting and paging happen after the dates are worked out, because the next-birthday date is not stored.
@@ -19,9 +19,9 @@ sequenceDiagram
     participant Worker
     participant D1
 
-    Person->>Browser: open /admin/birthdays
+    Person->>Browser: open /admin/members/birthdays
     Browser->>Worker: getUpcomingBirthdaysFn(search, wantsCongratulation, sort, page)
-    Worker->>D1: Active and Board members with a birthday
+    Worker->>D1: Active members with a birthday
     opt congratulation filter set
         Worker->>D1: keep members whose choice matches
     end

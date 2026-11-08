@@ -2,7 +2,7 @@
 
 > **Question:** Which admin actions can a manager do, and which are only for admins?
 >
-> **Answer:** Managers can do day-to-day running of the club: dashboard, member lists and edits, equipment, categories, birthdays, settings, exports and the Violations list. Admins can do all of that plus the actions that reach every member or change who gets in: broadcast, test email, club code, free-space expiry, bans, and assigning the manager or admin role. A manager who tries an admin-only call gets "Insufficient permissions". The buttons for those actions are hidden or disabled for managers, so the error appears only if the call is made by hand.
+> **Answer:** Managers can do day-to-day running of the club: dashboard, Club Members (members, birthdays, violations), Equipment (equipment and categories), settings and exports. Admins can do all of that plus the actions that reach every member or change who gets in: broadcast, test email, club code, free-space expiry, bans, and assigning the manager or admin role. A manager who tries an admin-only call gets "Insufficient permissions". The buttons for those actions are hidden or disabled for managers, so the error appears only if the call is made by hand.
 >
 > **Notes:**
 >

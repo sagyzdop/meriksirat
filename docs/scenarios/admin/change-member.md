@@ -8,7 +8,7 @@
 >
 > - The Manager and Admin options are greyed out for managers. The server refuses the same change if it is sent by hand, see [who-can-do-what.md](who-can-do-what.md).
 > - Only the fields sent are changed. A call with nothing to change is refused with "No valid fields provided for update".
-> - Birthdays use only the Active and Board statuses, so a status change can add or remove the member's birthday event. A failure of that sync is logged and does not undo the change, see [sync-birthdays.md](sync-birthdays.md).
+> - Birthdays use only the Active status, so a status change can add or remove the member's birthday event. A failure of that sync is logged and does not undo the change, see [sync-birthdays.md](sync-birthdays.md).
 > - A person set to Inactive is also refused at the next sign-in. The sign-in side is in [../account/sign-in.md](../account/sign-in.md).
 > - First name and last name can also be changed by this function, but this table does not offer them.
 > - The clearance dropdown offers levels 1 to 10. A manager can also set a role back to Member, even for an admin.

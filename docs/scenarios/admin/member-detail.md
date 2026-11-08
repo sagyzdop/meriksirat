@@ -19,7 +19,7 @@ sequenceDiagram
     participant Worker
     participant D1
 
-    Person->>Browser: open /admin/users/userId
+    Person->>Browser: open /admin/members/userId
     Browser->>Worker: getAdminUserByIdFn(userId)
     Worker->>D1: read the user
     alt user not found

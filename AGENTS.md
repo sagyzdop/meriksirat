@@ -30,6 +30,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 - Component folder path mirrors the route path minus `.tsx` (drop `_authenticated`/`_public` groups); page exports named `Page`. Large pages get a `components/` subfolder.
 - **Never `useSearch({ from })`/`useNavigate({ from })` from pages under `_authenticated` routes** — it fails typecheck (TS2820/TS2322); pass search data/navigators via props instead.
 - Build UI from `src/components/ui/` (shadcn) and `src/components/shared/`; reuse over recreate. No comments unless asked.
+- Routes: `/account` (was `/profile`), `/admin/members` (with birthdays and violations; was `/admin/users`), `/admin/equipment/categories`. Dates go through `formatDate`/`formatDateTime` in `src/lib/format.ts`; storage usage UI is in `src/components/shared/storage-usage.tsx`.
 - `routeTree.gen.ts` is generated — do not edit.
 
 ## Database / schema
@@ -54,7 +55,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 - `0 * * * *`: `checkFlamekeeperHealth`, `maintainPool`, `drainFlamekeepers`, `finishBans`, `expireAlbums`, `checkBufferUsage`, then the Telegram bot configuration, which calls Telegram only when the deployed version (`CF_VERSION_METADATA.id`) differs from the KV marker `telegram-bot:configured-version`.
 - `0 3 * * *`: `graduateFlamekeepers`.
 
-Nobody holds photos on a flamekeeper until Stage 2 of #15: `maintainPool` only resets old `full` rows and sends the pool-low alert, and `drainFlamekeepers` only ends rows left in the old `draining` state. Stop, graduation, domain change and ban end flamekeeping at once (`src/lib/pool/stop-server.ts`). The old placement, drain and relay code is at `dev` commit `2565826`.
+Nobody holds photos on a flamekeeper until Stage 2 of #15: `maintainPool` only resets old `full` rows and sends the pool-low alert (threshold is the admin "% used" setting, default 90), and `drainFlamekeepers` only ends rows left in the old `draining` state. Stop, graduation, domain change and ban end flamekeeping at once (`src/lib/pool/stop-server.ts`). The old placement, drain and relay code is at `dev` commit `2565826`.
 
 Test with `wrangler dev --test-scheduled`, then `curl "http://localhost:3000/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"` (swap in each schedule, spaces as `+`).
 
