@@ -1,3 +1,5 @@
+import { CLUB_TIMEZONE } from '@/lib/club-time'
+
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB']
@@ -9,20 +11,58 @@ export function formatBytes(bytes: number): string {
   return `${value >= 10 || exponent === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[exponent]}`
 }
 
-/**
- * Format a UTC ISO timestamp as a stable date string. Uses a fixed UTC
- * timezone so server and client renders match (avoids hydration mismatches).
- */
-export function formatUtcDate(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+}
+
+const TIME_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+}
+
+function toValidDate(value: string | number | Date | null | undefined) {
+  if (value === null || value === undefined || value === '') return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function formatUtcDate(
+  value: string | number | Date | null | undefined
+): string {
+  const date = toValidDate(value)
+  if (!date) return ''
+  return new Intl.DateTimeFormat('en-GB', {
+    ...DATE_OPTIONS,
     timeZone: 'UTC',
   }).format(date)
+}
+
+export function formatDate(
+  value: string | number | Date | null | undefined
+): string {
+  const date = toValidDate(value)
+  if (!date) return ''
+  return new Intl.DateTimeFormat('en-GB', {
+    ...DATE_OPTIONS,
+    timeZone: CLUB_TIMEZONE,
+  }).format(date)
+}
+
+export function formatDateTime(
+  value: string | number | Date | null | undefined
+): string {
+  const date = toValidDate(value)
+  if (!date) return ''
+  return new Intl.DateTimeFormat('en-GB', {
+    ...DATE_OPTIONS,
+    ...TIME_OPTIONS,
+    timeZone: CLUB_TIMEZONE,
+  })
+    .format(date)
+    .replace(/^(.*\d{4}) /, '$1, ')
 }
 
 /**
@@ -37,24 +77,6 @@ export function toDateOnlyString(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
-}
-
-/**
- * Format a UTC ISO timestamp as a stable date + time string. Uses a fixed UTC
- * timezone so server and client renders match (avoids hydration mismatches).
- */
-export function formatUtcDateTime(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  }).format(date)
 }
 
 export function siteOrigin(value: string | undefined): string {

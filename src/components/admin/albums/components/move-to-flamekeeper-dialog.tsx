@@ -108,18 +108,30 @@ export function MoveToFlamekeeperDialog({
   const destinations = React.useMemo(() => {
     const map = new Map<
       string,
-      { name: string; albums: number; bytes: number }
+      { name: string; albums: number; bytes: number; seen: Set<string> }
     >()
     for (const item of movable) {
-      const key = item.flamekeeperUserId ?? 'unknown'
-      const entry = map.get(key) ?? {
-        name: item.flamekeeperName ?? 'Flamekeeper',
-        albums: 0,
-        bytes: 0,
+      const parts = item.volumes ?? [
+        {
+          userId: item.flamekeeperUserId ?? 'unknown',
+          name: item.flamekeeperName,
+          bytes: item.bytes,
+        },
+      ]
+      for (const part of parts) {
+        const entry = map.get(part.userId) ?? {
+          name: part.name ?? 'Flamekeeper',
+          albums: 0,
+          bytes: 0,
+          seen: new Set<string>(),
+        }
+        if (!entry.seen.has(item.albumId)) {
+          entry.seen.add(item.albumId)
+          entry.albums += 1
+        }
+        entry.bytes += part.bytes
+        map.set(part.userId, entry)
       }
-      entry.albums += 1
-      entry.bytes += item.bytes
-      map.set(key, entry)
     }
     return [...map.values()]
   }, [movable])
@@ -191,13 +203,15 @@ export function MoveToFlamekeeperDialog({
         const result = await completeOffloadFn({
           data: {
             albumId: session.albumId,
-            volumeFolderId: session.volumeFolderId,
-            files: session.files.map(({ id, name, size, md5 }) => ({
-              id,
-              name,
-              size,
-              md5,
-            })),
+            files: session.files.map(
+              ({ id, name, size, md5, volumeFolderId }) => ({
+                id,
+                name,
+                size,
+                md5,
+                volumeFolderId,
+              })
+            ),
           },
         })
         if (result.ok) {

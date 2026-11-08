@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { addDays, format } from 'date-fns'
+import { formatDate } from '@/lib/format'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -416,11 +417,7 @@ export function TimeSlotPicker({
               <span>
                 Booking for{' '}
                 <span className="font-medium">
-                  {date?.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  })}
+                  {date ? formatDate(date) : null}
                 </span>{' '}
                 from{' '}
                 <span className="font-medium">

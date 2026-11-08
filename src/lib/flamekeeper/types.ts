@@ -35,6 +35,20 @@ export interface StopStatus {
   state: FlamekeeperState
 }
 
+export const STATE_LABEL: Record<FlamekeeperState, string> = {
+  active: 'Active',
+  full: 'Full',
+  draining: 'Draining',
+  lost: 'Lost',
+  drained: 'Stopped',
+}
+
+export function flamekeeperStatus(
+  row: Pick<AdminFlamekeeperRow, 'state' | 'bannedAt'>
+): string {
+  return row.bannedAt ? 'Banned' : STATE_LABEL[row.state]
+}
+
 const pledgeGb = z
   .number()
   .refine(isValidPledgeGb, 'Choose one of the pledge options')

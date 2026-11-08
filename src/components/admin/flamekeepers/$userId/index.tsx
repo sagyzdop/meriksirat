@@ -20,16 +20,11 @@ import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { formatGraduationMonth } from '@/lib/graduation-date'
 import { lostDeadline } from '@/lib/pool/health'
 import { StateBadge } from '../components/state-badge'
+import { formatDate as formatClubDate } from '@/lib/format'
 
 const formatDate = (value: string | number | Date | null | undefined) => {
   if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  return formatClubDate(value) || String(value)
 }
 
 interface FlamekeeperUser {

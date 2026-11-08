@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { formatDate } from '@/lib/format'
 
 interface DatePickerProps {
   value?: Date
@@ -21,15 +22,6 @@ export default function DatePicker({
   disabled,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
-
-  const formatDate = (date: Date) => {
-    // Use consistent formatting to avoid hydration mismatch
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

@@ -38,10 +38,7 @@ function RouteComponent() {
 function DashboardPending() {
   return (
     <PageContainer>
-      <PageHeader
-        title="Dashboard"
-        description="Bookings, albums, members and storage at a glance"
-      />
+      <PageHeader title="Dashboard" />
       <div className="max-w-2xl space-y-6">
         <Skeleton className="h-9 w-80" />
         <div className="space-y-2">

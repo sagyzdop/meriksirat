@@ -96,6 +96,7 @@ export async function loadListingSources(
         ? []
         : [
             {
+              id: v.id,
               userId: v.userId,
               driveFolderId: v.driveFolderId,
               droppedAt: v.droppedAt,

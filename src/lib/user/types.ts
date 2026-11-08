@@ -99,6 +99,11 @@ export const BanUserSchema = z.object({
   reason: z.string().trim().min(1, 'Give a reason for the ban').max(500),
 })
 
+export const BulkBanUsersSchema = z.object({
+  userIds: z.array(z.string()).min(1),
+  reason: z.string().trim().min(1, 'Give a reason for the ban').max(500),
+})
+
 export const UnbanUserSchema = z.object({
   userId: z.string(),
 })

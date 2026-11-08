@@ -21,7 +21,11 @@ import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-f
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { toDateOnlyString } from '@/lib/format'
-import { ALBUM_STATUSES, ALBUM_STATUS_INFO } from '@/lib/albums/status'
+import {
+  ALBUM_STATUSES,
+  ALBUM_STATUS_INFO,
+  DEFAULT_ALBUM_STATUS_FILTER,
+} from '@/lib/albums/status'
 import type { AdminAlbumRow } from '@/lib/albums/types'
 import type { PaginationMeta } from '@/lib/pagination'
 import { createAlbumColumns } from './album-columns'
@@ -121,9 +125,18 @@ export function AlbumDataTable({
 
   const selectedAlbums = albums.filter((album) => rowSelection[album.id])
 
+  const statuses = filters.status ?? []
+  const isStatusFiltered =
+    statuses.length > 0 &&
+    (statuses.length !== DEFAULT_ALBUM_STATUS_FILTER.length ||
+      statuses.some(
+        (status) =>
+          !(DEFAULT_ALBUM_STATUS_FILTER as readonly string[]).includes(status)
+      ))
+
   const isFiltered =
     !!filters.search ||
-    !!filters.status?.length ||
+    isStatusFiltered ||
     !!filters.storage?.length ||
     !!filters.startDate ||
     !!filters.endDate

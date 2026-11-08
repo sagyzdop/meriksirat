@@ -1,11 +1,10 @@
 import { Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Item, ItemGroup } from '@/components/ui/item'
-import { Skeleton } from '@/components/ui/skeleton'
+import { ItemGroup } from '@/components/ui/item'
+import { BufferUsage, PoolUsage } from '@/components/shared/storage-usage'
+import { adminDashboardQueries } from '@/lib/admin/dashboard-queries'
 import type { StorageStats } from '@/lib/admin/dashboard-types'
-import { isPoolLow } from '@/lib/pool/placement'
-import { BufferItems } from '../components/buffer-items'
-import { PoolItem } from '../components/pool-item'
 
 interface PageProps {
   stats?: StorageStats
@@ -13,24 +12,19 @@ interface PageProps {
 }
 
 export function Page({ stats, statsLoading }: PageProps) {
+  const { data: settings } = useQuery(adminDashboardQueries.settings())
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <ItemGroup className="gap-2">
-        <BufferItems usage={stats?.buffer} isLoading={statsLoading} />
-        {stats ? (
-          <PoolItem pool={stats.pool} />
-        ) : statsLoading ? (
-          <Item variant="outline" size="sm">
-            <Skeleton className="h-10 w-full" />
-          </Item>
-        ) : null}
+        <BufferUsage
+          usage={stats?.buffer}
+          isLoading={statsLoading}
+          alertPercent={settings?.bufferAlertPercent}
+        />
+        <PoolUsage pool={stats?.pool} isLoading={statsLoading} />
       </ItemGroup>
-      {stats && isPoolLow(stats.pool, stats.pool.alertPercent) ? (
-        <p className="text-sm text-destructive">
-          Pool usage is at or above {stats.pool.alertPercent}% of the pledge.
-          Recruit flamekeepers or schedule albums for deletion.
-        </p>
-      ) : null}
+
       <Button variant="outline" asChild>
         <Link to="/admin/settings/storage">Storage settings</Link>
       </Button>

@@ -1,4 +1,3 @@
-import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
 
@@ -10,6 +9,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/format'
 
 interface DateRangeFilterProps {
   from?: string
@@ -34,8 +34,8 @@ export function DateRangeFilter({
 
   const label = fromDate
     ? toDate
-      ? `Date: ${format(fromDate, 'MMM d, yyyy')} – ${format(toDate, 'MMM d, yyyy')}`
-      : `Date: from ${format(fromDate, 'MMM d, yyyy')}`
+      ? `Date: ${formatDate(fromDate)} – ${formatDate(toDate)}`
+      : `Date: from ${formatDate(fromDate)}`
     : 'Date Range'
 
   return (

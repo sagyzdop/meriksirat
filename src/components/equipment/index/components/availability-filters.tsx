@@ -1,4 +1,3 @@
-import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -12,6 +11,7 @@ import {
 import { cn } from '@/lib/utils'
 import { TimeRangePicker } from './time-range-picker'
 import { getClubLocalParts } from '@/lib/booking'
+import { formatDate } from '@/lib/format'
 
 function dateKeyToDate(dateKey?: string): Date | undefined {
   if (!dateKey) return undefined
@@ -101,7 +101,7 @@ export function AvailabilityFilters({
               >
                 <CalendarIcon data-icon="inline-start" />
                 <span className="min-w-0 flex-1 truncate text-left">
-                  {format(selectedDate, 'MMM d, yyyy')}
+                  {formatDate(selectedDate)}
                 </span>
               </Button>
             </PopoverTrigger>

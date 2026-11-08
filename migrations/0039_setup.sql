@@ -28,6 +28,4 @@ ALTER TABLE `__new_settings` RENAME TO `settings`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
 UPDATE `settings` SET `pool_low_alert_percent` = 100 - `pool_low_alert_percent`;
 --> statement-breakpoint
-UPDATE `user` SET `status` = 'Alumni' WHERE `status` IN ('Ex-Board','Ex-Roommate','Graduated');
---> statement-breakpoint
-UPDATE `user` SET `status` = 'Active' WHERE `status` IN ('On Probation','Board','Roommate');
+UPDATE `user` SET `status` = 'Active' WHERE `status` NOT IN ('Active','Inactive','Alumni');

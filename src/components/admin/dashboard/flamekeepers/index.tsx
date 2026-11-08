@@ -1,19 +1,15 @@
 import { Link } from '@tanstack/react-router'
 import {
   Flame,
-  Gauge,
-  HardDrive,
   HeartCrack,
   Hourglass,
   PackageCheck,
   PackageOpen,
-  Waves,
   type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ItemGroup } from '@/components/ui/item'
 import type { FlamekeeperStats } from '@/lib/admin/dashboard-types'
-import { formatGb } from '@/lib/flamekeeper/rules'
 import { StatItem } from '../components/stat-item'
 
 interface PageProps {
@@ -39,18 +35,6 @@ export function Page({ stats, statsLoading }: PageProps) {
       icon: PackageOpen,
       label: 'Drained',
       value: stats?.states.drained.toString(),
-    },
-    {
-      icon: HardDrive,
-      label: 'Pledged',
-      value: stats && formatGb(stats.pledgedBytes),
-    },
-    { icon: Waves, label: 'Used', value: stats && formatGb(stats.usedBytes) },
-    { icon: Waves, label: 'Free', value: stats && formatGb(stats.freeBytes) },
-    {
-      icon: Gauge,
-      label: 'Per-account cap',
-      value: stats && formatGb(stats.capBytes),
     },
   ]
 

@@ -36,20 +36,23 @@ import {
   shareFolderWith,
 } from './storage-drive'
 import {
+  assignVolumes,
   bufferHasRoom,
+  canReusePending,
   deletionDate,
   matchFiles,
   pendingMatches,
-  pickFlamekeeper,
   planMoves,
   verifyCopy,
   type FileIdentity,
   type MovePreview,
   type MoveTarget,
   type OffloadPending,
+  type OffloadPendingVolume,
   type PlacementCandidate,
 } from './storage-plan'
 import { albumStorageHolder } from './status'
+import { packFiles } from './volume-limit'
 import { newId } from './ids'
 import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
 
@@ -60,17 +63,20 @@ const REQUEST_BUDGET = 45
 const MINT_BATCH = 30
 
 const bufferVolumeKey = (albumId: string) =>
-  and(eq(volume.albumId, albumId), isNull(volume.flamekeeperUserId))
+  and(
+    eq(volume.albumId, albumId),
+    isNull(volume.flamekeeperUserId),
+    isNull(volume.droppedAt)
+  )
 
 export type MoveFailure = { ok: false; reason: string; bufferFull?: boolean }
 export type MoveResult = { ok: true } | MoveFailure
 
 export interface OffloadSession {
   albumId: string
-  files: (FileIdentity & { uploaded?: boolean })[]
+  files: (FileIdentity & { volumeFolderId: string; uploaded?: boolean })[]
   downloadToken: string
   uploadUrl: string
-  volumeFolderId: string
 }
 
 async function loadAlbums(database: Database, albumIds: string[]) {
@@ -263,20 +269,32 @@ export async function rescueAlbumVolume(
           : undefined
       )
     )
-    .get()
-  if (!held?.flamekeeperUserId) {
+    .all()
+  const holders = held.filter(
+    (h): h is typeof h & { flamekeeperUserId: string } => !!h.flamekeeperUserId
+  )
+  if (holders.length === 0) {
     return { ok: false, reason: 'No flamekeeper holds this album' }
   }
-  const holderId = held.flamekeeperUserId
 
   const plan = planBufferUpload(process.env)
   if (plan.kind === 'unavailable') return { ok: false, reason: plan.message }
 
   try {
     const token = await getBufferFullAccessToken()
-    const source = held.driveFolderId
-      ? await listIdentities(token, held.driveFolderId, budget)
-      : []
+    const sources: {
+      holder: (typeof holders)[number]
+      files: FileIdentity[]
+    }[] = []
+    for (const holder of holders) {
+      sources.push({
+        holder,
+        files: holder.driveFolderId
+          ? await listIdentities(token, holder.driveFolderId, budget)
+          : [],
+      })
+    }
+    const source = sources.flatMap((s) => s.files)
     const bytes = source.reduce((n, f) => n + f.size, 0)
 
     const overview = await getBufferOverview(OVERVIEW_MAX_AGE_MS)
@@ -287,33 +305,55 @@ export async function rescueAlbumVolume(
       return { ok: false, reason: 'The buffer is full', bufferFull: true }
     }
 
-    if (budget && !budget.take(4)) {
-      return { ok: false, reason: 'Out of budget, continues next run' }
-    }
-    const { volumeId: destVolumeId, folderId: destFolderId } =
-      await withGoogleToken((master) =>
-        ensureBufferVolume(database, master, albumRow, plan.email, bytes)
+    const pendingBytes = new Map<string, number>()
+    const destinations: { volumeId: string; copies: FileIdentity[] }[] = []
+    const groups = packFiles(source)
+    for (const group of groups) {
+      if (budget && !budget.take(4)) {
+        return { ok: false, reason: 'Out of budget, continues next run' }
+      }
+      const groupBytes = group.reduce((n, f) => n + f.size, 0)
+      const { volumeId: destVolumeId, folderId: destFolderId } =
+        await withGoogleToken((master) =>
+          ensureBufferVolume(
+            database,
+            master,
+            albumRow,
+            plan.email,
+            groupBytes,
+            pendingBytes
+          )
+        )
+      pendingBytes.set(
+        destVolumeId,
+        (pendingBytes.get(destVolumeId) ?? 0) + groupBytes
       )
 
-    const existing = await listIdentities(token, destFolderId, budget)
-    const toCopy = matchFiles(source, existing).missing
-    if (toCopy.length > 0) {
-      await copyFilesInto(token, toCopy, destFolderId, budget)
-    }
-    const copies = await listIdentities(token, destFolderId, budget)
-    const check = verifyCopy(source, copies)
-    if (!check.ok) {
-      return { ok: false, reason: check.reason ?? 'Copy did not verify' }
+      const existing = await listIdentities(token, destFolderId, budget)
+      const toCopy = matchFiles(group, existing).missing
+      if (toCopy.length > 0) {
+        await copyFilesInto(token, toCopy, destFolderId, budget)
+      }
+      const copies = await listIdentities(token, destFolderId, budget)
+      const check = verifyCopy(group, copies)
+      if (!check.ok) {
+        return { ok: false, reason: check.reason ?? 'Copy did not verify' }
+      }
+      await recordRemaps(database, albumId, matchFiles(group, copies).pairs)
+      destinations.push({ volumeId: destVolumeId, copies })
     }
 
-    await recordRemaps(database, albumId, matchFiles(source, copies).pairs)
-
-    const holderIds = source.map((f) => f.id)
-    if (holderIds.length > 0) {
+    for (const { holder, files } of sources) {
+      if (files.length === 0) continue
       const failed = await withFlamekeeperToken(
         database,
-        holderId,
-        (t) => deleteFiles(t, holderIds, budget),
+        holder.flamekeeperUserId,
+        (t) =>
+          deleteFiles(
+            t,
+            files.map((f) => f.id),
+            budget
+          ),
         budget
       )
       if (failed.length > 0) {
@@ -325,31 +365,47 @@ export async function rescueAlbumVolume(
     }
 
     const now = new Date()
-    const totalBytes = copies.reduce((n, f) => n + f.size, 0)
+    const released = new Map<string, number>()
+    for (const { holder, files } of sources) {
+      released.set(
+        holder.flamekeeperUserId,
+        (released.get(holder.flamekeeperUserId) ?? 0) +
+          files.reduce((n, f) => n + f.size, 0)
+      )
+    }
     await database.batch([
-      database.delete(volume).where(eq(volume.id, held.id)),
-      database
-        .update(volume)
-        .set({
-          expectedCount: copies.length,
-          expectedBytes: totalBytes,
-          expectedChangedAt: now,
-        })
-        .where(eq(volume.id, destVolumeId)),
+      database.delete(volume).where(
+        inArray(
+          volume.id,
+          holders.map((h) => h.id)
+        )
+      ),
+      ...destinations.map((d) =>
+        database
+          .update(volume)
+          .set({
+            expectedCount: d.copies.length,
+            expectedBytes: d.copies.reduce((n, f) => n + f.size, 0),
+            expectedChangedAt: now,
+          })
+          .where(eq(volume.id, d.volumeId))
+      ),
       database
         .update(album)
         .set({ rescuedAt: now, updatedAt: now })
         .where(eq(album.id, albumId)),
-      database
-        .update(flamekeeper)
-        .set({
-          usedBytes: sql`MAX(${flamekeeper.usedBytes} - ${bytes}, 0)`,
-          driveUsageBytes: sql`MAX(${flamekeeper.driveUsageBytes} - ${bytes}, 0)`,
-          updatedAt: now,
-        })
-        .where(eq(flamekeeper.userId, holderId)),
-    ])
-    await dropEmptyFolder(held.driveFolderId)
+      ...[...released].map(([userId, freed]) =>
+        database
+          .update(flamekeeper)
+          .set({
+            usedBytes: sql`MAX(${flamekeeper.usedBytes} - ${freed}, 0)`,
+            driveUsageBytes: sql`MAX(${flamekeeper.driveUsageBytes} - ${freed}, 0)`,
+            updatedAt: now,
+          })
+          .where(eq(flamekeeper.userId, userId))
+      ),
+    ] as unknown as Parameters<typeof database.batch>[0])
+    for (const h of holders) await dropEmptyFolder(h.driveFolderId)
     await afterMove(albumId, albumRow.driveFolderId)
     return { ok: true }
   } catch (error) {
@@ -392,7 +448,8 @@ async function readPending(albumId: string): Promise<OffloadPending | null> {
   const raw = await (await kv()).get(pendingKey(albumId))
   if (!raw) return null
   try {
-    return JSON.parse(raw) as OffloadPending
+    const parsed = JSON.parse(raw) as OffloadPending
+    return Array.isArray(parsed.volumes) ? parsed : null
   } catch {
     return null
   }
@@ -439,93 +496,115 @@ export async function startOffload(
     if (!albumRow || albumRow.deletedAt) continue
     const own = volumes.filter((v) => v.albumId === id)
     if (albumStorageHolder(own) !== 'buffer') continue
-    const bufferVolume = own.find((v) => !v.flamekeeperUserId)
-    if (!bufferVolume?.driveFolderId) continue
+    const bufferFolders = own
+      .filter((v) => !v.flamekeeperUserId && !v.droppedAt && v.driveFolderId)
+      .map((v) => v.driveFolderId!)
+    if (bufferFolders.length === 0) continue
     if (!budget.take(10)) break
 
     try {
-      const files = await withBufferToken(
-        (t) => listIdentities(t, bufferVolume.driveFolderId!),
-        budget
-      )
-      const bytes = files.reduce((n, f) => n + f.size, 0)
+      const files: (FileIdentity & { mimeType?: string })[] = []
+      for (const folderId of bufferFolders) {
+        files.push(
+          ...(await withBufferToken((t) => listIdentities(t, folderId), budget))
+        )
+      }
       const prior = await readPending(id)
-      const priorUsable =
-        prior && (free.get(prior.destUserId) ?? 0) >= prior.bytes
-      const pick = priorUsable
-        ? { userId: prior!.destUserId }
-        : pickFlamekeeper(
-            bytes,
-            [...free].map(([userId, freeBytes]) => ({ userId, freeBytes }))
-          )
-      if (!pick) {
-        firstFailure ??= 'No flamekeeper has room'
-        continue
-      }
-      const destUserId = pick.userId
+      const reuse =
+        !!prior &&
+        canReusePending(
+          prior,
+          files.map((f) => f.id),
+          free
+        )
 
-      let folderId = prior && priorUsable ? prior.volumeFolderId : ''
-      let permissionId = prior && priorUsable ? prior.permissionId : ''
-      if (!folderId) {
-        const setup = await withGoogleToken(async (master) => {
-          const created = await createDriveFolder(
-            master,
-            volumeFolderName(newId(6)),
-            albumRow.driveFolderId
-          )
-          const writer = await shareFolderWith(
-            master,
-            created.id,
-            emails.get(destUserId)!,
-            'writer'
-          )
-          await shareFolderWith(master, created.id, plan.email, 'reader')
-          return { folderId: created.id, permissionId: writer }
-        }, budget)
-        folderId = setup.folderId
-        permissionId = setup.permissionId
+      let volumesOut: OffloadPendingVolume[]
+      if (reuse) {
+        volumesOut = prior!.volumes
+      } else {
+        const groups = packFiles(files)
+        const picks = assignVolumes(
+          groups.map((g) => g.reduce((n, f) => n + f.size, 0)),
+          [...free].map(([userId, freeBytes]) => ({ userId, freeBytes }))
+        )
+        if (!picks) {
+          firstFailure ??= 'No flamekeeper has room'
+          continue
+        }
+        volumesOut = []
+        for (const [index, group] of groups.entries()) {
+          const destUserId = picks[index].userId
+          const setup = await withGoogleToken(async (master) => {
+            const created = await createDriveFolder(
+              master,
+              volumeFolderName(newId(6)),
+              albumRow.driveFolderId
+            )
+            const writer = await shareFolderWith(
+              master,
+              created.id,
+              emails.get(destUserId)!,
+              'writer'
+            )
+            await shareFolderWith(master, created.id, plan.email, 'reader')
+            return { folderId: created.id, permissionId: writer }
+          }, budget)
+          const groupBytes = group.reduce((n, f) => n + f.size, 0)
+          free.set(destUserId, (free.get(destUserId) ?? 0) - groupBytes)
+          volumesOut.push({
+            destUserId,
+            volumeFolderId: setup.folderId,
+            permissionId: setup.permissionId,
+            bytes: groupBytes,
+            files: group as OffloadPendingVolume['files'],
+          })
+        }
+      }
+      if (reuse) {
+        for (const v of volumesOut) {
+          free.set(v.destUserId, (free.get(v.destUserId) ?? 0) - v.bytes)
+        }
       }
 
-      const pending: OffloadPending = {
-        destUserId,
-        volumeFolderId: folderId,
-        permissionId,
-        bytes,
-        files,
-      }
-      free.set(destUserId, (free.get(destUserId) ?? 0) - bytes)
-
-      const uploadUrl = files[0]
-        ? await mintFor(database, pending, files[0].id, origin, budget)
+      const pending: OffloadPending = { volumes: volumesOut }
+      const firstFile = volumesOut[0]?.files[0]
+      const uploadUrl = firstFile
+        ? await mintFor(database, pending, firstFile.id, origin, budget)
         : ''
       await writePending(id, pending)
       const downloadToken = await withBufferToken(async (t) => t)
-      const already =
-        prior && priorUsable
+
+      const outFiles: OffloadSession['files'] = []
+      for (const v of volumesOut) {
+        const already = reuse
           ? new Set(
               matchFiles(
-                files,
+                v.files,
                 await withFlamekeeperToken(
                   database,
-                  destUserId,
-                  (t) => listIdentities(t, folderId, budget),
+                  v.destUserId,
+                  (t) => listIdentities(t, v.volumeFolderId, budget),
                   budget
                 )
               ).pairs.map((p) => p.source.id)
             )
           : new Set<string>()
+        for (const f of v.files) {
+          outFiles.push({
+            id: f.id,
+            name: f.name,
+            size: f.size,
+            md5: f.md5,
+            volumeFolderId: v.volumeFolderId,
+            ...(already.has(f.id) && { uploaded: true }),
+          })
+        }
+      }
       sessions.push({
         albumId: id,
-        files: files.map(({ id: fileId, name, size, md5 }) => ({
-          id: fileId,
-          name,
-          size,
-          md5,
-          ...(already.has(fileId) && { uploaded: true }),
-        })),
+        files: outFiles,
         downloadToken,
         uploadUrl,
-        volumeFolderId: folderId,
       })
     } catch (error) {
       console.warn(`Could not start the offload of album ${id}:`, error)
@@ -544,15 +623,16 @@ async function mintFor(
   origin: string | undefined,
   budget?: Budget
 ): Promise<string> {
-  const file = pending.files.find((f) => f.id === fileId)
-  if (!file) throw new Error('Unknown file in this move')
+  const dest = pending.volumes.find((v) => v.files.some((f) => f.id === fileId))
+  const file = dest?.files.find((f) => f.id === fileId)
+  if (!dest || !file) throw new Error('Unknown file in this move')
   return withFlamekeeperToken(
     database,
-    pending.destUserId,
+    dest.destUserId,
     (t) =>
       mintResumableUpload(t, {
         name: file.name,
-        folderId: pending.volumeFolderId,
+        folderId: dest.volumeFolderId,
         mimeType: file.mimeType || 'application/octet-stream',
         size: file.size,
         origin,
@@ -578,15 +658,14 @@ export async function completeOffload(
   database: Database,
   input: {
     albumId: string
-    volumeFolderId: string
-    files: FileIdentity[]
+    files: (FileIdentity & { volumeFolderId: string })[]
   }
 ): Promise<MoveResult> {
   const { albumId } = input
   const pending = await readPending(albumId)
   if (!pending)
     return { ok: false, reason: 'This move expired, start it again' }
-  if (!pendingMatches(pending, input.volumeFolderId, input.files)) {
+  if (!pendingMatches(pending, input.files)) {
     return { ok: false, reason: 'The move does not match what was started' }
   }
 
@@ -595,24 +674,36 @@ export async function completeOffload(
     .from(album)
     .where(eq(album.id, albumId))
     .get()
-  const bufferVolume = await database
+  const bufferVolumes = await database
     .select({ id: volume.id, driveFolderId: volume.driveFolderId })
     .from(volume)
     .where(bufferVolumeKey(albumId))
-    .get()
-  if (!albumRow || !bufferVolume) {
+    .all()
+  if (!albumRow || bufferVolumes.length === 0) {
     return { ok: false, reason: 'The album is no longer on the buffer' }
   }
 
   try {
-    const [source, copies] = await Promise.all([
-      bufferVolume.driveFolderId
-        ? withBufferToken((t) => listIdentities(t, bufferVolume.driveFolderId!))
-        : [],
-      withFlamekeeperToken(database, pending.destUserId, (t) =>
-        listIdentities(t, pending.volumeFolderId)
-      ),
-    ])
+    const source: FileIdentity[] = []
+    for (const v of bufferVolumes) {
+      if (!v.driveFolderId) continue
+      source.push(
+        ...(await withBufferToken((t) => listIdentities(t, v.driveFolderId!)))
+      )
+    }
+    const copiesByVolume: {
+      dest: OffloadPendingVolume
+      copies: FileIdentity[]
+    }[] = []
+    for (const dest of pending.volumes) {
+      copiesByVolume.push({
+        dest,
+        copies: await withFlamekeeperToken(database, dest.destUserId, (t) =>
+          listIdentities(t, dest.volumeFolderId)
+        ),
+      })
+    }
+    const copies = copiesByVolume.flatMap((c) => c.copies)
     const check = verifyCopy(source, copies)
     if (!check.ok) {
       return { ok: false, reason: check.reason ?? 'Copy did not verify' }
@@ -636,34 +727,46 @@ export async function completeOffload(
     }
 
     const now = new Date()
-    const bytes = copies.reduce((n, f) => n + f.size, 0)
-    await database.batch([
-      database.delete(volume).where(eq(volume.id, bufferVolume.id)),
-      database.insert(volume).values({
+    const added = new Map<string, number>()
+    const inserts = copiesByVolume.map(({ dest, copies: c }) => {
+      const bytes = c.reduce((n, f) => n + f.size, 0)
+      added.set(dest.destUserId, (added.get(dest.destUserId) ?? 0) + bytes)
+      return database.insert(volume).values({
         id: newId(10),
         albumId,
-        flamekeeperUserId: pending.destUserId,
-        permissionId: pending.permissionId,
-        driveFolderId: pending.volumeFolderId,
-        expectedCount: copies.length,
+        flamekeeperUserId: dest.destUserId,
+        permissionId: dest.permissionId,
+        driveFolderId: dest.volumeFolderId,
+        expectedCount: c.length,
         expectedBytes: bytes,
         expectedChangedAt: now,
-      }),
+      })
+    })
+    await database.batch([
+      database.delete(volume).where(
+        inArray(
+          volume.id,
+          bufferVolumes.map((v) => v.id)
+        )
+      ),
+      ...inserts,
       database
         .update(album)
         .set({ rescuedAt: null, updatedAt: now })
         .where(eq(album.id, albumId)),
-      database
-        .update(flamekeeper)
-        .set({
-          usedBytes: sql`${flamekeeper.usedBytes} + ${bytes}`,
-          driveUsageBytes: sql`${flamekeeper.driveUsageBytes} + ${bytes}`,
-          updatedAt: now,
-        })
-        .where(eq(flamekeeper.userId, pending.destUserId)),
-    ])
+      ...[...added].map(([userId, bytes]) =>
+        database
+          .update(flamekeeper)
+          .set({
+            usedBytes: sql`${flamekeeper.usedBytes} + ${bytes}`,
+            driveUsageBytes: sql`${flamekeeper.driveUsageBytes} + ${bytes}`,
+            updatedAt: now,
+          })
+          .where(eq(flamekeeper.userId, userId))
+      ),
+    ] as unknown as Parameters<typeof database.batch>[0])
     await clearPending(albumId)
-    await dropEmptyFolder(bufferVolume.driveFolderId)
+    for (const v of bufferVolumes) await dropEmptyFolder(v.driveFolderId)
     await afterMove(albumId, albumRow.driveFolderId)
     return { ok: true }
   } catch (error) {

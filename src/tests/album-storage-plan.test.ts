@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assignVolumes,
   bufferHasRoom,
+  canReusePending,
   deletionDate,
   deletionNoticeText,
   deletionRecipients,
   matchFiles,
+  pendingMatches,
   pickFlamekeeper,
   planDrainStep,
   planMoves,
@@ -194,5 +197,63 @@ describe('scheduled deletion', () => {
     expect(text).toContain('Hike')
     expect(text).toContain('Nov 21, 2026')
     expect(text).toContain('https://x/albums/1')
+  })
+})
+
+describe('assignVolumes', () => {
+  it('spends each flamekeeper’s room across volumes', () => {
+    const picks = assignVolumes([6, 6], [c('a', 10), c('b', 8)])
+    expect(picks?.map((p) => p.userId)).toEqual(['a', 'b'])
+  })
+  it('fails when any volume has nowhere to go', () => {
+    expect(assignVolumes([6, 6], [c('a', 10)])).toBeNull()
+  })
+})
+
+describe('multi-volume offload pending', () => {
+  const file = (id: string) => ({
+    id,
+    name: id,
+    size: 1,
+    md5: id,
+    mimeType: 'image/jpeg',
+  })
+  const pending = {
+    volumes: [
+      {
+        destUserId: 'a',
+        volumeFolderId: 'v1',
+        permissionId: 'p',
+        bytes: 1,
+        files: [file('x')],
+      },
+      {
+        destUserId: 'a',
+        volumeFolderId: 'v2',
+        permissionId: 'p',
+        bytes: 1,
+        files: [file('y')],
+      },
+    ],
+  }
+  it('matches only when each folder holds its files', () => {
+    const ok = [
+      { ...file('x'), volumeFolderId: 'v1' },
+      { ...file('y'), volumeFolderId: 'v2' },
+    ]
+    expect(pendingMatches(pending, ok)).toBe(true)
+    expect(
+      pendingMatches(pending, [
+        { ...file('x'), volumeFolderId: 'v2' },
+        { ...file('y'), volumeFolderId: 'v2' },
+      ])
+    ).toBe(false)
+  })
+  it('reuses only with the same files and room', () => {
+    expect(canReusePending(pending, ['x', 'y'], new Map([['a', 2]]))).toBe(true)
+    expect(canReusePending(pending, ['x', 'y'], new Map([['a', 1]]))).toBe(
+      false
+    )
+    expect(canReusePending(pending, ['x'], new Map([['a', 9]]))).toBe(false)
   })
 })

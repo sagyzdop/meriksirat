@@ -42,6 +42,7 @@ import type {
   BookingCollapsibleRowData,
   BookingStatusOption,
 } from './types'
+import { formatDate } from '@/lib/format'
 
 const SELECT_W = 'w-4'
 const ID_W = 'w-14'
@@ -180,7 +181,7 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
           >
             <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
             <span className="hidden min-w-0 truncate text-muted-foreground sm:inline">
-              {format(new Date(booking.startTime), 'MMM d')}
+              {formatDate(booking.startTime)}
             </span>
             <span
               className={cn(

@@ -40,7 +40,8 @@ export async function ensureBufferVolume(
   masterToken: string,
   albumRow: { id: string; driveFolderId: string },
   bufferEmail: string,
-  incomingBytes: number
+  incomingBytes: number,
+  pendingBytes: Map<string, number> = new Map()
 ): Promise<{ volumeId: string; folderId: string }> {
   const loadAll = () =>
     database
@@ -55,7 +56,13 @@ export async function ensureBufferVolume(
       .orderBy(asc(volume.createdAt), asc(volume.id))
       .all()
 
-  const existing = pickVolumeWithRoom(await loadAll(), incomingBytes)
+  const existing = pickVolumeWithRoom(
+    (await loadAll()).map((v) => ({
+      ...v,
+      expectedBytes: (v.expectedBytes ?? 0) + (pendingBytes.get(v.id) ?? 0),
+    })),
+    incomingBytes
+  )
   const setup = planVolumeSetup(existing)
   if (existing && !setup.create && !setup.share) {
     return { volumeId: existing.id, folderId: existing.driveFolderId! }

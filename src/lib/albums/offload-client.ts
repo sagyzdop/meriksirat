@@ -5,6 +5,7 @@ export interface OffloadSessionFile {
   name: string
   size: number
   md5: string
+  volumeFolderId: string
   uploaded?: boolean
 }
 
@@ -13,7 +14,6 @@ export interface OffloadSession {
   files: OffloadSessionFile[]
   downloadToken: string
   uploadUrl: string
-  volumeFolderId: string
 }
 
 export interface OffloadOptions {

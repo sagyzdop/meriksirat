@@ -5,15 +5,15 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const TABS = [
-  { value: 'members', label: 'Members', to: '/admin/settings/members' },
   { value: 'bookings', label: 'Bookings', to: '/admin/settings/bookings' },
   { value: 'albums', label: 'Albums', to: '/admin/settings/albums' },
-  { value: 'storage', label: 'Storage', to: '/admin/settings/storage' },
+  { value: 'members', label: 'Members', to: '/admin/settings/members' },
   {
     value: 'flamekeepers',
     label: 'Flamekeepers',
     to: '/admin/settings/flamekeepers',
   },
+  { value: 'storage', label: 'Storage', to: '/admin/settings/storage' },
 ] as const
 
 export function Page({ children }: { children: ReactNode }) {
@@ -22,11 +22,8 @@ export function Page({ children }: { children: ReactNode }) {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Settings"
-        description="Members, bookings, albums, storage and flamekeepers"
-      />
-      <Tabs value={active} className="gap-4">
+      <PageHeader title="Settings" />
+      <Tabs value={active} className="mb-6">
         <div className="overflow-x-auto">
           <TabsList variant="line">
             {TABS.map((tab) => (

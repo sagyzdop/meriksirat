@@ -37,7 +37,7 @@ function RouteComponent() {
     <Page
       buffer={buffer}
       bufferLoading={bufferFetching && buffer === undefined}
-      capBytes={pool?.capBytes}
+      pool={pool}
       canEditCap={canEditCap}
     />
   )

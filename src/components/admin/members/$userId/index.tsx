@@ -35,16 +35,11 @@ import type { AdminUserAlbum } from '@/lib/admin/dashboard-types'
 import type { PaginationMeta } from '@/lib/pagination'
 import { DetailRow } from '@/components/shared/detail-row'
 import { fullName } from '@/lib/utils'
+import { formatDate as formatClubDate } from '@/lib/format'
 
 const formatDate = (value: string | number | null | undefined) => {
   if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  return formatClubDate(value) || String(value)
 }
 
 interface PageProps {

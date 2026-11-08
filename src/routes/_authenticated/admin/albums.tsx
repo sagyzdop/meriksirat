@@ -18,11 +18,7 @@ function RouteComponent() {
   return (
     <PageContainer>
       {!isDetail && (
-        <PageHeader
-          title="Manage Albums"
-          description="Photo albums across the club, with where each one is stored."
-          actions={<ExportAlbumsDialog />}
-        />
+        <PageHeader title="Manage Albums" actions={<ExportAlbumsDialog />} />
       )}
       <Outlet />
     </PageContainer>

@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { EquipmentWithCategory } from '@/lib/equipment'
 import { format } from 'date-fns'
+import { formatDate } from '@/lib/format'
 
 interface BookingConfirmationDialogProps {
   open: boolean
@@ -71,12 +72,7 @@ export function BookingConfirmationDialog({
             <div className="text-sm text-muted-foreground space-y-1">
               <p>
                 <span className="font-medium">Date:</span>{' '}
-                {selectedDate?.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {formatDate(selectedDate)}
               </p>
               {bookingTimes && (
                 <>

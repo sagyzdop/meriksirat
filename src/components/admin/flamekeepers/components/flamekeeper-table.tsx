@@ -9,7 +9,7 @@ import {
   type PaginationState,
   type Updater,
 } from '@tanstack/react-table'
-import { X } from 'lucide-react'
+import { ShieldBan, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -29,6 +29,7 @@ import {
   BanUserDialog,
   UnbanUserDialog,
 } from '@/components/shared/ban-user-dialogs'
+import { BulkBanUsersDialog } from '@/components/shared/bulk-ban-users-dialog'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { createFlamekeeperColumns } from './flamekeeper-columns'
 import { FLAMEKEEPER_STATUSES } from '../types'
@@ -56,8 +57,12 @@ export function FlamekeeperTable({
   viewerId,
 }: FlamekeeperTableProps) {
   const navigate = useNavigate()
+  const [rowSelection, setRowSelection] = React.useState<
+    Record<string, boolean>
+  >({})
   const [banUserId, setBanUserId] = React.useState<string | null>(null)
   const [unbanUserId, setUnbanUserId] = React.useState<string | null>(null)
+  const [bulkBanOpen, setBulkBanOpen] = React.useState(false)
 
   const { sorting, handleSortingChange } = useServerTableSorting(filters)
 
@@ -102,13 +107,17 @@ export function FlamekeeperTable({
     columns,
     state: {
       sorting,
+      rowSelection,
       pagination: {
         pageIndex: filters.page - 1,
         pageSize: filters.limit,
       },
     },
     getRowId: (row) => row.userId,
+    enableRowSelection: (row) =>
+      canBan && row.original.userId !== viewerId && !row.original.bannedAt,
     enableSortingRemoval: false,
+    onRowSelectionChange: setRowSelection,
     onSortingChange: handleSortingChange,
     onPaginationChange: handlePaginationChange,
     getCoreRowModel: getCoreRowModel(),
@@ -178,6 +187,10 @@ export function FlamekeeperTable({
     })
   }
 
+  const selectedIds = filteredRows
+    .filter((row) => rowSelection[row.userId])
+    .map((row) => row.userId)
+
   const banRow = rows.find((row) => row.userId === banUserId)
   const unbanRow = rows.find((row) => row.userId === unbanUserId)
 
@@ -206,6 +219,17 @@ export function FlamekeeperTable({
             <X className="ml-2 h-4 w-4" />
           </Button>
         )}
+        {selectedIds.length > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8"
+            onClick={() => setBulkBanOpen(true)}
+          >
+            <ShieldBan className="mr-2 h-4 w-4" />
+            Ban ({selectedIds.length})
+          </Button>
+        )}
       </div>
 
       <div className="relative overflow-x-auto rounded-md border">
@@ -215,7 +239,10 @@ export function FlamekeeperTable({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="whitespace-nowrap">
+                  <TableHead
+                    key={header.id}
+                    className="whitespace-nowrap [&:has([role=checkbox])]:pl-3"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -248,7 +275,10 @@ export function FlamekeeperTable({
                   className="cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap">
+                    <TableCell
+                      key={cell.id}
+                      className="whitespace-nowrap [&:has([role=checkbox])]:pl-3"
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -296,6 +326,12 @@ export function FlamekeeperTable({
           onOpenChange={(open) => !open && setUnbanUserId(null)}
         />
       )}
+      <BulkBanUsersDialog
+        userIds={selectedIds}
+        open={bulkBanOpen}
+        onOpenChange={setBulkBanOpen}
+        onSuccess={() => setRowSelection({})}
+      />
     </div>
   )
 }

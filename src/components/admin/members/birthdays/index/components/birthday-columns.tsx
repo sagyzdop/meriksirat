@@ -5,14 +5,10 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import type { BirthdayUser } from '@/lib/birthdays/types'
+import { formatUtcDate } from '@/lib/format'
 
 function formatOccurrence(occurrence: string): string {
-  return new Date(`${occurrence}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return formatUtcDate(occurrence)
 }
 
 export const createBirthdayColumns = (): ColumnDef<BirthdayUser>[] => [

@@ -39,7 +39,6 @@ export function Page({
     <PageContainer>
       <PageHeader
         title="Dashboard"
-        description="Bookings, albums, members and storage at a glance"
         actions={
           <DashboardHeaderActions
             alerts={alerts}

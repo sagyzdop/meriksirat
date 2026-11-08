@@ -1,22 +1,10 @@
 import { Badge } from '@/components/ui/badge'
 import type { FlamekeeperState } from '@/lib/access/access-rules'
 import { cn } from '@/lib/utils'
+import { STATE_LABEL, flamekeeperStatus } from '@/lib/flamekeeper/types'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
-import type { FlamekeeperStatus } from '../types'
 
-const STATE_LABEL: Record<FlamekeeperState, FlamekeeperStatus> = {
-  active: 'Active',
-  full: 'Full',
-  draining: 'Draining',
-  lost: 'Lost',
-  drained: 'Stopped',
-}
-
-export function flamekeeperStatus(
-  row: Pick<AdminFlamekeeperRow, 'state' | 'bannedAt'>
-): FlamekeeperStatus {
-  return row.bannedAt ? 'Banned' : STATE_LABEL[row.state]
-}
+export { flamekeeperStatus }
 
 export const STATE_VARIANT = {
   active: 'default',

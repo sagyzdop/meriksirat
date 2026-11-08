@@ -16,6 +16,20 @@ export const ALBUM_STATUSES = [
   'lost',
 ] as const satisfies readonly AlbumStatus[]
 
+export const DEFAULT_ALBUM_STATUS_FILTER = [
+  'healthy',
+  'unhealthy',
+  'rescued',
+  'scheduled_deletion',
+] as const satisfies readonly AlbumStatus[]
+
+export function normalizeAlbumStatusFilter<
+  T extends { status?: readonly AlbumStatus[] },
+>(filters: T): T {
+  if (filters.status && filters.status.length > 0) return filters
+  return { ...filters, status: [...DEFAULT_ALBUM_STATUS_FILTER] }
+}
+
 export const ALBUM_STATUS_INFO: Record<
   AlbumStatus,
   { label: string; description: string }

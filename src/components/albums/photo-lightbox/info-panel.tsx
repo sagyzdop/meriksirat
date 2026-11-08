@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { AlbumPhoto } from '@/lib/albums'
-import { formatBytes, formatUtcDateTime } from '@/lib/format'
+import { formatBytes, formatDateTime } from '@/lib/format'
 
 interface InfoPanelProps {
   photo: AlbumPhoto
@@ -65,7 +65,7 @@ export function InfoPanel({
             <div>
               <div className="text-xs font-medium text-zinc-400">Date</div>
               <div className="mt-0.5">
-                {formatUtcDateTime(photo.capturedAt) || '—'}
+                {formatDateTime(photo.capturedAt) || '—'}
               </div>
             </div>
           </div>

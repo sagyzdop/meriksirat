@@ -1,5 +1,6 @@
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
+import { ExportFlamekeepersDialog } from '@/components/shared/export-flamekeepers-dialog'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { FlamekeeperTable } from './components/flamekeeper-table'
 import type { FlamekeeperTableFilters } from './types'
@@ -26,7 +27,16 @@ export function Page({
 
   return (
     <PageContainer>
-      <PageHeader title="Flamekeeper Management" description={description} />
+      <PageHeader
+        title="Flamekeeper Management"
+        description={description}
+        actions={
+          <ExportFlamekeepersDialog
+            search={filters.search}
+            status={filters.status}
+          />
+        }
+      />
       <FlamekeeperTable
         rows={rows}
         filters={filters}

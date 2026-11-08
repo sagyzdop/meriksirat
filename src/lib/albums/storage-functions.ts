@@ -8,6 +8,7 @@ const fileSchema = z.object({
   name: z.string(),
   size: z.number().int().nonnegative(),
   md5: z.string(),
+  volumeFolderId: z.string().min(1),
 })
 
 export interface OffloadSessionData {
@@ -17,11 +18,11 @@ export interface OffloadSessionData {
     name: string
     size: number
     md5: string
+    volumeFolderId: string
     uploaded?: boolean
   }[]
   downloadToken: string
   uploadUrl: string
-  volumeFolderId: string
 }
 
 export const previewAlbumMovesFn = createServerFn({ method: 'POST' })
@@ -70,7 +71,6 @@ export const completeOffloadFn = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       albumId: z.string().min(1),
-      volumeFolderId: z.string().min(1),
       files: z.array(fileSchema).max(5000),
     })
   )

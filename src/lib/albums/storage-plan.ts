@@ -1,3 +1,4 @@
+import { splitBytes } from './volume-limit'
 import type { AlbumStorageHolder } from './status'
 
 export type MoveTarget = 'buffer' | 'flamekeeper'
@@ -24,6 +25,7 @@ export interface MovePreviewItem {
   bytes: number
   flamekeeperUserId?: string
   flamekeeperName?: string
+  volumes?: { userId: string; name?: string; bytes: number }[]
   skipReason?: string
 }
 
@@ -57,6 +59,24 @@ export function pickFlamekeeper(
     }
   }
   return best
+}
+
+export function assignVolumes(
+  volumeBytes: number[],
+  candidates: PlacementCandidate[]
+): PlacementCandidate[] | null {
+  const free = new Map(candidates.map((c) => [c.userId, c.freeBytes]))
+  const picks: PlacementCandidate[] = []
+  for (const bytes of volumeBytes) {
+    const pick = pickFlamekeeper(
+      bytes,
+      candidates.map((c) => ({ ...c, freeBytes: free.get(c.userId) ?? 0 }))
+    )
+    if (!pick) return null
+    picks.push(pick)
+    free.set(pick.userId, (free.get(pick.userId) ?? 0) - bytes)
+  }
+  return picks
 }
 
 export function planMoves(input: {
@@ -94,18 +114,26 @@ export function planMoves(input: {
     } else if (input.target === 'flamekeeper' && a.holder === 'flamekeeper') {
       item.skipReason = 'Already on a flamekeeper'
     } else if (input.target === 'flamekeeper') {
-      const pick = pickFlamekeeper(
-        a.bytes,
+      const sizes = splitBytes(a.bytes)
+      const picks = assignVolumes(
+        sizes,
         input.candidates.map((c) => ({
           ...c,
           freeBytes: free.get(c.userId) ?? 0,
         }))
       )
-      if (!pick) item.skipReason = 'No flamekeeper has room'
+      if (!picks) item.skipReason = 'No flamekeeper has room'
       else {
-        item.flamekeeperUserId = pick.userId
-        item.flamekeeperName = pick.name
-        free.set(pick.userId, (free.get(pick.userId) ?? 0) - a.bytes)
+        item.flamekeeperUserId = picks[0].userId
+        item.flamekeeperName = picks[0].name
+        item.volumes = picks.map((p, i) => ({
+          userId: p.userId,
+          name: p.name,
+          bytes: sizes[i],
+        }))
+        for (const [i, p] of picks.entries()) {
+          free.set(p.userId, (free.get(p.userId) ?? 0) - sizes[i])
+        }
       }
     }
 
@@ -195,7 +223,7 @@ export function deletionNoticeText(
   return `The album "${title}" is scheduled for deletion on ${dateText}. Download any photos you want to keep before then.${link}`
 }
 
-export interface OffloadPending {
+export interface OffloadPendingVolume {
   destUserId: string
   volumeFolderId: string
   permissionId: string
@@ -203,14 +231,39 @@ export interface OffloadPending {
   files: (FileIdentity & { mimeType: string })[]
 }
 
+export interface OffloadPending {
+  volumes: OffloadPendingVolume[]
+}
+
 export function pendingMatches(
   pending: OffloadPending,
-  volumeFolderId: string,
-  files: FileIdentity[]
+  files: (FileIdentity & { volumeFolderId: string })[]
 ): boolean {
-  if (pending.volumeFolderId !== volumeFolderId) return false
-  if (pending.files.length !== files.length) return false
-  return matchFiles(pending.files, files).missing.length === 0
+  const total = pending.volumes.reduce((n, v) => n + v.files.length, 0)
+  if (total !== files.length) return false
+  return pending.volumes.every((v) => {
+    const mine = files.filter((f) => f.volumeFolderId === v.volumeFolderId)
+    return (
+      mine.length === v.files.length &&
+      matchFiles(v.files, mine).missing.length === 0
+    )
+  })
+}
+
+export function canReusePending(
+  pending: OffloadPending,
+  sourceIds: string[],
+  free: Map<string, number>
+): boolean {
+  const ids = pending.volumes.flatMap((v) => v.files.map((f) => f.id))
+  if (ids.length !== sourceIds.length) return false
+  const want = new Set(sourceIds)
+  if (!ids.every((id) => want.has(id))) return false
+  const need = new Map<string, number>()
+  for (const v of pending.volumes) {
+    need.set(v.destUserId, (need.get(v.destUserId) ?? 0) + v.bytes)
+  }
+  return [...need].every(([userId, bytes]) => (free.get(userId) ?? 0) >= bytes)
 }
 
 export type DrainStep =

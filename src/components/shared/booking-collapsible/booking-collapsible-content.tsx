@@ -22,6 +22,7 @@ import { BookingItemAction } from '@/components/shared/booking-item-action'
 import { cancelBookingItemFn } from '@/lib/booking'
 import type { BookingItemWithEquipment } from '@/lib/booking/types'
 import type { BookingCollapsibleRowData } from './types'
+import { formatDate } from '@/lib/format'
 
 interface BookingCollapsibleContentProps {
   booking: BookingCollapsibleRowData
@@ -92,9 +93,7 @@ export function BookingCollapsibleContent({
     <div className="space-y-4 border-t px-4 py-4">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-card px-3 py-2.5 text-sm">
         <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="font-medium">
-          {format(new Date(booking.startTime), 'EEEE, MMM d, yyyy')}
-        </span>
+        <span className="font-medium">{formatDate(booking.startTime)}</span>
         <span className="text-muted-foreground">·</span>
         <span className="tabular-nums">
           {format(new Date(booking.startTime), 'HH:mm')} –{' '}

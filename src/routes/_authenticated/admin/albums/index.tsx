@@ -1,5 +1,6 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { normalizeAlbumStatusFilter } from '@/lib/albums/status'
 import { albumQueries } from '@/lib/albums/queries'
 import { AdminAlbumSearchSchema } from '@/lib/search-params'
 import { Page } from '@/components/admin/albums'
@@ -10,7 +11,7 @@ export const Route = createFileRoute('/_authenticated/admin/albums/')({
   loader: async ({ context, deps }) => {
     try {
       await context.queryClient.ensureQueryData(
-        albumQueries.manage(deps.search)
+        albumQueries.manage(normalizeAlbumStatusFilter(deps.search))
       )
     } catch (error) {
       console.error('Failed to load albums:', error)
@@ -20,7 +21,7 @@ export const Route = createFileRoute('/_authenticated/admin/albums/')({
 })
 
 function RouteComponent() {
-  const search = Route.useSearch()
+  const search = normalizeAlbumStatusFilter(Route.useSearch())
   const navigate = Route.useNavigate()
   const { data, isFetching } = useQuery(albumQueries.manage(search))
   const isRouterPending = useRouterState({

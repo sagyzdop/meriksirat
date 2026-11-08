@@ -20,6 +20,9 @@ export const BUFFER_SOURCE_KEY = 'buffer'
 
 export const bufferSourceKey = (volumeId: string) => `buffer:${volumeId}`
 
+export const flamekeeperSourceKey = (volumeId: string) =>
+  `flamekeeper:${volumeId}`
+
 export const isBufferSourceKey = (key: string) =>
   key === BUFFER_SOURCE_KEY || key.startsWith('buffer:')
 
@@ -56,6 +59,7 @@ export interface ListingSourcesInput {
     expectedChangedAt?: number | null
   }[]
   flamekeeperVolumes: {
+    id: string
     userId: string
     driveFolderId: string | null
     droppedAt: Date | null
@@ -110,7 +114,7 @@ export function planListingSources(
   for (const v of input.flamekeeperVolumes) {
     if (!v.driveFolderId || v.droppedAt) continue
     sources.push({
-      key: `flamekeeper:${v.userId}`,
+      key: flamekeeperSourceKey(v.id),
       owner: { kind: 'flamekeeper', userId: v.userId },
       folderId: v.driveFolderId,
       stamp: '',

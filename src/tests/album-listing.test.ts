@@ -61,6 +61,7 @@ function keeper(
   > = {}
 ) {
   return {
+    id: userId,
     userId,
     driveFolderId: `${userId}-folder`,
     droppedAt: null,
@@ -118,6 +119,21 @@ describe('what to list, and with whose token', () => {
     })
     const buffer = sources.find((s) => s.key === 'buffer')
     expect(buffer?.expected).toBeNull()
+  })
+
+  it('keys each flamekeeper volume by its own id, so one holder can have several', () => {
+    const sources = sourcesOf({
+      flamekeeperVolumes: [
+        keeper('amina', { id: 'v1' }),
+        keeper('amina', { id: 'v2' }),
+      ],
+    })
+    expect(sources.map((s) => s.key)).toEqual([
+      'buffer',
+      'master',
+      'flamekeeper:v1',
+      'flamekeeper:v2',
+    ])
   })
 
   it('has nothing to list for a volume with no folder yet', () => {

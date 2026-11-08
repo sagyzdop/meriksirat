@@ -7,6 +7,7 @@ import {
   BulkUpdateUserClearanceSchema,
   ResetUserViolationCountersSchema,
   BanUserSchema,
+  BulkBanUsersSchema,
   UnbanUserSchema,
 } from './types'
 import { buildPagination } from '@/lib/pagination'
@@ -292,6 +293,23 @@ export const banUserFn = createServerFn({ method: 'POST' })
       reason: data.reason,
     })
     return { success: true }
+  })
+
+export const bulkBanUsersFn = createServerFn({ method: 'POST' })
+  .validator(BulkBanUsersSchema)
+  .handler(async ({ data }) => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { banUser } = await import('@/lib/pool/ban-server')
+
+    const { admin: actor, database } = await adminContext(['admin'])
+    for (const targetId of data.userIds) {
+      await banUser(database, {
+        actorId: actor.id,
+        targetId,
+        reason: data.reason,
+      })
+    }
+    return { success: true, count: data.userIds.length }
   })
 
 export const unbanUserFn = createServerFn({ method: 'POST' })

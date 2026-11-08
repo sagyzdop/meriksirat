@@ -18,7 +18,6 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Save, AlertCircle, ArrowLeft, X } from 'lucide-react'
-import { format } from 'date-fns'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
@@ -36,6 +35,7 @@ import type {
   AdminBookingWithDetails,
   BookingItemWithEquipment,
 } from '@/lib/booking/types'
+import { formatDateTime } from '@/lib/format'
 
 const editBookingSchema = z.object({
   notes: z.string().optional(),
@@ -194,7 +194,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 This booking is overdue! The equipment was due on{' '}
-                {format(new Date(booking.endTime), 'PPP p')}.
+                {formatDateTime(booking.endTime)}.
               </AlertDescription>
             </Alert>
           )}

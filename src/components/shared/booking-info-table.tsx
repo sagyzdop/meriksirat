@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { BookingStatusBadge } from '@/components/shared/booking-status-badge'
 import type { BookingWithItems } from '@/lib/booking/types'
+import { formatDate, formatDateTime } from '@/lib/format'
 
 export interface BookingInfoTableBookedBy {
   id: string
@@ -110,7 +111,7 @@ export function BookingInfoTable({
                 Booking Day
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {format(new Date(booking.startTime), 'EEEE, MMMM d, yyyy')}
+                {formatDate(booking.startTime)}
               </TableCell>
             </TableRow>
           )}
@@ -139,7 +140,7 @@ export function BookingInfoTable({
                 Actual Start
               </TableCell>
               <TableCell className="whitespace-nowrap tabular-nums">
-                {format(new Date(booking.startedAt), 'EEE, MMM d, yyyy HH:mm')}
+                {formatDateTime(booking.startedAt)}
               </TableCell>
             </TableRow>
           )}
@@ -150,7 +151,7 @@ export function BookingInfoTable({
                 Actual Return
               </TableCell>
               <TableCell className="whitespace-nowrap tabular-nums">
-                {format(new Date(actualReturn), 'EEE, MMM d, yyyy HH:mm')}
+                {formatDateTime(actualReturn)}
               </TableCell>
             </TableRow>
           )}
@@ -160,7 +161,7 @@ export function BookingInfoTable({
               Created At
             </TableCell>
             <TableCell className="whitespace-nowrap tabular-nums">
-              {format(new Date(booking.createdAt), 'EEEE, MMM d, yyyy, HH:mm')}
+              {formatDateTime(booking.createdAt)}
             </TableCell>
           </TableRow>
         </TableBody>

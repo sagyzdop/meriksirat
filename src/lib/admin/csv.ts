@@ -1,4 +1,7 @@
 import type { AdminAlbumExport, AdminUserExport } from './dashboard-types'
+import { formatGb } from '@/lib/flamekeeper/rules'
+import { flamekeeperStatus } from '@/lib/flamekeeper/types'
+import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 
 // ---------------------------------------------------------------------------
 // User export fields
@@ -222,4 +225,66 @@ export function albumsToCsv(
   keys: readonly AlbumExportFieldKey[] = DEFAULT_ALBUM_EXPORT_KEYS
 ): string {
   return rowsToCsv(albums, ALBUM_EXPORT_FIELDS, keys, getAlbumExportFieldValue)
+}
+
+// ---------------------------------------------------------------------------
+// Flamekeeper export fields
+// ---------------------------------------------------------------------------
+
+export type FlamekeeperExportFieldKey =
+  | 'name'
+  | 'email'
+  | 'status'
+  | 'pledged'
+  | 'used'
+  | 'graduationDate'
+  | 'createdAt'
+
+export const FLAMEKEEPER_EXPORT_FIELDS: ExportField<FlamekeeperExportFieldKey>[] =
+  [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'status', label: 'Status' },
+    { key: 'pledged', label: 'Pledged' },
+    { key: 'used', label: 'Used' },
+    { key: 'graduationDate', label: 'Graduation' },
+    { key: 'createdAt', label: 'Flamekeeper Since' },
+  ]
+
+export const DEFAULT_FLAMEKEEPER_EXPORT_KEYS: readonly FlamekeeperExportFieldKey[] =
+  FLAMEKEEPER_EXPORT_FIELDS.map((field) => field.key)
+
+export function getFlamekeeperExportFieldValue(
+  flamekeeper: AdminFlamekeeperRow,
+  key: FlamekeeperExportFieldKey
+): string {
+  switch (key) {
+    case 'status':
+      return flamekeeperStatus(flamekeeper)
+    case 'pledged':
+      return formatGb(flamekeeper.pledgedBytes)
+    case 'used':
+      return formatGb(flamekeeper.usedBytes)
+    case 'graduationDate':
+      return flamekeeper.graduationDate ?? ''
+    case 'createdAt':
+      return formatDateDDMMYYYY(flamekeeper.createdAt)
+    case 'name':
+    case 'email':
+      return stringifyCsvValue(flamekeeper[key])
+    default:
+      return ''
+  }
+}
+
+export function flamekeepersToCsv(
+  flamekeepers: AdminFlamekeeperRow[],
+  keys: readonly FlamekeeperExportFieldKey[] = DEFAULT_FLAMEKEEPER_EXPORT_KEYS
+): string {
+  return rowsToCsv(
+    flamekeepers,
+    FLAMEKEEPER_EXPORT_FIELDS,
+    keys,
+    getFlamekeeperExportFieldValue
+  )
 }
