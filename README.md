@@ -89,7 +89,7 @@ and [ADR-0015](docs/adr/0015-buffer-is-stable-photo-storage.md)). Uploads fail
 with "Photo storage is not available right now" until it is connected. Nothing
 falls back to a flamekeeper. The Worker reads the account's Drive quota with the
 `drive.file` token, warns admins at 90% and refuses uploads at 100% (see
-[the scenario](docs/scenarios/cron/flamekeepers/buffer-usage.md)).
+[the scenario](docs/scenarios/kv/buffer-usage.md)).
 
 The buffer uses the same OAuth client as production and holds two tokens:
 

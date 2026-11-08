@@ -105,7 +105,7 @@ The photo table was removed in #25 ([ADR-0017](docs/adr/0017-drop-photo-table-re
 _Avoid_: Image, file, picture
 
 **Volume**:
-The photos of one album held by one account: the buffer, or a flamekeeper after an offload. A volume holds at most 256 MB (`VOLUME_MAX_BYTES`); an upload that would exceed it opens another volume, so an album can have several per account. Stores the expected count and bytes, which the count warning checks against (see `docs/scenarios/albums/fewer-photos-warning.md`).
+The photos of one album held by one account: the buffer, or a flamekeeper after an offload. A volume holds at most 256 MB (`VOLUME_MAX_BYTES`); an upload that would exceed it opens another volume, so an album can have several per account. Stores the expected count and bytes, which the count warning checks against (see `docs/scenarios/member/albums/warnings.md`).
 All volumes live in the `volume` table. The buffer's volumes are the rows with no flamekeeper (`flamekeeper_user_id` is NULL) and carry the expected count and bytes. Flamekeeper rows from before the buffer keep those NULL and never warn. Offload (Stage 2) is the only thing that will create new ones.
 _Avoid_: Chunk, shard, part
 
@@ -162,7 +162,7 @@ _Avoid_: Invite code, password
 **Buffer**:
 The club-run Google account, `nuimage.storage@gmail.com`, on a 5 TB plan. New album photos are uploaded to it, and photos leaving a flamekeeper are copied back to it. It holds a `drive.file` token for uploads and a full-scope token that only the server uses, for drains. It is not a flamekeeper.
 Uploads go to it as of #17. Copying photos onto the buffer from flamekeepers is Stage 2 and not built yet.
-Usage is read from the Drive quota with the `drive.file` token. At 90% admins get one Telegram warning per crossing and `@nu.edu.kz` users see a banner asking for flamekeepers, with no mention of storage. At 100% uploads are refused with a plain message and the files stay in the uploader's browser (#26, [scenario](docs/scenarios/cron/flamekeepers/buffer-usage.md)). Setup is in the README, "Connecting the buffer account".
+Usage is read from the Drive quota with the `drive.file` token. At 90% admins get one Telegram warning per crossing and `@nu.edu.kz` users see a banner asking for flamekeepers, with no mention of storage. At 100% uploads are refused with a plain message and the files stay in the uploader's browser (#26, [scenario](docs/scenarios/kv/buffer-usage.md)). Setup is in the README, "Connecting the buffer account".
 _Avoid_: Storage account, main account, master
 
 **Flamekeeper**:

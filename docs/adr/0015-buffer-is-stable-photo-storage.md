@@ -36,7 +36,7 @@ step warns admins once per crossing of 90% and of 100%, tracked by a KV marker
 that clears when usage falls below 90%, so the schema is untouched. The
 banner and the dashboard card read the cache. Uploads are refused at 100% before
 the browser sends any bytes. See
-[the scenario](../scenarios/cron/flamekeepers/buffer-usage.md).
+[the scenario](../scenarios/kv/buffer-usage.md).
 
 Not built yet: offload (Stage 2, which waits for its live tests). Photos uploaded to flamekeepers before #17 stay
 there until a drain. [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)

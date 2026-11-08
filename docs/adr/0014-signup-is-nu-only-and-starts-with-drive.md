@@ -9,7 +9,7 @@
 > cleanup and the leave dialog are removed. The minimum pledge is 512 MB, not
 > 1 GB. The new signup flow is built (#28): the terms box on the login page is
 > read by a Better Auth user-creation hook, which saves `termsAcceptedAt` or
-> refuses the account; see [sign-in](../scenarios/account/sign-in.md). No other
+> refuses the account; see [sign-in](../scenarios/member/account/join-club-and-onboarding.md). No other
 > ADR records it; #15 is its reference. The text below is the original
 > decision, kept for history.
 

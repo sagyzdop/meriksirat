@@ -1,0 +1,42 @@
+# Storage settings
+
+`/admin/settings/storage` has a Buffer section (admins and managers) and a Flamekeepers section (admins only). Definitions: [GLOSSARY](../../../../GLOSSARY.md) (Buffer, Pool).
+
+## How are the buffer limit and alert set, and when are admins warned?
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor A as Admin or manager
+    participant W as Worker
+    participant D as Drive quota (buffer token)
+    participant KV
+    participant TG as Telegram
+    A->>W: Save limit (GB) and alert %
+    W->>D: read current usage (cached up to 10 min)
+    alt limit below used bytes
+        W-->>A: error, ceiling cannot be lower than used space
+    else ok
+        W->>W: store bufferLimitBytes and bufferAlertPercent (50-99)
+    end
+    Note over W,TG: Hourly checkBufferUsage
+    W->>D: refresh usage if cache older than 50 min
+    W->>W: level = ok, warn (>= alert %) or full (>= effective limit)
+    W->>KV: compare with marker buffer:alert
+    W->>TG: one message to admins per crossing of warn and of full
+```
+
+- The effective limit is the smaller of the configured limit and the Drive quota. Percent used is measured against the configured limit.
+- At warn, `@nu.edu.kz` users see a banner asking for flamekeepers; at full, uploads are refused ([ADR-0015](../../../adr/0015-buffer-is-stable-photo-storage.md)). Dropping back to ok clears the marker so the next crossing alerts again.
+
+## How are the flamekeeper cap and pool-low alert set?
+
+```mermaid
+flowchart LR
+    A["Admin edits Per-account cap (1-1024 GB) and Pool-low alert (50-99 %)"] --> S["Save"]
+    S --> C["settings.flamekeeperCapBytes"]
+    S --> P["settings.poolLowAlertPercent"]
+    C & P --> H["Read by hourly maintainPool and by dashboards"]
+```
+
+Managers do not see this section. How the pool and its alert work: [../flamekeepers/pool.md](../flamekeepers/pool.md).
