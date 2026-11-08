@@ -22,14 +22,14 @@
 >   accounts with any other domain can still sign in.
 > - The home page is `/onboarding` for a member who has not
 >   finished onboarding, else `/equipment` for members and
->   `/profile` for non-members. See access-gate.md for the rules.
+>   `/account` for non-members. See access-gate.md for the rules.
 > - The login page cannot tell new users from existing ones, so it
 >   never blocks the button. Only account creation runs the check.
 > - Nothing about the terms travels from the browser. A better-auth hook
 >   stamps the acceptance time while creating the user. Existing accounts
 >   are never asked again and never removed, and nothing deletes an account
 >   for being unfinished.
-> - A club member enters the club code later on `/profile`, see
+> - A club member enters the club code later on `/account`, see
 >   join-club.md. An @nu.edu.kz user can become a flamekeeper from
 >   the profile too, see flamekeepers/connect-drive.md.
 > - Someone who is already signed in and opens `/login` is sent
@@ -83,7 +83,7 @@ sequenceDiagram
             W-->>B: Session cookie, redirect to /login
             B->>W: getUserFn()
             W-->>B: User with member state
-            B-->>P: Redirect to /onboarding, /equipment or<br/>/profile
+            B-->>P: Redirect to /onboarding, /equipment or<br/>/account
         end
     end
 ```

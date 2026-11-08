@@ -12,12 +12,11 @@ describe('profile sections', () => {
   it('shows a member every section and no join action', () => {
     const rules = getAccessRules({ ...base, isMember: true })
     expect(rules.showAboutYou).toBe(true)
-    expect(rules.showContact).toBe(true)
     expect(rules.canJoinClub).toBe(false)
     expect(rules.graduationUnderFlamekeeper).toBe(false)
   })
 
-  it('shows a member who is flamekeeping graduation under About you', () => {
+  it('shows a member who is flamekeeping graduation under Personal Information', () => {
     const rules = getAccessRules({
       ...base,
       isMember: true,
@@ -28,12 +27,11 @@ describe('profile sections', () => {
   })
 
   it.each(['active', 'full', 'draining', 'lost'] as const)(
-    'gives a %s flamekeeper-only account no Contact or About you and graduation under Flamekeeper',
+    'gives a %s flamekeeper-only account no Personal Information and graduation under Flamekeeper',
     (state) => {
       const rules = getAccessRules({ ...base, flamekeeperState: state })
       expect(rules.showFlamekeeperSection).toBe(true)
       expect(rules.showAboutYou).toBe(false)
-      expect(rules.showContact).toBe(false)
       expect(rules.graduationUnderFlamekeeper).toBe(true)
       expect(rules.canJoinClub).toBe(true)
     }

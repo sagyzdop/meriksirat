@@ -65,6 +65,12 @@ export function equipmentWhere(data: EquipmentFilters, leading: SQL[]) {
     )
   }
 
+  if (data.clearanceLevels && data.clearanceLevels.length > 0) {
+    conditions.push(
+      inArray(equipment.requiredClearanceLevel, data.clearanceLevels)
+    )
+  }
+
   if (data.minClearanceLevel !== undefined) {
     conditions.push(
       gte(equipment.requiredClearanceLevel, data.minClearanceLevel)

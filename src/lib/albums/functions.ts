@@ -401,11 +401,14 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
     if (!currentUser || (!isAdmin && row.ownerUserId !== currentUser.id)) {
       throw new Error('Only the album owner or an admin can accept this.')
     }
-    if (data.volumeKey !== 'buffer') {
+    if (data.volumeKey !== 'buffer' && !data.volumeKey.startsWith('buffer:')) {
       throw new Error('This volume has no fewer-photos warning to accept.')
     }
 
     const listing = await loadAlbumListing(database, row, { force: true })
+    const volumeId = data.volumeKey.startsWith('buffer:')
+      ? data.volumeKey.slice('buffer:'.length)
+      : null
     const plan = planAccept({
       listing,
       volumeKey: data.volumeKey,
@@ -419,7 +422,13 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
         expectedCount: sql`MIN(${volume.expectedCount}, ${plan.expected.count})`,
         expectedBytes: sql`MIN(${volume.expectedBytes}, ${plan.expected.bytes})`,
       })
-      .where(and(eq(volume.albumId, row.id), isNull(volume.flamekeeperUserId)))
+      .where(
+        and(
+          eq(volume.albumId, row.id),
+          isNull(volume.flamekeeperUserId),
+          volumeId ? eq(volume.id, volumeId) : undefined
+        )
+      )
 
     return { success: true }
   })
@@ -749,8 +758,8 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
       deleteDriveFile(token, data.fileId)
     )
     if (listed.owner.kind === 'buffer') {
-      const { adjustExpected } = await import('@/lib/buffer/server')
-      await adjustExpected(database, row.id, -1, -bytes)
+      const { adjustExpectedByKey } = await import('@/lib/buffer/server')
+      await adjustExpectedByKey(database, row.id, listed.volumeKey, -1, -bytes)
     } else if (listed.owner.kind === 'flamekeeper') {
       await database
         .update(flamekeeper)

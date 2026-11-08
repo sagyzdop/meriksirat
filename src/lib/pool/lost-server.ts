@@ -32,7 +32,7 @@ export async function sendReconnectEmails(
     sentCount++
     const deadline = new Date(row.lostSince.getTime() + LOST_GRACE_MS)
     const deadlineText = formatLongDate(deadline)
-    const link = origin ? `${origin}/profile` : 'your account page'
+    const link = origin ? `${origin}/account` : 'your account page'
     const sent = await sendEmail({
       to: row.email,
       subject: 'Reconnect your Google Drive to keep your flame lit',

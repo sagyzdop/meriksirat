@@ -1,17 +1,14 @@
-import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  CalendarDays,
   ExternalLink,
   Flame,
+  FolderOpen,
   HardDrive,
   Images,
-  Pencil,
   Trash2,
   Undo2,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Empty,
@@ -23,16 +20,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/layout/page-header'
-import { AlbumStatusBadge } from '@/components/albums/album-status-badge'
-import { AlbumStorageBadge } from '@/components/albums/album-storage-badge'
-import { EditAlbumDialog } from '@/components/albums/edit-album-dialog'
-import type { AlbumFormValues } from '@/components/albums/album-form-fields'
+import { AlbumManager } from '@/components/albums/album-manager'
+import { AlbumStatusLegend } from '@/components/albums/album-status-legend'
 import { albumQueries } from '@/lib/albums/queries'
-import { updateAlbumFn } from '@/lib/albums/functions'
-import { formatUtcDate, toDateOnlyString } from '@/lib/format'
-import { errorMessage } from '@/lib/utils'
+import { driveFolderUrl } from '@/lib/albums/urls'
 import type { AdminAlbumRow, AlbumDetail } from '@/lib/albums/types'
-import { AlbumStorageCell } from '../components/album-columns'
 import { OFFLOAD_ENABLED } from '../components/album-table-types'
 import { useAlbumBulkActions } from '../components/use-album-bulk-actions'
 import { AlbumAuthorsTable } from './components/album-authors-table'
@@ -61,6 +53,7 @@ function toRow(
     createdAt: album.createdAt,
     rescuedAt: album.rescuedAt,
     scheduledDeletionAt: album.scheduledDeletionAt,
+    status: album.status,
     storage: album.storage,
   }
 }
@@ -68,8 +61,6 @@ function toRow(
 export function Page({ albumId }: PageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [editOpen, setEditOpen] = React.useState(false)
-  const [saving, setSaving] = React.useState(false)
 
   const { data: album, isLoading } = useQuery(albumQueries.detail(albumId))
   const { data: authors = [] } = useQuery(albumQueries.authors(albumId))
@@ -118,40 +109,31 @@ export function Page({ albumId }: PageProps) {
   const row = toRow(album, photoBytes, owner?.email ?? null)
   const ownerName = owner?.name ?? album.authors[0]?.name ?? 'Unknown'
 
-  const handleSave = async (values: AlbumFormValues) => {
-    if (!values.eventDate) return
-    setSaving(true)
-    try {
-      await updateAlbumFn({
-        data: {
-          albumId,
-          title: values.title.trim(),
-          description: values.description.trim() || '',
-          event: values.event.trim(),
-          eventDate: toDateOnlyString(values.eventDate),
-        },
-      })
-      toast.success('Album updated')
-      setEditOpen(false)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['albums'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
-      ])
-    } catch (error) {
-      toast.error(errorMessage(error, 'Failed to update album'))
-    } finally {
-      setSaving(false)
-    }
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['albums'], refetchType: 'all' })
+    queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] })
   }
 
   return (
     <>
       <PageHeader
         title={album.title}
-        description={album.event || undefined}
         onBack={goBack}
         actions={
           <div className="flex flex-wrap gap-2">
+            {album.photos.length > 0 && (
+              <Button asChild variant="secondary">
+                <a
+                  href={driveFolderUrl(album.driveFolderId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Opens this album's folder in Google Drive, where Drive's own Download button zips every photo"
+                >
+                  <FolderOpen />
+                  Download
+                </a>
+              </Button>
+            )}
             <Button asChild variant="secondary">
               <a
                 href={`/albums/${album.id}`}
@@ -162,75 +144,71 @@ export function Page({ albumId }: PageProps) {
                 View public album
               </a>
             </Button>
-            <Button variant="secondary" onClick={() => setEditOpen(true)}>
-              <Pencil />
-              Edit
-            </Button>
           </div>
         }
       />
 
-      <div className="-mt-2 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <CalendarDays className="size-4" />
-          {formatUtcDate(album.eventDate)}
-        </span>
-        <span aria-hidden="true">·</span>
-        <span>Owner {ownerName}</span>
-        <span aria-hidden="true">·</span>
-        <span>Created {formatUtcDate(album.createdAt)}</span>
-        <AlbumStatusBadge
-          rescuedAt={album.rescuedAt}
-          scheduledDeletionAt={album.scheduledDeletionAt}
+      <div className="mb-6">
+        <AlbumManager
+          album={album}
+          isAdmin
+          onChanged={invalidate}
+          onRefreshed={(detail) => {
+            queryClient.setQueryData(
+              albumQueries.detail(albumId).queryKey,
+              detail
+            )
+          }}
+          onDeleted={() => {
+            invalidate()
+            goBack()
+          }}
+          extraActions={
+            <>
+              {album.scheduledDeletionAt ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start sm:w-auto"
+                  onClick={() => onBulkAction('cancel-deletion', [row])}
+                >
+                  <Undo2 />
+                  Cancel deletion
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-full justify-start sm:w-auto"
+                  onClick={() => onBulkAction('schedule-deletion', [row])}
+                >
+                  <Trash2 />
+                  Schedule for deletion
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start sm:w-auto"
+                onClick={() => onBulkAction('move-to-buffer', [row])}
+              >
+                <HardDrive />
+                Move to Buffer
+              </Button>
+              {OFFLOAD_ENABLED && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start sm:w-auto"
+                  onClick={() => onBulkAction('move-to-flamekeeper', [row])}
+                >
+                  <Flame />
+                  Move to Flamekeepers
+                </Button>
+              )}
+            </>
+          }
         />
-        {album.storage.holder === 'none' ? (
-          <AlbumStorageCell album={row} />
-        ) : (
-          <AlbumStorageBadge storage={album.storage} />
-        )}
-        {album.scheduledDeletionAt && (
-          <span>Deletes {formatUtcDate(album.scheduledDeletionAt)}</span>
-        )}
-      </div>
-
-      <div className="mb-6 flex flex-wrap gap-2">
-        {album.scheduledDeletionAt ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onBulkAction('cancel-deletion', [row])}
-          >
-            <Undo2 />
-            Cancel deletion
-          </Button>
-        ) : (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => onBulkAction('schedule-deletion', [row])}
-          >
-            <Trash2 />
-            Schedule for deletion
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onBulkAction('move-to-buffer', [row])}
-        >
-          <HardDrive />
-          Move to Buffer
-        </Button>
-        {OFFLOAD_ENABLED && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onBulkAction('move-to-flamekeeper', [row])}
-          >
-            <Flame />
-            Move to Flamekeepers
-          </Button>
-        )}
       </div>
 
       <Tabs defaultValue="overview" className="gap-4">
@@ -239,20 +217,20 @@ export function Page({ albumId }: PageProps) {
           <TabsTrigger value="authors">Authors</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
-          <AlbumOverview album={album} photoBytes={photoBytes} />
+          <div className="space-y-6">
+            <AlbumOverview
+              album={album}
+              photoBytes={photoBytes}
+              ownerName={ownerName}
+            />
+            <AlbumStatusLegend />
+          </div>
         </TabsContent>
         <TabsContent value="authors">
           <AlbumAuthorsTable authors={authors} />
         </TabsContent>
       </Tabs>
 
-      <EditAlbumDialog
-        album={album}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        busy={saving}
-        onSave={handleSave}
-      />
       {dialogs}
     </>
   )

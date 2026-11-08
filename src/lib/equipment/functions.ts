@@ -13,6 +13,9 @@ import {
   DeleteEquipmentSchema,
   UploadEquipmentImageSchema,
   BulkUpdateEquipmentClearanceSchema,
+  BulkUpdateEquipmentCategorySchema,
+  BulkUpdateEquipmentStatusSchema,
+  BulkDeleteEquipmentSchema,
 } from './types'
 import { buildPageInfo } from '@/lib/pagination'
 
@@ -230,6 +233,87 @@ export const bulkUpdateEquipmentClearanceFn = createServerFn({ method: 'POST' })
       .where(inArray(equipment.id, data.equipmentIds))
 
     return { success: true, count: data.equipmentIds.length }
+  })
+
+export const bulkUpdateEquipmentCategoryFn = createServerFn({ method: 'POST' })
+  .validator(BulkUpdateEquipmentCategorySchema)
+  .handler(async ({ data }) => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { equipment, category } = await import('@/db/schema')
+    const { eq, inArray } = await import('drizzle-orm')
+
+    const { database } = await adminContext(['admin', 'manager'])
+
+    if (data.equipmentIds.length === 0) {
+      throw new Error('No equipment IDs provided')
+    }
+
+    const categoryExists = await database
+      .select({ id: category.id })
+      .from(category)
+      .where(eq(category.id, data.categoryId))
+      .get()
+
+    if (!categoryExists) {
+      throw new Error('Selected category does not exist')
+    }
+
+    await database
+      .update(equipment)
+      .set({ categoryId: data.categoryId })
+      .where(inArray(equipment.id, data.equipmentIds))
+
+    return { success: true, count: data.equipmentIds.length }
+  })
+
+export const bulkUpdateEquipmentStatusFn = createServerFn({ method: 'POST' })
+  .validator(BulkUpdateEquipmentStatusSchema)
+  .handler(async ({ data }) => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { equipment } = await import('@/db/schema')
+    const { inArray } = await import('drizzle-orm')
+
+    const { database } = await adminContext(['admin', 'manager'])
+
+    if (data.equipmentIds.length === 0) {
+      throw new Error('No equipment IDs provided')
+    }
+
+    await database
+      .update(equipment)
+      .set({ isActive: data.isActive, updatedAt: new Date() })
+      .where(inArray(equipment.id, data.equipmentIds))
+
+    return { success: true, count: data.equipmentIds.length }
+  })
+
+export const bulkDeleteEquipmentFn = createServerFn({ method: 'POST' })
+  .validator(BulkDeleteEquipmentSchema)
+  .handler(async ({ data }) => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { equipment, bookingItem } = await import('@/db/schema')
+    const { inArray } = await import('drizzle-orm')
+
+    const { database } = await adminContext(['admin', 'manager'])
+
+    const withBookings = await database
+      .selectDistinct({ equipmentId: bookingItem.equipmentId })
+      .from(bookingItem)
+      .where(inArray(bookingItem.equipmentId, data.equipmentIds))
+
+    const blocked = new Set(withBookings.map((row) => row.equipmentId))
+    const deletable = data.equipmentIds.filter((id) => !blocked.has(id))
+
+    for (let i = 0; i < deletable.length; i += 50) {
+      await database
+        .delete(equipment)
+        .where(inArray(equipment.id, deletable.slice(i, i + 50)))
+    }
+
+    return {
+      deleted: deletable.length,
+      skipped: data.equipmentIds.length - deletable.length,
+    }
   })
 
 export const deleteEquipmentFn = createServerFn({ method: 'POST' })

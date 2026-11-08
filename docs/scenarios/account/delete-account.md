@@ -5,12 +5,13 @@
 >
 > **Answer:** Only a non-member who is not currently flamekeeping
 > can. They see a "Delete my account" row in the Club section of
-> `/profile`, click Delete and confirm "Delete your account?". The
+> `/account`, click Delete and confirm "Delete your account?". The
 > account and its favorites are removed for good and the browser
 > goes to `/`, which redirects to `/albums`. Club members cannot
 > delete themselves.
 >
 > **Notes:**
+>
 > - A flamekeeper whose state is "drained" counts as no longer
 >   flamekeeping and may delete. Any other state blocks it.
 > - The row is hidden when the rule says no, and the server
@@ -28,7 +29,7 @@ sequenceDiagram
     participant B as Browser
     participant W as Worker
     participant D as D1
-    P->>B: Open /profile
+    P->>B: Open /account
     B->>W: getUserFn()
     W-->>B: User
     B->>W: getMyFlamekeeperFn()

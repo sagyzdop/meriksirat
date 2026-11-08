@@ -161,7 +161,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         ])
         forgetFlamekeeperAccessToken(pending.userId)
 
-        return redirectTo(origin, '/profile')
+        return redirectTo(origin, '/account')
       },
     },
   },

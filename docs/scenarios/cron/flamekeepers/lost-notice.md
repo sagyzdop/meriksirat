@@ -11,6 +11,7 @@
 > again on the next run.
 >
 > **Notes:**
+>
 > - The email goes out in the same run that marks the loss,
 >   right after the probes.
 > - If the budget is gone or the cap of 3 is reached, the rest
@@ -19,7 +20,7 @@
 >   finalized after 7 days.
 > - The email is sent from the club account. Subject: Reconnect
 >   your Google Drive to keep your flame lit. The body
->   gives the deadline date and a link to /profile, and ends there.
+>   gives the deadline date and a link to /account, and ends there.
 > - Reconnecting is done by the flamekeeper in the app, see
 >   ../../flamekeepers/connect-drive.md. Reconnecting
 >   puts the flamekeeper back to active; no photos are restored

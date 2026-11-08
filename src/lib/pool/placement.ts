@@ -3,7 +3,7 @@ import type { FlamekeeperState } from '@/lib/access/access-rules'
 const GB = 1024 * 1024 * 1024
 
 export const DEFAULT_FLAMEKEEPER_CAP_BYTES = 20 * GB
-export const POOL_LOW_FRACTION = 0.1
+export const DEFAULT_POOL_LOW_ALERT_PERCENT = 90
 
 export interface PoolFlamekeeper {
   userId: string
@@ -43,18 +43,22 @@ export function poolStats(fks: PoolFlamekeeper[], capBytes: number): PoolStats {
   return stats
 }
 
-export function isPoolLow(stats: PoolStats): boolean {
-  return (
-    stats.freeBytes < stats.pledgedBytes * POOL_LOW_FRACTION ||
-    stats.pledgedBytes === 0
-  )
+export function isPoolLow(
+  stats: PoolStats,
+  alertPercent: number = DEFAULT_POOL_LOW_ALERT_PERCENT
+): boolean {
+  if (stats.pledgedBytes === 0) return true
+  const usedPercent =
+    (100 * (stats.pledgedBytes - stats.freeBytes)) / stats.pledgedBytes
+  return usedPercent >= alertPercent
 }
 
 export function poolAlert(
   stats: PoolStats,
-  alertedAt: Date | null
+  alertedAt: Date | null,
+  alertPercent: number = DEFAULT_POOL_LOW_ALERT_PERCENT
 ): 'alert' | 'rearm' | null {
-  const low = isPoolLow(stats)
+  const low = isPoolLow(stats, alertPercent)
   if (low && !alertedAt) return 'alert'
   if (!low && alertedAt) return 'rearm'
   return null

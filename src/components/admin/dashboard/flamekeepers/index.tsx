@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { ItemGroup } from '@/components/ui/item'
 import type { FlamekeeperStats } from '@/lib/admin/dashboard-types'
 import { formatGb } from '@/lib/flamekeeper/rules'
-import { POOL_LOW_FRACTION } from '@/lib/pool/placement'
 import { StatItem } from '../components/stat-item'
 
 interface PageProps {
@@ -70,7 +69,7 @@ export function Page({ stats, statsLoading }: PageProps) {
       </ItemGroup>
       {stats?.poolLow ? (
         <p className="text-sm text-destructive">
-          Free space is below {POOL_LOW_FRACTION * 100}% of the pledge. Recruit
+          Pool usage is at or above {stats.alertPercent}% of the pledge. Recruit
           flamekeepers or schedule albums for deletion.
         </p>
       ) : null}

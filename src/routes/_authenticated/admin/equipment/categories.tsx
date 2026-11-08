@@ -1,0 +1,31 @@
+import { createFileRoute, useRouterState } from '@tanstack/react-router'
+import { Page } from '@/components/admin/equipment/categories/index'
+import { getCategoriesWithCountFn } from '@/lib/admin'
+
+export const Route = createFileRoute(
+  '/_authenticated/admin/equipment/categories'
+)({
+  component: RouteComponent,
+  loader: async () => {
+    try {
+      const categories = await getCategoriesWithCountFn()
+      return {
+        categories: categories || [],
+      }
+    } catch (error) {
+      console.error('Failed to load categories:', error)
+      return {
+        categories: [],
+      }
+    }
+  },
+})
+
+function RouteComponent() {
+  const { categories } = Route.useLoaderData()
+  const isLoading = useRouterState({
+    select: (state) => state.status === 'pending',
+  })
+
+  return <Page categories={categories} isLoading={isLoading} />
+}

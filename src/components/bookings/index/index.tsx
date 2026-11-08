@@ -57,7 +57,7 @@ export function Page({
         getPersonInfo={() => ({
           name: currentUserName,
           image: currentUserImage,
-          href: '/profile',
+          href: '/account',
         })}
         onSortChange={(sortBy, sortOrder) =>
           navigate({

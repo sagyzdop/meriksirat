@@ -4,6 +4,7 @@ import { flamekeeper, settings, user } from '@/db/schema'
 import { type Budget } from '@/lib/cron/budget'
 import {
   DEFAULT_FLAMEKEEPER_CAP_BYTES,
+  DEFAULT_POOL_LOW_ALERT_PERCENT,
   poolAlert,
   poolStats,
   type PoolFlamekeeper,
@@ -16,6 +17,17 @@ export async function loadCapBytes(database: Database): Promise<number> {
     .where(eq(settings.id, 'global'))
     .get()
   return row?.cap ?? DEFAULT_FLAMEKEEPER_CAP_BYTES
+}
+
+export async function loadPoolLowAlertPercent(
+  database: Database
+): Promise<number> {
+  const row = await database
+    .select({ percent: settings.poolLowAlertPercent })
+    .from(settings)
+    .where(eq(settings.id, 'global'))
+    .get()
+  return row?.percent ?? DEFAULT_POOL_LOW_ALERT_PERCENT
 }
 
 export async function loadPoolFlamekeepers(
@@ -88,7 +100,10 @@ export async function runPoolMaintenance(
     loadPoolFlamekeepers(database),
     loadCapBytes(database),
     database
-      .select({ alertedAt: settings.poolLowAlertedAt })
+      .select({
+        alertedAt: settings.poolLowAlertedAt,
+        alertPercent: settings.poolLowAlertPercent,
+      })
       .from(settings)
       .where(eq(settings.id, 'global'))
       .get(),
@@ -96,13 +111,17 @@ export async function runPoolMaintenance(
 
   if (!settingsRow) return
   const stats = poolStats(fks, cap)
-  const alert = poolAlert(stats, settingsRow.alertedAt)
+  const alert = poolAlert(
+    stats,
+    settingsRow.alertedAt,
+    settingsRow.alertPercent
+  )
   if (alert === 'alert') {
     const { formatGb } = await import('@/lib/flamekeeper/rules')
     const result = await sendAdminsTelegramResult(
       database,
       env.TELEGRAM_BOT_TOKEN,
-      `#savenuimg pool is low: ${formatGb(stats.freeBytes)} free of ${formatGb(stats.pledgedBytes)} pledged across ${stats.flamekeepers} flamekeepers. Recruit flamekeepers or schedule albums for deletion.`,
+      `#savenuimg pool is low: ${formatGb(stats.usedBytes)} used and ${formatGb(stats.freeBytes)} free of ${formatGb(stats.pledgedBytes)} pledged across ${stats.flamekeepers} flamekeepers. Recruit flamekeepers or schedule albums for deletion.`,
       budget
     )
     if (result !== 'sent') return

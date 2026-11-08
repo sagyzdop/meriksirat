@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { album, albumMember, user, volume } from '@/db/schema'
+import { album, albumMember, flamekeeper, user, volume } from '@/db/schema'
 import { planCountWarning } from './count-warning'
 import { listingPhotos } from './listing'
 import { loadAlbumListing } from './listing-server'
@@ -11,7 +11,7 @@ import type {
   AlbumPhoto,
   AlbumStorage,
 } from './types'
-import { albumStorageHolder } from './status'
+import { albumStatus, albumStorageHolder } from './status'
 import { albumCoverUrl } from './urls'
 
 export type AlbumRecord = typeof album.$inferSelect
@@ -100,9 +100,12 @@ export async function loadAlbumDetail(
       flamekeeperUserId: volume.flamekeeperUserId,
       droppedAt: volume.droppedAt,
       name: user.name,
+      flamekeeperState: flamekeeper.state,
+      flamekeeperLostSince: flamekeeper.lostSince,
     })
     .from(volume)
     .leftJoin(user, eq(user.id, volume.flamekeeperUserId))
+    .leftJoin(flamekeeper, eq(flamekeeper.userId, volume.flamekeeperUserId))
     .where(eq(volume.albumId, row.id))
     .all()
   const holder = albumStorageHolder(volumes)
@@ -139,6 +142,7 @@ export async function loadAlbumDetail(
     scheduledDeletionAt: row.scheduledDeletionAt
       ? row.scheduledDeletionAt.toISOString()
       : null,
+    status: albumStatus({ ...row, volumes }),
     storage,
     tombstone: null,
     countWarning: currentUser
@@ -176,6 +180,7 @@ export function buildTombstoneDetail(row: AlbumRecord): AlbumDetail {
     folderState: 'ok',
     rescuedAt: null,
     scheduledDeletionAt: null,
+    status: albumStatus(row),
     storage: { holder: 'none', flamekeeperUserId: null, flamekeeperName: null },
     tombstone: {
       reason: row.tombstoneReason!,

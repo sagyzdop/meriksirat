@@ -4,22 +4,24 @@ import type { PoolStats } from '@/lib/pool/placement'
 
 export interface PoolOverview extends PoolStats {
   capBytes: number
+  alertPercent: number
 }
 
 export const getPoolOverviewFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<PoolOverview> => {
     const { adminContext } = await import('../server')
-    const { loadCapBytes, loadPoolFlamekeepers } =
+    const { loadCapBytes, loadPoolFlamekeepers, loadPoolLowAlertPercent } =
       await import('@/lib/pool/server')
     const { poolStats } = await import('@/lib/pool/placement')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    const [fks, capBytes] = await Promise.all([
+    const [fks, capBytes, alertPercent] = await Promise.all([
       loadPoolFlamekeepers(database),
       loadCapBytes(database),
+      loadPoolLowAlertPercent(database),
     ])
-    return { ...poolStats(fks, capBytes), capBytes }
+    return { ...poolStats(fks, capBytes), capBytes, alertPercent }
   }
 )
 

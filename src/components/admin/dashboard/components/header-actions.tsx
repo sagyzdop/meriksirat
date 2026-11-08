@@ -93,7 +93,7 @@ export function DashboardHeaderActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem asChild>
-            <Link to="/admin/users">
+            <Link to="/admin/members">
               <Users />
               View All Members
             </Link>

@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, isNull, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { album, volume } from '@/db/schema'
 import {
@@ -13,7 +13,8 @@ import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { isImage } from '@/lib/albums/drive-photo'
 import { getCachedListing } from '@/lib/albums/server'
 import { newId } from '@/lib/albums/ids'
-import { BUFFER_SOURCE_KEY } from '@/lib/albums/listing'
+import { isBufferSourceKey } from '@/lib/albums/listing'
+import { pickVolumeWithRoom } from '@/lib/albums/volume-limit'
 import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
 import {
   bufferUploadMessage,
@@ -27,29 +28,40 @@ import { getBufferOverview } from './usage-server'
 
 const UPLOAD_USAGE_MAX_AGE_MS = 10 * 60 * 1000
 
-const key = (albumId: string) =>
-  and(eq(volume.albumId, albumId), isNull(volume.flamekeeperUserId))
+const bufferVolumes = (albumId: string) =>
+  and(
+    eq(volume.albumId, albumId),
+    isNull(volume.flamekeeperUserId),
+    isNull(volume.droppedAt)
+  )
 
 export async function ensureBufferVolume(
   database: Database,
   masterToken: string,
   albumRow: { id: string; driveFolderId: string },
-  bufferEmail: string
-): Promise<string> {
-  const load = () =>
+  bufferEmail: string,
+  incomingBytes: number
+): Promise<{ volumeId: string; folderId: string }> {
+  const loadAll = () =>
     database
       .select({
+        id: volume.id,
         driveFolderId: volume.driveFolderId,
         permissionId: volume.permissionId,
+        expectedBytes: volume.expectedBytes,
       })
       .from(volume)
-      .where(key(albumRow.id))
-      .get()
+      .where(bufferVolumes(albumRow.id))
+      .orderBy(asc(volume.createdAt), asc(volume.id))
+      .all()
 
-  const existing = (await load()) ?? null
+  const existing = pickVolumeWithRoom(await loadAll(), incomingBytes)
   const setup = planVolumeSetup(existing)
-  if (!setup.create && !setup.share) return existing!.driveFolderId!
+  if (existing && !setup.create && !setup.share) {
+    return { volumeId: existing.id, folderId: existing.driveFolderId! }
+  }
 
+  let volumeId = existing?.id ?? null
   let folderId = existing?.driveFolderId ?? null
   if (setup.create) {
     const created = await createDriveFolder(
@@ -57,22 +69,26 @@ export async function ensureBufferVolume(
       volumeFolderName(newId(6)),
       albumRow.driveFolderId
     )
+    const newVolumeId = volumeId ?? newId(10)
     const claimed = existing
       ? await database
           .update(volume)
           .set({ driveFolderId: created.id, permissionId: '' })
-          .where(and(key(albumRow.id), sql`${volume.driveFolderId} IS NULL`))
-      : await database
-          .insert(volume)
-          .values({
-            id: newId(10),
-            albumId: albumRow.id,
-            driveFolderId: created.id,
-            expectedCount: 0,
-            expectedBytes: 0,
-          })
-          .onConflictDoNothing()
+          .where(
+            and(
+              eq(volume.id, existing.id),
+              sql`${volume.driveFolderId} IS NULL`
+            )
+          )
+      : await database.insert(volume).values({
+          id: newVolumeId,
+          albumId: albumRow.id,
+          driveFolderId: created.id,
+          expectedCount: 0,
+          expectedBytes: 0,
+        })
     if ((claimed.meta?.changes ?? 0) > 0) {
+      volumeId = newVolumeId
       folderId = created.id
     } else {
       try {
@@ -80,11 +96,14 @@ export async function ensureBufferVolume(
       } catch (error) {
         console.warn('Failed to delete a spare buffer volume folder:', error)
       }
-      const winner = await load()
+      const winner = (await loadAll()).find((v) => v.id === existing?.id)
       if (!winner?.driveFolderId) {
         throw new Error('Could not set up the album storage, try again')
       }
-      if (winner.permissionId) return winner.driveFolderId
+      if (winner.permissionId) {
+        return { volumeId: winner.id, folderId: winner.driveFolderId }
+      }
+      volumeId = winner.id
       folderId = winner.driveFolderId
     }
   }
@@ -94,28 +113,31 @@ export async function ensureBufferVolume(
     folderId!,
     bufferEmail
   )
-  await database.update(volume).set({ permissionId }).where(key(albumRow.id))
-  return folderId!
+  await database
+    .update(volume)
+    .set({ permissionId })
+    .where(eq(volume.id, volumeId!))
+  return { volumeId: volumeId!, folderId: folderId! }
 }
 
 async function forgetBufferVolumeFolder(
   database: Database,
-  albumId: string
+  volumeId: string
 ): Promise<void> {
   await database
     .update(volume)
     .set({ driveFolderId: null, permissionId: '' })
-    .where(key(albumId))
+    .where(eq(volume.id, volumeId))
 }
 
 async function volumeHasPhotos(
   database: Database,
-  albumId: string
+  volumeId: string
 ): Promise<boolean> {
   const row = await database
     .select({ expectedCount: volume.expectedCount })
     .from(volume)
-    .where(key(albumId))
+    .where(eq(volume.id, volumeId))
     .get()
   return (row?.expectedCount ?? 0) > 0
 }
@@ -139,11 +161,13 @@ export async function startBufferUpload(
   if (blocked) throw new Error(blocked)
 
   let retried = false
+  let currentVolumeId: string | null = null
   while (true) {
     try {
-      const folderId = await withGoogleToken((token) =>
-        ensureBufferVolume(database, token, albumRow, plan.email)
+      const { volumeId, folderId } = await withGoogleToken((token) =>
+        ensureBufferVolume(database, token, albumRow, plan.email, file.bytes)
       )
+      currentVolumeId = volumeId
       const uploadUrl = await withBufferToken((token) =>
         mintResumableUpload(token, {
           name: file.name,
@@ -157,11 +181,13 @@ export async function startBufferUpload(
     } catch (error) {
       if (error instanceof DriveNotFoundError) {
         const decision = decideMissingVolumeFolder({
-          hasPhotos: await volumeHasPhotos(database, albumRow.id),
+          hasPhotos: currentVolumeId
+            ? await volumeHasPhotos(database, currentVolumeId)
+            : true,
           retried,
         })
-        if (decision === 'recreate') {
-          await forgetBufferVolumeFolder(database, albumRow.id)
+        if (decision === 'recreate' && currentVolumeId) {
+          await forgetBufferVolumeFolder(database, currentVolumeId)
           retried = true
           continue
         }
@@ -184,14 +210,15 @@ export async function confirmBufferUpload(
   albumRow: { id: string; driveFolderId: string },
   fileId: string
 ): Promise<boolean> {
-  const volumeRow = await database
-    .select({ driveFolderId: volume.driveFolderId })
+  const volumeRows = await database
+    .select({ id: volume.id, driveFolderId: volume.driveFolderId })
     .from(volume)
-    .where(key(albumRow.id))
-    .get()
+    .where(bufferVolumes(albumRow.id))
+    .all()
 
   const file = await withBufferToken((token) => getDriveFileMeta(token, fileId))
-  if (!isInVolumeFolder(file, volumeRow?.driveFolderId ?? null)) {
+  const target = volumeRows.find((v) => isInVolumeFolder(file, v.driveFolderId))
+  if (!target) {
     throw new Error('Uploaded file not found in the album folder')
   }
 
@@ -200,13 +227,15 @@ export async function confirmBufferUpload(
     return false
   }
 
-  const counted = (await getCachedListing(albumRow.driveFolderId))?.sources[
-    BUFFER_SOURCE_KEY
-  ]?.files.some((f) => f.id === fileId)
+  const sources = (await getCachedListing(albumRow.driveFolderId))?.sources
+  const counted = Object.entries(sources ?? {}).some(
+    ([key, source]) =>
+      isBufferSourceKey(key) && source.files.some((f) => f.id === fileId)
+  )
   if (counted) return true
 
   const bytes = Number(file.size ?? 0) || 0
-  await adjustExpected(database, albumRow.id, 1, bytes)
+  await adjustExpected(database, target.id, 1, bytes)
   await database
     .update(album)
     .set({
@@ -219,7 +248,7 @@ export async function confirmBufferUpload(
 
 export async function adjustExpected(
   database: Database,
-  albumId: string,
+  volumeId: string,
   countDelta: number,
   bytesDelta: number
 ): Promise<void> {
@@ -230,5 +259,31 @@ export async function adjustExpected(
       expectedBytes: sql`MAX(COALESCE(${volume.expectedBytes}, 0) + ${bytesDelta}, 0)`,
       expectedChangedAt: new Date(),
     })
-    .where(key(albumId))
+    .where(eq(volume.id, volumeId))
+}
+
+export async function adjustExpectedByKey(
+  database: Database,
+  albumId: string,
+  volumeKey: string,
+  countDelta: number,
+  bytesDelta: number
+): Promise<void> {
+  const volumeId = await resolveBufferVolumeId(database, albumId, volumeKey)
+  if (volumeId) await adjustExpected(database, volumeId, countDelta, bytesDelta)
+}
+
+export async function resolveBufferVolumeId(
+  database: Database,
+  albumId: string,
+  volumeKey: string
+): Promise<string | null> {
+  if (volumeKey.startsWith('buffer:')) return volumeKey.slice('buffer:'.length)
+  const first = await database
+    .select({ id: volume.id })
+    .from(volume)
+    .where(bufferVolumes(albumId))
+    .orderBy(asc(volume.createdAt), asc(volume.id))
+    .get()
+  return first?.id ?? null
 }

@@ -218,6 +218,44 @@ function CapItem({ capBytes }: { capBytes: number }) {
   )
 }
 
+function PoolLowItem({ settings }: { settings: SettingsData }) {
+  const [percent, setPercent] = useState(String(settings.poolLowAlertPercent))
+  const { save, pending } = useSaveSettings()
+  const error = validateRange(percent, 50, 99)
+
+  return (
+    <Item variant="outline" size="sm">
+      <ItemContent>
+        <Label htmlFor="poolLowAlertPercent">Pool-low alert (% used)</Label>
+        <ItemDescription>
+          Alert when used pledged space reaches this share of the pledge.
+        </ItemDescription>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </ItemContent>
+      <ItemActions>
+        <Input
+          id="poolLowAlertPercent"
+          type="number"
+          min={50}
+          max={99}
+          className="w-24"
+          value={percent}
+          aria-invalid={error ? true : undefined}
+          onChange={(event) => setPercent(event.target.value)}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => save({ poolLowAlertPercent: Number(percent) })}
+          disabled={pending || error !== null}
+        >
+          {pending ? 'Saving...' : 'Save'}
+        </Button>
+      </ItemActions>
+    </Item>
+  )
+}
+
 export function Page({
   buffer,
   bufferLoading,
@@ -240,6 +278,7 @@ export function Page({
           {capBytes !== undefined ? (
             <ItemGroup className="gap-2">
               <CapItem capBytes={capBytes} />
+              {settings ? <PoolLowItem settings={settings} /> : null}
             </ItemGroup>
           ) : (
             <Skeleton className="h-16 w-full" />

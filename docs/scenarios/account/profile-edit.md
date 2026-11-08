@@ -3,12 +3,13 @@
 > **Question:** How does a person change their own details on
 > the profile page?
 >
-> **Answer:** On `/profile` every editable field is its own row with
+> **Answer:** On `/account` every editable field is its own row with
 > its input always visible. Changing the text makes a Save button
 > appear on that row. Saving sends just that field, shows the message
 > "<Field> saved" and reloads the page data. There is no edit mode.
 >
 > **Notes:**
+>
 > - Members see About you (first name, last name, birthday, major,
 >   Graduating, NU ID), Contact (email locked, Telegram with Relink,
 >   Instagram) and a read-only Club section (status, role, clearance,

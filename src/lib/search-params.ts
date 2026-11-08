@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ALBUM_STATUSES } from '@/lib/albums/status'
 
 /**
  * Search-param helpers for TanStack Router `validateSearch` schemas.
@@ -78,7 +79,7 @@ export const ADMIN_ALBUM_SORT_FIELDS = [
 
 export const AdminAlbumFiltersShape = {
   search: z.string().optional(),
-  status: stringArrayParam(z.enum(['rescued', 'scheduled_deletion'])),
+  status: stringArrayParam(z.enum(ALBUM_STATUSES)),
   storage: stringArrayParam(z.enum(['buffer', 'flamekeeper'])),
   startDate: dateOnlyParam,
   endDate: dateOnlyParam,

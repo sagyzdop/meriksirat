@@ -6,17 +6,18 @@
 > **Answer:** Every page in the signed-in area first asks the
 > server who the person is. No session means `/login`. A member
 > who has not finished onboarding goes to `/onboarding`. A
-> non-member is never sent to onboarding. A non-member can only open `/profile`, `/favorites` and `/become-flamekeeper`, and is
-> sent to `/profile` for anything else.
+> non-member is never sent to onboarding. A non-member can only open `/account`, `/favorites` and `/become-flamekeeper`, and is
+> sent to `/account` for anything else.
 >
 > **Notes:**
+>
 > - Member: the account has isMember set. Their onboarding is
 >   unfinished until onboardingComplete is set.
 > - Non-member: has no onboarding. Logging in means agreeing to the terms
 >   (stated on the login page), and the time is saved when the account is created, so there is no signup step
 >   left to finish, and an account is never removed for being
 >   unfinished.
-> - `/profile`, `/favorites` and `/become-flamekeeper` count along with any sub-path.
+> - `/account`, `/favorites` and `/become-flamekeeper` count along with any sub-path.
 >   Trailing slashes are ignored.
 > - The `/albums` pages are outside the signed-in area. Anyone
 >   can open them, signed in or not. `/` redirects to `/albums`.
@@ -46,7 +47,7 @@ sequenceDiagram
     else needsOnboarding is true
         B-->>P: Redirect to /onboarding
     else Non-member and path not allowed by nonMemberCanVisit
-        B-->>P: Redirect to /profile
+        B-->>P: Redirect to /account
     else Allowed
         B->>W: Route loaders for the page
         W-->>B: Page data

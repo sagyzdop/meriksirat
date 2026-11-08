@@ -265,7 +265,7 @@ describe('formatBanLog', () => {
       userName: 'Ann <b>',
       actorName: 'Admin',
       reason: 'deleted photos',
-      url: 'https://x.test/admin/users/1',
+      url: 'https://x.test/admin/members/1',
     })
     expect(text).toContain('🚫 User banned by Admin')
     expect(text).toContain('Ann &lt;b&gt;')

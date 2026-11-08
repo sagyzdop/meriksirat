@@ -14,18 +14,16 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBecomeFlamekeeperRouteImport } from './routes/_authenticated/become-flamekeeper'
-import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AlbumsIndexRouteImport } from './routes/albums/index'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums/$albumId'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AuthenticatedAdminAlbumsRouteImport } from './routes/_authenticated/admin/albums'
-import { Route as AuthenticatedAdminBirthdaysRouteImport } from './routes/_authenticated/admin/birthdays'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
 import { Route as AuthenticatedAdminStorageRouteImport } from './routes/_authenticated/admin/storage'
-import { Route as AuthenticatedAdminViolationsRouteImport } from './routes/_authenticated/admin/violations'
 import { Route as AuthenticatedBookingsIndexRouteImport } from './routes/_authenticated/bookings/index'
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedEquipmentIndexRouteImport } from './routes/_authenticated/equipment/index'
@@ -38,7 +36,6 @@ import { Route as ApiImagesSplatRouteImport } from './routes/api/images.$'
 import { Route as AuthenticatedAdminAlbumsIndexRouteImport } from './routes/_authenticated/admin/albums/index'
 import { Route as AuthenticatedAdminAlbumsAlbumIdRouteImport } from './routes/_authenticated/admin/albums/$albumId'
 import { Route as AuthenticatedAdminBookingsIndexRouteImport } from './routes/_authenticated/admin/bookings/index'
-import { Route as AuthenticatedAdminCategoriesIndexRouteImport } from './routes/_authenticated/admin/categories/index'
 import { Route as AuthenticatedAdminDashboardIndexRouteImport } from './routes/_authenticated/admin/dashboard/index'
 import { Route as AuthenticatedAdminDashboardAlbumsRouteImport } from './routes/_authenticated/admin/dashboard/albums'
 import { Route as AuthenticatedAdminDashboardBookingsRouteImport } from './routes/_authenticated/admin/dashboard/bookings'
@@ -46,17 +43,20 @@ import { Route as AuthenticatedAdminDashboardFlamekeepersRouteImport } from './r
 import { Route as AuthenticatedAdminDashboardMembersRouteImport } from './routes/_authenticated/admin/dashboard/members'
 import { Route as AuthenticatedAdminDashboardStorageRouteImport } from './routes/_authenticated/admin/dashboard/storage'
 import { Route as AuthenticatedAdminEquipmentIndexRouteImport } from './routes/_authenticated/admin/equipment/index'
+import { Route as AuthenticatedAdminEquipmentCategoriesRouteImport } from './routes/_authenticated/admin/equipment/categories'
 import { Route as AuthenticatedAdminEquipmentNewRouteImport } from './routes/_authenticated/admin/equipment/new'
 import { Route as AuthenticatedAdminFlamekeepersIndexRouteImport } from './routes/_authenticated/admin/flamekeepers/index'
 import { Route as AuthenticatedAdminFlamekeepersUserIdRouteImport } from './routes/_authenticated/admin/flamekeepers.$userId'
+import { Route as AuthenticatedAdminMembersIndexRouteImport } from './routes/_authenticated/admin/members/index'
+import { Route as AuthenticatedAdminMembersUserIdRouteImport } from './routes/_authenticated/admin/members/$userId'
+import { Route as AuthenticatedAdminMembersBirthdaysRouteImport } from './routes/_authenticated/admin/members/birthdays'
+import { Route as AuthenticatedAdminMembersViolationsRouteImport } from './routes/_authenticated/admin/members/violations'
 import { Route as AuthenticatedAdminSettingsIndexRouteImport } from './routes/_authenticated/admin/settings/index'
 import { Route as AuthenticatedAdminSettingsAlbumsRouteImport } from './routes/_authenticated/admin/settings/albums'
 import { Route as AuthenticatedAdminSettingsBookingsRouteImport } from './routes/_authenticated/admin/settings/bookings'
 import { Route as AuthenticatedAdminSettingsFlamekeepersRouteImport } from './routes/_authenticated/admin/settings/flamekeepers'
 import { Route as AuthenticatedAdminSettingsMembersRouteImport } from './routes/_authenticated/admin/settings/members'
 import { Route as AuthenticatedAdminSettingsStorageRouteImport } from './routes/_authenticated/admin/settings/storage'
-import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin/users/index'
-import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_authenticated/admin/users/$userId'
 import { Route as AuthenticatedBookingsBookingIdIndexRouteImport } from './routes/_authenticated/bookings/$bookingId/index'
 import { Route as AuthenticatedBookingsBookingIdEditRouteImport } from './routes/_authenticated/bookings_/$bookingId/edit'
 import { Route as AuthenticatedAdminBookingsBookingIdIndexRouteImport } from './routes/_authenticated/admin/bookings/$bookingId/index'
@@ -87,6 +87,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -98,11 +103,6 @@ const AuthenticatedBecomeFlamekeeperRoute =
     path: '/become-flamekeeper',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AlbumsIndexRoute = AlbumsIndexRouteImport.update({
   id: '/albums/',
   path: '/albums/',
@@ -124,12 +124,6 @@ const AuthenticatedAdminAlbumsRoute =
     path: '/albums',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminBirthdaysRoute =
-  AuthenticatedAdminBirthdaysRouteImport.update({
-    id: '/birthdays',
-    path: '/birthdays',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 const AuthenticatedAdminDashboardRoute =
   AuthenticatedAdminDashboardRouteImport.update({
     id: '/dashboard',
@@ -146,12 +140,6 @@ const AuthenticatedAdminStorageRoute =
   AuthenticatedAdminStorageRouteImport.update({
     id: '/storage',
     path: '/storage',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminViolationsRoute =
-  AuthenticatedAdminViolationsRouteImport.update({
-    id: '/violations',
-    path: '/violations',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedBookingsIndexRoute =
@@ -223,12 +211,6 @@ const AuthenticatedAdminBookingsIndexRoute =
     path: '/bookings/',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminCategoriesIndexRoute =
-  AuthenticatedAdminCategoriesIndexRouteImport.update({
-    id: '/categories/',
-    path: '/categories/',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 const AuthenticatedAdminDashboardIndexRoute =
   AuthenticatedAdminDashboardIndexRouteImport.update({
     id: '/',
@@ -271,6 +253,12 @@ const AuthenticatedAdminEquipmentIndexRoute =
     path: '/equipment/',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEquipmentCategoriesRoute =
+  AuthenticatedAdminEquipmentCategoriesRouteImport.update({
+    id: '/equipment/categories',
+    path: '/equipment/categories',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminEquipmentNewRoute =
   AuthenticatedAdminEquipmentNewRouteImport.update({
     id: '/equipment/new',
@@ -287,6 +275,30 @@ const AuthenticatedAdminFlamekeepersUserIdRoute =
   AuthenticatedAdminFlamekeepersUserIdRouteImport.update({
     id: '/flamekeepers/$userId',
     path: '/flamekeepers/$userId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMembersIndexRoute =
+  AuthenticatedAdminMembersIndexRouteImport.update({
+    id: '/members/',
+    path: '/members/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMembersUserIdRoute =
+  AuthenticatedAdminMembersUserIdRouteImport.update({
+    id: '/members/$userId',
+    path: '/members/$userId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMembersBirthdaysRoute =
+  AuthenticatedAdminMembersBirthdaysRouteImport.update({
+    id: '/members/birthdays',
+    path: '/members/birthdays',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMembersViolationsRoute =
+  AuthenticatedAdminMembersViolationsRouteImport.update({
+    id: '/members/violations',
+    path: '/members/violations',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminSettingsIndexRoute =
@@ -325,18 +337,6 @@ const AuthenticatedAdminSettingsStorageRoute =
     path: '/storage',
     getParentRoute: () => AuthenticatedAdminSettingsRoute,
   } as any)
-const AuthenticatedAdminUsersIndexRoute =
-  AuthenticatedAdminUsersIndexRouteImport.update({
-    id: '/users/',
-    path: '/users/',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminUsersUserIdRoute =
-  AuthenticatedAdminUsersUserIdRouteImport.update({
-    id: '/users/$userId',
-    path: '/users/$userId',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 const AuthenticatedBookingsBookingIdIndexRoute =
   AuthenticatedBookingsBookingIdIndexRouteImport.update({
     id: '/bookings/$bookingId/',
@@ -373,18 +373,16 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/account': typeof AuthenticatedAccountRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
-  '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsRouteWithChildren
-  '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRouteWithChildren
   '/admin/settings': typeof AuthenticatedAdminSettingsRouteWithChildren
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
-  '/admin/violations': typeof AuthenticatedAdminViolationsRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -400,23 +398,25 @@ export interface FileRoutesByFullPath {
   '/admin/dashboard/flamekeepers': typeof AuthenticatedAdminDashboardFlamekeepersRoute
   '/admin/dashboard/members': typeof AuthenticatedAdminDashboardMembersRoute
   '/admin/dashboard/storage': typeof AuthenticatedAdminDashboardStorageRoute
+  '/admin/equipment/categories': typeof AuthenticatedAdminEquipmentCategoriesRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/admin/flamekeepers/$userId': typeof AuthenticatedAdminFlamekeepersUserIdRoute
+  '/admin/members/$userId': typeof AuthenticatedAdminMembersUserIdRoute
+  '/admin/members/birthdays': typeof AuthenticatedAdminMembersBirthdaysRoute
+  '/admin/members/violations': typeof AuthenticatedAdminMembersViolationsRoute
   '/admin/settings/albums': typeof AuthenticatedAdminSettingsAlbumsRoute
   '/admin/settings/bookings': typeof AuthenticatedAdminSettingsBookingsRoute
   '/admin/settings/flamekeepers': typeof AuthenticatedAdminSettingsFlamekeepersRoute
   '/admin/settings/members': typeof AuthenticatedAdminSettingsMembersRoute
   '/admin/settings/storage': typeof AuthenticatedAdminSettingsStorageRoute
-  '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
   '/admin/albums/': typeof AuthenticatedAdminAlbumsIndexRoute
   '/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
-  '/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
   '/admin/dashboard/': typeof AuthenticatedAdminDashboardIndexRoute
   '/admin/equipment/': typeof AuthenticatedAdminEquipmentIndexRoute
   '/admin/flamekeepers/': typeof AuthenticatedAdminFlamekeepersIndexRoute
+  '/admin/members/': typeof AuthenticatedAdminMembersIndexRoute
   '/admin/settings/': typeof AuthenticatedAdminSettingsIndexRoute
-  '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/bookings/$bookingId/': typeof AuthenticatedBookingsBookingIdIndexRoute
   '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
@@ -427,15 +427,13 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/account': typeof AuthenticatedAccountRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
-  '/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums': typeof AlbumsIndexRoute
-  '/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
-  '/admin/violations': typeof AuthenticatedAdminViolationsRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -451,23 +449,25 @@ export interface FileRoutesByTo {
   '/admin/dashboard/flamekeepers': typeof AuthenticatedAdminDashboardFlamekeepersRoute
   '/admin/dashboard/members': typeof AuthenticatedAdminDashboardMembersRoute
   '/admin/dashboard/storage': typeof AuthenticatedAdminDashboardStorageRoute
+  '/admin/equipment/categories': typeof AuthenticatedAdminEquipmentCategoriesRoute
   '/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/admin/flamekeepers/$userId': typeof AuthenticatedAdminFlamekeepersUserIdRoute
+  '/admin/members/$userId': typeof AuthenticatedAdminMembersUserIdRoute
+  '/admin/members/birthdays': typeof AuthenticatedAdminMembersBirthdaysRoute
+  '/admin/members/violations': typeof AuthenticatedAdminMembersViolationsRoute
   '/admin/settings/albums': typeof AuthenticatedAdminSettingsAlbumsRoute
   '/admin/settings/bookings': typeof AuthenticatedAdminSettingsBookingsRoute
   '/admin/settings/flamekeepers': typeof AuthenticatedAdminSettingsFlamekeepersRoute
   '/admin/settings/members': typeof AuthenticatedAdminSettingsMembersRoute
   '/admin/settings/storage': typeof AuthenticatedAdminSettingsStorageRoute
-  '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/bookings/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
   '/admin/albums': typeof AuthenticatedAdminAlbumsIndexRoute
   '/admin/bookings': typeof AuthenticatedAdminBookingsIndexRoute
-  '/admin/categories': typeof AuthenticatedAdminCategoriesIndexRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardIndexRoute
   '/admin/equipment': typeof AuthenticatedAdminEquipmentIndexRoute
   '/admin/flamekeepers': typeof AuthenticatedAdminFlamekeepersIndexRoute
+  '/admin/members': typeof AuthenticatedAdminMembersIndexRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsIndexRoute
-  '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/bookings/$bookingId': typeof AuthenticatedBookingsBookingIdIndexRoute
   '/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
@@ -480,18 +480,16 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/become-flamekeeper': typeof AuthenticatedBecomeFlamekeeperRoute
-  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/albums/': typeof AlbumsIndexRoute
   '/_authenticated/admin/albums': typeof AuthenticatedAdminAlbumsRouteWithChildren
-  '/_authenticated/admin/birthdays': typeof AuthenticatedAdminBirthdaysRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRouteWithChildren
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRouteWithChildren
   '/_authenticated/admin/storage': typeof AuthenticatedAdminStorageRoute
-  '/_authenticated/admin/violations': typeof AuthenticatedAdminViolationsRoute
   '/_authenticated/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/_authenticated/equipment/$': typeof AuthenticatedEquipmentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -507,23 +505,25 @@ export interface FileRoutesById {
   '/_authenticated/admin/dashboard/flamekeepers': typeof AuthenticatedAdminDashboardFlamekeepersRoute
   '/_authenticated/admin/dashboard/members': typeof AuthenticatedAdminDashboardMembersRoute
   '/_authenticated/admin/dashboard/storage': typeof AuthenticatedAdminDashboardStorageRoute
+  '/_authenticated/admin/equipment/categories': typeof AuthenticatedAdminEquipmentCategoriesRoute
   '/_authenticated/admin/equipment/new': typeof AuthenticatedAdminEquipmentNewRoute
   '/_authenticated/admin/flamekeepers/$userId': typeof AuthenticatedAdminFlamekeepersUserIdRoute
+  '/_authenticated/admin/members/$userId': typeof AuthenticatedAdminMembersUserIdRoute
+  '/_authenticated/admin/members/birthdays': typeof AuthenticatedAdminMembersBirthdaysRoute
+  '/_authenticated/admin/members/violations': typeof AuthenticatedAdminMembersViolationsRoute
   '/_authenticated/admin/settings/albums': typeof AuthenticatedAdminSettingsAlbumsRoute
   '/_authenticated/admin/settings/bookings': typeof AuthenticatedAdminSettingsBookingsRoute
   '/_authenticated/admin/settings/flamekeepers': typeof AuthenticatedAdminSettingsFlamekeepersRoute
   '/_authenticated/admin/settings/members': typeof AuthenticatedAdminSettingsMembersRoute
   '/_authenticated/admin/settings/storage': typeof AuthenticatedAdminSettingsStorageRoute
-  '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/_authenticated/bookings_/$bookingId/edit': typeof AuthenticatedBookingsBookingIdEditRoute
   '/_authenticated/admin/albums/': typeof AuthenticatedAdminAlbumsIndexRoute
   '/_authenticated/admin/bookings/': typeof AuthenticatedAdminBookingsIndexRoute
-  '/_authenticated/admin/categories/': typeof AuthenticatedAdminCategoriesIndexRoute
   '/_authenticated/admin/dashboard/': typeof AuthenticatedAdminDashboardIndexRoute
   '/_authenticated/admin/equipment/': typeof AuthenticatedAdminEquipmentIndexRoute
   '/_authenticated/admin/flamekeepers/': typeof AuthenticatedAdminFlamekeepersIndexRoute
+  '/_authenticated/admin/members/': typeof AuthenticatedAdminMembersIndexRoute
   '/_authenticated/admin/settings/': typeof AuthenticatedAdminSettingsIndexRoute
-  '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/bookings/$bookingId/': typeof AuthenticatedBookingsBookingIdIndexRoute
   '/_authenticated/admin/bookings/$bookingId/edit': typeof AuthenticatedAdminBookingsBookingIdEditRoute
   '/_authenticated/admin/equipment/$equipmentId/edit': typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
@@ -536,18 +536,16 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/onboarding'
+    | '/account'
     | '/admin'
     | '/become-flamekeeper'
-    | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
     | '/albums/'
     | '/admin/albums'
-    | '/admin/birthdays'
     | '/admin/dashboard'
     | '/admin/settings'
     | '/admin/storage'
-    | '/admin/violations'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
@@ -563,23 +561,25 @@ export interface FileRouteTypes {
     | '/admin/dashboard/flamekeepers'
     | '/admin/dashboard/members'
     | '/admin/dashboard/storage'
+    | '/admin/equipment/categories'
     | '/admin/equipment/new'
     | '/admin/flamekeepers/$userId'
+    | '/admin/members/$userId'
+    | '/admin/members/birthdays'
+    | '/admin/members/violations'
     | '/admin/settings/albums'
     | '/admin/settings/bookings'
     | '/admin/settings/flamekeepers'
     | '/admin/settings/members'
     | '/admin/settings/storage'
-    | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
     | '/admin/albums/'
     | '/admin/bookings/'
-    | '/admin/categories/'
     | '/admin/dashboard/'
     | '/admin/equipment/'
     | '/admin/flamekeepers/'
+    | '/admin/members/'
     | '/admin/settings/'
-    | '/admin/users/'
     | '/bookings/$bookingId/'
     | '/admin/bookings/$bookingId/edit'
     | '/admin/equipment/$equipmentId/edit'
@@ -590,15 +590,13 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/onboarding'
+    | '/account'
     | '/admin'
     | '/become-flamekeeper'
-    | '/profile'
     | '/albums/$albumId'
     | '/api/telegram'
     | '/albums'
-    | '/admin/birthdays'
     | '/admin/storage'
-    | '/admin/violations'
     | '/bookings/new'
     | '/equipment/$'
     | '/api/auth/$'
@@ -614,23 +612,25 @@ export interface FileRouteTypes {
     | '/admin/dashboard/flamekeepers'
     | '/admin/dashboard/members'
     | '/admin/dashboard/storage'
+    | '/admin/equipment/categories'
     | '/admin/equipment/new'
     | '/admin/flamekeepers/$userId'
+    | '/admin/members/$userId'
+    | '/admin/members/birthdays'
+    | '/admin/members/violations'
     | '/admin/settings/albums'
     | '/admin/settings/bookings'
     | '/admin/settings/flamekeepers'
     | '/admin/settings/members'
     | '/admin/settings/storage'
-    | '/admin/users/$userId'
     | '/bookings/$bookingId/edit'
     | '/admin/albums'
     | '/admin/bookings'
-    | '/admin/categories'
     | '/admin/dashboard'
     | '/admin/equipment'
     | '/admin/flamekeepers'
+    | '/admin/members'
     | '/admin/settings'
-    | '/admin/users'
     | '/bookings/$bookingId'
     | '/admin/bookings/$bookingId/edit'
     | '/admin/equipment/$equipmentId/edit'
@@ -642,18 +642,16 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/onboarding'
+    | '/_authenticated/account'
     | '/_authenticated/admin'
     | '/_authenticated/become-flamekeeper'
-    | '/_authenticated/profile'
     | '/albums/$albumId'
     | '/api/telegram'
     | '/albums/'
     | '/_authenticated/admin/albums'
-    | '/_authenticated/admin/birthdays'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/storage'
-    | '/_authenticated/admin/violations'
     | '/_authenticated/bookings/new'
     | '/_authenticated/equipment/$'
     | '/api/auth/$'
@@ -669,23 +667,25 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/dashboard/flamekeepers'
     | '/_authenticated/admin/dashboard/members'
     | '/_authenticated/admin/dashboard/storage'
+    | '/_authenticated/admin/equipment/categories'
     | '/_authenticated/admin/equipment/new'
     | '/_authenticated/admin/flamekeepers/$userId'
+    | '/_authenticated/admin/members/$userId'
+    | '/_authenticated/admin/members/birthdays'
+    | '/_authenticated/admin/members/violations'
     | '/_authenticated/admin/settings/albums'
     | '/_authenticated/admin/settings/bookings'
     | '/_authenticated/admin/settings/flamekeepers'
     | '/_authenticated/admin/settings/members'
     | '/_authenticated/admin/settings/storage'
-    | '/_authenticated/admin/users/$userId'
     | '/_authenticated/bookings_/$bookingId/edit'
     | '/_authenticated/admin/albums/'
     | '/_authenticated/admin/bookings/'
-    | '/_authenticated/admin/categories/'
     | '/_authenticated/admin/dashboard/'
     | '/_authenticated/admin/equipment/'
     | '/_authenticated/admin/flamekeepers/'
+    | '/_authenticated/admin/members/'
     | '/_authenticated/admin/settings/'
-    | '/_authenticated/admin/users/'
     | '/_authenticated/bookings/$bookingId/'
     | '/_authenticated/admin/bookings/$bookingId/edit'
     | '/_authenticated/admin/equipment/$equipmentId/edit'
@@ -743,6 +743,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/account': {
+      id: '/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedAccountRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -755,13 +762,6 @@ declare module '@tanstack/react-router' {
       path: '/become-flamekeeper'
       fullPath: '/become-flamekeeper'
       preLoaderRoute: typeof AuthenticatedBecomeFlamekeeperRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/profile': {
-      id: '/_authenticated/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/albums/': {
@@ -792,13 +792,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAlbumsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/birthdays': {
-      id: '/_authenticated/admin/birthdays'
-      path: '/birthdays'
-      fullPath: '/admin/birthdays'
-      preLoaderRoute: typeof AuthenticatedAdminBirthdaysRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
     '/_authenticated/admin/dashboard': {
       id: '/_authenticated/admin/dashboard'
       path: '/dashboard'
@@ -818,13 +811,6 @@ declare module '@tanstack/react-router' {
       path: '/storage'
       fullPath: '/admin/storage'
       preLoaderRoute: typeof AuthenticatedAdminStorageRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/violations': {
-      id: '/_authenticated/admin/violations'
-      path: '/violations'
-      fullPath: '/admin/violations'
-      preLoaderRoute: typeof AuthenticatedAdminViolationsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/bookings/': {
@@ -911,13 +897,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBookingsIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/categories/': {
-      id: '/_authenticated/admin/categories/'
-      path: '/categories'
-      fullPath: '/admin/categories/'
-      preLoaderRoute: typeof AuthenticatedAdminCategoriesIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
     '/_authenticated/admin/dashboard/': {
       id: '/_authenticated/admin/dashboard/'
       path: '/'
@@ -967,6 +946,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEquipmentIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/equipment/categories': {
+      id: '/_authenticated/admin/equipment/categories'
+      path: '/equipment/categories'
+      fullPath: '/admin/equipment/categories'
+      preLoaderRoute: typeof AuthenticatedAdminEquipmentCategoriesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/equipment/new': {
       id: '/_authenticated/admin/equipment/new'
       path: '/equipment/new'
@@ -986,6 +972,34 @@ declare module '@tanstack/react-router' {
       path: '/flamekeepers/$userId'
       fullPath: '/admin/flamekeepers/$userId'
       preLoaderRoute: typeof AuthenticatedAdminFlamekeepersUserIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/members/': {
+      id: '/_authenticated/admin/members/'
+      path: '/members'
+      fullPath: '/admin/members/'
+      preLoaderRoute: typeof AuthenticatedAdminMembersIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/members/$userId': {
+      id: '/_authenticated/admin/members/$userId'
+      path: '/members/$userId'
+      fullPath: '/admin/members/$userId'
+      preLoaderRoute: typeof AuthenticatedAdminMembersUserIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/members/birthdays': {
+      id: '/_authenticated/admin/members/birthdays'
+      path: '/members/birthdays'
+      fullPath: '/admin/members/birthdays'
+      preLoaderRoute: typeof AuthenticatedAdminMembersBirthdaysRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/members/violations': {
+      id: '/_authenticated/admin/members/violations'
+      path: '/members/violations'
+      fullPath: '/admin/members/violations'
+      preLoaderRoute: typeof AuthenticatedAdminMembersViolationsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/settings/': {
@@ -1029,20 +1043,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/settings/storage'
       preLoaderRoute: typeof AuthenticatedAdminSettingsStorageRouteImport
       parentRoute: typeof AuthenticatedAdminSettingsRoute
-    }
-    '/_authenticated/admin/users/': {
-      id: '/_authenticated/admin/users/'
-      path: '/users'
-      fullPath: '/admin/users/'
-      preLoaderRoute: typeof AuthenticatedAdminUsersIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/users/$userId': {
-      id: '/_authenticated/admin/users/$userId'
-      path: '/users/$userId'
-      fullPath: '/admin/users/$userId'
-      preLoaderRoute: typeof AuthenticatedAdminUsersUserIdRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/bookings/$bookingId/': {
       id: '/_authenticated/bookings/$bookingId/'
@@ -1159,19 +1159,19 @@ const AuthenticatedAdminSettingsRouteWithChildren =
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAlbumsRoute: typeof AuthenticatedAdminAlbumsRouteWithChildren
-  AuthenticatedAdminBirthdaysRoute: typeof AuthenticatedAdminBirthdaysRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRouteWithChildren
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRouteWithChildren
   AuthenticatedAdminStorageRoute: typeof AuthenticatedAdminStorageRoute
-  AuthenticatedAdminViolationsRoute: typeof AuthenticatedAdminViolationsRoute
+  AuthenticatedAdminEquipmentCategoriesRoute: typeof AuthenticatedAdminEquipmentCategoriesRoute
   AuthenticatedAdminEquipmentNewRoute: typeof AuthenticatedAdminEquipmentNewRoute
   AuthenticatedAdminFlamekeepersUserIdRoute: typeof AuthenticatedAdminFlamekeepersUserIdRoute
-  AuthenticatedAdminUsersUserIdRoute: typeof AuthenticatedAdminUsersUserIdRoute
+  AuthenticatedAdminMembersUserIdRoute: typeof AuthenticatedAdminMembersUserIdRoute
+  AuthenticatedAdminMembersBirthdaysRoute: typeof AuthenticatedAdminMembersBirthdaysRoute
+  AuthenticatedAdminMembersViolationsRoute: typeof AuthenticatedAdminMembersViolationsRoute
   AuthenticatedAdminBookingsIndexRoute: typeof AuthenticatedAdminBookingsIndexRoute
-  AuthenticatedAdminCategoriesIndexRoute: typeof AuthenticatedAdminCategoriesIndexRoute
   AuthenticatedAdminEquipmentIndexRoute: typeof AuthenticatedAdminEquipmentIndexRoute
   AuthenticatedAdminFlamekeepersIndexRoute: typeof AuthenticatedAdminFlamekeepersIndexRoute
-  AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
+  AuthenticatedAdminMembersIndexRoute: typeof AuthenticatedAdminMembersIndexRoute
   AuthenticatedAdminBookingsBookingIdEditRoute: typeof AuthenticatedAdminBookingsBookingIdEditRoute
   AuthenticatedAdminEquipmentEquipmentIdEditRoute: typeof AuthenticatedAdminEquipmentEquipmentIdEditRoute
   AuthenticatedAdminBookingsBookingIdIndexRoute: typeof AuthenticatedAdminBookingsBookingIdIndexRoute
@@ -1179,23 +1179,25 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAlbumsRoute: AuthenticatedAdminAlbumsRouteWithChildren,
-  AuthenticatedAdminBirthdaysRoute: AuthenticatedAdminBirthdaysRoute,
   AuthenticatedAdminDashboardRoute:
     AuthenticatedAdminDashboardRouteWithChildren,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRouteWithChildren,
   AuthenticatedAdminStorageRoute: AuthenticatedAdminStorageRoute,
-  AuthenticatedAdminViolationsRoute: AuthenticatedAdminViolationsRoute,
+  AuthenticatedAdminEquipmentCategoriesRoute:
+    AuthenticatedAdminEquipmentCategoriesRoute,
   AuthenticatedAdminEquipmentNewRoute: AuthenticatedAdminEquipmentNewRoute,
   AuthenticatedAdminFlamekeepersUserIdRoute:
     AuthenticatedAdminFlamekeepersUserIdRoute,
-  AuthenticatedAdminUsersUserIdRoute: AuthenticatedAdminUsersUserIdRoute,
+  AuthenticatedAdminMembersUserIdRoute: AuthenticatedAdminMembersUserIdRoute,
+  AuthenticatedAdminMembersBirthdaysRoute:
+    AuthenticatedAdminMembersBirthdaysRoute,
+  AuthenticatedAdminMembersViolationsRoute:
+    AuthenticatedAdminMembersViolationsRoute,
   AuthenticatedAdminBookingsIndexRoute: AuthenticatedAdminBookingsIndexRoute,
-  AuthenticatedAdminCategoriesIndexRoute:
-    AuthenticatedAdminCategoriesIndexRoute,
   AuthenticatedAdminEquipmentIndexRoute: AuthenticatedAdminEquipmentIndexRoute,
   AuthenticatedAdminFlamekeepersIndexRoute:
     AuthenticatedAdminFlamekeepersIndexRoute,
-  AuthenticatedAdminUsersIndexRoute: AuthenticatedAdminUsersIndexRoute,
+  AuthenticatedAdminMembersIndexRoute: AuthenticatedAdminMembersIndexRoute,
   AuthenticatedAdminBookingsBookingIdEditRoute:
     AuthenticatedAdminBookingsBookingIdEditRoute,
   AuthenticatedAdminEquipmentEquipmentIdEditRoute:
@@ -1208,9 +1210,9 @@ const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedBecomeFlamekeeperRoute: typeof AuthenticatedBecomeFlamekeeperRoute
-  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedBookingsNewRoute: typeof AuthenticatedBookingsNewRoute
   AuthenticatedEquipmentSplatRoute: typeof AuthenticatedEquipmentSplatRoute
   AuthenticatedBookingsIndexRoute: typeof AuthenticatedBookingsIndexRoute
@@ -1222,9 +1224,9 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAccountRoute: AuthenticatedAccountRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedBecomeFlamekeeperRoute: AuthenticatedBecomeFlamekeeperRoute,
-  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedBookingsNewRoute: AuthenticatedBookingsNewRoute,
   AuthenticatedEquipmentSplatRoute: AuthenticatedEquipmentSplatRoute,
   AuthenticatedBookingsIndexRoute: AuthenticatedBookingsIndexRoute,

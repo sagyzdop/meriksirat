@@ -3,22 +3,14 @@ import { ShieldBan, ShieldCheck } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { InlineSelect } from '@/components/admin/users/index/components/user-columns'
 import { DataTableColumnHeader } from '@/components/shared/data-table/data-table-column-header'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { formatGb } from '@/lib/flamekeeper/rules'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { formatGraduationMonth } from '@/lib/graduation-date'
-import { USER_STATUSES } from '@/lib/user/types'
-import { StateBadge } from './state-badge'
-
-const statusOptions = USER_STATUSES.map((status) => ({
-  value: status,
-  label: status,
-}))
+import { flamekeeperStatus, StatusBadge } from './state-badge'
 
 interface CreateFlamekeeperColumnsOptions {
-  onUpdateStatus?: (userId: string, status: string) => Promise<void>
   onBan?: (row: AdminFlamekeeperRow) => void
   onUnban?: (row: AdminFlamekeeperRow) => void
   canBan?: boolean
@@ -26,7 +18,6 @@ interface CreateFlamekeeperColumnsOptions {
 }
 
 export const createFlamekeeperColumns = ({
-  onUpdateStatus,
   onBan,
   onUnban,
   canBan = false,
@@ -48,11 +39,6 @@ export const createFlamekeeperColumns = ({
             <span className="flex items-center gap-2 font-medium">
               {fk.name || 'No name'}
               {fk.isMember && <Badge variant="secondary">Member</Badge>}
-              {fk.bannedAt && (
-                <Badge variant="destructive" title={fk.banReason ?? undefined}>
-                  Banned
-                </Badge>
-              )}
             </span>
             <span className="text-sm text-muted-foreground">{fk.email}</span>
           </div>
@@ -61,30 +47,12 @@ export const createFlamekeeperColumns = ({
     },
   },
   {
-    accessorKey: 'status',
+    id: 'status',
+    accessorFn: (row) => flamekeeperStatus(row),
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Status" />
     ),
-    cell: ({ row }) => {
-      const fk = row.original
-
-      return (
-        <InlineSelect
-          value={fk.status ?? ''}
-          placeholder="—"
-          options={statusOptions}
-          onValueChange={(value) => onUpdateStatus?.(fk.userId, value)}
-        />
-      )
-    },
-  },
-  {
-    id: 'state',
-    accessorKey: 'state',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Flamekeeping" />
-    ),
-    cell: ({ row }) => <StateBadge state={row.original.state} />,
+    cell: ({ row }) => <StatusBadge row={row.original} />,
   },
   {
     accessorKey: 'pledgedBytes',

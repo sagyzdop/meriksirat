@@ -11,6 +11,7 @@
 > to user.terms_accepted_at when the account is created.
 >
 > **Notes:**
+>
 > - Deleting a user cascades to session, account, favorite,
 >   telegram_link_token, flamekeeper and flamekeeper_grant. It
 >   also removes the user's albums, album memberships, upload
@@ -43,7 +44,7 @@ erDiagram
         integer nu_id
         text major
         text graduation_date "YYYY-MM-01, month precision"
-        text status "Active, Inactive, On Probation, Board, Ex-Board, Roommate, Ex-Roommate, Graduated"
+        text status "Active, Inactive, Alumni"
         text role "user, manager, admin"
         integer is_member
         integer onboarding_complete

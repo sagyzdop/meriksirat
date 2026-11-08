@@ -4,6 +4,7 @@ import type { AdminAlbumSearchSchema } from '@/lib/search-params'
 import type { PaginationMeta } from '@/lib/pagination'
 import type { TombstoneReason } from '@/lib/albums/tombstone'
 import type { CountWarning } from './count-warning'
+import type { AlbumStatus } from './status'
 
 export const ALBUM_CREATE_MIN_CLEARANCE = 3
 
@@ -185,6 +186,7 @@ export interface AdminAlbumRow {
   createdAt: string
   rescuedAt: string | null
   scheduledDeletionAt: string | null
+  status: AlbumStatus
   storage: AlbumStorage
 }
 
@@ -217,6 +219,7 @@ export interface AlbumDetail extends AlbumSummary {
   folderState: AlbumFolderState
   rescuedAt: string | null
   scheduledDeletionAt: string | null
+  status: AlbumStatus
   storage: AlbumStorage
   tombstone: { reason: TombstoneReason; deletedAt: string } | null
   /**

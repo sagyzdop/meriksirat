@@ -34,6 +34,7 @@ import { tombstoneCopy } from '@/lib/albums/tombstone'
 import type { UserProfile } from '@/lib/user/types'
 import { AlbumManager } from '@/components/albums/album-manager'
 import { AlbumStatusBadge } from '@/components/albums/album-status-badge'
+import { AlbumStatusLegend } from '@/components/albums/album-status-legend'
 import { AlbumStorageBadge } from '@/components/albums/album-storage-badge'
 import { albumStorageWarning } from '@/lib/albums/warning'
 import { PhotoGrid } from '@/components/albums/photo-grid'
@@ -293,12 +294,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         {album.access === 'manager' && (
           <AlbumStorageBadge storage={album.storage} />
         )}
-        {canManage && (
-          <AlbumStatusBadge
-            rescuedAt={album.rescuedAt}
-            scheduledDeletionAt={album.scheduledDeletionAt}
-          />
-        )}
+        {canManage && <AlbumStatusBadge status={album.status} />}
         {canManage && album.scheduledDeletionAt && (
           <span>Deletes {formatUtcDate(album.scheduledDeletionAt)}</span>
         )}
@@ -340,6 +336,12 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         onDeletePhoto={canManage ? handleDeletePhoto : undefined}
         favorites={favorites}
       />
+
+      {canManage && (
+        <div className="mt-6">
+          <AlbumStatusLegend />
+        </div>
+      )}
 
       {activeUploads.length > 0 && (
         <button

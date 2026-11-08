@@ -1,16 +1,7 @@
 import { z } from 'zod'
 import type { FlamekeeperState } from '@/lib/access/access-rules'
 
-export const USER_STATUSES = [
-  'Active',
-  'Inactive',
-  'On Probation',
-  'Board',
-  'Ex-Board',
-  'Roommate',
-  'Ex-Roommate',
-  'Graduated',
-] as const
+export const USER_STATUSES = ['Active', 'Inactive', 'Alumni'] as const
 
 // User Profile Types
 export interface UserProfile {

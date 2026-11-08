@@ -62,29 +62,25 @@ export const createAlbumColumns = ({
       <DataTableColumnHeader column={column} title="Title" />
     ),
     cell: ({ row }) => (
-      <Link
-        to="/admin/albums/$albumId"
-        params={{ albumId: row.original.id }}
-        className="block max-w-[240px] truncate font-medium hover:underline"
-        title={row.original.title}
-      >
-        {row.original.title}
-      </Link>
+      <div className="max-w-[240px]">
+        <Link
+          to="/admin/albums/$albumId"
+          params={{ albumId: row.original.id }}
+          className="block truncate font-medium hover:underline"
+          title={row.original.title}
+        >
+          {row.original.title}
+        </Link>
+        {row.original.description && (
+          <span
+            className="block truncate text-sm text-muted-foreground"
+            title={row.original.description}
+          >
+            {row.original.description}
+          </span>
+        )}
+      </div>
     ),
-  },
-  {
-    id: 'description',
-    accessorKey: 'description',
-    header: () => <span>Description</span>,
-    cell: ({ row }) => (
-      <span
-        className="block max-w-[240px] truncate text-muted-foreground"
-        title={row.original.description}
-      >
-        {row.original.description || '—'}
-      </span>
-    ),
-    enableSorting: false,
   },
   {
     id: 'event',
@@ -140,12 +136,7 @@ export const createAlbumColumns = ({
   {
     id: 'status',
     header: () => <span>Status</span>,
-    cell: ({ row }) => (
-      <AlbumStatusBadge
-        rescuedAt={row.original.rescuedAt}
-        scheduledDeletionAt={row.original.scheduledDeletionAt}
-      />
-    ),
+    cell: ({ row }) => <AlbumStatusBadge status={row.original.status} />,
     enableSorting: false,
   },
   {

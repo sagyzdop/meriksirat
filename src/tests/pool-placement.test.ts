@@ -62,6 +62,13 @@ describe('poolStats', () => {
 })
 
 describe('poolAlert', () => {
+  const mid = {
+    pledgedBytes: 100 * GB,
+    usedBytes: 80 * GB,
+    freeBytes: 20 * GB,
+    flamekeepers: 3,
+  }
+
   const healthy = {
     pledgedBytes: 100 * GB,
     usedBytes: 50 * GB,
@@ -70,14 +77,19 @@ describe('poolAlert', () => {
   }
   const low = { ...healthy, usedBytes: 91 * GB, freeBytes: 9 * GB }
 
-  it('alerts once when free space drops below 10%', () => {
+  it('alerts once when used space reaches 90%', () => {
     expect(poolAlert(low, null)).toBe('alert')
     expect(poolAlert(low, new Date())).toBeNull()
   })
 
-  it('re-arms when free space recovers', () => {
+  it('re-arms when used space falls back below 90%', () => {
     expect(poolAlert(healthy, new Date())).toBe('rearm')
     expect(poolAlert(healthy, null)).toBeNull()
+  })
+
+  it('uses the configured threshold', () => {
+    expect(poolAlert(mid, null)).toBeNull()
+    expect(poolAlert(mid, null, 80)).toBe('alert')
   })
 
   it('treats an empty pool as low', () => {

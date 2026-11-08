@@ -168,11 +168,13 @@ export async function previewMoves(
     .map((id) => {
       const a = byId.get(id)!
       const own = volumes.filter((v) => v.albumId === id)
-      const bufferVolume = own.find((v) => !v.flamekeeperUserId)
+      const buffered = own.filter((v) => !v.flamekeeperUserId)
       return {
         albumId: id,
         title: a.title,
-        bytes: bufferVolume?.expectedBytes ?? a.photoBytes,
+        bytes: buffered.length
+          ? buffered.reduce((n, v) => n + (v.expectedBytes ?? 0), 0)
+          : a.photoBytes,
         holder: albumStorageHolder(own),
         deleted: !!a.deletedAt,
       }
@@ -288,9 +290,10 @@ export async function rescueAlbumVolume(
     if (budget && !budget.take(4)) {
       return { ok: false, reason: 'Out of budget, continues next run' }
     }
-    const destFolderId = await withGoogleToken((master) =>
-      ensureBufferVolume(database, master, albumRow, plan.email)
-    )
+    const { volumeId: destVolumeId, folderId: destFolderId } =
+      await withGoogleToken((master) =>
+        ensureBufferVolume(database, master, albumRow, plan.email, bytes)
+      )
 
     const existing = await listIdentities(token, destFolderId, budget)
     const toCopy = matchFiles(source, existing).missing
@@ -332,7 +335,7 @@ export async function rescueAlbumVolume(
           expectedBytes: totalBytes,
           expectedChangedAt: now,
         })
-        .where(bufferVolumeKey(albumId)),
+        .where(eq(volume.id, destVolumeId)),
       database
         .update(album)
         .set({ rescuedAt: now, updatedAt: now })

@@ -34,16 +34,7 @@ export const user = sqliteTable(
     major: text('major'),
     graduationDate: text('graduation_date'),
     status: text('status', {
-      enum: [
-        'Active',
-        'Inactive',
-        'On Probation',
-        'Board',
-        'Ex-Board',
-        'Roommate',
-        'Ex-Roommate',
-        'Graduated',
-      ],
+      enum: ['Active', 'Inactive', 'Alumni'],
     }).default('Active'),
     clearanceLevel: integer('clearance_level').default(1),
     role: text('role', { enum: ['user', 'manager', 'admin'] }).default('user'),
@@ -550,11 +541,11 @@ export const volume = sqliteTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('volume_albumId_flamekeeperUserId_idx').on(
+    index('volume_albumId_flamekeeperUserId_idx').on(
       table.albumId,
       table.flamekeeperUserId
     ),
-    uniqueIndex('volume_albumId_buffer_idx')
+    index('volume_albumId_buffer_idx')
       .on(table.albumId)
       .where(sql`${table.flamekeeperUserId} IS NULL`),
     index('volume_flamekeeperUserId_idx').on(table.flamekeeperUserId),
@@ -580,7 +571,7 @@ export const settings = sqliteTable('settings', {
   albumDeletionNoticeDays: integer('album_deletion_notice_days')
     .default(14)
     .notNull(),
-  poolLowAlertPercent: integer('pool_low_alert_percent').default(10).notNull(),
+  poolLowAlertPercent: integer('pool_low_alert_percent').default(90).notNull(),
   lostGraceDays: integer('lost_grace_days').default(7).notNull(),
   graduationPromptDays: integer('graduation_prompt_days').default(60).notNull(),
 

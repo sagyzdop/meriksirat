@@ -64,7 +64,7 @@ export function Page({ stats, statsLoading }: PageProps) {
         ))}
       </ItemGroup>
       <Button variant="outline" asChild>
-        <Link to="/admin/users">Member Management</Link>
+        <Link to="/admin/members">Club Members</Link>
       </Button>
     </div>
   )

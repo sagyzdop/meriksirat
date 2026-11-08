@@ -60,6 +60,7 @@ export interface FlamekeeperStats {
   freeBytes: number
   capBytes: number
   poolLow: boolean
+  alertPercent: number
 }
 
 // ---------------------------------------------------------------------------
@@ -184,20 +185,7 @@ export interface PaginatedAdminUserAlbumsResponse {
  */
 export const ExportUsersFiltersSchema = z.object({
   role: z.array(z.enum(['user', 'manager', 'admin'])).optional(),
-  status: z
-    .array(
-      z.enum([
-        'Active',
-        'Inactive',
-        'On Probation',
-        'Board',
-        'Ex-Board',
-        'Roommate',
-        'Ex-Roommate',
-        'Graduated',
-      ])
-    )
-    .optional(),
+  status: z.array(z.enum(['Active', 'Inactive', 'Alumni'])).optional(),
   clearanceLevel: z.array(z.coerce.number()).optional(),
   search: z.string().optional(),
 })

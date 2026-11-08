@@ -82,7 +82,7 @@ A member's permission tier: `user`, `manager`, or `admin`.
 _Avoid_: Type
 
 **Member status**:
-A member's club standing: Active, Inactive, On Probation, Board, Ex-Board, Roommate, Ex-Roommate, or Graduated.
+A member's club standing: Active, Inactive, or Alumni.
 _Avoid_: User state
 
 ### Albums
@@ -97,8 +97,8 @@ The photo table was removed in #25 ([ADR-0017](docs/adr/0017-drop-photo-table-re
 _Avoid_: Image, file, picture
 
 **Volume**:
-The photos of one album held by one account: the buffer, or a flamekeeper after an offload. One volume per album per account. Stores the expected count and bytes, which the count warning checks against (see `docs/scenarios/albums/fewer-photos-warning.md`).
-All volumes live in the `volume` table. The buffer's volume is the row with no flamekeeper (`flamekeeper_user_id` is NULL), one per album, and carries the expected count and bytes. Flamekeeper rows from before the buffer keep those NULL and never warn. Offload (Stage 2) is the only thing that will create new ones.
+The photos of one album held by one account: the buffer, or a flamekeeper after an offload. A volume holds at most 256 MB (`VOLUME_MAX_BYTES`); an upload that would exceed it opens another volume, so an album can have several per account. Stores the expected count and bytes, which the count warning checks against (see `docs/scenarios/albums/fewer-photos-warning.md`).
+All volumes live in the `volume` table. The buffer's volumes are the rows with no flamekeeper (`flamekeeper_user_id` is NULL) and carry the expected count and bytes. Flamekeeper rows from before the buffer keep those NULL and never warn. Offload (Stage 2) is the only thing that will create new ones.
 _Avoid_: Chunk, shard, part
 
 **Favorite**:

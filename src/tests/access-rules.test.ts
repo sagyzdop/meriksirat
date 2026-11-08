@@ -158,7 +158,7 @@ describe('entry rules', () => {
 
   it('never sends a non-member to onboarding, whatever their history', () => {
     expect(needsOnboarding(nonMember)).toBe(false)
-    expect(homePath(nonMember)).toBe('/profile')
+    expect(homePath(nonMember)).toBe('/account')
     expect(needsOnboarding({ ...nonMember, flamekeeperState: 'active' })).toBe(
       false
     )
@@ -191,13 +191,13 @@ describe('entry rules', () => {
   })
 
   it('limits non-members to their profile and favorites', () => {
-    expect(nonMemberCanVisit('/profile')).toBe(true)
-    expect(nonMemberCanVisit('/profile/')).toBe(true)
+    expect(nonMemberCanVisit('/account')).toBe(true)
+    expect(nonMemberCanVisit('/account/')).toBe(true)
     expect(nonMemberCanVisit('/favorites')).toBe(true)
     expect(nonMemberCanVisit('/equipment')).toBe(false)
-    expect(nonMemberCanVisit('/profileX')).toBe(false)
+    expect(nonMemberCanVisit('/accountX')).toBe(false)
     expect(nonMemberCanVisit('/my-albums')).toBe(false)
-    expect(nonMemberCanVisit('/admin/users')).toBe(false)
+    expect(nonMemberCanVisit('/admin/members')).toBe(false)
   })
 })
 

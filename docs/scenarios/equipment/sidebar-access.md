@@ -11,6 +11,7 @@
 > page if they try any other address.
 >
 > **Notes:**
+>
 > - Locked entries cannot be clicked, but the pages are not blocked
 >   by address. A member under clearance 2 who opens `/equipment`
 >   directly gets the empty list in `load-equipment-page.md`.
@@ -48,7 +49,7 @@ sequenceDiagram
     else Onboarding not finished
         B-->>M: Redirect to /onboarding
     else Not a member and page not profile or favorites
-        B-->>M: Redirect to /profile
+        B-->>M: Redirect to /account
     else Allowed
         B->>B: build sidebar from membership and clearance
         alt Not a member

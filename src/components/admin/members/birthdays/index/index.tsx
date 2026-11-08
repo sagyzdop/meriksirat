@@ -1,0 +1,67 @@
+import { AdminTabs, memberTabs } from '@/components/shared/admin-tabs'
+import { useRouter } from '@tanstack/react-router'
+import { toast } from 'sonner'
+import { RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useAsyncAction } from '@/hooks/use-async-action'
+import { BirthdayDataTable } from './components/birthday-data-table'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
+import { syncBirthdaysToCalendarFn } from '@/lib/birthdays/functions/birthdays'
+import type { BirthdayListFilters, BirthdayUser } from '@/lib/birthdays/types'
+import type { PaginationMeta } from '@/lib/pagination'
+
+interface PageProps {
+  birthdays: BirthdayUser[]
+  pagination: PaginationMeta
+  filters: BirthdayListFilters
+  isLoading?: boolean
+}
+
+export function Page({
+  birthdays,
+  pagination,
+  filters,
+  isLoading = false,
+}: PageProps) {
+  const router = useRouter()
+  const { pending: isSyncing, run } = useAsyncAction()
+
+  const handleSync = () =>
+    run(async () => {
+      const result = await syncBirthdaysToCalendarFn()
+      toast.success(
+        `Calendar synced: ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`
+      )
+      router.invalidate()
+    }, 'Failed to sync birthdays to the calendar')
+
+  const description =
+    pagination.totalCount > 0
+      ? `${pagination.totalCount} upcoming birthday${pagination.totalCount === 1 ? '' : 's'}`
+      : 'No birthdays found'
+
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Birthdays"
+        description={description}
+        actions={
+          <Button onClick={handleSync} disabled={isSyncing}>
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+            />
+            {isSyncing ? 'Syncing...' : 'Sync to Calendar'}
+          </Button>
+        }
+      />
+      <AdminTabs tabs={memberTabs} />
+      <BirthdayDataTable
+        data={birthdays}
+        pagination={pagination}
+        filters={filters}
+        isLoading={isLoading}
+      />
+    </PageContainer>
+  )
+}

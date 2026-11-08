@@ -18,6 +18,11 @@ export const LISTING_DRIVE_BUDGET = RUN_SUBREQUEST_BUDGET
 
 export const BUFFER_SOURCE_KEY = 'buffer'
 
+export const bufferSourceKey = (volumeId: string) => `buffer:${volumeId}`
+
+export const isBufferSourceKey = (key: string) =>
+  key === BUFFER_SOURCE_KEY || key.startsWith('buffer:')
+
 export type ListingFile = DriveFileMeta
 
 export type ListingOwner =
@@ -43,6 +48,13 @@ export interface ListingSourcesInput {
     expectedBytes: number | null
     expectedChangedAt?: number | null
   } | null
+  moreBufferVolumes?: {
+    id: string
+    driveFolderId: string | null
+    expectedCount: number | null
+    expectedBytes: number | null
+    expectedChangedAt?: number | null
+  }[]
   flamekeeperVolumes: {
     userId: string
     driveFolderId: string | null
@@ -69,6 +81,21 @@ export function planListingSources(
         buffer.expectedCount === null || buffer.expectedBytes === null
           ? null
           : { count: buffer.expectedCount, bytes: buffer.expectedBytes },
+    })
+  }
+  for (const more of input.moreBufferVolumes ?? []) {
+    if (!more.driveFolderId) continue
+    sources.push({
+      key: bufferSourceKey(more.id),
+      owner: { kind: 'buffer' },
+      folderId: more.driveFolderId,
+      stamp: `${more.expectedCount ?? ''}:${more.expectedBytes ?? ''}`,
+      changedAt: more.expectedChangedAt ?? null,
+      listable: true,
+      expected:
+        more.expectedCount === null || more.expectedBytes === null
+          ? null
+          : { count: more.expectedCount, bytes: more.expectedBytes },
     })
   }
   sources.push({
@@ -362,10 +389,10 @@ export function listingPhotos(listing: AlbumListing): AlbumPhoto[] {
 export function findListedFile(
   listing: AlbumListing,
   fileId: string
-): { owner: ListingOwner; file: ListingFile } | null {
+): { owner: ListingOwner; file: ListingFile; volumeKey: string } | null {
   for (const volume of listing.volumes) {
     const file = volume.files.find((f) => f.id === fileId)
-    if (file) return { owner: volume.owner, file }
+    if (file) return { owner: volume.owner, file, volumeKey: volume.key }
   }
   return null
 }

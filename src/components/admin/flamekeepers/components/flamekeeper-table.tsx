@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   flexRender,
   getCoreRowModel,
@@ -11,7 +10,6 @@ import {
   type Updater,
 } from '@tanstack/react-table'
 import { X } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -31,14 +29,13 @@ import {
   BanUserDialog,
   UnbanUserDialog,
 } from '@/components/shared/ban-user-dialogs'
-import { updateUserAdminFn } from '@/lib/user'
-import { USER_STATUSES } from '@/lib/user/types'
-import { errorMessage } from '@/lib/utils'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { createFlamekeeperColumns } from './flamekeeper-columns'
+import { FLAMEKEEPER_STATUSES } from '../types'
 import type { FlamekeeperTableFilters } from '../types'
+import { flamekeeperStatus } from './state-badge'
 
-const statusOptions = USER_STATUSES.map((status) => ({
+const statusOptions = FLAMEKEEPER_STATUSES.map((status) => ({
   value: status,
   label: status,
 }))
@@ -59,7 +56,6 @@ export function FlamekeeperTable({
   viewerId,
 }: FlamekeeperTableProps) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [banUserId, setBanUserId] = React.useState<string | null>(null)
   const [unbanUserId, setUnbanUserId] = React.useState<string | null>(null)
 
@@ -67,40 +63,18 @@ export function FlamekeeperTable({
 
   const filteredRows = React.useMemo(() => {
     if (!filters.status || filters.status.length === 0) return rows
-    return rows.filter((fk) => filters.status!.includes(fk.status ?? ''))
+    return rows.filter((fk) => filters.status!.includes(flamekeeperStatus(fk)))
   }, [rows, filters.status])
-
-  const handleUpdateStatus = React.useCallback(
-    async (userId: string, status: string) => {
-      try {
-        await updateUserAdminFn({
-          data: {
-            userId,
-            status: status as (typeof USER_STATUSES)[number],
-          },
-        })
-        await queryClient.invalidateQueries({ queryKey: ['flamekeepers'] })
-        await queryClient.invalidateQueries({ queryKey: ['users'] })
-        toast.success('Status updated')
-      } catch (error) {
-        toast.error('Failed to update status', {
-          description: errorMessage(error, 'An error occurred'),
-        })
-      }
-    },
-    [queryClient]
-  )
 
   const columns = React.useMemo(
     () =>
       createFlamekeeperColumns({
-        onUpdateStatus: handleUpdateStatus,
         onBan: (row) => setBanUserId(row.userId),
         onUnban: (row) => setUnbanUserId(row.userId),
         canBan,
         viewerId,
       }),
-    [handleUpdateStatus, canBan, viewerId]
+    [canBan, viewerId]
   )
 
   const handlePaginationChange = React.useCallback(

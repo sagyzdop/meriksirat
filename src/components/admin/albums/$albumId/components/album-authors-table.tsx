@@ -13,7 +13,7 @@ import {
 import {
   RoleBadge,
   StatusBadge,
-} from '@/components/admin/users/components/user-badges'
+} from '@/components/admin/members/components/user-badges'
 import type { AlbumAuthorRow } from '@/lib/albums/types'
 
 export function AlbumAuthorsTable({ authors }: { authors: AlbumAuthorRow[] }) {
@@ -79,7 +79,7 @@ export function AlbumAuthorsTable({ authors }: { authors: AlbumAuthorRow[] }) {
                     className="size-8"
                   >
                     <Link
-                      to="/admin/users/$userId"
+                      to="/admin/members/$userId"
                       params={{ userId: author.userId }}
                       aria-label={`Open ${author.name}`}
                     >

@@ -32,6 +32,7 @@ export const EquipmentFiltersSchema = z.object({
   searchQuery: z.string().optional(),
   minClearanceLevel: z.coerce.number().optional(),
   maxClearanceLevel: z.coerce.number().optional(),
+  clearanceLevels: z.array(z.coerce.number()).optional(),
   isActive: z.array(z.boolean()).optional(),
   // Sorting
   sortBy: z
@@ -107,4 +108,18 @@ export const UploadEquipmentImageSchema = z.object({
 export const BulkUpdateEquipmentClearanceSchema = z.object({
   equipmentIds: z.array(z.number()),
   requiredClearanceLevel: z.number().min(1).max(10),
+})
+
+export const BulkUpdateEquipmentCategorySchema = z.object({
+  equipmentIds: z.array(z.number()),
+  categoryId: z.number().min(1),
+})
+
+export const BulkUpdateEquipmentStatusSchema = z.object({
+  equipmentIds: z.array(z.number()),
+  isActive: z.boolean(),
+})
+
+export const BulkDeleteEquipmentSchema = z.object({
+  equipmentIds: z.array(z.number()).min(1),
 })

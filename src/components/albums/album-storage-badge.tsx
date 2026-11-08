@@ -16,7 +16,7 @@ export function AlbumStorageBadge({
     return (
       <Badge variant="outline" className={className}>
         <Flame />
-        {storage.flamekeeperName ?? 'Flamekeeper'}
+        Flamekeepers
       </Badge>
     )
   }

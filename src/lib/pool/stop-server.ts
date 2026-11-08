@@ -186,7 +186,7 @@ export async function sendFlamekeeperEmail(
 
 export function accountLink(): string {
   const origin = siteOrigin(process.env.BETTER_AUTH_URL)
-  return origin ? `\n\nOpen your account page: ${origin}/profile` : ''
+  return origin ? `\n\nOpen your account page: ${origin}/account` : ''
 }
 
 const ENDED_WHY: Partial<Record<StopReason, string>> = {

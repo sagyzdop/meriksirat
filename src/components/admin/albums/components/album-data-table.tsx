@@ -21,16 +21,17 @@ import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-f
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
 import { ServerDataTablePagination } from '@/components/shared/data-table/server-data-table-pagination'
 import { toDateOnlyString } from '@/lib/format'
+import { ALBUM_STATUSES, ALBUM_STATUS_INFO } from '@/lib/albums/status'
 import type { AdminAlbumRow } from '@/lib/albums/types'
 import type { PaginationMeta } from '@/lib/pagination'
 import { createAlbumColumns } from './album-columns'
 import { OFFLOAD_ENABLED } from './album-table-types'
 import type { AlbumTableFilters, OnBulkAction } from './album-table-types'
 
-const statusOptions = [
-  { value: 'rescued', label: 'Rescued' },
-  { value: 'scheduled_deletion', label: 'Scheduled for deletion' },
-]
+const statusOptions = ALBUM_STATUSES.map((value) => ({
+  value,
+  label: ALBUM_STATUS_INFO[value].label,
+}))
 
 const storageOptions = [
   { value: 'buffer', label: 'On Buffer' },

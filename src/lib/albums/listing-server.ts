@@ -1,4 +1,4 @@
-import { and, eq, or, ne } from 'drizzle-orm'
+import { and, asc, eq, or, ne } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { album, flamekeeper, flamekeeperGrant, volume } from '@/db/schema'
 import { withBufferToken } from '@/lib/buffer/tokens'
@@ -53,6 +53,7 @@ export async function loadListingSources(
 ): Promise<ListingSource[]> {
   const rows = await database
     .select({
+      id: volume.id,
       userId: volume.flamekeeperUserId,
       driveFolderId: volume.driveFolderId,
       droppedAt: volume.droppedAt,
@@ -69,8 +70,10 @@ export async function loadListingSources(
       eq(flamekeeperGrant.userId, volume.flamekeeperUserId)
     )
     .where(eq(volume.albumId, row.id))
+    .orderBy(asc(volume.createdAt), asc(volume.id))
     .all()
-  const buffer = rows.find((v) => v.userId === null)
+  const buffers = rows.filter((v) => v.userId === null && !v.droppedAt)
+  const buffer = buffers[0]
   return planListingSources({
     albumFolderId: row.driveFolderId,
     bufferVolume: buffer
@@ -81,6 +84,13 @@ export async function loadListingSources(
           expectedChangedAt: buffer.expectedChangedAt?.getTime() ?? null,
         }
       : null,
+    moreBufferVolumes: buffers.slice(1).map((v) => ({
+      id: v.id,
+      driveFolderId: v.driveFolderId,
+      expectedCount: v.expectedCount,
+      expectedBytes: v.expectedBytes,
+      expectedChangedAt: v.expectedChangedAt?.getTime() ?? null,
+    })),
     flamekeeperVolumes: rows.flatMap((v) =>
       v.userId === null
         ? []
@@ -224,7 +234,11 @@ export async function findAlbumFile(
   database: Database,
   row: { id: string; driveFolderId: string },
   fileId: string
-): Promise<{ owner: ListingOwner; file: ListingFile } | null> {
+): Promise<{
+  owner: ListingOwner
+  file: ListingFile
+  volumeKey: string
+} | null> {
   const cached = findListedFile(await loadAlbumListing(database, row), fileId)
   if (cached) return cached
   return findListedFile(

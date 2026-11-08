@@ -14,10 +14,12 @@ import {
 } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '@/db'
-import { album, albumMember, user, volume } from '@/db/schema'
+import { album, albumMember, flamekeeper, user, volume } from '@/db/schema'
 import { buildPagination } from '@/lib/pagination'
 import { chunk } from '@/lib/utils'
-import { albumStorageHolder } from './status'
+import { albumStatus, albumStorageHolder } from './status'
+import type { AlbumStatus } from './status'
+import type { TombstoneReason } from './tombstone'
 import type {
   AdminAlbumListFilters,
   AdminAlbumListResponse,
@@ -28,11 +30,48 @@ import type {
 const liveVolume = (extra?: SQL) =>
   sql`exists (select 1 from ${volume} where ${volume.albumId} = ${album.id} and ${volume.droppedAt} is null${extra ? sql` and ${extra}` : sql``})`
 
+const LOST_TOMBSTONES: TombstoneReason[] = [
+  'flamekeeper_lost',
+  'flamekeeper_left',
+  'folder_deleted',
+]
+
+function statusCondition(statuses: AlbumStatus[]): SQL {
+  const lost = and(
+    isNotNull(album.deletedAt),
+    inArray(album.tombstoneReason, LOST_TOMBSTONES)
+  )!
+  const live = isNull(album.deletedAt)
+  const open = and(
+    live,
+    isNull(album.scheduledDeletionAt),
+    isNull(album.rescuedAt)
+  )!
+  const unhealthy = liveVolume(
+    sql`exists (select 1 from ${flamekeeper} where ${flamekeeper.userId} = ${volume.flamekeeperUserId} and (${flamekeeper.state} = 'lost' or ${flamekeeper.lostSince} is not null))`
+  )
+  const parts: Record<AlbumStatus, SQL> = {
+    lost,
+    deleted: and(isNotNull(album.deletedAt), sql`not ${lost}`)!,
+    scheduled_deletion: and(live, isNotNull(album.scheduledDeletionAt))!,
+    rescued: and(
+      live,
+      isNull(album.scheduledDeletionAt),
+      isNotNull(album.rescuedAt)
+    )!,
+    unhealthy: and(open, unhealthy)!,
+    healthy: and(open, sql`not ${unhealthy}`)!,
+  }
+  return or(...statuses.map((s) => parts[s]))!
+}
+
 function filterConditions(
   filters: AdminAlbumListFilters,
   scopeUserId?: string
 ): SQL[] {
-  const conditions: SQL[] = [isNull(album.deletedAt)]
+  const conditions: SQL[] = filters.status?.length
+    ? [statusCondition(filters.status)]
+    : [isNull(album.deletedAt)]
 
   if (scopeUserId) {
     const memberAlbums = sql`(select ${albumMember.albumId} from ${albumMember} where ${albumMember.userId} = ${scopeUserId})`
@@ -55,19 +94,6 @@ function filterConditions(
         like(sql`lower(${user.email})`, pattern)
       )!
     )
-  }
-
-  if (filters.status?.length) {
-    const parts: SQL[] = []
-    if (filters.status.includes('scheduled_deletion')) {
-      parts.push(isNotNull(album.scheduledDeletionAt))
-    }
-    if (filters.status.includes('rescued')) {
-      parts.push(
-        and(isNotNull(album.rescuedAt), isNull(album.scheduledDeletionAt))!
-      )
-    }
-    if (parts.length) conditions.push(or(...parts)!)
   }
 
   if (filters.storage?.length) {
@@ -133,6 +159,8 @@ export async function listAdminAlbums(
         createdAt: album.createdAt,
         rescuedAt: album.rescuedAt,
         scheduledDeletionAt: album.scheduledDeletionAt,
+        deletedAt: album.deletedAt,
+        tombstoneReason: album.tombstoneReason,
       })
       .from(album)
       .leftJoin(user, eq(user.id, album.ownerUserId))
@@ -155,9 +183,15 @@ export async function listAdminAlbums(
             flamekeeperUserId: volume.flamekeeperUserId,
             droppedAt: volume.droppedAt,
             name: user.name,
+            flamekeeperState: flamekeeper.state,
+            flamekeeperLostSince: flamekeeper.lostSince,
           })
           .from(volume)
           .leftJoin(user, eq(user.id, volume.flamekeeperUserId))
+          .leftJoin(
+            flamekeeper,
+            eq(flamekeeper.userId, volume.flamekeeperUserId)
+          )
           .where(inArray(volume.albumId, ids))
           .all()
       )
@@ -190,6 +224,7 @@ export async function listAdminAlbums(
       scheduledDeletionAt: row.scheduledDeletionAt
         ? row.scheduledDeletionAt.toISOString()
         : null,
+      status: albumStatus({ ...row, volumes: own }),
       storage,
     }
   })

@@ -203,13 +203,13 @@ export const getFlamekeeperStatsFn = createServerFn({ method: 'GET' }).handler(
     const { adminContext } = await import('@/lib/admin/server')
     const { flamekeeper } = await import('@/db/schema')
     const { sql } = await import('drizzle-orm')
-    const { loadCapBytes, loadPoolFlamekeepers } =
+    const { loadCapBytes, loadPoolFlamekeepers, loadPoolLowAlertPercent } =
       await import('@/lib/pool/server')
     const { isPoolLow, poolStats } = await import('@/lib/pool/placement')
 
     const { database } = await adminContext(['admin', 'manager'])
 
-    const [stateRows, fks, capBytes] = await Promise.all([
+    const [stateRows, fks, capBytes, alertPercent] = await Promise.all([
       database
         .select({ state: flamekeeper.state, count: sql<number>`count(*)` })
         .from(flamekeeper)
@@ -217,6 +217,7 @@ export const getFlamekeeperStatsFn = createServerFn({ method: 'GET' }).handler(
         .all(),
       loadPoolFlamekeepers(database),
       loadCapBytes(database),
+      loadPoolLowAlertPercent(database),
     ])
 
     const states: FlamekeeperStats['states'] = {
@@ -235,7 +236,8 @@ export const getFlamekeeperStatsFn = createServerFn({ method: 'GET' }).handler(
       usedBytes: stats.usedBytes,
       freeBytes: stats.freeBytes,
       capBytes,
-      poolLow: isPoolLow(stats),
+      poolLow: isPoolLow(stats, alertPercent),
+      alertPercent,
     }
   }
 )
@@ -338,7 +340,7 @@ export const getAdminDashboardAlertsFn = createServerFn({
       severity: 'warning',
       title: `${violators} user${violators === 1 ? '' : 's'} with 2+ violations`,
       message: 'Review users with repeated auto-cancelled or overdue bookings.',
-      href: '/admin/users',
+      href: '/admin/members',
     })
   }
 
@@ -348,7 +350,7 @@ export const getAdminDashboardAlertsFn = createServerFn({
       severity: 'info',
       title: `${unlinked} user${unlinked === 1 ? '' : 's'} without a linked Telegram account`,
       message: 'These users will not receive broadcasts or reminders.',
-      href: '/admin/users',
+      href: '/admin/members',
     })
   }
 

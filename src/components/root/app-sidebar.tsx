@@ -6,13 +6,10 @@ import {
   Flame,
   ShieldCheck,
   Users,
-  Tags,
   Calendar,
   Images,
   FolderOpen,
   Heart,
-  Cake,
-  TriangleAlert,
   Settings,
 } from 'lucide-react'
 
@@ -88,8 +85,8 @@ const data = {
       icon: ShieldCheck,
     },
     {
-      title: 'Member Management',
-      url: '/admin/users',
+      title: 'Club Members',
+      url: '/admin/members',
       icon: Users,
     },
     {
@@ -98,19 +95,9 @@ const data = {
       icon: Flame,
     },
     {
-      title: 'Birthdays',
-      url: '/admin/birthdays',
-      icon: Cake,
-    },
-    {
-      title: 'Equipment Management',
+      title: 'Equipment',
       url: '/admin/equipment',
       icon: Camera,
-    },
-    {
-      title: 'Category Management',
-      url: '/admin/categories',
-      icon: Tags,
     },
     {
       title: 'Booking Oversight',
@@ -121,11 +108,6 @@ const data = {
       title: 'Album Management',
       url: '/admin/albums',
       icon: Images,
-    },
-    {
-      title: 'Violations',
-      url: '/admin/violations',
-      icon: TriangleAlert,
     },
     {
       title: 'Settings',

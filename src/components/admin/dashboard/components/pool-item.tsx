@@ -13,7 +13,7 @@ import type { PoolOverview } from '@/lib/admin/functions/pool'
 import { cn } from '@/lib/utils'
 
 export function PoolItem({ pool }: { pool: PoolOverview }) {
-  const low = isPoolLow(pool)
+  const low = isPoolLow(pool, pool.alertPercent)
   const usedPercent =
     pool.pledgedBytes > 0
       ? Math.min(

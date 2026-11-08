@@ -70,7 +70,7 @@ function RouteComponent() {
           user.email ||
           'Unknown',
         image: user.image,
-        href: '/profile',
+        href: '/account',
       }
     : null
 

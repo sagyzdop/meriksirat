@@ -26,7 +26,7 @@ describe('master onboarding', () => {
   it('does not trap a non-member master in onboarding', () => {
     const u = { isMember: false, isMaster: true }
     expect(needsOnboarding(u)).toBe(false)
-    expect(homePath(u)).toBe('/profile')
+    expect(homePath(u)).toBe('/account')
   })
 
   it('still requires onboarding for a member master', () => {

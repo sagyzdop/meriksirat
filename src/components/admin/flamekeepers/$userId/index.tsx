@@ -10,7 +10,7 @@ import {
   UnbanUserDialog,
 } from '@/components/shared/ban-user-dialogs'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
-import { StatusBadge } from '@/components/admin/users/components/user-badges'
+import { StatusBadge } from '@/components/admin/members/components/user-badges'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import type { PoolOverview } from '@/lib/admin/functions/pool'
 import { DetailRow } from '@/components/shared/detail-row'

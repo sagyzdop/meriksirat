@@ -5,7 +5,7 @@
 > **Answer:** Every new photo goes to the buffer, the club-run Google account. The Worker makes sure the album has a Volume folder for the buffer, asks Google for a resumable upload address using the buffer's `drive.file` token, and returns only that address. No flamekeeper is ever chosen. If the buffer is not set up, its token stops working or its Drive is full, the upload fails with a plain message and nothing is placed anywhere else.
 >
 > **Notes:**
-> - The Volume folder lives inside the album folder in the master's Drive. The master creates it, and shares it with the buffer as editor only on the first upload to that album, so the buffer is shared with only when it first receives files. One volume per album: its row in the volume table (no flamekeeper) also stores the expected photo count and bytes.
+> - The Volume folder lives inside the album folder in the master's Drive. The master creates it, and shares it with the buffer as editor only on the first upload to that album, so the buffer is shared with only when it first receives files. A volume holds at most 256 MB: when the next file would push the newest volume past that (by its expected bytes), the upload opens a new Volume folder and row instead. Each row in the volume table (no flamekeeper) also stores its own expected photo count and bytes.
 > - The master account holds no photos. The file is created with the buffer's token, so it counts against the buffer's Drive, and it inherits the album folder's "anyone" reader permission.
 > - The browser gets an upload address and nothing else. The buffer's `drive.file` token and its full-scope token (kept for drains, read only by src/lib/buffer/full-token.ts) never leave the Worker.
 > - Messages: "Photo storage is not available right now, so uploads are paused. Please tell an admin." when GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET or GOOGLE_BUFFER_REFRESH_TOKEN is missing or Google rejects the buffer's token, and "The club's photo storage is full, so uploads are paused. Your photos are still on your device and nothing was lost. Please tell an admin." when the buffer is at 100% or Drive reports the quota exceeded. Setup is in the README, "Connecting the buffer account".
@@ -28,7 +28,7 @@ sequenceDiagram
         alt Buffer full
             W-->>W: Error The club's photo storage is full
         end
-        W->>D: Load the album's buffer volume row (volume with no flamekeeper)
+        W->>D: Load the album's buffer volume rows (volumes with no flamekeeper) and pick one with room under 256 MB, or open a new one
         opt No Volume folder yet
             W->>G: Master token: create the Volume folder in the album folder
             W->>D: Save the folder id, or delete the spare if another request won

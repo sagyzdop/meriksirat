@@ -246,7 +246,7 @@ export async function logUserBanActivity(input: {
       userName: input.userName,
       actorName: input.actorName,
       reason: input.reason,
-      url: origin ? `${origin}/admin/users/${input.userId}` : undefined,
+      url: origin ? `${origin}/admin/members/${input.userId}` : undefined,
     })
   )
 }

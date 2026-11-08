@@ -22,7 +22,7 @@ export const Route = createFileRoute('/_authenticated/become-flamekeeper')({
       flamekeeperState: user.flamekeeperState ?? null,
     })
     if (!rules.canBecomeFlamekeeper || user.isMaster) {
-      throw redirect({ to: '/profile', search: { fk_error: search.fk_error } })
+      throw redirect({ to: '/account', search: { fk_error: search.fk_error } })
     }
   },
   component: RouteComponent,

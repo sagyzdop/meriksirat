@@ -10,6 +10,7 @@ const searchSchema = z.object({
   searchQuery: z.string().optional(),
   minClearanceLevel: z.coerce.number().optional(),
   maxClearanceLevel: z.coerce.number().optional(),
+  clearanceLevels: numberArrayParam(),
   isActive: booleanArrayParam(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),

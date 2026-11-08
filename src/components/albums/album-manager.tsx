@@ -51,6 +51,7 @@ interface AlbumManagerProps {
   onChanged: () => void
   onRefreshed: (detail: AlbumDetail | null) => void
   onDeleted: () => void
+  extraActions?: React.ReactNode
 }
 
 export function AlbumManager({
@@ -60,6 +61,7 @@ export function AlbumManager({
   onChanged,
   onRefreshed,
   onDeleted,
+  extraActions,
 }: AlbumManagerProps) {
   const [showUpload, setShowUpload] = React.useState(false)
   const [shareOpen, setShareOpen] = React.useState(false)
@@ -272,6 +274,7 @@ export function AlbumManager({
             <Pencil />
             Edit details
           </Button>
+          {extraActions}
         </div>
 
         <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">

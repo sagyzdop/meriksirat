@@ -10,6 +10,7 @@
 > to `/become-flamekeeper` for a signed-in person and to `/login` for a guest.
 >
 > **Notes:**
+>
 > - Links to the page: the sidebar "About" entry, the public gallery
 >   header and the login page. `/` still redirects to `/albums`.
 > - Guest loads are cached at the edge for an hour, signed-in loads
@@ -17,7 +18,7 @@
 >   `src/lib/cache/guest-html.ts`.
 > - The HTML is the same for everyone. The browser only asks for the
 >   session after the page loads, to pick the button's destination.
->   Until it answers, the button points at `/profile`, which sends a
+>   Until it answers, the button points at `/account`, which sends a
 >   guest to `/login`.
 > - The minimum pledge, the two-year album lifetime and the 30 and 7
 >   day reminders in the text come from the same constants the app
@@ -42,7 +43,7 @@ sequenceDiagram
     W-->>B: Signed in or not
     P->>B: Click Become a flamekeeper
     alt Signed in
-        B-->>P: Open /profile
+        B-->>P: Open /account
     else Guest
         B-->>P: Open /login
     end

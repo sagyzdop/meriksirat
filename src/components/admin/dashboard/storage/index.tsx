@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Item, ItemGroup } from '@/components/ui/item'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { StorageStats } from '@/lib/admin/dashboard-types'
-import { isPoolLow, POOL_LOW_FRACTION } from '@/lib/pool/placement'
+import { isPoolLow } from '@/lib/pool/placement'
 import { BufferItems } from '../components/buffer-items'
 import { PoolItem } from '../components/pool-item'
 
@@ -25,10 +25,10 @@ export function Page({ stats, statsLoading }: PageProps) {
           </Item>
         ) : null}
       </ItemGroup>
-      {stats && isPoolLow(stats.pool) ? (
+      {stats && isPoolLow(stats.pool, stats.pool.alertPercent) ? (
         <p className="text-sm text-destructive">
-          Free space is below {POOL_LOW_FRACTION * 100}% of the pledge. Recruit
-          flamekeepers or schedule albums for deletion.
+          Pool usage is at or above {stats.pool.alertPercent}% of the pledge.
+          Recruit flamekeepers or schedule albums for deletion.
         </p>
       ) : null}
       <Button variant="outline" asChild>

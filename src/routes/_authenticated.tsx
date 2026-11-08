@@ -21,7 +21,7 @@ export const Route = createFileRoute('/_authenticated')({
     }
 
     if (!user.isMember && !nonMemberCanVisit(location.pathname)) {
-      throw redirect({ to: '/profile' })
+      throw redirect({ to: '/account' })
     }
 
     return { user }

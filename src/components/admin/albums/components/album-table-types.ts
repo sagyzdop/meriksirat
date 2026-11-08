@@ -1,4 +1,5 @@
 import type { AdminAlbumRow } from '@/lib/albums/types'
+import type { AlbumStatus } from '@/lib/albums/status'
 
 export type AlbumBulkAction =
   | 'move-to-buffer'
@@ -8,7 +9,7 @@ export type AlbumBulkAction =
 
 export interface AlbumTableFilters {
   search?: string
-  status?: ('rescued' | 'scheduled_deletion')[]
+  status?: AlbumStatus[]
   storage?: ('buffer' | 'flamekeeper')[]
   startDate?: string
   endDate?: string

@@ -43,7 +43,7 @@ describe('guest html cache ttl', () => {
   })
 
   it('does not cache other paths', () => {
-    expect(guestHtmlTtlSeconds('/profile')).toBeNull()
+    expect(guestHtmlTtlSeconds('/account')).toBeNull()
     expect(guestHtmlTtlSeconds('/about/x')).toBeNull()
   })
 })

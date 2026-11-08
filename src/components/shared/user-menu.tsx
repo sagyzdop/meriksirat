@@ -72,7 +72,7 @@ export function UserMenu({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to="/profile" aria-label="Go to account settings">
+            <Link to="/account" aria-label="Go to account settings">
               <UserCircle aria-hidden="true" />
               Account
             </Link>

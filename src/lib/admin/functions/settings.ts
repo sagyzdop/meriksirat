@@ -12,7 +12,7 @@ export const UpdateSettingsSchema = z.object({
   bufferLimitBytes: z.number().min(1).max(1_000_000).optional(),
   bufferAlertPercent: z.number().int().min(1).max(100).optional(),
   albumDeletionNoticeDays: z.number().int().min(1).max(365).optional(),
-  poolLowAlertPercent: z.number().int().min(1).max(100).optional(),
+  poolLowAlertPercent: z.number().int().min(50).max(99).optional(),
   lostGraceDays: z.number().int().min(1).max(365).optional(),
   graduationPromptDays: z.number().int().min(1).max(730).optional(),
 })

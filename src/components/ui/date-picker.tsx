@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
 
@@ -10,7 +11,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
-interface DatePickerProps {
+interface DatePickerProps extends Pick<
+  React.ComponentProps<typeof Calendar>,
+  'captionLayout' | 'startMonth' | 'endMonth' | 'defaultMonth'
+> {
+  id?: string
   date?: Date
   onSelect?: (date: Date | undefined) => void
   placeholder?: string
@@ -22,11 +27,15 @@ export function DatePicker({
   onSelect,
   placeholder = 'Pick a date',
   className,
+  id,
+  ...calendarProps
 }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
+          id={id}
+          type="button"
           variant="outline"
           data-empty={!date}
           className={cn(
@@ -44,6 +53,7 @@ export function DatePicker({
           selected={date}
           onSelect={onSelect}
           initialFocus
+          {...calendarProps}
         />
       </PopoverContent>
     </Popover>

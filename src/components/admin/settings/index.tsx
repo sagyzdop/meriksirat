@@ -28,7 +28,7 @@ export function Page({ children }: { children: ReactNode }) {
       />
       <Tabs value={active} className="gap-4">
         <div className="overflow-x-auto">
-          <TabsList>
+          <TabsList variant="line">
             {TABS.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value} asChild>
                 <Link to={tab.to}>{tab.label}</Link>

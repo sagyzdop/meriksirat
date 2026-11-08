@@ -1,6 +1,13 @@
-import { createEquipmentColumns } from './components/equipment-columns'
+import { AdminTabs, equipmentTabs } from '@/components/shared/admin-tabs'
+import {
+  createEquipmentColumns,
+  EquipmentField,
+} from './components/equipment-columns'
 import { EquipmentDataTable } from './components/equipment-data-table'
-import { EquipmentWithCategory } from '@/lib/equipment'
+import { EquipmentWithCategory, updateEquipmentFn } from '@/lib/equipment'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { errorMessage } from '@/lib/utils'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -13,6 +20,7 @@ interface Filters {
   searchQuery?: string
   minClearanceLevel?: number
   maxClearanceLevel?: number
+  clearanceLevels?: number[]
   isActive?: boolean[]
   page: number
   limit: number
@@ -40,7 +48,33 @@ export function Page({
   filters,
   isLoading = false,
 }: PageProps) {
-  const columns = createEquipmentColumns()
+  const queryClient = useQueryClient()
+
+  const handleUpdateField = async (
+    equipmentId: number,
+    field: EquipmentField,
+    value: string
+  ) => {
+    try {
+      const data =
+        field === 'isActive'
+          ? { isActive: value === 'true' }
+          : { [field]: parseInt(value) }
+
+      await updateEquipmentFn({ data: { equipmentId, ...data } })
+      await queryClient.invalidateQueries({ queryKey: ['equipment'] })
+      toast.success('Equipment updated')
+    } catch (error) {
+      toast.error('Failed to update equipment', {
+        description: errorMessage(error, 'An error occurred'),
+      })
+    }
+  }
+
+  const columns = createEquipmentColumns({
+    categories,
+    onUpdateField: handleUpdateField,
+  })
 
   const description =
     pagination.total > 0
@@ -50,7 +84,7 @@ export function Page({
   return (
     <PageContainer>
       <PageHeader
-        title="Manage Equipment"
+        title="Equipment"
         description={description}
         actions={
           <Button asChild>
@@ -61,6 +95,7 @@ export function Page({
           </Button>
         }
       />
+      <AdminTabs tabs={equipmentTabs} />
       <EquipmentDataTable
         data={equipment}
         categories={categories}

@@ -18,7 +18,6 @@ export interface AccessRules {
   canJoinClub: boolean
   showFlamekeeperSection: boolean
   showAboutYou: boolean
-  showContact: boolean
   graduationUnderFlamekeeper: boolean
   canEditPledge: boolean
   canStopFlamekeeping: boolean
@@ -57,7 +56,6 @@ export function getAccessRules(user: AccessUser): AccessRules {
     canJoinClub: !user.isMember,
     showFlamekeeperSection: isFlamekeeping || canBecomeFlamekeeper,
     showAboutYou: user.isMember,
-    showContact: user.isMember,
     graduationUnderFlamekeeper: !user.isMember && isFlamekeeping,
     canEditPledge: isKeeping,
     canStopFlamekeeping: isKeeping,
@@ -90,14 +88,14 @@ export function needsOnboarding(user: EntryUser): boolean {
   return user.isMember && !user.onboardingComplete
 }
 
-export type HomePath = '/onboarding' | '/equipment' | '/profile'
+export type HomePath = '/onboarding' | '/equipment' | '/account'
 
 export function homePath(user: EntryUser): HomePath {
   if (needsOnboarding(user)) return '/onboarding'
-  return user.isMember ? '/equipment' : '/profile'
+  return user.isMember ? '/equipment' : '/account'
 }
 
-const NON_MEMBER_PATHS = ['/profile', '/favorites', '/become-flamekeeper']
+const NON_MEMBER_PATHS = ['/account', '/favorites', '/become-flamekeeper']
 
 export function nonMemberCanVisit(pathname: string): boolean {
   const clean = pathname.replace(/\/+$/, '') || '/'

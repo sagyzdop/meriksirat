@@ -67,11 +67,11 @@ export function BookingInfoTable({
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 <a
-                  href={bookedBy.href ?? `/admin/users/${bookedBy.id}`}
+                  href={bookedBy.href ?? `/admin/members/${bookedBy.id}`}
                   onClick={(event) => {
                     event.preventDefault()
                     router.navigate({
-                      href: bookedBy.href ?? `/admin/users/${bookedBy.id}`,
+                      href: bookedBy.href ?? `/admin/members/${bookedBy.id}`,
                     })
                   }}
                   className="flex items-center gap-2 font-medium hover:underline"

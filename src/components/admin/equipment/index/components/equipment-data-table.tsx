@@ -26,10 +26,14 @@ import { useServerTableSorting } from '@/components/shared/data-table/use-server
 import { BulkEditClearanceDialog } from '@/components/shared/bulk-edit-clearance-dialog'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import { SearchInput } from '@/components/shared/search-input'
-import { Shield, X } from 'lucide-react'
+import { BulkDeleteDialog, BulkSelectDialog } from './equipment-bulk-dialogs'
+import { Folder, Power, Shield, Trash2, X } from 'lucide-react'
 import {
   EquipmentWithCategory,
   bulkUpdateEquipmentClearanceFn,
+  bulkUpdateEquipmentCategoryFn,
+  bulkUpdateEquipmentStatusFn,
+  bulkDeleteEquipmentFn,
 } from '@/lib/equipment'
 import type { PageInfo } from '@/lib/pagination'
 
@@ -38,6 +42,7 @@ interface Filters {
   searchQuery?: string
   minClearanceLevel?: number
   maxClearanceLevel?: number
+  clearanceLevels?: number[]
   isActive?: boolean[]
   page: number
   limit: number
@@ -65,6 +70,11 @@ const statusOptions = [
   { value: 'false', label: 'Inactive' },
 ]
 
+const clearanceLevelOptions = [...Array(10)].map((_, i) => ({
+  value: (i + 1).toString(),
+  label: `Level ${i + 1}`,
+}))
+
 export function EquipmentDataTable({
   columns,
   data,
@@ -78,6 +88,9 @@ export function EquipmentDataTable({
   const [rowSelection, setRowSelection] = React.useState({})
   const [bulkEditClearanceOpen, setBulkEditClearanceOpen] =
     React.useState(false)
+  const [bulkCategoryOpen, setBulkCategoryOpen] = React.useState(false)
+  const [bulkStatusOpen, setBulkStatusOpen] = React.useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = React.useState(false)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -145,6 +158,9 @@ export function EquipmentDataTable({
             : undefined
         newFilters.categoryIds =
           categoryIds && categoryIds.length > 0 ? categoryIds : undefined
+      } else if (filterId === 'clearanceLevels') {
+        newFilters.clearanceLevels =
+          value && value.length > 0 ? value.map(Number) : undefined
       } else if (filterId === 'isActive') {
         newFilters.isActive =
           value && value.length > 0 ? value.map((v) => v === 'true') : undefined
@@ -186,6 +202,7 @@ export function EquipmentDataTable({
   const isFiltered =
     (filters.categoryIds && filters.categoryIds.length > 0) ||
     (filters.isActive && filters.isActive.length > 0) ||
+    (filters.clearanceLevels && filters.clearanceLevels.length > 0) ||
     filters.searchQuery
 
   const clearAllFilters = React.useCallback(() => {
@@ -242,6 +259,18 @@ export function EquipmentDataTable({
               />
             )}
             <DataTableFacetedFilter
+              title="Clearance Level"
+              options={clearanceLevelOptions}
+              selectedValues={
+                filters.clearanceLevels
+                  ? filters.clearanceLevels.map(String)
+                  : []
+              }
+              onSelectionChange={(values) =>
+                handleFilterChange('clearanceLevels', values)
+              }
+            />
+            <DataTableFacetedFilter
               title="Status"
               options={statusOptions}
               selectedValues={
@@ -267,15 +296,44 @@ export function EquipmentDataTable({
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {selectedEquipmentIds.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-full border-dashed sm:w-auto"
-              onClick={() => setBulkEditClearanceOpen(true)}
-            >
-              <Shield className="mr-2 h-4 w-4" />
-              Edit Clearance ({selectedEquipmentIds.length})
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-full border-dashed sm:w-auto"
+                onClick={() => setBulkEditClearanceOpen(true)}
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Edit Clearance ({selectedEquipmentIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-full border-dashed sm:w-auto"
+                onClick={() => setBulkCategoryOpen(true)}
+              >
+                <Folder className="mr-2 h-4 w-4" />
+                Edit Category ({selectedEquipmentIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-full border-dashed sm:w-auto"
+                onClick={() => setBulkStatusOpen(true)}
+              >
+                <Power className="mr-2 h-4 w-4" />
+                Edit Status ({selectedEquipmentIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete ({selectedEquipmentIds.length})
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -381,9 +439,73 @@ export function EquipmentDataTable({
         }}
         onSuccess={() => {
           setRowSelection({})
-          queryClient.invalidateQueries({
-            queryKey: ['equipment', 'admin-list'],
+          queryClient.invalidateQueries({ queryKey: ['equipment'] })
+        }}
+      />
+
+      <BulkSelectDialog
+        open={bulkCategoryOpen}
+        onOpenChange={setBulkCategoryOpen}
+        count={selectedEquipmentIds.length}
+        title="Bulk Edit Category"
+        label="Category"
+        placeholder="Select category"
+        options={categories.map((c) => ({
+          value: c.id.toString(),
+          label: c.name,
+        }))}
+        successMessage={`Updated category for ${selectedEquipmentIds.length} equipment item(s)`}
+        errorTitle="Failed to update equipment"
+        onSubmit={async (value) => {
+          await bulkUpdateEquipmentCategoryFn({
+            data: {
+              equipmentIds: selectedEquipmentIds,
+              categoryId: parseInt(value),
+            },
           })
+        }}
+        onSuccess={() => {
+          setRowSelection({})
+          queryClient.invalidateQueries({ queryKey: ['equipment'] })
+        }}
+      />
+
+      <BulkSelectDialog
+        open={bulkStatusOpen}
+        onOpenChange={setBulkStatusOpen}
+        count={selectedEquipmentIds.length}
+        title="Bulk Edit Status"
+        label="Status"
+        placeholder="Select status"
+        options={statusOptions}
+        successMessage={`Updated status for ${selectedEquipmentIds.length} equipment item(s)`}
+        errorTitle="Failed to update equipment"
+        onSubmit={async (value) => {
+          await bulkUpdateEquipmentStatusFn({
+            data: {
+              equipmentIds: selectedEquipmentIds,
+              isActive: value === 'true',
+            },
+          })
+        }}
+        onSuccess={() => {
+          setRowSelection({})
+          queryClient.invalidateQueries({ queryKey: ['equipment'] })
+        }}
+      />
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={selectedEquipmentIds.length}
+        onSubmit={() =>
+          bulkDeleteEquipmentFn({
+            data: { equipmentIds: selectedEquipmentIds },
+          })
+        }
+        onSuccess={() => {
+          setRowSelection({})
+          queryClient.invalidateQueries({ queryKey: ['equipment'] })
         }}
       />
     </div>

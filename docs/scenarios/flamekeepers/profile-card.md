@@ -1,10 +1,11 @@
 # See the Flamekeeper section on the profile page
 
-> **Question:** What does a person see in the Flamekeeper section on /profile for each flamekeeper state?
+> **Question:** What does a person see in the Flamekeeper section on /account for each flamekeeper state?
 >
 > **Answer:** The profile page loads the person's flamekeeper record. The section only appears for people who have a record or who could sign up (an @nu.edu.kz account that is not flamekeeping). It starts with one muted row holding the Lucide fire icon, a title and a description, and the copy depends on the state. Someone with no record, or a drained one, sees "Keep the flame alive" and a Become a flamekeeper button. An active or full flamekeeper sees "You're keeping the flame alive", a "x GB of y GB pledged" row with a thin bar and Edit, and a Stop flamekeeping row. A draining flamekeeper sees "Your flame is winding down" and the pledge row without buttons. A lost flamekeeper sees "We lost touch with your Drive" with a Reconnect Drive button.
 >
 > **Notes:**
+>
 > - The page is one centred column of rows with no tabs or cards, see
 >   [GLOSSARY.md](../../../GLOSSARY.md) for the terms.
 > - Icon by state. Keeping with photos stored: primary colour, light
@@ -45,7 +46,7 @@ sequenceDiagram
     participant Worker
     participant D1
     participant GO as Google OAuth
-    F->>Browser: Open /profile
+    F->>Browser: Open /account
     Browser->>Worker: getMyFlamekeeperFn()
     Worker->>D1: read flamekeeper row
     Worker-->>Browser: state, pledge, used, date

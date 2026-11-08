@@ -1,4 +1,10 @@
 import { Input } from '@/components/ui/input'
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+} from '@/components/ui/item'
 import { Label } from '@/components/ui/label'
 
 interface NumberFieldProps {
@@ -23,23 +29,28 @@ export function NumberField({
   error,
 }: NumberFieldProps) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type="number"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={error ? true : undefined}
-      />
-      {error ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : helper ? (
-        <p className="text-sm text-muted-foreground">{helper}</p>
-      ) : null}
-    </div>
+    <Item variant="outline" size="sm">
+      <ItemContent>
+        <Label htmlFor={id}>{label}</Label>
+        {error ? (
+          <p className="text-sm text-destructive">{error}</p>
+        ) : helper ? (
+          <ItemDescription>{helper}</ItemDescription>
+        ) : null}
+      </ItemContent>
+      <ItemActions>
+        <Input
+          id={id}
+          type="number"
+          min={min}
+          max={max}
+          className="w-28"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={error ? true : undefined}
+        />
+      </ItemActions>
+    </Item>
   )
 }
 

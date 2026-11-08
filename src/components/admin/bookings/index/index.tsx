@@ -76,7 +76,7 @@ export function Page({
         getPersonInfo={(booking) => ({
           name: getDisplayName(booking),
           image: booking.user?.image,
-          href: booking.user ? `/admin/users/${booking.user.id}` : undefined,
+          href: booking.user ? `/admin/members/${booking.user.id}` : undefined,
         })}
         onSortChange={(sortBy, sortOrder) =>
           navigate({

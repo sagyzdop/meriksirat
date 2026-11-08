@@ -2,12 +2,13 @@
 
 > **Question:** How does a non-member become a club member?
 >
-> **Answer:** On `/profile` they type the current club code in the "Join the
+> **Answer:** On `/account` they type the current club code in the "Join the
 > club" row of the Club section and click Join. If it matches, the account becomes a member
 > and the app moves them to `/onboarding` to fill in their
 > profile. A wrong code shows an error and nothing changes.
 >
 > **Notes:**
+>
 > - The code is compared ignoring capital letters and spaces at
 >   the ends. It is stored in the global settings row. The server
 >   accepts at most 64 characters.
@@ -26,7 +27,7 @@ sequenceDiagram
     participant B as Browser
     participant W as Worker
     participant D as D1
-    P->>B: Open /profile, type the code in the Join the club row,<br/>click Join
+    P->>B: Open /account, type the code in the Join the club row,<br/>click Join
     Note over B: Join is disabled while the box is empty
     B->>W: submitClubCodeFn(code)
     W->>D: Read settings.clubCode (create one if missing)
