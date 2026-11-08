@@ -17,6 +17,7 @@ import {
   planListingRefresh,
   planListingSources,
   readAlbumListing,
+  volumeIdFromSourceKey,
 } from '@/lib/albums/listing'
 import type {
   AlbumListingEntry,
@@ -107,6 +108,28 @@ describe('what to list, and with whose token', () => {
     const volume = sources.find((s) => s.owner.kind === 'flamekeeper')
     expect(volume?.owner).toEqual({ kind: 'flamekeeper', userId: 'amina' })
     expect(volume?.folderId).toBe('amina-folder')
+  })
+
+  it('carries an offloaded volume’s expected totals as its stamp', () => {
+    const sources = sourcesOf({
+      flamekeeperVolumes: [
+        keeper('amina', { expectedCount: 3, expectedBytes: 30 }),
+        keeper('legacy'),
+      ],
+    })
+    const offloaded = sources.find((s) => s.key === 'flamekeeper:amina')
+    expect(offloaded?.expected).toEqual({ count: 3, bytes: 30 })
+    expect(offloaded?.stamp).toBe('3:30')
+    const legacy = sources.find((s) => s.key === 'flamekeeper:legacy')
+    expect(legacy?.expected).toBeNull()
+    expect(legacy?.stamp).toBe('')
+  })
+
+  it('reads the volume id from a source key', () => {
+    expect(volumeIdFromSourceKey('buffer:v1')).toBe('v1')
+    expect(volumeIdFromSourceKey('flamekeeper:v2')).toBe('v2')
+    expect(volumeIdFromSourceKey('buffer')).toBeNull()
+    expect(volumeIdFromSourceKey('master')).toBeNull()
   })
 
   it('expects nothing from a buffer volume that carries no expected values', () => {

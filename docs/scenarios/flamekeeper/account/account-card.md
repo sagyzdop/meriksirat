@@ -1,6 +1,6 @@
 # Flamekeeper card on the account page
 
-The Flamekeeper section of `/account` shows the person's state and pledge. The state is system-managed ([GLOSSARY](../../../../GLOSSARY.md), Flamekeeper). Nobody holds photos on a flamekeeper until Stage 2 of #15, so "used" is 0 for now.
+The Flamekeeper section of `/account` shows the person's state and pledge. The state is system-managed ([GLOSSARY](../../../../GLOSSARY.md), Flamekeeper). "Used" is what admins have offloaded to them; it is 0 until an offload.
 
 ## What does the card show in each state?
 
@@ -36,4 +36,4 @@ sequenceDiagram
     G-->>D1: callback sets Active and clears the lost fields
 ```
 
-Other failures (network, Google outage) are retried an hour later and never mark Lost. A successful check also stores Drive usage and syncs a changed Google email to the account. The 7 days are fixed in code (`LOST_GRACE_MS`); the Settings value `lostGraceDays` is not read yet ([settings/other-settings.md](../../admin/settings/other-settings.md)). Cron overview: [cron](../../cron/).
+Other failures (network, Google outage) are retried an hour later and never mark Lost. A successful check also stores Drive usage and syncs a changed Google email to the account. The grace period is the Settings value `lostGraceDays` (default 7) ([settings/other-settings.md](../../admin/settings/other-settings.md)). Cron overview: [cron](../../cron/).

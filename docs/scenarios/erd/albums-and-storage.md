@@ -53,7 +53,8 @@ erDiagram
     }
 ```
 
-- A volume holds at most 256 MB. Rows with no `flamekeeperUserId` are the buffer's; flamekeeper rows appear only after an offload (or on legacy data) and keep `expected*` NULL.
+- A volume holds at most 256 MB. Rows with no `flamekeeperUserId` are the buffer's; flamekeeper rows are created by an offload and carry `expected*` like the buffer's (legacy flamekeeper rows keep them NULL).
+- A row with `droppedAt` set is not live: it is skipped by listings and the storage holder, and the cleanup of dropped volumes deletes what its folder still holds, then the row. Offloads and rescues stage their new volumes as dropped rows and make them live in one batch ([album-offload](../kv/album-offload.md)).
 - `volume.flamekeeperUserId` points at `user`, not at the `flamekeeper` table.
 - `album_member` is unique on `(albumId, userId)`: a user who opens the edit link becomes a co-author.
 - `favorite` stores a Drive file id, not a photo row; photos exist only in Drive. When a file moves to another account, favorites are remapped.

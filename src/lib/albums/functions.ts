@@ -387,7 +387,7 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
   .validator(AcceptFewerPhotosSchema)
   .handler(async ({ data }) => {
     const { volume } = await import('@/db/schema')
-    const { and, eq, isNull, sql } = await import('drizzle-orm')
+    const { and, eq, sql } = await import('drizzle-orm')
     const { planAccept } = await import('./count-warning')
     const { loadAlbumListing } = await import('./listing-server')
 
@@ -401,14 +401,13 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
     if (!currentUser || (!isAdmin && row.ownerUserId !== currentUser.id)) {
       throw new Error('Only the album owner or an admin can accept this.')
     }
-    if (data.volumeKey !== 'buffer' && !data.volumeKey.startsWith('buffer:')) {
+    const { resolveVolumeId } = await import('@/lib/buffer/server')
+    const volumeId = await resolveVolumeId(database, row.id, data.volumeKey)
+    if (!volumeId) {
       throw new Error('This volume has no fewer-photos warning to accept.')
     }
 
     const listing = await loadAlbumListing(database, row, { force: true })
-    const volumeId = data.volumeKey.startsWith('buffer:')
-      ? data.volumeKey.slice('buffer:'.length)
-      : null
     const plan = planAccept({
       listing,
       volumeKey: data.volumeKey,
@@ -422,13 +421,7 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
         expectedCount: sql`MIN(${volume.expectedCount}, ${plan.expected.count})`,
         expectedBytes: sql`MIN(${volume.expectedBytes}, ${plan.expected.bytes})`,
       })
-      .where(
-        and(
-          eq(volume.albumId, row.id),
-          isNull(volume.flamekeeperUserId),
-          volumeId ? eq(volume.id, volumeId) : undefined
-        )
-      )
+      .where(and(eq(volume.albumId, row.id), eq(volume.id, volumeId)))
 
     return { success: true }
   })
@@ -757,10 +750,11 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     await withListingOwnerToken(database, listed.owner, (token) =>
       deleteDriveFile(token, data.fileId)
     )
-    if (listed.owner.kind === 'buffer') {
+    if (listed.owner.kind !== 'master') {
       const { adjustExpectedByKey } = await import('@/lib/buffer/server')
       await adjustExpectedByKey(database, row.id, listed.volumeKey, -1, -bytes)
-    } else if (listed.owner.kind === 'flamekeeper') {
+    }
+    if (listed.owner.kind === 'flamekeeper') {
       await database
         .update(flamekeeper)
         .set({
@@ -768,6 +762,8 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
           driveUsageBytes: sql`MAX(${flamekeeper.driveUsageBytes} - ${bytes}, 0)`,
         })
         .where(eq(flamekeeper.userId, listed.owner.userId))
+      const { syncKeepingStates } = await import('@/lib/pool/server')
+      await syncKeepingStates(database, [listed.owner.userId])
     }
     await database.batch([
       database

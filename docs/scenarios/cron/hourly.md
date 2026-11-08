@@ -29,28 +29,31 @@ What does the pool-low alert do?
 
 ```mermaid
 flowchart TD
-    A[Reset every Full flamekeeper to Active] --> B["Pool = Active and Full flamekeepers<br/>% used = (pledged - free) / pledged"]
+    A["Active with no room left becomes Full,<br/>Full with room again becomes Active"] --> B["Pool = Active and Full flamekeepers<br/>% used = (pledged - free) / pledged"]
     B --> C{"% used at or above the setting<br/>(poolLowAlertPercent, default 90)"}
     C -- yes, not alerted yet --> D[Telegram every admin, set poolLowAlertedAt]
     C -- no, was alerted --> E[Clear poolLowAlertedAt]
 ```
 
-How does a draining or banned flamekeeper end?
+How does a draining or banned flamekeeper end, and what happens to a lost one's photos?
 
 ```mermaid
 flowchart TD
-    A["drainFlamekeepers: up to 10 Draining rows, 2 requests each"] --> B{Volumes still held?}
-    B -- none --> S[Stopped: grant dropped]
+    A["drainFlamekeepers: up to 10 Draining rows, 2 requests each"] --> B{Live volumes held?}
     B -- some, buffer full --> P["Pause, alert admins once per 24 h<br/>(KV drain-paused)"]
     B -- some --> R["Rescue up to 3 albums to the buffer<br/>(needs 12 requests each)"]
-    R --> B2{None left?}
-    B2 -- yes --> S
-    B2 -- no --> W[Retry next run]
+    B -- none --> C["Clean this flamekeeper's dropped volumes:<br/>delete the originals with their token"]
+    R --> C
+    C --> B2{Any volume row left?}
+    B2 -- no --> S[Stopped: grant dropped]
+    B2 -- yes --> W[Retry next run]
+    L["Up to 3 Lost flamekeepers with live volumes"] --> LR["Rescue their albums with the buffer's full token;<br/>originals stay until they reconnect"]
+    CL["Then up to 10 dropped volumes anywhere,<br/>older than 15 min, album not mid-move"] --> CD["List with the owner's token, delete the files,<br/>delete the folder and the row"]
     X["finishBans"] --> Y["Cancel up to 3 booked bookings of banned users"]
     X --> Z["End flamekeeping for up to 10 banned flamekeepers"]
 ```
 
-Ending flamekeeping (`endFlamekeeping`) moves a flamekeeper to Draining while they still hold volumes, otherwise to Stopped. Before the buffer redesign, rows could be left in Draining; this step ends them.
+Ending flamekeeping (`endFlamekeeping`) moves a flamekeeper to Draining while any volume row of theirs remains (live or dropped), otherwise to Stopped. Dropped volumes are rows whose files the app no longer lists: buffer originals after an offload, flamekeeper originals after a rescue, and partial copies of an abandoned move ([album-offload](../kv/album-offload.md)). A lost or stopped owner's dropped volumes wait until the owner can be reached again.
 
 What do scheduled deletions and the buffer check do?
 
@@ -70,5 +73,5 @@ flowchart TD
 ```
 
 - Telegram bot configuration runs after the steps. It calls `setMyCommands` only when the deployed version differs from the KV marker [telegram-bot-version](../kv/telegram-bot-version.md).
-- The health constants (7-day grace, 60-day graduation lead) are code constants. The `lostGraceDays` and `graduationPromptDays` settings columns are not read by these steps.
+- The lost grace period comes from the `lostGraceDays` setting (default 7) and the graduation stop lead from `graduationPromptDays` (default 60); the code constants are only the defaults.
 - Related KV keys: [drain-paused](../kv/drain-paused.md), [buffer-usage](../kv/buffer-usage.md).

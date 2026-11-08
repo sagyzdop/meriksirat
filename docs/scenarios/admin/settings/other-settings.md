@@ -20,5 +20,5 @@ flowchart TD
 
 - Operating hours start must be before end (minutes from midnight, 0-1439).
 - The scheduled deletion period applies when an admin schedules an album for deletion from Album Management ([ADR-0012](../../../adr/0012-no-backup-albums-expire.md)).
-- Lost grace days (default 7) and Graduation prompt lead (default 60) are saved but not read by any code. The lost grace and graduation timing are constants in code. Treat these two fields as inactive until wired ([account card](../../flamekeeper/account/account-card.md), [graduation](../../flamekeeper/account/graduation.md)).
+- Lost grace days (default 7) and Graduation prompt lead (default 60) are read by the lost-grace cron step, the reconnect email and the graduation stop ([account card](../../flamekeeper/account/account-card.md), [graduation](../../flamekeeper/account/graduation.md)).
 - Club code, broadcast, test email and storage have their own files: [club-code.md](club-code.md), [broadcast.md](broadcast.md), [test-email.md](test-email.md), [storage.md](storage.md).

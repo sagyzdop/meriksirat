@@ -26,6 +26,13 @@ export const flamekeeperSourceKey = (volumeId: string) =>
 export const isBufferSourceKey = (key: string) =>
   key === BUFFER_SOURCE_KEY || key.startsWith('buffer:')
 
+export function volumeIdFromSourceKey(key: string): string | null {
+  for (const prefix of ['buffer:', 'flamekeeper:']) {
+    if (key.startsWith(prefix)) return key.slice(prefix.length) || null
+  }
+  return null
+}
+
 export type ListingFile = DriveFileMeta
 
 export type ListingOwner =
@@ -65,6 +72,9 @@ export interface ListingSourcesInput {
     droppedAt: Date | null
     state: string | null
     hasGrant: boolean
+    expectedCount?: number | null
+    expectedBytes?: number | null
+    expectedChangedAt?: number | null
   }[]
 }
 
@@ -117,10 +127,16 @@ export function planListingSources(
       key: flamekeeperSourceKey(v.id),
       owner: { kind: 'flamekeeper', userId: v.userId },
       folderId: v.driveFolderId,
-      stamp: '',
-      changedAt: null,
+      stamp:
+        v.expectedCount == null || v.expectedBytes == null
+          ? ''
+          : `${v.expectedCount}:${v.expectedBytes}`,
+      changedAt: v.expectedChangedAt ?? null,
       listable: v.hasGrant && v.state !== 'lost' && v.state !== 'drained',
-      expected: null,
+      expected:
+        v.expectedCount == null || v.expectedBytes == null
+          ? null
+          : { count: v.expectedCount, bytes: v.expectedBytes },
     })
   }
   return sources

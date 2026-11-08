@@ -6,6 +6,7 @@ import { MIN_PLEDGE_BYTES, formatGb } from '@/lib/flamekeeper/rules'
 import type { StopStatus } from '@/lib/flamekeeper/types'
 import { siteOrigin } from '@/lib/format'
 import { graduationDateError } from '@/lib/graduation-date'
+import { loadSettings } from '@/lib/booking/load-settings'
 import { planGraduation } from './graduation'
 import { planEnd, planOptOut, type StopPlan, type StopReason } from './stop'
 
@@ -113,10 +114,11 @@ export async function changePledge(
       .set({ graduationDate: input.graduationDate, updatedAt: now })
       .where(eq(user.id, userId)),
   ])
+  const { graduationPromptDays } = await loadSettings(database)
   await applyStopPlan(
     database,
     userId,
-    planGraduation(row, input.graduationDate, now),
+    planGraduation(row, input.graduationDate, now, graduationPromptDays),
     now
   )
 }

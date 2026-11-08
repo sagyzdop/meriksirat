@@ -33,7 +33,7 @@ export function Page({ stats, statsLoading }: PageProps) {
     { icon: HeartCrack, label: 'Lost', value: stats?.states.lost.toString() },
     {
       icon: PackageOpen,
-      label: 'Drained',
+      label: 'Stopped',
       value: stats?.states.drained.toString(),
     },
   ]

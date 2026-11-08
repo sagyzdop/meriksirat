@@ -5,9 +5,8 @@
 > login, and never on the master. Changes: the buffer's full-scope token is a
 > separate server-side credential, not a flamekeeper grant. The daily health check
 > becomes hourly, as `checkFlamekeeperHealth` in the hourly cron. Flamekeeper
-> grants sit unused until offload (Stage 2) of
-> [#15](https://github.com/sagyzdop/meriksirat/issues/15). The rescue of a lost
-> flamekeeper's photos is pending its live test. The text below is the original
+> grants are used by offload, to mint upload addresses into their volumes and to
+> list and delete what they hold. The text below is the original
 > decision, kept for history.
 
 The flamekeeper's offline `drive.file` refresh token lives in its own table,

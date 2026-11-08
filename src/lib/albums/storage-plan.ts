@@ -1,4 +1,4 @@
-import { splitBytes } from './volume-limit'
+import { VOLUME_MAX_BYTES, packFiles, splitBytes } from './volume-limit'
 import type { AlbumStorageHolder } from './status'
 
 export type MoveTarget = 'buffer' | 'flamekeeper'
@@ -223,31 +223,65 @@ export function deletionNoticeText(
   return `The album "${title}" is scheduled for deletion on ${dateText}. Download any photos you want to keep before then.${link}`
 }
 
+export interface OffloadPendingFile extends FileIdentity {
+  mimeType: string
+  sourceFolderId: string
+}
+
+export interface OffloadCopy {
+  sourceId: string
+  copyId: string
+  size: number
+}
+
 export interface OffloadPendingVolume {
+  volumeId: string
   destUserId: string
-  volumeFolderId: string
-  permissionId: string
+  volumeFolderId: string | null
+  permissionId: string | null
   bytes: number
-  files: (FileIdentity & { mimeType: string })[]
+  files: OffloadPendingFile[]
+  copies?: OffloadCopy[]
+  extras?: string[]
 }
 
 export interface OffloadPending {
+  startedAt: number
+  sourceFolders: string[]
+  checkedFolders: string[]
+  goneSources?: string[]
   volumes: OffloadPendingVolume[]
 }
 
-export function pendingMatches(
-  pending: OffloadPending,
-  files: (FileIdentity & { volumeFolderId: string })[]
-): boolean {
-  const total = pending.volumes.reduce((n, v) => n + v.files.length, 0)
-  if (total !== files.length) return false
-  return pending.volumes.every((v) => {
-    const mine = files.filter((f) => f.volumeFolderId === v.volumeFolderId)
-    return (
-      mine.length === v.files.length &&
-      matchFiles(v.files, mine).missing.length === 0
-    )
-  })
+export interface OffloadStart {
+  albumId: string
+  files: FileIdentity[]
+  downloadToken: string
+}
+
+export interface OffloadMint {
+  urls: Record<string, string>
+  uploaded: string[]
+  downloadToken: string
+}
+
+export type OffloadCompletion =
+  { ok: true; done: boolean } | { ok: false; reason: string }
+
+export function planOffloadVolumes<T extends { size: number }>(
+  files: T[],
+  candidates: PlacementCandidate[],
+  max: number = VOLUME_MAX_BYTES
+): { files: T[]; bytes: number; userId: string }[] | null {
+  const groups = packFiles(files, max)
+  const sizes = groups.map((g) => g.reduce((n, f) => n + f.size, 0))
+  const picks = assignVolumes(sizes, candidates)
+  if (!picks) return null
+  return groups.map((group, i) => ({
+    files: group,
+    bytes: sizes[i],
+    userId: picks[i].userId,
+  }))
 }
 
 export function canReusePending(
@@ -255,15 +289,102 @@ export function canReusePending(
   sourceIds: string[],
   free: Map<string, number>
 ): boolean {
-  const ids = pending.volumes.flatMap((v) => v.files.map((f) => f.id))
-  if (ids.length !== sourceIds.length) return false
-  const want = new Set(sourceIds)
-  if (!ids.every((id) => want.has(id))) return false
+  const ids = new Set(pending.volumes.flatMap((v) => v.files.map((f) => f.id)))
+  if (sourceIds.length === 0) return false
+  if (!sourceIds.every((id) => ids.has(id))) return false
   const need = new Map<string, number>()
   for (const v of pending.volumes) {
     need.set(v.destUserId, (need.get(v.destUserId) ?? 0) + v.bytes)
   }
   return [...need].every(([userId, bytes]) => (free.get(userId) ?? 0) >= bytes)
+}
+
+export function trimPending(
+  pending: OffloadPending,
+  sourceIds: string[]
+): OffloadPending {
+  const keep = new Set(sourceIds)
+  return {
+    ...pending,
+    volumes: pending.volumes.map((v) => {
+      const files = v.files.filter((f) => keep.has(f.id))
+      return {
+        ...v,
+        files,
+        bytes: files.reduce((n, f) => n + f.size, 0),
+        copies: undefined,
+        extras: undefined,
+      }
+    }),
+  }
+}
+
+export function unknownSourceFiles(
+  pending: OffloadPending,
+  listedIds: string[]
+): string[] {
+  const known = new Set(
+    pending.volumes.flatMap((v) => v.files.map((f) => f.id))
+  )
+  return listedIds.filter((id) => !known.has(id))
+}
+
+export function matchVolumeCopies(
+  files: FileIdentity[],
+  listed: FileIdentity[]
+): { copies: OffloadCopy[]; extras: string[]; missing: FileIdentity[] } {
+  const match = matchFiles(files, listed)
+  const used = new Set(match.pairs.map((p) => p.copy.id))
+  return {
+    copies: match.pairs.map((p) => ({
+      sourceId: p.source.id,
+      copyId: p.copy.id,
+      size: p.copy.size,
+    })),
+    extras: listed.filter((f) => !used.has(f.id)).map((f) => f.id),
+    missing: match.missing,
+  }
+}
+
+export type OffloadStep =
+  | { kind: 'check-source'; folderId: string }
+  | { kind: 'verify'; volumeId: string }
+  | { kind: 'commit' }
+
+export function nextOffloadStep(pending: OffloadPending): OffloadStep {
+  const volume = pending.volumes.find((v) => !v.copies)
+  if (volume) return { kind: 'verify', volumeId: volume.volumeId }
+  const checked = new Set(pending.checkedFolders)
+  const folderId = pending.sourceFolders.find((id) => !checked.has(id))
+  if (folderId) return { kind: 'check-source', folderId }
+  return { kind: 'commit' }
+}
+
+export function goneFromSource(
+  pending: OffloadPending,
+  folderId: string,
+  listedIds: string[]
+): string[] {
+  const listed = new Set(listedIds)
+  return pending.volumes.flatMap((v) =>
+    v.files
+      .filter((f) => f.sourceFolderId === folderId && !listed.has(f.id))
+      .map((f) => f.id)
+  )
+}
+
+export function offloadCopiesToKeep(
+  volume: OffloadPendingVolume,
+  gone: Set<string>
+): { keep: OffloadCopy[]; drop: string[] } {
+  const copies = volume.copies ?? []
+  return {
+    keep: copies.filter((c) => !gone.has(c.sourceId)),
+    drop: [
+      ...(volume.extras ?? []),
+      ...copies.filter((c) => gone.has(c.sourceId)).map((c) => c.copyId),
+    ],
+  }
 }
 
 export type DrainStep =

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  keepingState,
   poolAlert,
   poolStats,
   usableBytes,
@@ -99,5 +100,18 @@ describe('poolAlert', () => {
         null
       )
     ).toBe('alert')
+  })
+})
+
+describe('keepingState', () => {
+  it('is full once the pledge or the cap leaves no room', () => {
+    expect(keepingState(fk({ usedBytes: 4 * GB }), CAP)).toBe('active')
+    expect(keepingState(fk({ usedBytes: 10 * GB }), CAP)).toBe('full')
+    expect(keepingState(fk({ driveUsageBytes: 20 * GB }), CAP)).toBe('full')
+  })
+  it('returns to active when room frees up', () => {
+    expect(keepingState(fk({ state: 'full', usedBytes: 9 * GB }), CAP)).toBe(
+      'active'
+    )
   })
 })

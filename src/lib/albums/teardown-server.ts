@@ -76,6 +76,11 @@ export async function tearDownAlbumFiles(
   row: { id: string; driveFolderId: string },
   budget: Budget
 ): Promise<TeardownVerdict> {
+  const { cleanDroppedVolumes } = await import('./storage-server')
+  await cleanDroppedVolumes(database, budget, {
+    albumId: row.id,
+    minAgeMs: 0,
+  })
   const sources = (await loadListingSources(database, row)).filter(
     (s) => s.key !== 'master'
   )

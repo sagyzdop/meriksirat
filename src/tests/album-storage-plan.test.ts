@@ -6,12 +6,19 @@ import {
   deletionDate,
   deletionNoticeText,
   deletionRecipients,
+  goneFromSource,
   matchFiles,
-  pendingMatches,
+  matchVolumeCopies,
+  nextOffloadStep,
+  offloadCopiesToKeep,
   pickFlamekeeper,
   planDrainStep,
   planMoves,
+  planOffloadVolumes,
+  trimPending,
+  unknownSourceFiles,
   verifyCopy,
+  type OffloadPending,
   type FileIdentity,
   type PlacementCandidate,
 } from '@/lib/albums/storage-plan'
@@ -211,49 +218,138 @@ describe('assignVolumes', () => {
 })
 
 describe('multi-volume offload pending', () => {
-  const file = (id: string) => ({
+  const file = (id: string, size = 1, folder = 'b1') => ({
     id,
     name: id,
-    size: 1,
+    size,
     md5: id,
     mimeType: 'image/jpeg',
+    sourceFolderId: folder,
   })
-  const pending = {
+  const pending = (): OffloadPending => ({
+    startedAt: 0,
+    sourceFolders: ['b1', 'b2'],
+    checkedFolders: [],
     volumes: [
       {
+        volumeId: 'v1',
         destUserId: 'a',
-        volumeFolderId: 'v1',
+        volumeFolderId: 'f1',
         permissionId: 'p',
         bytes: 1,
         files: [file('x')],
       },
       {
+        volumeId: 'v2',
         destUserId: 'a',
-        volumeFolderId: 'v2',
-        permissionId: 'p',
+        volumeFolderId: null,
+        permissionId: null,
         bytes: 1,
-        files: [file('y')],
+        files: [file('y', 1, 'b2')],
       },
     ],
-  }
-  it('matches only when each folder holds its files', () => {
-    const ok = [
-      { ...file('x'), volumeFolderId: 'v1' },
-      { ...file('y'), volumeFolderId: 'v2' },
-    ]
-    expect(pendingMatches(pending, ok)).toBe(true)
-    expect(
-      pendingMatches(pending, [
-        { ...file('x'), volumeFolderId: 'v2' },
-        { ...file('y'), volumeFolderId: 'v2' },
-      ])
-    ).toBe(false)
   })
-  it('reuses only with the same files and room', () => {
-    expect(canReusePending(pending, ['x', 'y'], new Map([['a', 2]]))).toBe(true)
-    expect(canReusePending(pending, ['x', 'y'], new Map([['a', 1]]))).toBe(
+
+  it('reuses with the same or fewer files and enough room', () => {
+    expect(canReusePending(pending(), ['x', 'y'], new Map([['a', 2]]))).toBe(
+      true
+    )
+    expect(canReusePending(pending(), ['x'], new Map([['a', 9]]))).toBe(true)
+    expect(canReusePending(pending(), ['x', 'y'], new Map([['a', 1]]))).toBe(
       false
     )
-    expect(canReusePending(pending, ['x'], new Map([['a', 9]]))).toBe(false)
+    expect(canReusePending(pending(), ['x', 'z'], new Map([['a', 9]]))).toBe(
+      false
+    )
+    expect(canReusePending(pending(), [], new Map([['a', 9]]))).toBe(false)
+  })
+
+  it('trims photos deleted since the start and forgets verification', () => {
+    const p = pending()
+    p.volumes[0].copies = [{ sourceId: 'x', copyId: 'c', size: 1 }]
+    const trimmed = trimPending(p, ['x'])
+    expect(trimmed.volumes[0].files.map((f) => f.id)).toEqual(['x'])
+    expect(trimmed.volumes[0].copies).toBeUndefined()
+    expect(trimmed.volumes[1].files).toEqual([])
+    expect(trimmed.volumes[1].bytes).toBe(0)
+  })
+
+  it('flags buffer files the plan does not know', () => {
+    expect(unknownSourceFiles(pending(), ['x', 'y'])).toEqual([])
+    expect(unknownSourceFiles(pending(), ['x', 'new'])).toEqual(['new'])
+  })
+
+  it('finds planned photos missing from a source folder', () => {
+    expect(goneFromSource(pending(), 'b1', [])).toEqual(['x'])
+    expect(goneFromSource(pending(), 'b1', ['x'])).toEqual([])
+    expect(goneFromSource(pending(), 'b2', [])).toEqual(['y'])
+  })
+
+  it('verifies every volume before checking the buffer, then commits', () => {
+    const p = pending()
+    expect(nextOffloadStep(p)).toEqual({ kind: 'verify', volumeId: 'v1' })
+    p.volumes[0].copies = []
+    p.volumes[1].copies = []
+    expect(nextOffloadStep(p)).toEqual({
+      kind: 'check-source',
+      folderId: 'b1',
+    })
+    p.checkedFolders = ['b1', 'b2']
+    expect(nextOffloadStep(p)).toEqual({ kind: 'commit' })
+  })
+})
+
+describe('matchVolumeCopies', () => {
+  it('pairs copies, lists duplicates as extras and reports missing', () => {
+    const result = matchVolumeCopies(
+      [f('a', 'm1'), f('b', 'm2')],
+      [f('c1', 'm1', 10, 'a'), f('c2', 'm1', 10, 'a')]
+    )
+    expect(result.copies).toEqual([{ sourceId: 'a', copyId: 'c1', size: 10 }])
+    expect(result.extras).toEqual(['c2'])
+    expect(result.missing.map((m) => m.id)).toEqual(['b'])
+  })
+})
+
+describe('offloadCopiesToKeep', () => {
+  it('drops extras and copies of photos deleted during the move', () => {
+    const result = offloadCopiesToKeep(
+      {
+        volumeId: 'v',
+        destUserId: 'a',
+        volumeFolderId: 'f',
+        permissionId: 'p',
+        bytes: 2,
+        files: [],
+        copies: [
+          { sourceId: 'x', copyId: 'cx', size: 1 },
+          { sourceId: 'y', copyId: 'cy', size: 1 },
+        ],
+        extras: ['dup'],
+      },
+      new Set(['y'])
+    )
+    expect(result.keep.map((c) => c.copyId)).toEqual(['cx'])
+    expect(result.drop).toEqual(['dup', 'cy'])
+  })
+})
+
+describe('planOffloadVolumes', () => {
+  it('packs files into capped volumes and spreads them over room', () => {
+    const files = [
+      { id: '1', size: 6 },
+      { id: '2', size: 6 },
+      { id: '3', size: 3 },
+    ]
+    const planned = planOffloadVolumes(files, [c('a', 10), c('b', 8)], 10)
+    expect(planned?.map((p) => [p.userId, p.bytes])).toEqual([
+      ['a', 9],
+      ['b', 6],
+    ])
+  })
+  it('fails when a volume has nowhere to go', () => {
+    expect(
+      planOffloadVolumes([{ size: 6 }, { size: 6 }], [c('a', 7)], 10)
+    ).toBe(null)
   })
 })

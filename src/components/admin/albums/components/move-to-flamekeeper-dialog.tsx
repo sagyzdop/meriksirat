@@ -16,26 +16,34 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   completeOffloadFn,
   mintOffloadUploadsFn,
+  offloadDownloadTokenFn,
   previewAlbumMovesFn,
   startOffloadFn,
 } from '@/lib/albums/storage-functions'
-import type { OffloadSessionData } from '@/lib/albums/storage-functions'
-import { runOffloadSession } from '@/lib/albums/offload-client'
+import { runOffload } from '@/lib/albums/offload-client'
 import { formatBytes } from '@/lib/format'
 import { errorMessage } from '@/lib/utils'
 import type { AdminAlbumRow } from '@/lib/albums/types'
 import { SkippedItems, movableIds, previewSkips } from './move-preview-summary'
 
-type RunStatus = 'waiting' | 'running' | 'done' | 'failed' | 'cancelled'
+type RunStatus =
+  | 'waiting'
+  | 'starting'
+  | 'copying'
+  | 'verifying'
+  | 'done'
+  | 'failed'
+  | 'cancelled'
+
+type FileState = 'pending' | 'copying' | 'done'
 
 interface AlbumRun {
   albumId: string
   title: string
   status: RunStatus
-  fileIndex: number
   bytesDone: number
   bytesTotal: number
-  files: { name: string; uploaded: boolean }[]
+  files: { name: string; state: FileState }[]
   error?: string
 }
 
@@ -48,21 +56,13 @@ interface MoveToFlamekeeperDialogProps {
   onDone: () => void
 }
 
-function fileState(run: AlbumRun, index: number) {
-  if (run.status === 'done') return 'done'
-  if (run.files[index].uploaded && index !== run.fileIndex) return 'done'
-  if (run.status === 'waiting') return 'pending'
-  if (index < run.fileIndex) return 'done'
-  if (index === run.fileIndex) {
-    if (run.status === 'running') return 'uploading'
-    if (run.status === 'failed') return 'failed'
-  }
-  return 'pending'
-}
+const MAX_COMPLETE_CALLS = 30
 
 const statusText: Record<RunStatus, string> = {
   waiting: 'Waiting',
-  running: 'Copying',
+  starting: 'Preparing',
+  copying: 'Copying',
+  verifying: 'Verifying',
   done: 'Done',
   failed: 'Failed',
   cancelled: 'Cancelled',
@@ -77,7 +77,6 @@ export function MoveToFlamekeeperDialog({
   const queryClient = useQueryClient()
   const [phase, setPhase] = React.useState<Phase>('confirm')
   const [runs, setRuns] = React.useState<AlbumRun[]>([])
-  const [startError, setStartError] = React.useState<string | null>(null)
   const abortRef = React.useRef<AbortController | null>(null)
 
   const albumIds = React.useMemo(() => albums.map((a) => a.id), [albums])
@@ -90,9 +89,15 @@ export function MoveToFlamekeeperDialog({
     if (open) {
       setPhase('confirm')
       setRuns([])
-      setStartError(null)
     }
   }, [open])
+
+  React.useEffect(() => {
+    if (phase !== 'running') return
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [phase])
 
   const preview = useQuery({
     queryKey: ['albums', 'move-preview', 'flamekeeper', albumIds],
@@ -144,87 +149,104 @@ export function MoveToFlamekeeperDialog({
       )
     )
 
+  const patchFile = (albumId: string, index: number, state: FileState) =>
+    setRuns((current) =>
+      current.map((run) =>
+        run.albumId === albumId
+          ? {
+              ...run,
+              files: run.files.map((file, i) =>
+                i === index ? { ...file, state } : file
+              ),
+            }
+          : run
+      )
+    )
+
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ['albums'] }),
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] }),
     ])
 
-  const start = async () => {
+  const moveOne = async (
+    albumId: string,
+    signal: AbortSignal
+  ): Promise<boolean> => {
+    patchRun(albumId, { status: 'starting', error: undefined })
+    const [session] = await startOffloadFn({ data: { albumIds: [albumId] } })
+    if (!session) throw new Error('Could not start the move')
+    patchRun(albumId, {
+      status: 'copying',
+      bytesDone: 0,
+      bytesTotal: session.files.reduce((n, f) => n + f.size, 0),
+      files: session.files.map((f) => ({ name: f.name, state: 'pending' })),
+    })
+    await runOffload(session, {
+      signal,
+      mint: (id, fileIds) =>
+        mintOffloadUploadsFn({
+          data: { albumId: id, fileIds, origin: window.location.origin },
+        }),
+      refreshDownloadToken: (id) =>
+        offloadDownloadTokenFn({ data: { albumId: id } }),
+      onFile: (id, index, state) =>
+        patchFile(id, index, state === 'done' ? 'done' : 'copying'),
+      onBytes: (id, bytesDone, bytesTotal) =>
+        patchRun(id, { bytesDone, bytesTotal }),
+    })
+    patchRun(albumId, { status: 'verifying' })
+    for (let call = 0; call < MAX_COMPLETE_CALLS; call++) {
+      if (signal.aborted) throw new DOMException('Cancelled', 'AbortError')
+      const result = await completeOffloadFn({ data: { albumId } })
+      if (!result.ok) {
+        patchRun(albumId, { status: 'failed', error: result.reason })
+        return false
+      }
+      if (result.done) {
+        patchRun(albumId, { status: 'done' })
+        return true
+      }
+    }
+    patchRun(albumId, {
+      status: 'failed',
+      error: 'The move did not finish verifying; try again',
+    })
+    return false
+  }
+
+  const runAll = async (ids: string[]) => {
     const controller = new AbortController()
     abortRef.current = controller
-    const ids = movableIds(items)
     setPhase('running')
-    setStartError(null)
-
-    let sessions: OffloadSessionData[]
-    try {
-      sessions = await startOffloadFn({
-        data: { albumIds: ids, origin: window.location.origin },
-      })
-    } catch (error) {
-      setStartError(errorMessage(error, 'Could not start the move'))
-      setPhase('finished')
-      return
-    }
-
-    setRuns(
-      sessions.map((session) => ({
-        albumId: session.albumId,
-        title: titles.get(session.albumId) ?? session.albumId,
-        status: 'waiting',
-        fileIndex: 0,
-        bytesDone: 0,
-        bytesTotal: session.files.reduce((n, f) => n + f.size, 0),
-        files: session.files.map((f) => ({
-          name: f.name,
-          uploaded: !!f.uploaded,
+    setRuns((current) => {
+      const kept = current.filter((run) => !ids.includes(run.albumId))
+      return [
+        ...kept,
+        ...ids.map((albumId) => ({
+          albumId,
+          title: titles.get(albumId) ?? albumId,
+          status: 'waiting' as const,
+          bytesDone: 0,
+          bytesTotal: 0,
+          files: current.find((run) => run.albumId === albumId)?.files ?? [],
         })),
-      }))
-    )
+      ]
+    })
 
     let completed = 0
-    for (const session of sessions) {
+    for (const albumId of ids) {
       if (controller.signal.aborted) {
-        patchRun(session.albumId, { status: 'cancelled' })
+        patchRun(albumId, { status: 'cancelled' })
         continue
       }
-      patchRun(session.albumId, { status: 'running' })
       try {
-        await runOffloadSession(session, {
-          signal: controller.signal,
-          mintUploadUrls: (albumId, fileIds) =>
-            mintOffloadUploadsFn({
-              data: { albumId, fileIds, origin: window.location.origin },
-            }),
-          onProgress: (albumId, fileIndex, _count, bytesDone, bytesTotal) =>
-            patchRun(albumId, { fileIndex, bytesDone, bytesTotal }),
-        })
-        const result = await completeOffloadFn({
-          data: {
-            albumId: session.albumId,
-            files: session.files.map(
-              ({ id, name, size, md5, volumeFolderId }) => ({
-                id,
-                name,
-                size,
-                md5,
-                volumeFolderId,
-              })
-            ),
-          },
-        })
-        if (result.ok) {
-          completed += 1
-          patchRun(session.albumId, { status: 'done' })
-        } else {
-          patchRun(session.albumId, { status: 'failed', error: result.reason })
-        }
+        if (await moveOne(albumId, controller.signal)) completed += 1
       } catch (error) {
         if (controller.signal.aborted) {
-          patchRun(session.albumId, { status: 'cancelled' })
+          patchRun(albumId, { status: 'cancelled' })
         } else {
-          patchRun(session.albumId, {
+          patchRun(albumId, {
             status: 'failed',
             error: errorMessage(error, 'Copy failed'),
           })
@@ -243,14 +265,20 @@ export function MoveToFlamekeeperDialog({
     onDone()
   }
 
+  const start = () => runAll(movableIds(items))
+
+  const retry = () =>
+    runAll(
+      runs
+        .filter((run) => run.status === 'failed' || run.status === 'cancelled')
+        .map((run) => run.albumId)
+    )
+
   const cancelRun = () => abortRef.current?.abort()
 
-  const notStarted = movable
-    .filter((item) => !runs.some((run) => run.albumId === item.albumId))
-    .map((item) => ({
-      albumId: item.albumId,
-      reason: 'Could not be started; try again later',
-    }))
+  const retryable = runs.some(
+    (run) => run.status === 'failed' || run.status === 'cancelled'
+  )
 
   return (
     <Dialog
@@ -264,8 +292,9 @@ export function MoveToFlamekeeperDialog({
         <DialogHeader>
           <DialogTitle>Move to Flamekeepers</DialogTitle>
           <DialogDescription>
-            Photos are copied from the Buffer to a Flamekeeper. The Buffer copy
-            stays until the move completes.
+            Photos are copied through this browser from the Buffer to
+            Flamekeepers. Keep this window open; the Buffer copy stays until the
+            move is verified.
           </DialogDescription>
         </DialogHeader>
 
@@ -311,7 +340,6 @@ export function MoveToFlamekeeperDialog({
 
         {phase !== 'confirm' && (
           <div className="space-y-4 text-sm">
-            {startError && <p className="text-destructive">{startError}</p>}
             {runs.map((run) => {
               const percent = run.bytesTotal
                 ? Math.round((run.bytesDone / run.bytesTotal) * 100)
@@ -333,7 +361,15 @@ export function MoveToFlamekeeperDialog({
                   {run.error && <p className="text-destructive">{run.error}</p>}
                   <ul className="max-h-28 space-y-0.5 overflow-y-auto text-xs">
                     {run.files.map((file, index) => {
-                      const state = fileState(run, index)
+                      const state =
+                        run.status === 'done'
+                          ? 'done'
+                          : file.state === 'copying' && run.status === 'failed'
+                            ? 'failed'
+                            : file.state === 'copying' &&
+                                run.status !== 'copying'
+                              ? 'pending'
+                              : file.state
                       return (
                         <li
                           key={`${file.name}-${index}`}
@@ -341,7 +377,7 @@ export function MoveToFlamekeeperDialog({
                         >
                           {state === 'done' ? (
                             <Check className="size-3 shrink-0" />
-                          ) : state === 'uploading' ? (
+                          ) : state === 'copying' ? (
                             <Loader2 className="size-3 shrink-0 animate-spin" />
                           ) : state === 'failed' ? (
                             <CircleAlert className="size-3 shrink-0 text-destructive" />
@@ -356,16 +392,12 @@ export function MoveToFlamekeeperDialog({
                 </div>
               )
             })}
-            {phase === 'finished' && (
-              <SkippedItems items={notStarted} titles={titles} />
+            {phase === 'finished' && retryable && (
+              <p className="text-muted-foreground">
+                Albums that did not finish are unchanged and stay on the Buffer.
+                Retrying within 6 hours skips the photos already copied.
+              </p>
             )}
-            {phase === 'finished' &&
-              runs.some((run) => run.status === 'cancelled') && (
-                <p className="text-muted-foreground">
-                  Cancelled albums are unchanged: their copy on the Buffer stays
-                  in place.
-                </p>
-              )}
           </div>
         )}
 
@@ -394,9 +426,16 @@ export function MoveToFlamekeeperDialog({
             </Button>
           )}
           {phase === 'finished' && (
-            <Button type="button" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
+            <>
+              {retryable && (
+                <Button type="button" variant="outline" onClick={retry}>
+                  Retry unfinished
+                </Button>
+              )}
+              <Button type="button" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

@@ -210,6 +210,9 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
 
     const { flamekeeper, user } = await import('@/db/schema')
     const { eq, desc } = await import('drizzle-orm')
+    const { loadSettings } = await import('@/lib/booking/load-settings')
+    const { DAY_MS, lostDeadline } = await import('@/lib/pool/health')
+    const graceMs = (await loadSettings(database)).lostGraceDays * DAY_MS
 
     const rows = await database
       .select({
@@ -254,6 +257,7 @@ export const getAdminFlamekeepersFn = createServerFn({ method: 'GET' })
       graduationConfirmedAt: row.graduationConfirmedAt,
       healthCheckedAt: row.healthCheckedAt,
       lostSince: row.lostSince,
+      lostDeadline: row.lostSince ? lostDeadline(row.lostSince, graceMs) : null,
       bannedAt: row.bannedAt,
       banReason: row.banReason,
       createdAt: row.createdAt,

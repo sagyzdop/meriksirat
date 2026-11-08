@@ -46,7 +46,7 @@ export async function getBufferAccessToken(): Promise<string> {
   return cachedToken
 }
 
-function forgetBufferAccessToken(): void {
+export function forgetBufferAccessToken(): void {
   cachedToken = null
   cachedAt = 0
 }

@@ -102,6 +102,9 @@ export async function loadListingSources(
               droppedAt: v.droppedAt,
               state: v.state,
               hasGrant: !!v.grantUserId,
+              expectedCount: v.expectedCount,
+              expectedBytes: v.expectedBytes,
+              expectedChangedAt: v.expectedChangedAt?.getTime() ?? null,
             },
           ]
     ),

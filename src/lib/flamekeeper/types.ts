@@ -26,6 +26,7 @@ export interface AdminFlamekeeperRow {
   graduationConfirmedAt: Date | null
   healthCheckedAt: Date | null
   lostSince: Date | null
+  lostDeadline: Date | null
   bannedAt: Date | null
   banReason: string | null
   createdAt: Date

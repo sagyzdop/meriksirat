@@ -26,8 +26,9 @@ Built in [#17](https://github.com/sagyzdop/meriksirat/issues/17): uploads land o
 the buffer, in a `volume` row (no flamekeeper) per album whose folder is created by the
 master and shared with the buffer on the first upload. The buffer's `drive.file`
 token mints each resumable upload address, so the browser receives an address and
-never a token. The full-scope token is read only by `src/lib/buffer/full-token.ts`,
-which nothing imports yet. If the buffer is not configured or its token fails, the
+never a token (an admin's offload is the exception: it gets a short-lived `drive.file`
+buffer token to download). The full-scope token is read only by
+`src/lib/buffer/full-token.ts`, which only the server's move code imports. If the buffer is not configured or its token fails, the
 upload fails with a plain message and nothing is placed on a flamekeeper.
 
 Built in [#26](https://github.com/sagyzdop/meriksirat/issues/26): usage is read
@@ -38,6 +39,8 @@ banner and the dashboard card read the cache. Uploads are refused at 100% before
 the browser sends any bytes. See
 [the scenario](../scenarios/kv/buffer-usage.md).
 
-Not built yet: offload (Stage 2, which waits for its live tests). Photos uploaded to flamekeepers before #17 stay
-there until a drain. [ADR-0008](0008-one-club-folder-per-album-photos-owned-by-flamekeepers.md)
-still describes them.
+Offload is built: Move to Flamekeepers copies an album's photos from the buffer
+through the admin's browser into flamekeeper volumes of at most 256 MB, and
+deletes the buffer originals once every copy is verified. Move to Buffer, drains
+and the rescue of a lost flamekeeper bring them back with the full-scope token.
+See [the scenario](../scenarios/admin/albums/storage.md).

@@ -26,6 +26,13 @@ export function usableBytes(fk: PoolFlamekeeper, capBytes: number): number {
   return Math.max(0, Math.min(pledgeLeft, capLeft))
 }
 
+export function keepingState(
+  fk: PoolFlamekeeper,
+  capBytes: number
+): 'active' | 'full' {
+  return usableBytes(fk, capBytes) > 0 ? 'active' : 'full'
+}
+
 export function poolStats(fks: PoolFlamekeeper[], capBytes: number): PoolStats {
   const stats: PoolStats = {
     pledgedBytes: 0,

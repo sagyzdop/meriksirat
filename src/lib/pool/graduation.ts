@@ -6,25 +6,32 @@ const DAY_MS = 24 * 60 * 60 * 1000
 export const GRADUATION_LEAD_DAYS = 60
 export const GRADUATION_CONFIRM_DAYS = 365
 
-export function graduationStopStart(graduationDate: string): Date {
+export function graduationStopStart(
+  graduationDate: string,
+  leadDays: number = GRADUATION_LEAD_DAYS
+): Date {
   return new Date(
-    new Date(`${graduationDate}T00:00:00Z`).getTime() -
-      GRADUATION_LEAD_DAYS * DAY_MS
+    new Date(`${graduationDate}T00:00:00Z`).getTime() - leadDays * DAY_MS
   )
 }
 
-export function graduationStopDue(graduationDate: string, now: Date): boolean {
-  const start = graduationStopStart(graduationDate)
+export function graduationStopDue(
+  graduationDate: string,
+  now: Date,
+  leadDays: number = GRADUATION_LEAD_DAYS
+): boolean {
+  const start = graduationStopStart(graduationDate, leadDays)
   return !Number.isNaN(start.getTime()) && now.getTime() >= start.getTime()
 }
 
 export function planGraduation(
   fk: StoppableFlamekeeper,
   graduationDate: string,
-  now: Date
+  now: Date,
+  leadDays: number = GRADUATION_LEAD_DAYS
 ): StopPlan {
   if (fk.state === 'drained') return { kind: 'none' }
-  return graduationStopDue(graduationDate, now)
+  return graduationStopDue(graduationDate, now, leadDays)
     ? { kind: 'stop' }
     : { kind: 'none' }
 }

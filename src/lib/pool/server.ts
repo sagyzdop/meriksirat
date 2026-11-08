@@ -5,6 +5,7 @@ import { type Budget } from '@/lib/cron/budget'
 import {
   DEFAULT_FLAMEKEEPER_CAP_BYTES,
   DEFAULT_POOL_LOW_ALERT_PERCENT,
+  keepingState,
   poolAlert,
   poolStats,
   type PoolFlamekeeper,
@@ -44,6 +45,29 @@ export async function loadPoolFlamekeepers(
     .from(flamekeeper)
     .where(inArray(flamekeeper.state, ['active', 'full']))
     .all()
+}
+
+export async function syncKeepingStates(
+  database: Database,
+  userIds?: string[]
+): Promise<void> {
+  if (userIds && userIds.length === 0) return
+  const [fks, cap] = await Promise.all([
+    loadPoolFlamekeepers(database),
+    loadCapBytes(database),
+  ])
+  const now = new Date()
+  for (const fk of fks) {
+    if (userIds && !userIds.includes(fk.userId)) continue
+    const next = keepingState(fk, cap)
+    if (next === fk.state) continue
+    await database
+      .update(flamekeeper)
+      .set({ state: next, updatedAt: now })
+      .where(
+        and(eq(flamekeeper.userId, fk.userId), eq(flamekeeper.state, fk.state))
+      )
+  }
 }
 
 export type AdminSendResult = 'sent' | 'no_admins' | 'over_budget'
@@ -91,10 +115,7 @@ export async function runPoolMaintenance(
   const database = db(env.meriksirat_d1)
   const now = new Date()
 
-  await database
-    .update(flamekeeper)
-    .set({ state: 'active', updatedAt: now })
-    .where(eq(flamekeeper.state, 'full'))
+  await syncKeepingStates(database)
 
   const [fks, cap, settingsRow] = await Promise.all([
     loadPoolFlamekeepers(database),

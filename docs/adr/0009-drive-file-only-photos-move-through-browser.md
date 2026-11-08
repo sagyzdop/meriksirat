@@ -3,13 +3,14 @@
 > **Amended by #24.** The relay, drain and placement code described below was
 > removed because nobody holds photos on a flamekeeper until Stage 2. The last
 > `dev` commit containing it is `2565826`; Stage 2 tickets restore what they need
-> from the commit history.
+> from the commit history. Offload and the server-side drain have since been
+> rebuilt; see [the storage scenario](../scenarios/admin/albums/storage.md).
 
 > **Amended by [ADR-0016](0016-drains-run-on-server-with-buffer-full-token.md).**
 > The `drive.file`-only rule for flamekeepers and the master still holds. Drains
 > no longer go through the browser: the server copies photos to the buffer with
 > the buffer's full-scope token. The browser relay stays only for an admin-started
-> offload from the buffer to a flamekeeper (Stage 2, not built). The rule that
+> offload from the buffer to a flamekeeper (built, `src/lib/albums/offload-client.ts`). The rule that
 > photos are deleted when no browser relays them is removed. The 14-day deletion
 > now applies only when a flamekeeper's own access blocks the drain
 > ([ADR-0012](0012-no-backup-albums-expire.md)). The text below is the original

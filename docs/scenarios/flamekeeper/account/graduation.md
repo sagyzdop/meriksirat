@@ -37,4 +37,4 @@ sequenceDiagram
 
 - Confirmation is due 365 days after the last confirmation (sign-up counts) and applies to Active, Full and Draining, not Lost or Stopped.
 - Ending clears the grant exactly as in [stop.md](stop.md).
-- The Settings value `graduationPromptDays` does not drive this yet; 60 and 365 are constants ([settings/other-settings.md](../../admin/settings/other-settings.md)).
+- The stop lead is the Settings value `graduationPromptDays` (default 60); the 365-day confirmation interval is a constant ([settings/other-settings.md](../../admin/settings/other-settings.md)).

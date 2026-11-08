@@ -4,7 +4,8 @@ import { flamekeeper, user } from '@/db/schema'
 import { type Budget } from '@/lib/cron/budget'
 import { formatLongDate } from '@/lib/club-time'
 import { sendEmail } from '@/lib/google/email'
-import { LOST_GRACE_MS } from './health'
+import { loadSettings } from '@/lib/booking/load-settings'
+import { DAY_MS, lostDeadline } from './health'
 
 const MAX_EMAILS_PER_RUN = 3
 
@@ -15,6 +16,7 @@ export async function sendReconnectEmails(
   now: Date,
   budget: Budget
 ): Promise<void> {
+  const graceMs = (await loadSettings(database)).lostGraceDays * DAY_MS
   let sentCount = 0
   for (const userId of userIds) {
     if (sentCount >= MAX_EMAILS_PER_RUN || !budget.take(1)) break
@@ -30,7 +32,7 @@ export async function sendReconnectEmails(
       .get()
     if (!row?.lostSince) continue
     sentCount++
-    const deadline = new Date(row.lostSince.getTime() + LOST_GRACE_MS)
+    const deadline = lostDeadline(row.lostSince, graceMs)
     const deadlineText = formatLongDate(deadline)
     const link = origin ? `${origin}/account` : 'your account page'
     const sent = await sendEmail({

@@ -1,34 +1,18 @@
 import SparkMD5 from 'spark-md5'
+import type { FileIdentity, OffloadMint } from './storage-plan'
 
-export interface OffloadSessionFile {
-  id: string
-  name: string
-  size: number
-  md5: string
-  volumeFolderId: string
-  uploaded?: boolean
-}
-
-export interface OffloadSession {
+export interface OffloadRun {
   albumId: string
-  files: OffloadSessionFile[]
+  files: FileIdentity[]
   downloadToken: string
-  uploadUrl: string
 }
 
 export interface OffloadOptions {
-  onProgress(
-    albumId: string,
-    fileIndex: number,
-    fileCount: number,
-    bytesDone: number,
-    bytesTotal: number
-  ): void
   signal?: AbortSignal
-  mintUploadUrls?(
-    albumId: string,
-    fileIds: string[]
-  ): Promise<Record<string, string>>
+  mint(albumId: string, fileIds: string[]): Promise<OffloadMint>
+  refreshDownloadToken(albumId: string): Promise<string>
+  onFile(albumId: string, index: number, state: 'copying' | 'done'): void
+  onBytes(albumId: string, bytesDone: number, bytesTotal: number): void
 }
 
 const CHUNK_BYTES = 8 * 1024 * 1024
@@ -37,6 +21,8 @@ const MINT_GROUP = 20
 const DOWNLOAD = 'https://www.googleapis.com/drive/v3/files'
 
 class TransientError extends Error {}
+
+class ExpiredTokenError extends Error {}
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new DOMException('Offload aborted', 'AbortError')
@@ -80,7 +66,7 @@ async function retrying<T>(
 }
 
 async function download(
-  file: OffloadSessionFile,
+  file: FileIdentity,
   token: string,
   signal?: AbortSignal
 ): Promise<ArrayBuffer> {
@@ -89,6 +75,7 @@ async function download(
       `${DOWNLOAD}/${encodeURIComponent(file.id)}?alt=media`,
       { headers: { Authorization: `Bearer ${token}` }, signal }
     )
+    if (response.status === 401) throw new ExpiredTokenError()
     if (!response.ok) {
       if (isTransient(response.status)) {
         throw new TransientError(`Download failed (${response.status})`)
@@ -123,7 +110,7 @@ async function uploadedOffset(
 }
 
 async function upload(
-  file: OffloadSessionFile,
+  file: FileIdentity,
   data: ArrayBuffer,
   uploadUrl: string,
   onBytes: (done: number) => void,
@@ -179,56 +166,74 @@ async function upload(
   }
 }
 
-export async function runOffloadSession(
-  session: OffloadSession,
+export async function runOffload(
+  run: OffloadRun,
   options: OffloadOptions
 ): Promise<void> {
-  const { files, albumId } = session
+  const { files, albumId } = run
   const { signal } = options
   const bytesTotal = files.reduce((n, f) => n + f.size, 0)
   const urls = new Map<string, string>()
-  if (files[0] && !files[0].uploaded) urls.set(files[0].id, session.uploadUrl)
+  const uploaded = new Set<string>()
+  let token = run.downloadToken
   let bytesDone = 0
+
+  const resolve = async (ids: string[]) => {
+    const minted = await options.mint(albumId, ids)
+    for (const [id, url] of Object.entries(minted.urls)) urls.set(id, url)
+    for (const id of minted.uploaded) uploaded.add(id)
+    if (minted.downloadToken) token = minted.downloadToken
+  }
+  const known = (id: string) => urls.has(id) || uploaded.has(id)
 
   for (let index = 0; index < files.length; index++) {
     throwIfAborted(signal)
     const file = files[index]
-    if (file.uploaded) {
-      bytesDone += file.size
-      options.onProgress(albumId, index, files.length, bytesDone, bytesTotal)
-      continue
+    if (!known(file.id)) {
+      await resolve(
+        files
+          .slice(index, index + MINT_GROUP)
+          .map((f) => f.id)
+          .filter((id) => !known(id))
+      )
+      if (!known(file.id)) await resolve([file.id])
     }
-    if (!urls.has(file.id)) {
-      if (!options.mintUploadUrls) {
-        throw new Error('No way to start uploads for the remaining files')
-      }
-      const group = files
-        .slice(index, index + MINT_GROUP)
-        .map((f) => f.id)
-        .filter((id) => !urls.has(id))
-      const minted = await options.mintUploadUrls(albumId, group)
-      for (const [id, url] of Object.entries(minted)) urls.set(id, url)
+    if (uploaded.has(file.id)) {
+      bytesDone += file.size
+      options.onFile(albumId, index, 'done')
+      options.onBytes(albumId, bytesDone, bytesTotal)
+      continue
     }
     const uploadUrl = urls.get(file.id)
     if (!uploadUrl) throw new Error(`No upload address for ${file.name}`)
 
-    const data = await download(file, session.downloadToken, signal)
+    options.onFile(albumId, index, 'copying')
+    let data: ArrayBuffer
+    try {
+      data = await download(file, token, signal)
+    } catch (error) {
+      if (!(error instanceof ExpiredTokenError)) throw error
+      token = await options.refreshDownloadToken(albumId)
+      try {
+        data = await download(file, token, signal)
+      } catch (again) {
+        if (again instanceof ExpiredTokenError) {
+          throw new Error('The buffer refused the download; try again later')
+        }
+        throw again
+      }
+    }
     const before = bytesDone
     await upload(
       file,
       data,
       uploadUrl,
-      (done) =>
-        options.onProgress(
-          albumId,
-          index,
-          files.length,
-          before + done,
-          bytesTotal
-        ),
+      (done) => options.onBytes(albumId, before + done, bytesTotal),
       signal
     )
     bytesDone = before + file.size
-    options.onProgress(albumId, index, files.length, bytesDone, bytesTotal)
+    uploaded.add(file.id)
+    options.onFile(albumId, index, 'done')
+    options.onBytes(albumId, bytesDone, bytesTotal)
   }
 }

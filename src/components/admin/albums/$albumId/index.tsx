@@ -25,7 +25,6 @@ import { AlbumStatusLegend } from '@/components/albums/album-status-legend'
 import { albumQueries } from '@/lib/albums/queries'
 import { driveFolderUrl } from '@/lib/albums/urls'
 import type { AdminAlbumRow, AlbumDetail } from '@/lib/albums/types'
-import { OFFLOAD_ENABLED } from '../components/album-table-types'
 import { useAlbumBulkActions } from '../components/use-album-bulk-actions'
 import { AlbumAuthorsTable } from './components/album-authors-table'
 import { AlbumOverview } from './components/album-overview'
@@ -186,16 +185,18 @@ export function Page({ albumId }: PageProps) {
                   Schedule for deletion
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start sm:w-auto"
-                onClick={() => onBulkAction('move-to-buffer', [row])}
-              >
-                <HardDrive />
-                Move to Buffer
-              </Button>
-              {OFFLOAD_ENABLED && (
+              {row.storage.holder === 'flamekeeper' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start sm:w-auto"
+                  onClick={() => onBulkAction('move-to-buffer', [row])}
+                >
+                  <HardDrive />
+                  Move to Buffer
+                </Button>
+              )}
+              {row.storage.holder === 'buffer' && (
                 <Button
                   type="button"
                   variant="outline"

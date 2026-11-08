@@ -2,6 +2,7 @@ import type { FlamekeeperState } from '@/lib/access/access-rules'
 
 export const HEALTH_INTERVAL_MS = 24 * 60 * 60 * 1000
 export const LOST_GRACE_MS = 7 * 24 * 60 * 60 * 1000
+export const DAY_MS = 24 * 60 * 60 * 1000
 export const HEALTH_STEP_CAP = 24
 export const HEALTH_CHECK_COST = 2
 
@@ -88,18 +89,25 @@ export function isUniqueConstraintError(error: unknown): boolean {
   return /unique|constraint/i.test(text)
 }
 
-export function lostDeadline(lostSince: Date): Date {
-  return new Date(lostSince.getTime() + LOST_GRACE_MS)
+export function lostDeadline(
+  lostSince: Date,
+  graceMs: number = LOST_GRACE_MS
+): Date {
+  return new Date(lostSince.getTime() + graceMs)
 }
 
-export function planLost(fks: LostFlamekeeper[], now: Date): LostPlan {
+export function planLost(
+  fks: LostFlamekeeper[],
+  now: Date,
+  graceMs: number = LOST_GRACE_MS
+): LostPlan {
   const plan: LostPlan = { notify: [], finalize: [] }
   for (const fk of fks) {
     if (fk.state !== 'lost' || !fk.lostSince) continue
     if (!fk.lostNotifiedAt && !fk.banned) plan.notify.push(fk.userId)
     if (
       !fk.lostFinalizedAt &&
-      now.getTime() >= lostDeadline(fk.lostSince).getTime()
+      now.getTime() >= lostDeadline(fk.lostSince, graceMs).getTime()
     ) {
       plan.finalize.push(fk.userId)
     }

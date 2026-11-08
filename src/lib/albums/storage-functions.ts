@@ -1,30 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import type { MovePreview } from './storage-plan'
+import type {
+  MovePreview,
+  OffloadCompletion,
+  OffloadMint,
+  OffloadStart,
+} from './storage-plan'
 
 const albumIds = z.array(z.string().min(1).max(64)).min(1).max(200)
-const fileSchema = z.object({
-  id: z.string().min(1),
-  name: z.string(),
-  size: z.number().int().nonnegative(),
-  md5: z.string(),
-  volumeFolderId: z.string().min(1),
-})
-
-export interface OffloadSessionData {
-  albumId: string
-  files: {
-    id: string
-    name: string
-    size: number
-    md5: string
-    volumeFolderId: string
-    uploaded?: boolean
-  }[]
-  downloadToken: string
-  uploadUrl: string
-}
-
 export const previewAlbumMovesFn = createServerFn({ method: 'POST' })
   .validator(z.object({ albumIds, target: z.enum(['buffer', 'flamekeeper']) }))
   .handler(async ({ data }): Promise<MovePreview> => {
@@ -44,12 +27,12 @@ export const moveAlbumsToBufferFn = createServerFn({ method: 'POST' })
   })
 
 export const startOffloadFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ albumIds, origin: z.string().url().optional() }))
-  .handler(async ({ data }): Promise<OffloadSessionData[]> => {
+  .validator(z.object({ albumIds }))
+  .handler(async ({ data }): Promise<OffloadStart[]> => {
     const { adminContext } = await import('@/lib/admin/server')
     const { startOffload } = await import('./storage-server')
     const { database } = await adminContext(['admin', 'manager'])
-    return startOffload(database, data.albumIds, data.origin)
+    return startOffload(database, data.albumIds)
   })
 
 export const mintOffloadUploadsFn = createServerFn({ method: 'POST' })
@@ -60,29 +43,30 @@ export const mintOffloadUploadsFn = createServerFn({ method: 'POST' })
       origin: z.string().url().optional(),
     })
   )
-  .handler(async ({ data }): Promise<Record<string, string>> => {
+  .handler(async ({ data }): Promise<OffloadMint> => {
     const { adminContext } = await import('@/lib/admin/server')
     const { mintOffloadUploads } = await import('./storage-server')
     const { database } = await adminContext(['admin', 'manager'])
     return mintOffloadUploads(database, data)
   })
 
+export const offloadDownloadTokenFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ albumId: z.string().min(1) }))
+  .handler(async ({ data }): Promise<string> => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { offloadDownloadToken } = await import('./storage-server')
+    await adminContext(['admin', 'manager'])
+    return offloadDownloadToken(data.albumId)
+  })
+
 export const completeOffloadFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      albumId: z.string().min(1),
-      files: z.array(fileSchema).max(5000),
-    })
-  )
-  .handler(
-    async ({ data }): Promise<{ ok: true } | { ok: false; reason: string }> => {
-      const { adminContext } = await import('@/lib/admin/server')
-      const { completeOffload } = await import('./storage-server')
-      const { database } = await adminContext(['admin', 'manager'])
-      const result = await completeOffload(database, data)
-      return result.ok ? { ok: true } : { ok: false, reason: result.reason }
-    }
-  )
+  .validator(z.object({ albumId: z.string().min(1) }))
+  .handler(async ({ data }): Promise<OffloadCompletion> => {
+    const { adminContext } = await import('@/lib/admin/server')
+    const { completeOffload } = await import('./storage-server')
+    const { database } = await adminContext(['admin', 'manager'])
+    return completeOffload(database, data.albumId)
+  })
 
 export const scheduleAlbumsDeletionFn = createServerFn({ method: 'POST' })
   .validator(z.object({ albumIds }))

@@ -23,6 +23,3 @@ export type OnBulkAction = (
   action: AlbumBulkAction,
   albums: AdminAlbumRow[]
 ) => void
-
-export const OFFLOAD_ENABLED =
-  import.meta.env.VITE_ENABLE_ALBUM_OFFLOAD === 'true'

@@ -29,7 +29,6 @@ import {
 import type { AdminAlbumRow } from '@/lib/albums/types'
 import type { PaginationMeta } from '@/lib/pagination'
 import { createAlbumColumns } from './album-columns'
-import { OFFLOAD_ENABLED } from './album-table-types'
 import type { AlbumTableFilters, OnBulkAction } from './album-table-types'
 
 const statusOptions = ALBUM_STATUSES.map((value) => ({
@@ -224,19 +223,17 @@ export function AlbumDataTable({
               <HardDrive className="mr-2 h-4 w-4" />
               Move to Buffer ({selectedAlbums.length})
             </Button>
-            {OFFLOAD_ENABLED && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 border-dashed"
-                onClick={() =>
-                  onBulkAction('move-to-flamekeeper', selectedAlbums)
-                }
-              >
-                <Flame className="mr-2 h-4 w-4" />
-                Move to Flamekeepers ({selectedAlbums.length})
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 border-dashed"
+              onClick={() =>
+                onBulkAction('move-to-flamekeeper', selectedAlbums)
+              }
+            >
+              <Flame className="mr-2 h-4 w-4" />
+              Move to Flamekeepers ({selectedAlbums.length})
+            </Button>
             <Button
               variant="destructive"
               size="sm"

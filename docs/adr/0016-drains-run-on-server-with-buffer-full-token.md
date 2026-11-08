@@ -3,7 +3,8 @@
 > **Amended by #24.** The relay, drain and placement code described below was
 > removed because nobody holds photos on a flamekeeper until Stage 2. The last
 > `dev` commit containing it is `2565826`; Stage 2 tickets restore what they need
-> from the commit history.
+> from the commit history. Offload and the server-side drain have since been
+> rebuilt; see [the storage scenario](../scenarios/admin/albums/storage.md).
 
 A drain moves a leaving flamekeeper's photos to the buffer. It runs in the hourly
 cron on the server, not in the flamekeeper's browser. Under `drive.file` the
@@ -33,7 +34,9 @@ token on the server. The browser gets only a short-lived `drive.file` buffer
 token for the download. See [GLOSSARY.md](../../GLOSSARY.md#save-nu-image-savenuimg)
 for Relay.
 
-Not built yet, and not verified. Stage 2 of [#15](https://github.com/sagyzdop/meriksirat/issues/15)
-waits on live tests: a full drain with real photos, a `drive.file` download of a
-buffer file, and finding and copying a lost flamekeeper's photos without their
-token. Until those pass, this ADR is a plan.
+Built in `src/lib/albums/storage-server.ts` (`rescueAlbumVolume`) and
+`src/lib/pool/drain-cron.ts`. The copies are staged and made live in one batch;
+the originals are deleted afterwards with the owner's token, or once a lost owner
+reconnects. Before trusting a listing, the rescue checks that the buffer can read
+the volume folder and, when the owner is reachable, sees every file the owner
+sees.

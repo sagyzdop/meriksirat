@@ -36,5 +36,5 @@ flowchart TD
 ```
 
 - Quick Actions link to Club Members, Add Equipment and Bookings, and offer Export Members; admins also get Broadcast ([settings/broadcast.md](../settings/broadcast.md)).
-- The Flamekeepers tab labels the Stopped state "Drained". The same state is "Stopped" everywhere else.
+- The Flamekeepers tab shows the `drained` state as "Stopped", like everywhere else.
 - Storage numbers and the thresholds behind them: [settings/storage.md](../settings/storage.md), [pool.md](../flamekeepers/pool.md).

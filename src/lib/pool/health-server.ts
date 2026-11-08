@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db, type Database } from '@/db'
 import { flamekeeper, flamekeeperGrant, user } from '@/db/schema'
 import { type Budget } from '@/lib/cron/budget'
+import { loadSettings } from '@/lib/booking/load-settings'
 import { siteOrigin } from '@/lib/format'
 import {
   FlamekeeperGrantError,
@@ -10,6 +11,7 @@ import {
 } from '@/lib/flamekeeper/tokens'
 import { getDriveAbout } from '@/lib/google/google-drive'
 import {
+  DAY_MS,
   HEALTH_CHECK_COST,
   HEALTH_INTERVAL_MS,
   HEALTH_STEP_CAP,
@@ -145,6 +147,7 @@ export async function runFlamekeeperHealth(
 
   await checkGrants(database, now, budget)
 
+  const settingsRow = await loadSettings(database)
   const lostRows = await database
     .select({
       userId: flamekeeper.userId,
@@ -165,7 +168,8 @@ export async function runFlamekeeperHealth(
     .all()
   const plan = planLost(
     lostRows.map((r) => ({ ...r, banned: !!r.bannedAt })),
-    now
+    now,
+    settingsRow.lostGraceDays * DAY_MS
   )
 
   const origin = siteOrigin(env.BETTER_AUTH_URL)

@@ -18,7 +18,6 @@ import { fullName } from '@/lib/utils'
 import { formatGb } from '@/lib/flamekeeper/rules'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { formatGraduationMonth } from '@/lib/graduation-date'
-import { lostDeadline } from '@/lib/pool/health'
 import { StateBadge } from '../components/state-badge'
 import { formatDate as formatClubDate } from '@/lib/format'
 
@@ -204,7 +203,7 @@ export function Page({
                         <span>{formatDate(flamekeeper.lostSince)}</span>
                         <span className="text-sm text-muted-foreground">
                           Reconnect deadline:{' '}
-                          {formatDate(lostDeadline(flamekeeper.lostSince))}
+                          {formatDate(flamekeeper.lostDeadline)}
                         </span>
                       </div>
                     ) : (

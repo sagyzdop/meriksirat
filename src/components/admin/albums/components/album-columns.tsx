@@ -16,7 +16,6 @@ import { AlbumStorageBadge } from '@/components/albums/album-storage-badge'
 import { Badge } from '@/components/ui/badge'
 import { formatBytes, formatUtcDate } from '@/lib/format'
 import type { AdminAlbumRow } from '@/lib/albums/types'
-import { OFFLOAD_ENABLED } from './album-table-types'
 import type { OnBulkAction } from './album-table-types'
 
 interface AlbumColumnsOptions {
@@ -180,12 +179,14 @@ export const createAlbumColumns = ({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => onBulkAction?.('move-to-buffer', [album])}
-            >
-              Move to Buffer
-            </DropdownMenuItem>
-            {OFFLOAD_ENABLED && (
+            {album.storage.holder === 'flamekeeper' && (
+              <DropdownMenuItem
+                onSelect={() => onBulkAction?.('move-to-buffer', [album])}
+              >
+                Move to Buffer
+              </DropdownMenuItem>
+            )}
+            {album.storage.holder === 'buffer' && (
               <DropdownMenuItem
                 onSelect={() => onBulkAction?.('move-to-flamekeeper', [album])}
               >

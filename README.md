@@ -96,7 +96,7 @@ The buffer uses the same OAuth client as production and holds two tokens:
 | Env or secret | Scope | Used for |
 |---|---|---|
 | `GOOGLE_BUFFER_REFRESH_TOKEN` | `drive.file` | Every upload. The Worker mints a resumable upload address with it; the browser never receives the token. |
-| `GOOGLE_BUFFER_FULL_REFRESH_TOKEN` | full `drive` | Server-only drains from flamekeepers (Stage 2, [ADR-0016](docs/adr/0016-drains-run-on-server-with-buffer-full-token.md)). Nothing reads it yet. |
+| `GOOGLE_BUFFER_FULL_REFRESH_TOKEN` | full `drive` | Server-only: copies photos from flamekeepers back to the buffer (Move to Buffer, drains, lost flamekeepers) ([ADR-0016](docs/adr/0016-drains-run-on-server-with-buffer-full-token.md)). Read only by `src/lib/buffer/full-token.ts`. |
 | `GOOGLE_BUFFER_EMAIL` | none | Optional, defaults to `nuimage.storage@gmail.com`. |
 
 Setup:

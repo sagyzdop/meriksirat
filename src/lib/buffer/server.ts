@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { album, volume } from '@/db/schema'
 import {
@@ -13,7 +13,8 @@ import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { isImage } from '@/lib/albums/drive-photo'
 import { getCachedListing } from '@/lib/albums/server'
 import { newId } from '@/lib/albums/ids'
-import { isBufferSourceKey } from '@/lib/albums/listing'
+import { hasOffloadPending } from '@/lib/albums/offload-pending'
+import { isBufferSourceKey, volumeIdFromSourceKey } from '@/lib/albums/listing'
 import { pickVolumeWithRoom } from '@/lib/albums/volume-limit'
 import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
 import {
@@ -22,6 +23,7 @@ import {
   planBufferUpload,
   planVolumeSetup,
 } from './plan'
+import { MOVING_ALBUM_MESSAGE, OFFLOADED_ALBUM_MESSAGE } from './messages'
 import { withBufferToken } from './tokens'
 import { bufferUploadBlock } from './usage'
 import { getBufferOverview } from './usage-server'
@@ -149,6 +151,27 @@ async function volumeHasPhotos(
   return (row?.expectedCount ?? 0) > 0
 }
 
+async function albumUploadBlock(
+  database: Database,
+  albumId: string
+): Promise<string | null> {
+  const held = await database
+    .select({ id: volume.id })
+    .from(volume)
+    .where(
+      and(
+        eq(volume.albumId, albumId),
+        isNotNull(volume.flamekeeperUserId),
+        isNull(volume.droppedAt)
+      )
+    )
+    .limit(1)
+    .get()
+  if (held) return OFFLOADED_ALBUM_MESSAGE
+  if (await hasOffloadPending(albumId, false)) return MOVING_ALBUM_MESSAGE
+  return null
+}
+
 export async function startBufferUpload(
   database: Database,
   albumRow: { id: string; driveFolderId: string },
@@ -166,6 +189,8 @@ export async function startBufferUpload(
     await getBufferOverview(UPLOAD_USAGE_MAX_AGE_MS)
   )
   if (blocked) throw new Error(blocked)
+  const moving = await albumUploadBlock(database, albumRow.id)
+  if (moving) throw new Error(moving)
 
   let retried = false
   let currentVolumeId: string | null = null
@@ -276,16 +301,18 @@ export async function adjustExpectedByKey(
   countDelta: number,
   bytesDelta: number
 ): Promise<void> {
-  const volumeId = await resolveBufferVolumeId(database, albumId, volumeKey)
+  const volumeId = await resolveVolumeId(database, albumId, volumeKey)
   if (volumeId) await adjustExpected(database, volumeId, countDelta, bytesDelta)
 }
 
-export async function resolveBufferVolumeId(
+export async function resolveVolumeId(
   database: Database,
   albumId: string,
   volumeKey: string
 ): Promise<string | null> {
-  if (volumeKey.startsWith('buffer:')) return volumeKey.slice('buffer:'.length)
+  const keyed = volumeIdFromSourceKey(volumeKey)
+  if (keyed) return keyed
+  if (volumeKey !== 'buffer') return null
   const first = await database
     .select({ id: volume.id })
     .from(volume)

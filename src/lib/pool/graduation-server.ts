@@ -1,5 +1,6 @@
 import { eq, ne } from 'drizzle-orm'
 import { db } from '@/db'
+import { loadSettings } from '@/lib/booking/load-settings'
 import { flamekeeper, user } from '@/db/schema'
 import { takeIfBudgeted, type Budget } from '@/lib/cron/budget'
 import { formatLongDate } from '@/lib/club-time'
@@ -24,6 +25,8 @@ export async function runGraduationMaintenance(
 ): Promise<void> {
   const database = db(env.meriksirat_d1)
   const now = new Date()
+
+  const settingsRow = await loadSettings(database)
 
   const rows = await database
     .select({
@@ -50,7 +53,12 @@ export async function runGraduationMaintenance(
     if (planDomainChange(row, row.email).kind === 'stop') reason = 'domain'
     else if (
       row.graduationDate &&
-      planGraduation(row, row.graduationDate, now).kind === 'stop'
+      planGraduation(
+        row,
+        row.graduationDate,
+        now,
+        settingsRow.graduationPromptDays
+      ).kind === 'stop'
     ) {
       reason = 'graduation'
     }
