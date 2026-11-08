@@ -61,9 +61,17 @@ async function resolveMonthFolder(
   const { getOrCreateDriveFolder } = await import('@/lib/google/google-drive')
   const now = new Date()
   const year = String(now.getUTCFullYear())
-  const month = now.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
+  const monthName = now.toLocaleString('en-US', {
+    month: 'long',
+    timeZone: 'UTC',
+  })
+  const month = `${String(now.getUTCMonth() + 1).padStart(2, '0')}-${monthName}`
 
-  const albumsRoot = await getOrCreateDriveFolder(accessToken, 'Albums', 'root')
+  const albumsRoot = await getOrCreateDriveFolder(
+    accessToken,
+    'NU Image Albums',
+    'root'
+  )
   const yearFolder = await getOrCreateDriveFolder(
     accessToken,
     year,
