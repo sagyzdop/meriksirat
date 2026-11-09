@@ -71,12 +71,29 @@ availability, or integrity of content stored on third-party infrastructure.
 
 ### 3.3 How Long Albums Last
 
-An album is kept for two years after its event by default. When it expires, its
-folder and photos are deleted and there is no backup copy. Only the album's
-title and the reason it was removed remain. An administrator may pin an album
-to keep it longer, or bring its expiry forward if the club needs space, in which
-case it is kept for 7 more days. You will get a reminder before an album
-expires, so you can download what you need.
+Albums have no fixed lifetime and are not deleted automatically. An album stays
+until it is deleted, which happens in one of these ways:
+
+- **Scheduled deletion.** An administrator may schedule an album for deletion,
+  for example when the club needs space. The album is deleted on the scheduled
+  date, which is a set number of days after it is scheduled (14 by default). The
+  album's owner and everyone who favorited a photo in it are told by Telegram,
+  if they have linked it, so there is time to download what they want to keep.
+  An administrator can cancel a scheduled deletion before the date.
+- **By its owner or an administrator.** An album's owner, or an administrator or
+  manager, may delete it at any time.
+- **When its storage is lost.** If the flamekeeper holding an album's photos
+  leaves or can no longer be reached before the photos can be moved, those photos
+  are deleted or become unavailable, and the album's page says why. The same page
+  is shown when an album's Google Drive folder is permanently deleted and an
+  administrator removes the album.
+
+Albums that are more than two years past their event are marked in the Platform
+as ones that may be deleted if storage runs low.
+
+A deleted album's folder and photos are removed, and there is no backup copy. In
+the second and third cases the album's address keeps a page that gives the
+title and the reason; after a scheduled deletion nothing remains.
 
 ### 3.4 Storage Limits
 
@@ -99,16 +116,34 @@ You agree not to:
 - Use another person's account or share your account credentials.
 - Interfere with the operation of the Platform.
 
-## 5. Suspension and Bans
+## 5. Suspension
 
 The Organization may suspend or restrict your access at any time, with or
-without cause, including for violations of these Terms. An administrator may
-ban an account for abusing the Platform. A banned user can no longer sign in,
-cannot sign up again with the same Google account, and any flamekeeping ends at
-once (Part C, Section 1). Suspension and bans do not result in deletion of club member
-records.
+without cause, including for violations of these Terms. Suspension may affect
+your ability to make new bookings.
 
-## 6. Limitation of Liability
+## 6. Bans
+
+An administrator may ban an account for abusing the Platform. Only administrators
+can ban, and they must record a reason. When your account is banned:
+
+- You are signed out everywhere and can no longer sign in. You cannot sign up
+  again with the same Google account.
+- Any flamekeeping ends at once (Part C, Section 1).
+- Bookings you have not yet picked up are cancelled. Equipment you already have
+  out is not cancelled: you must still return it through the Telegram bot, and
+  the return is tracked.
+- The ban, its reason, and who set it are saved on your account, and a message is
+  posted to the club's Telegram audit channel, which administrators can read.
+
+A ban does not delete your account or its records, and it does not release you
+from responsibility for equipment you hold or for lost or damaged equipment.
+
+An administrator can lift a ban. Lifting it does not restore sessions, reinstate
+cancelled bookings or restart flamekeeping. You sign in again and, if you wish,
+reconnect your Drive yourself.
+
+## 7. Limitation of Liability
 
 To the maximum extent permitted by applicable law:
 
@@ -120,20 +155,20 @@ To the maximum extent permitted by applicable law:
   related to these Terms or the Platform shall not exceed the amount you have
   paid to the Organization, if any.
 
-## 7. Intellectual Property
+## 8. Intellectual Property
 
 The Platform, including its software, design, and documentation, is the
 intellectual property of the Organization. These Terms do not grant you any
 rights to use the Organization's trademarks, logos, or other brand features.
 
-## 8. Governing Law
+## 9. Governing Law
 
 These Terms shall be governed by and construed in accordance with the laws of
 the Republic of Kazakhstan. Any disputes arising under or in connection with
 these Terms shall be subject to the exclusive jurisdiction of the courts of
 Kazakhstan.
 
-## 9. Changes, Severability and Contact
+## 10. Changes, Severability and Contact
 
 The Organization may modify these Terms at any time. Material changes will be
 communicated through the Platform or via Telegram, and your continued use after
@@ -306,8 +341,8 @@ marked Full until room frees up.
 - **No editing or deleting.** You must not edit, rename, move or delete the
   files the Platform stores in your Drive. The Platform manages them for you.
 - **Moves and deletion.** The Platform may move photos out of your Drive, and
-  delete them from it, when an administrator moves an album, when an album
-  expires, or when you stop flamekeeping.
+  delete them from it, when an administrator moves an album, when an album is
+  deleted, or when you stop flamekeeping.
 - **Revoking access.** You may revoke the Platform's Drive access at any time at
   Google. If you hold photos when you revoke, you are marked Lost and have a
   grace period (7 days by default) to reconnect. During that time the Platform

@@ -38,6 +38,9 @@ Platform or Telegram.
 - Your photo favorites.
 - Your role and clearance level, set by administrators.
 - If an administrator bans your account: the ban, its reason and who set it.
+  A message about the ban is also posted to the club's Telegram audit channel.
+  Banned accounts are not deleted, and you cannot sign in or sign up again with
+  the same Google account. Lifting a ban clears these details.
 
 ## 3. What We Access in Your Google Account
 
@@ -83,10 +86,13 @@ regulations require it.
   have been moved. Deleting it removes your sessions, linked Google accounts,
   Telegram link, favorites and flamekeeper record. Accounts are never deleted
   for being unfinished.
-- **Album photos:** kept until the album expires (by default two years after
-  the event), unless an administrator pins it or it is deleted earlier. When an
-  album expires, its folder and photos are deleted, with no backup copy. After
-  deletion, only the album's title and the reason it was deleted remain.
+- **Album photos:** kept until the album is deleted. Albums are not deleted
+  automatically. An administrator may schedule an album for deletion with notice
+  (14 days by default), and its owner or an administrator may delete it at any
+  time. When an album is deleted, its folder and photos are deleted, with no
+  backup copy. A page giving the album's title and the reason remains only when
+  the photos were lost with a flamekeeper or their folder was permanently
+  deleted.
 - **Sessions** expire automatically. Telegram return-flow session data expires
   within an hour.
 
@@ -191,7 +197,7 @@ which is never automatic. Those photos are public like every album's photos, and
 the folder holding them is shared with the club's account, so the club can copy
 them back to its own storage, even if you can no longer be reached. They are
 copied back, and deleted from your Drive, when an administrator moves them, when
-the album expires, or when your flamekeeping ends.
+the album is deleted, or when your flamekeeping ends.
 
 ## 4. Emails
 

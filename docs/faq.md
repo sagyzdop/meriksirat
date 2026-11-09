@@ -7,6 +7,18 @@ The questions are grouped into three parts: **everyone** with an account,
 - [Club Members](#club-members)
 - [Flamekeepers](#flamekeepers)
 
+## Bans
+
+### What happens if I am banned?
+
+An admin can ban an account for abusing the platform, and must give a reason. A
+banned person is signed out and cannot sign in or sign up again with that Google
+account. Any flamekeeping ends at once. Bookings not yet picked up are cancelled,
+but equipment you already have out must still be returned through the Telegram
+bot. Your account and its records are not deleted. An admin can lift the ban, but
+that does not restore your sessions or bookings or restart flamekeeping. See the
+[Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
+
 ---
 
 # Everyone
@@ -82,17 +94,17 @@ with the link can claim co-author access and upload photos to that album.
 
 ### How long do albums last?
 
-Albums are kept for two years after their event by default. The album's owner
-and members get a Telegram reminder 30 days and 7 days before an album expires,
-so there is time to download what you need. When an album expires, its photos are deleted,
-and there is no backup copy. Only the album's title and the reason it was
-removed remain on the site.
+There is no automatic expiry. An album stays until it is deleted. Albums more
+than two years past their event are marked as ones that may be deleted if
+storage runs low.
 
-Admins can pin an album to keep it longer. If the club needs space, an admin
-can also bring an album's expiry forward; it is then kept for 7 more days, and
-its owner and members are told.
-
----
+If the club needs space, an admin can schedule an album for deletion. It is then
+deleted after a notice period (14 days by default), and the album's owner and
+everyone who favorited a photo in it get a Telegram message, if they have linked
+Telegram, so there is time to download what they want. An admin can cancel a
+scheduled deletion before the date. An album's owner or an admin can also delete
+it at any time. When an album is deleted, its photos are deleted too, and there
+is no backup copy.
 
 # Club Members
 
