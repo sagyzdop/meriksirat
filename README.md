@@ -1,206 +1,163 @@
+<div align="center">
+  <img src="public/logo.png" alt="NU Image logo" width="120" />
+
 # MerikSirat
 
-A modern, full-stack equipment booking and management platform (and more) built for clubs
-and organizations.
+**Equipment booking and photo albums for NU Image, the photography club at Nazarbayev University.**
+
+[Features](#features) · [Architecture](#architecture) · [Flamekeepers](#flamekeepers) · [Getting started](#getting-started) · [Deployment](#deployment) · [Documentation](#documentation)
+
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
+![TanStack Start](https://img.shields.io/badge/TanStack-Start-ef4444)
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)
+
+</div>
+
+MerikSirat lets club members book cameras, lenses and other gear, pick it up and return it through a Telegram bot, and share event photo albums. Admins manage equipment, members and storage. The whole app runs on Cloudflare Workers, with server-side rendering done inside the Worker.
 
 ## Features
 
-### For Members
+**Members**
 
-- **Equipment Catalog**: Browse available equipment with real-time availability status
-- **Smart Booking System**: Book equipment with time slot selection and conflict detection
-- **Google Calendar Integration**: View equipment availability directly from Google Calendar
-- **Telegram Bot**: Receive notifications, check status, and manage bookings via Telegram
-- **Pickup Confirmation**: 30-minute window to confirm equipment pickup
-- **Partial Returns**: Return some items while keeping others with automatic grace periods
-- **Photo Albums**: Upload and browse club photo galleries backed by Google Drive
-- **Booking History**: Track all your past and current bookings
+- Browse the equipment catalog with live availability, backed by Google Calendar free/busy data.
+- Book several items in one booking, each with its own time slot. Extend by 30 minutes when there is no conflict.
+- Confirm pickup within a 15-minute window and return items, fully or partially, through the Telegram bot.
+- Get Telegram reminders for upcoming pickups and returns.
+- Upload, browse and favorite photo albums stored in Google Drive.
+- Optionally become a [flamekeeper](#flamekeepers) by pledging spare Google Drive space to the club (`@nu.edu.kz` accounts only).
 
-### For Administrators
+**Admins**
 
-- **Dashboard**: Overview of bookings, equipment usage, and system statistics
-- **Equipment**: Add, edit, and bulk edit equipment, with categories and clearance levels
-- **Club Members**: Control member access, roles, status (Active, Inactive, Alumni) and clearance levels, with birthdays and violations
-- **Booking Oversight**: Monitor all bookings, handle overdue equipment, and manage conflicts
-- **Album Management**: Oversee public and member albums
-- **Settings**: Configure operating hours, booking limits, and global notifications
+- Dashboard with bookings, equipment usage and system statistics.
+- Equipment management with categories, bulk edit and clearance levels for high-end gear.
+- Member management: roles, status (Active, Inactive, Alumni), clearance, birthdays, violations and bans.
+- Booking oversight: overdue items, no-shows and conflicts.
+- Album and storage management, including flamekeepers (members who pledge spare Google Drive space) and scheduled deletion.
+- Settings for operating hours, booking limits and notifications.
 
-### Technical Features
+> [!NOTE]
+> Sign-up is limited to `@nu.edu.kz` and `@alumni.nu.edu.kz` Google accounts. Terms like _flamekeeper_, _buffer_ and _volume_ are defined in the [glossary](GLOSSARY.md).
 
-- **Clearance Levels**: Restrict high-end equipment to authorized users
-- **Overdue Tracking**: Automatic alerts for late returns
-- **Photo Verification**: Timestamped photos required for equipment returns
-- **Multi-item Bookings**: Book multiple pieces of equipment with independent time slots
-- **Booking Extensions**: Extend bookings by 30 minutes if no conflicts exist
+## Architecture
 
-## Tech Stack
+```mermaid
+flowchart LR
+  Browser -->|SSR + server functions| Worker
+  Telegram -->|webhook| Worker
+  Cron[Cron Triggers] --> Worker
+  Worker --> D1[(D1 / Drizzle)]
+  Worker --> R2[(R2: images)]
+  Worker --> KV[(KV: caches)]
+  Worker --> Google[Google Calendar + Drive]
+  Worker --> Telegram
+```
 
-- **Frontend**: React 19, TanStack Start, TanStack Router, TanStack Query
-- **UI**: Tailwind CSS v4, shadcn/ui, Radix UI
-- **Backend**: Cloudflare Workers (serverless)
-- **Database**: Cloudflare D1 (SQLite), Drizzle ORM
-- **Storage**: Cloudflare R2 (object storage), Cloudflare KV (caching)
-- **Authentication**: Better Auth with Google OAuth
-- **Calendar**: Google Calendar API (OAuth refresh tokens)
-- **Notifications**: Telegram Bot API
-- **Build**: Vite
-- **Deployment**: Cloudflare Workers
+| Layer          | Technology                                                    |
+| -------------- | ------------------------------------------------------------- |
+| Frontend       | React 19, TanStack Start, Router and Query                    |
+| UI             | Tailwind CSS v4, shadcn/ui, Radix UI                          |
+| Runtime        | Cloudflare Workers (`server.ts`), Smart Placement             |
+| Data           | D1 (SQLite) with Drizzle ORM, R2 for images, KV for caches    |
+| Auth           | Better Auth with Google OAuth                                 |
+| Integrations   | Google Calendar and Drive APIs, Telegram Bot API              |
+| Rate limiting  | Workers native rate limit bindings                            |
+| Scheduled work | Three Cron Triggers: every 5 minutes, hourly, daily 03:00 UTC |
 
-## Getting Started
+Photos live in Google Drive rather than R2. New uploads go to a club-run **buffer** account; see [Flamekeepers](#flamekeepers) for the reserve storage and [ADR-0015](docs/adr/0015-buffer-is-stable-photo-storage.md) for the design.
+
+## Flamekeepers
+
+A flamekeeper is an `@nu.edu.kz` user who pledges optional reserve storage from their own Google Drive to the club. Pledges are at least 512 MB and cap what the app may use; no space is set aside in Google. Flamekeeping is separate from club membership ([ADR-0011](docs/adr/0011-membership-and-flamekeeping-are-separate.md)).
+
+- **Nothing is held at sign-up.** Uploads always go to the buffer and never to a flamekeeper. A flamekeeper holds photos only after an admin runs **Move to Flamekeepers**, which relays them through the admin's browser into the flamekeeper's Drive.
+- **The pool.** Free pledged space across active flamekeepers. The hourly `maintainPool` step marks each flamekeeper Active or Full and alerts admins when usage reaches the "% used" setting (default 90).
+- **Leaving is safe.** When a flamekeeper stops, graduates, changes email domain or is banned, they end at once if they hold nothing. Otherwise they are **Draining** while the hourly `drainFlamekeepers` step copies their photos back to the buffer. The same step rescues the photos of a **Lost** flamekeeper (one whose Drive access can no longer be refreshed).
+- **Statuses** shown to admins: Active, Full, Draining, Lost, Stopped, Banned. They are system-managed and read-only.
+
+> [!NOTE]
+> A flamekeeper's access is a `drive.file`-only token stored apart from their login ([ADR-0013](docs/adr/0013-drive-grant-stored-apart-from-login.md)). There is no backup copy of a photo while it sits with a flamekeeper, and a full buffer pauses a drain rather than deleting anything.
+
+Scenarios: [admin](docs/scenarios/admin/flamekeepers/list.md), [flamekeeper](docs/scenarios/flamekeeper/onboarding/become-flamekeeper.md) and [offload and storage](docs/scenarios/admin/albums/storage.md).
+
+## Getting started
 
 ### Prerequisites
 
 - Node.js 18+ and npm
-- Cloudflare account
-- Google Cloud project with Calendar API enabled
-- Telegram Bot Token
+- A Cloudflare account (for `wrangler`)
+- A Google Cloud project with the Calendar and Drive APIs enabled and an OAuth client
+- A Telegram bot token (optional locally, see below)
 
-### Installation
+### Run locally
 
 ```bash
-# Install dependencies
 npm install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your credentials
-
-# Generate database migrations
-npm run db:generate
-
-# Apply migrations locally
-npm run db:migrate-local
-
-# Start development server
+cp .env.example .env   # fill in the values
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`
+`npm run dev` applies local D1 migrations, builds, and starts `wrangler dev` on <http://localhost:3000>.
 
-### Environment Variables
+> [!TIP]
+> Set `DEV=true` in `.env` to skip the Telegram onboarding step locally.
 
-`.env.example` is the canonical key list — copy it (see Installation above) and fill in values. Production builds read bindings from `wrangler.jsonc`; secrets are set via `wrangler secrets`.
+To try admin features, sign in once, then promote your user:
+
+```bash
+npx wrangler d1 execute meriksirat_d1 --local \
+  --command "update user set role='admin' where email='you@example.com';"
+```
+
+### Environment
+
+[`.env.example`](.env.example) is the canonical list of keys. Production reads bindings from [`wrangler.jsonc`](wrangler.jsonc); secrets are set with `wrangler secret put`.
 
 ### Connecting the buffer account
 
-New album photos upload to the buffer, the club-run Google account
-`nuimage.storage@gmail.com` (see [GLOSSARY.md](GLOSSARY.md#save-nu-image-savenuimg)
-and [ADR-0015](docs/adr/0015-buffer-is-stable-photo-storage.md)). Uploads fail
-with "Photo storage is not available right now" until it is connected. Nothing
-falls back to a flamekeeper. The Worker reads the account's Drive quota with the
-`drive.file` token, warns admins at 90% and refuses uploads at 100% (see
-[the scenario](docs/scenarios/kv/buffer-usage.md)).
+Album uploads fail with "Photo storage is not available right now" until an admin connects the buffer, a Google account used as stable photo storage. The app stores its refresh token encrypted in D1 (`buffer_grant`) and never sends it to the browser ([ADR-0021](docs/adr/0021-buffer-account-is-a-stored-grant.md)).
 
-The buffer is a Google account an admin connects in Admin > Settings > Storage.
-It uses the same OAuth client as production, one token with the full `drive`
-scope. The app stores that token encrypted in D1 (`buffer_grant`); the browser
-never receives it ([ADR-0021](docs/adr/0021-buffer-account-is-a-stored-grant.md)).
+1. In Google Cloud Console, make sure the OAuth consent screen allows the buffer account (add it as a test user in Testing mode) and that `<your origin>/api/buffer/callback` is an authorized redirect URI, for example `http://localhost:3000/api/buffer/callback`.
+2. Set `BUFFER_ENCRYPTION_KEY` (`openssl rand -base64 32`) in `.env`, and in production with `wrangler secret put BUFFER_ENCRYPTION_KEY`.
+3. Sign in as an admin, open **Settings > Storage**, press **Connect**, pick the buffer account and allow full Drive access.
 
-| Env or secret | Used for |
-|---|---|
-| `BUFFER_ENCRYPTION_KEY` | Required. Worker secret that encrypts the stored token. Losing it means reconnecting the account. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | The shared OAuth client. |
-| `GOOGLE_BUFFER_REFRESH_TOKEN`, `GOOGLE_BUFFER_FULL_REFRESH_TOKEN`, `GOOGLE_BUFFER_EMAIL` | Fallback only, used while no account is connected in the app. Once the account is connected they can be removed. |
+To change the buffer later, connect a different account. Albums are copied over in the background, uploads keep using the old account until every album is copied, and the old originals are removed 7 days after the switch. Cancelling discards the copies and changes nothing.
 
-Setup:
-
-1. In Google Cloud Console, check that the OAuth consent screen allows the buffer
-   account (user type External; in Testing mode, add it as a test user) and that
-   `<your origin>/api/buffer/callback` is an authorized redirect URI on the
-   OAuth client (for example `http://localhost:3000/api/buffer/callback`).
-2. Set `BUFFER_ENCRYPTION_KEY` (`openssl rand -base64 32`) in `.env`, and in
-   production with `wrangler secret put BUFFER_ENCRYPTION_KEY`.
-3. Sign in as an admin, open Settings > Storage and press Connect. Pick the
-   buffer account and allow full Drive access. Connecting the account the env
-   tokens already point at adopts the existing albums with no copying.
-4. To change the buffer, connect a different account. Albums are copied to it in
-   the background (hourly, or "Copy more now"); uploads keep using the old
-   account until every album is copied, then the new one takes over. Cancel
-   discards the copies and changes nothing. The old account's originals are
-   removed 7 days after the switch.
-
-If the buffer loses access (revoked, password reset), uploads pause, admins get
-an alert and a Telegram message, and reconnecting the same account restores
-everything. Nothing switches or deletes on its own.
-
-Minting a token does not revoke the master account's grant. Never revoke the app
-on the master account at myaccount.google.com/permissions: it shares the OAuth
-client with production. The master account never gets the full `drive` scope.
+> [!WARNING]
+> Never revoke the app on the master Google account at myaccount.google.com/permissions. It shares the OAuth client with production. Minting a new master token does not revoke the old grant. Losing `BUFFER_ENCRYPTION_KEY` means reconnecting the buffer account.
 
 ## Development
 
-```bash
-# Start development server (with Wrangler)
-npm run dev
+| Command                                          | What it does                                            |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| `npm run dev`                                    | Migrate locally, build, run `wrangler dev` on :3000     |
+| `npm run dev:vite`                               | Vite UI shell only, without the Worker                  |
+| `npm run test`                                   | Unit tests (Vitest, no database)                        |
+| `npx tsc --noEmit`                               | Type check                                              |
+| `npm run format`                                 | Prettier                                                |
+| `npm run db:generate`                            | Generate a Drizzle migration into `migrations/`         |
+| `npm run db:migrate-local` / `db:migrate-remote` | Apply migrations to the local or production D1 database |
 
-# Start Vite dev server only
-npm run dev:vite
-
-# Run tests
-npm run test
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
-```
-
-## Database Management
+Test the cron jobs locally with `wrangler dev --test-scheduled`, then call each schedule:
 
 ```bash
-# Promote your local user to admin for testing admin-only flows.
-npx wrangler d1 execute meriksirat_d1 --local --command "update user set role='admin' where email='you@example.com';"
+curl "http://localhost:3000/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"
 ```
 
-```bash
-# Generate new migration
-npm run db:generate
-
-# Apply migrations locally
-npm run db:migrate-local
-
-# Apply migrations to production
-npm run db:migrate-remote
-```
+> [!IMPORTANT]
+> Code reachable from the browser must not statically import worker-only modules (`cloudflare:workers`, `@/db`, `drizzle-orm`, `@/lib/auth/auth`). Import them inside server function handlers with `await import(...)`. After a build, `rg -c "cloudflare:workers" dist/client/assets/` should report nothing. See [ADR-0003](docs/adr/0003-lazy-import-worker-only-modules.md) and [AGENTS.md](AGENTS.md).
 
 ## Deployment
 
 ```bash
-# Build and deploy to Cloudflare Workers
+npm run db:migrate-remote
 npm run deploy
 ```
 
-### Cloudflare Resources
-
-The app uses the following Cloudflare resources:
-
-- **D1 Database**: `meriksirat_d1` — stores all application data
-- **R2 Bucket**: `meriksirat` — stores equipment images and return photos
-- **KV Namespace**: `meriksirat_kv` — caches album listing data
-- **Cron Triggers**: Three schedules (every 5 minutes, hourly, daily at 03:00 UTC), each with its own budget. See [docs/scenarios/cron/overview.md](docs/scenarios/cron/overview.md)
-
-## Project Structure
-
-The code lives in `src/`. Domain vocabulary is fixed in
-[GLOSSARY.md](GLOSSARY.md); architectural decisions are recorded as
-[ADRs](docs/adr/).
-
 ## Documentation
 
-- [Glossary](GLOSSARY.md) — canonical domain vocabulary
-- [ADRs](docs/adr/) — architectural decisions that are hard to reverse
-- [Issue tracker](docs/agents/issue-tracker.md) — where issues live (GitHub)
-- [Triage labels](docs/agents/triage-labels.md) — canonical triage roles → repo label strings
-- [Domain docs](docs/agents/domain.md) — how skills read the glossary / ADRs
-- [FAQ](https://github.com/sagyzdop/meriksirat/blob/main/docs/faq.md) — common questions (linked from the About page)
-- [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md) — user agreement (linked from the About page + login page)
-
-## Contributing
-
-This is a private project for club use. For feature requests or bug reports,
-contact the administrators.
-
-## License
-
-GNU Affero General Public License v3.0 — see [LICENSE](LICENSE) for details.
+- [Glossary](GLOSSARY.md): the domain vocabulary used across code and docs
+- [ADRs](docs/adr/): architectural decisions
+- [Scenarios](docs/scenarios/README.md): behavior by role (anonymous, member, flamekeeper, admin), cron jobs, KV usage and the database ERD
+- [FAQ](docs/faq.md), [Terms of Service](docs/terms-of-service.md) and [Privacy Policy](docs/privacy-policy.md)
+- [AGENTS.md](AGENTS.md): conventions for contributors and coding agents
