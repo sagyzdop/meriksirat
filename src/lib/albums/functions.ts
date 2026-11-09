@@ -117,7 +117,8 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
     const folder = await createDriveFolder(
       accessToken,
       data.title,
-      monthFolder.id
+      monthFolder.id,
+      data.description
     )
 
     // Public folder: photos are served straight from Google's CDN.
@@ -513,6 +514,22 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
           )
         }
         throw new Error('Failed to rename the Drive folder')
+      }
+    }
+
+    if (
+      data.description !== undefined &&
+      data.description !== row.description
+    ) {
+      const { setDriveDescription } = await import('@/lib/google/google-drive')
+      try {
+        await setDriveDescription(
+          await getGoogleAccessToken(),
+          row.driveFolderId,
+          data.description
+        )
+      } catch {
+        // The folder note is a convenience; the album text still saves.
       }
     }
 

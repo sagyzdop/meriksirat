@@ -100,10 +100,25 @@ async function driveFetch(
   return response
 }
 
+export const driveDescription = (text: string) => text.slice(0, 4000)
+
+export async function setDriveDescription(
+  accessToken: string,
+  fileId: string,
+  description: string
+): Promise<void> {
+  await driveFetch(accessToken, `${API}/files/${fileId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description: driveDescription(description) }),
+  })
+}
+
 export async function createDriveFolder(
   accessToken: string,
   name: string,
-  parentId?: string
+  parentId?: string,
+  description?: string
 ): Promise<{ id: string }> {
   const response = await driveFetch(accessToken, `${API}/files`, {
     method: 'POST',
@@ -111,6 +126,7 @@ export async function createDriveFolder(
     body: JSON.stringify({
       name,
       mimeType: 'application/vnd.google-apps.folder',
+      ...(description ? { description: driveDescription(description) } : {}),
       ...(parentId ? { parents: [parentId] } : {}),
     }),
   })
