@@ -16,6 +16,7 @@ import type { PoolOverview } from '@/lib/admin/functions/pool'
 import { DetailRow } from '@/components/shared/detail-row'
 import { fullName } from '@/lib/utils'
 import { formatGb } from '@/lib/flamekeeper/rules'
+import { usableBytes } from '@/lib/pool/placement'
 import type { AdminFlamekeeperRow } from '@/lib/flamekeeper/types'
 import { formatGraduationMonth } from '@/lib/graduation-date'
 import { StateBadge } from '../components/state-badge'
@@ -64,9 +65,8 @@ export function Page({
   const [tab, setTab] = useState('details')
   const userName = fullName(user) || user.email
 
-  const availableBytes = flamekeeper
-    ? Math.max(0, flamekeeper.pledgedBytes - flamekeeper.usedBytes)
-    : 0
+  const availableBytes =
+    flamekeeper && pool ? usableBytes(flamekeeper, pool.capBytes) : 0
 
   return (
     <PageContainer>

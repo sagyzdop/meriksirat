@@ -83,6 +83,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         if (!tokenResponse.ok) return redirectTo(origin, failPath, 'token')
 
         const tokens = (await tokenResponse.json()) as {
+          access_token?: string
           refresh_token?: string
           id_token?: string
           scope?: string
@@ -118,6 +119,25 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         }
         if (!tokens.refresh_token) return redirectTo(origin, failPath, 'token')
 
+        let driveUsageBytes: number | null = null
+        if (tokens.access_token) {
+          try {
+            const { getDriveAbout } = await import('@/lib/google/google-drive')
+            const { loadCapBytes } = await import('@/lib/pool/server')
+            const about = await getDriveAbout(tokens.access_token)
+            driveUsageBytes = about.usageInDrive
+            if (
+              driveUsageBytes !== null &&
+              driveUsageBytes + pending.pledgedBytes >
+                (await loadCapBytes(database))
+            ) {
+              return redirectTo(origin, failPath, 'full')
+            }
+          } catch (error) {
+            console.warn('Drive usage check failed on connect:', error)
+          }
+        }
+
         const now = new Date()
         await database.batch([
           database
@@ -136,6 +156,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
               pledgedBytes: pending.pledgedBytes,
               graduationConfirmedAt: now,
               termsAcceptedAt: new Date(pending.termsAcceptedAt),
+              ...(driveUsageBytes !== null ? { driveUsageBytes } : {}),
             })
             .onConflictDoUpdate({
               target: flamekeeper.userId,
@@ -146,6 +167,7 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
                 lostSince: null,
                 lostNotifiedAt: null,
                 lostFinalizedAt: null,
+                ...(driveUsageBytes !== null ? { driveUsageBytes } : {}),
                 healthCheckedAt: now,
                 updatedAt: now,
               },

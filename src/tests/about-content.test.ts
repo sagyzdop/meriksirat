@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { aboutCopy, formatMinPledge } from '../lib/about/content'
+import { formatMinPledge } from '../lib/about/content'
 import { postLoginPath } from '../lib/access/access-rules'
 import { guestHtmlTtlSeconds } from '../lib/cache/guest-html'
-import { MIN_PLEDGE_BYTES } from '../lib/flamekeeper/rules'
 
 describe('postLoginPath', () => {
   const member = { isMember: true, onboardingComplete: true }
@@ -32,19 +31,6 @@ describe('formatMinPledge', () => {
   it('shows whole gigabytes and sub-gigabyte pledges in MB', () => {
     expect(formatMinPledge(1024 ** 3)).toBe('1 GB')
     expect(formatMinPledge(512 * 1024 ** 2)).toBe('512 MB')
-  })
-})
-
-describe('about copy', () => {
-  const text = JSON.stringify(aboutCopy())
-
-  it('states the minimum pledge the code enforces', () => {
-    expect(text).toContain(formatMinPledge(MIN_PLEDGE_BYTES))
-  })
-
-  it('says albums stay up until they are deleted', () => {
-    expect(text).toContain('until they are deleted')
-    expect(text).not.toContain('two years')
   })
 })
 

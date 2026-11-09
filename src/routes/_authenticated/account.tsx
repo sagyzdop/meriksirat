@@ -3,15 +3,15 @@ import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { Page } from '@/components/account'
 import { flamekeeperQueries } from '@/lib/flamekeeper/queries'
-import { CONNECT_ERROR_MESSAGES } from '@/lib/flamekeeper/rules'
+import {
+  CONNECT_ERROR_CODES,
+  CONNECT_ERROR_MESSAGES,
+} from '@/lib/flamekeeper/rules'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 
 const searchSchema = z.object({
   flamekeeper: z.literal('connected').optional().catch(undefined),
-  fk_error: z
-    .enum(['denied', 'state', 'session', 'account', 'scope', 'token', 'master'])
-    .optional()
-    .catch(undefined),
+  fk_error: z.enum(CONNECT_ERROR_CODES).optional().catch(undefined),
 })
 
 export const Route = createFileRoute('/_authenticated/account')({

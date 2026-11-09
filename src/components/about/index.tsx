@@ -9,6 +9,7 @@ import {
 import { authClient } from '@/lib/auth/auth-client'
 import {
   ABOUT_LEGAL_LINKS,
+  ABOUT_TITLE,
   BECOME_FLAMEKEEPER_PATH,
   aboutCopy,
 } from '@/lib/about/content'
@@ -54,15 +55,28 @@ export function Page() {
           aria-hidden="true"
         />
         <h1 className="mt-6 text-3xl md:text-4xl font-semibold tracking-tight">
-          Keeping the flame alive
+          {ABOUT_TITLE}
         </h1>
         <div className="mt-10 space-y-12">
           {sections.map((section) => (
             <section key={section.id} id={section.id} className="scroll-mt-20">
               <h2 className="text-2xl font-semibold">{section.title}</h2>
-              <p className="mt-4 leading-relaxed text-muted-foreground">
-                {section.body}
-              </p>
+              <div className="mt-4 space-y-4 leading-relaxed text-muted-foreground">
+                {section.blocks.map((block, index) =>
+                  block.type === 'p' ? (
+                    <p key={index}>{block.text}</p>
+                  ) : (
+                    <ul
+                      key={index}
+                      className={`ml-5 space-y-2 ${block.type === 'ol' ? 'list-decimal' : 'list-disc'}`}
+                    >
+                      {block.items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  )
+                )}
+              </div>
               {section.id === 'help' && (
                 <div className="mt-6">
                   <BecomeFlamekeeperButton />

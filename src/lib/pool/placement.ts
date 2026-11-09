@@ -20,7 +20,10 @@ export interface PoolStats {
   flamekeepers: number
 }
 
-export function usableBytes(fk: PoolFlamekeeper, capBytes: number): number {
+export function usableBytes(
+  fk: Pick<PoolFlamekeeper, 'pledgedBytes' | 'usedBytes' | 'driveUsageBytes'>,
+  capBytes: number
+): number {
   const pledgeLeft = fk.pledgedBytes - fk.usedBytes
   const capLeft = capBytes - fk.driveUsageBytes
   return Math.max(0, Math.min(pledgeLeft, capLeft))

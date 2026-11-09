@@ -104,6 +104,7 @@ export const CONNECT_ERROR_CODES = [
   'scope',
   'token',
   'master',
+  'full',
 ] as const
 
 export type ConnectErrorCode = (typeof CONNECT_ERROR_CODES)[number]
@@ -118,4 +119,5 @@ export const CONNECT_ERROR_MESSAGES: Record<ConnectErrorCode, string> = {
   token: 'Google did not return a usable authorization. Please try again.',
   master:
     'The club account owns the album folders and cannot be a flamekeeper.',
+  full: 'Your Google Drive does not have enough free space for your pledge. Free up space or pledge less, then try again.',
 }
