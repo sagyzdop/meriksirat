@@ -1,47 +1,120 @@
 # Frequently Asked Questions
 
+The questions are grouped into three parts: **everyone** with an account,
+**club members**, and **flamekeepers**.
+
+- [Everyone](#everyone)
+- [Club Members](#club-members)
+- [Flamekeepers](#flamekeepers)
+
+---
+
+# Everyone
+
 ## Getting Started
 
 ### How do I create an account?
 
 Sign in with Google using an `@nu.edu.kz` or `@alumni.nu.edu.kz` account. If
 you are new, logging in means you agree to the terms of service and privacy
-policy linked on the login page. Your account is ready straight away. You can browse albums
-and favorite photos, and you do not need to connect Google Drive.
+policy linked on the login page. Your account is ready straight away. You can
+browse albums and favorite photos, and you do not need to connect Google Drive.
 
 Returning users just sign in. People who already had an account keep it,
 whatever their email.
 
-### What do I do after I sign up?
+### Do I have to join the club or become a flamekeeper?
 
-To book equipment and create albums you must be a club member. Enter the club
-code on your My Account page whenever you are ready. You will then be asked for your
-name, date of birth, NU ID, major and graduation month, and to link your
-Telegram account.
+No to both. Joining the club (entering the club code) is only needed to book
+equipment and create albums. Flamekeeping is optional and never part of signing
+up. Accounts are never removed for being unfinished, so you can come back at any
+time. See [Club Members](#club-members) and [Flamekeepers](#flamekeepers).
 
-Accounts are never removed for being unfinished, so you can come back at any
-time.
+### Can I delete my account?
 
-### Do I have to become a flamekeeper?
+If you are not a club member, yes, from your My Account page, once you have
+stopped flamekeeping and any photos the Platform stored in your Drive have been
+moved. Club members cannot: their accounts and activity records are retained
+permanently for equipment accountability. See the [Terms of
+Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
 
-No. Flamekeeping is optional and never part of signing up. Only `@nu.edu.kz`
-accounts can become flamekeepers, and you can do it from your My Account page at any
-time. See [Flamekeepers](#flamekeepers).
+## Photo Albums
+
+### What are albums?
+
+Albums are photo galleries. Each album is a public folder in the club's Google
+storage. You can upload photos directly from your browser.
+
+### Where are my photos stored?
+
+New uploads go to a club-run Google account (the buffer), not to a student's
+Google Drive. Your browser uploads straight to Google, and the Platform does not
+pass the photos through its own server.
+
+If the club needs extra space, an admin can move an album's photos to
+flamekeepers' Drives, and back again. The album's link and your favorites keep
+working when photos move. Albums uploaded before the buffer existed remain on
+the club's main Google account until an admin moves them.
+
+### Who can see my albums?
+
+Everyone. Every album is public and listed in the public gallery, and its Google
+Drive folder is open to anyone with the link (photos load from Google's CDN).
+There is no private option, so only upload photos you are happy to have public.
+
+### How do I upload photos?
+
+Open your album and use the upload button. Uploads are tracked in a progress
+widget in the site header.
+
+If the club's storage is full, uploads are refused and the site says so. Your
+photos stay on your device, and you can tell an admin.
+
+### Can I favorite photos?
+
+Yes, any signed-in user can. A favorite follows the photo if it moves between
+accounts.
+
+### Can I share an album with specific people?
+
+Yes, if you are a club member. Every album has an edit share link, and any member
+with the link can claim co-author access and upload photos to that album.
+
+### How long do albums last?
+
+Albums are kept for two years after their event by default. The album's owner
+and members get a Telegram reminder 30 days and 7 days before an album expires,
+so there is time to download what you need. When an album expires, its photos are deleted,
+and there is no backup copy. Only the album's title and the reason it was
+removed remain on the site.
+
+Admins can pin an album to keep it longer. If the club needs space, an admin
+can also bring an album's expiry forward; it is then kept for 7 more days, and
+its owner and members are told.
+
+---
+
+# Club Members
+
+## Joining the Club
+
+### How do I become a club member?
+
+Enter the club code on your My Account page whenever you are ready. You will
+then be asked for your name, date of birth, NU ID, major and graduation month,
+and to link your Telegram account. Alumni (`@alumni.nu.edu.kz`) accounts can
+join too.
 
 ### Why do I need to link Telegram?
 
 Telegram is required for equipment returns and booking notifications. You'll
 receive reminders about upcoming bookings, and you use the Telegram bot to
-return equipment with photo verification. See [Telegram Bot](user/telegram-bot.md).
+return equipment with photo verification.
 
-### Can I delete my account?
+### Can I delete my account as a member?
 
-Club members cannot. Their accounts and activity records are retained
-permanently for equipment accountability purposes. If you need your account
-deactivated, contact an administrator. If you are not a club member, you can
-delete your account from your My Account page once you have stopped flamekeeping and
-any photos the Platform stored in your Drive have been moved. See [Terms of
-Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
+No. Membership is permanent, and your records are kept for equipment
+accountability. If you need your account deactivated, contact an administrator.
 
 ## Booking Equipment
 
@@ -54,8 +127,6 @@ Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.
    the cart persists in `localStorage` and shows all items on a shared
    availability calendar.
 4. Confirm the booking. Conflicts are detected server-side.
-
-See [Booking Flow](user/booking.md) for the full lifecycle.
 
 ### How long can I book for?
 
@@ -110,97 +181,6 @@ If equipment is not returned by the booking end time plus a 15-minute grace
 period, items become `overdue`. You'll receive a Telegram notification. You can
 still return overdue equipment through the normal flow.
 
-## Photo Albums
-
-### What are albums?
-
-Albums are photo galleries. Each album is a public folder in the club's Google
-storage. You can upload photos directly from your browser.
-
-### Where are my photos stored?
-
-New uploads go to a club-run Gmail account, not to a student's Google Drive.
-Your browser uploads straight to Google, and the Platform does not pass the
-photos through its own server.
-
-Existing albums were uploaded earlier and remain on the club's main Google
-account for now. Flamekeepers hold no photos today.
-
-### Who can see my albums?
-
-Everyone. Every album is public and listed in the public gallery, and its Google
-Drive folder is open to anyone with the link (photos load from Google's CDN).
-There is no private option, so only upload photos you are happy to have public.
-
-### How do I upload photos?
-
-Open your album and use the upload button. Uploads are tracked in a progress
-widget in the site header.
-
-If the club's storage is full, uploads pause and the site says so. Your photos
-stay on your device, and you can tell an admin.
-
-### Can I share an album with specific people?
-
-Yes. Every album has an edit share link. Anyone with the link can claim
-co-author access and upload photos to that album.
-
-### How long do albums last?
-
-Albums are kept for two years after their event by default. The album's owner
-and members get a Telegram reminder 30 days and 7 days before an album expires,
-so there is time to download what you need. When an album expires, its photos are deleted,
-and there is no backup copy. Only the album's title and the reason it was
-removed remain on the site.
-
-Admins can pin an album to keep it longer. If the club needs space, an admin
-can also bring an album's expiry forward; it is then kept for 7 more days, and
-its owner and members are told.
-
-## Flamekeepers
-
-### What is a flamekeeper?
-
-A flamekeeper is an `@nu.edu.kz` student who pledges part of their own Google
-Drive storage to the club as reserve capacity. Flamekeeping is optional, and
-you do not need it to use the site.
-
-### How do I become a flamekeeper?
-
-Open the Become a flamekeeper page from your My Account page or the one-time invitation. It takes three short steps. You will be asked for:
-
-- your expected graduation month, which must be in the future,
-- your pledge, at least 512 MB (see below),
-- nothing else: connecting your Drive means you agree to the [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
-
-Then connect the Google Drive account with the same `@nu.edu.kz` address you
-signed in with. The Platform asks only for access to the files it creates
-(`drive.file`).
-
-### How much do I need to pledge?
-
-The minimum pledge is 512 MB. The pledge is the most storage the Platform may use
-in your Drive. You can change it at any time from your My Account page. A pledge is
-reserve space; flamekeepers hold no photos today.
-
-### Will my photos be stored in my Drive?
-
-No. Flamekeepers hold no photos today, and new uploads go to the club-run Gmail
-account.
-
-### What can the Platform see in my Drive?
-
-Only the files and folders the Platform creates. It cannot read or change any
-other file in your Drive.
-
-### Can I stop flamekeeping?
-
-Yes, at any time from your My Account page. Stopping ends your pledge, and the Platform
-places no photos in your Drive. You can also revoke the Platform's access at
-[myaccount.google.com/permissions](https://myaccount.google.com/permissions).
-Flamekeepers hold no photos today, so this does not affect any album. See [Privacy Policy](https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md)
-and [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
-
 ## Telegram Bot
 
 ### What can I do with the bot?
@@ -218,8 +198,6 @@ The bot is menu-driven (inline keyboard, not slash commands):
   before grace period ends
 - **Overdue alerts**: when your booking becomes overdue
 - **Auto-cancel**: when a booking is cancelled for not being picked up
-
-See [Telegram Bot](user/telegram-bot.md) for details.
 
 ## Clearance Levels
 
@@ -267,3 +245,93 @@ your My Account page to connect.
 Returns are processed through Telegram. Make sure you completed the full
 return flow (including sending the photo). If the issue persists, contact an
 administrator.
+
+---
+
+# Flamekeepers
+
+## About Flamekeeping
+
+### What is a flamekeeper?
+
+A flamekeeper is an `@nu.edu.kz` student who pledges part of their own Google
+Drive storage to the club as optional reserve capacity (#savenuimg). Flamekeeping
+is optional, you do not need it to use the site, and you do not need to be a club
+member. Alumni accounts cannot be flamekeepers.
+
+### How do I become a flamekeeper?
+
+Open the Become a flamekeeper page from your My Account page or the one-time
+invitation. It takes three short steps. You will be asked for:
+
+- your expected graduation month, which must be in the future,
+- your pledge, at least 512 MB (see below),
+- nothing else: connecting your Drive means you agree to the [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
+
+Then connect the Google Drive account with the same `@nu.edu.kz` address you
+signed in with. The Platform asks only for access to the files it creates
+(`drive.file`).
+
+### Why was my Drive refused?
+
+Your Drive needs room for your pledge under the club's per-account cap (20 GB by
+default). If your Drive is already full, or has less free space than your pledge,
+free up some space or pick a smaller pledge and try again.
+
+### How much do I need to pledge?
+
+The minimum pledge is 512 MB. The pledge is the most storage the Platform may use
+in your Drive. It is a cap on what the Platform uses, not space set aside in
+Google. You can change it at any time from your My Account page.
+
+### What does Full mean?
+
+Full means your pledge, or your Drive's room under the cap, has no space left.
+It returns to Active by itself when room frees up.
+
+## Photos and Your Drive
+
+### Will my photos be stored in my Drive?
+
+Not unless an admin moves some there. New uploads go to the club's own account.
+Your pledge is reserve space: an admin may move an album's photos to flamekeepers
+when the club needs room, up to your pledge. That is never automatic, and the
+photos can be moved back at any time.
+
+### What can the Platform see in my Drive?
+
+Only the files and folders the Platform creates. It cannot read or change any
+other file in your Drive. It also checks how much of your Drive is in use.
+
+### Can I edit or delete the photos the Platform keeps in my Drive?
+
+Please don't. Do not rename, move or delete them, because the Platform manages
+them for you. They are owned by you in Google's terms and count against your
+Google storage, up to your pledge. The folder is shared with the club's account
+so the photos can be copied back.
+
+## Stopping and Graduating
+
+### Can I stop flamekeeping?
+
+Yes, at any time from your My Account page. If the Platform holds none of your
+Drive's photos, flamekeeping ends at once. Otherwise you are Draining while the
+Platform copies the photos back to the club and deletes them from your Drive. You
+do not need to do anything. You can also revoke the Platform's access at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions). See
+the [Privacy Policy](https://github.com/sagyzdop/meriksirat/blob/main/docs/privacy-policy.md)
+and [Terms of Service](https://github.com/sagyzdop/meriksirat/blob/main/docs/terms-of-service.md).
+
+### What happens when I graduate?
+
+Flamekeeping ends 60 days before your expected graduation month, and any photos
+are moved back to the club first. You are asked once a year to confirm that month
+is still right. It also ends if your email stops being `@nu.edu.kz`, or if you are
+banned.
+
+### What does Lost mean?
+
+The Platform can no longer reach your Drive, for example because you revoked
+access. You have 7 days to reconnect from your My Account page. Meanwhile any
+photos in your Drive are copied to the club's account, and your original files
+stay until you reconnect, then they are deleted. You get an email about it.
