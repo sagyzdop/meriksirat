@@ -234,3 +234,30 @@ export async function listAlbumsPaginated({
         : null,
   }
 }
+
+export async function withLiveHeartCounts(
+  database: Database,
+  page: AlbumListPage
+): Promise<AlbumListPage> {
+  const ids = page.albums.map((a) => a.id)
+  if (ids.length === 0) return page
+  const rows = (
+    await Promise.all(
+      chunk(ids, 100).map((idPart) =>
+        database
+          .select({ id: album.id, heartCount: album.heartCount })
+          .from(album)
+          .where(inArray(album.id, idPart))
+          .all()
+      )
+    )
+  ).flat()
+  const counts = new Map(rows.map((r) => [r.id, r.heartCount]))
+  return {
+    ...page,
+    albums: page.albums.map((a) => ({
+      ...a,
+      heartCount: counts.get(a.id) ?? a.heartCount,
+    })),
+  }
+}

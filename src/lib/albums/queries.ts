@@ -1,4 +1,8 @@
-import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+} from '@tanstack/react-query'
 import {
   getAllAlbumsFn,
   getAlbumAuthorsFn,
@@ -37,6 +41,7 @@ export const albumQueries = {
       // window focus — album lists must never linger on old data.
       staleTime: 0,
       refetchOnWindowFocus: true,
+      placeholderData: keepPreviousData,
       initialPageParam: null as string | null,
       queryFn: async ({ pageParam }): Promise<AlbumListPage> =>
         await getMyAlbumsFn({ data: { ...filters, cursor: pageParam } }),
@@ -47,6 +52,7 @@ export const albumQueries = {
       queryKey: [...albumQueries.all, 'public', normalizeFilters(filters)],
       staleTime: 0,
       refetchOnWindowFocus: true,
+      placeholderData: keepPreviousData,
       initialPageParam: null as string | null,
       queryFn: async ({ pageParam }): Promise<AlbumListPage> =>
         await getPublicAlbumsFn({

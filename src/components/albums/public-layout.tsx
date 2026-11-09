@@ -5,7 +5,6 @@ import { useLogout } from '@/hooks/use-logout'
 import type { UserProfile } from '@/lib/user/types'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
-import { BirthdayWishDrawer } from '@/components/shared/birthday-wish-drawer'
 import { FlamekeeperInvitation } from '@/components/shared/flamekeeper-invitation'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { UserMenu, type UserMenuUser } from '@/components/shared/user-menu'
@@ -153,7 +152,6 @@ export function PublicAlbumsLayout({
       <main className="flex-1">{children}</main>
       <PublicAlbumsFooter />
       <Toaster />
-      {user && <BirthdayWishDrawer userId={user.id} />}
       {showInvitation && <FlamekeeperInvitation user={invitationUser} />}
     </div>
   )

@@ -24,6 +24,7 @@ export function MyAlbumsIndex({ user, search }: MyAlbumsIndexProps) {
     navigate({
       to: '/my-albums',
       search: (prev) => ({ ...prev, ...next }),
+      replace: true,
     })
   }
 

@@ -13,6 +13,41 @@ const MAX_RETRIES = 5
  */
 const loadedUrls = new Set<string>()
 
+const NEAR_VIEWPORT_MARGIN = '600px 0px'
+
+type NearListener = (near: boolean) => void
+
+const nearListeners = new WeakMap<Element, NearListener>()
+let nearObserver: IntersectionObserver | null = null
+
+function observeNear(element: Element, listener: NearListener): () => void {
+  nearObserver ??= new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        nearListeners.get(entry.target)?.(entry.isIntersecting)
+      }
+    },
+    { rootMargin: NEAR_VIEWPORT_MARGIN }
+  )
+  nearListeners.set(element, listener)
+  nearObserver.observe(element)
+  return () => {
+    nearListeners.delete(element)
+    nearObserver?.unobserve(element)
+  }
+}
+
+/** Whether the element is within the prefetch margin of the viewport. */
+function useNearViewport(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [near, setNear] = React.useState(false)
+  React.useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    return observeNear(element, setNear)
+  }, [ref])
+  return near
+}
+
 interface PhotoImageProps extends React.ComponentProps<'img'> {
   containerClassName?: string
   fit?: 'cover' | 'contain'
@@ -54,12 +89,15 @@ export function PhotoImage({
   placeholderClassName,
   ...props
 }: PhotoImageProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const near = useNearViewport(containerRef)
+  const cached = src != null && loadedUrls.has(src)
   const [attempt, setAttempt] = React.useState(0)
-  const [loaded, setLoaded] = React.useState(
-    () => src != null && loadedUrls.has(src)
-  )
+  const [loaded, setLoaded] = React.useState(cached)
   const [failed, setFailed] = React.useState(false)
-  const [currentSrc, setCurrentSrc] = React.useState<string | null>(null)
+  const [currentSrc, setCurrentSrc] = React.useState<string | null>(
+    cached ? src : null
+  )
   const timerRef = React.useRef<number | null>(null)
   const releaseRef = React.useRef<(() => void) | null>(null)
 
@@ -76,30 +114,39 @@ export function PhotoImage({
     setLoaded(src != null && loadedUrls.has(src))
   }, [src])
 
-  // Wait for a concurrency slot before attaching the URL, then request it.
-  // The slot is held only for the fetch (load, final error, or unmount) so a
-  // successful load frees the slot for the next queued image. Retrying
+  // Cached URLs render straight away without a slot (back navigation shows
+  // them instantly). Others wait until they are near the viewport, then for a
+  // concurrency slot, held only for the fetch. Scrolling away before the
+  // image loads gives the slot (or queue place) back so fast scrolling never
+  // leaves slots stuck on images the user already passed. Retrying
   // (attempt++) releases the previous slot and re-queues.
   React.useEffect(() => {
-    let cancelled = false
-    releaseRef.current = null
+    if (src != null && loadedUrls.has(src)) {
+      setCurrentSrc(src)
+      return
+    }
     setCurrentSrc(null)
+    if (src == null || !near) return
 
-    acquireImageSlot().then((release) => {
-      if (cancelled) {
-        release()
-        return
-      }
-      releaseRef.current = release
-      setCurrentSrc(src ?? null)
-    })
+    const controller = new AbortController()
+    acquireImageSlot(controller.signal).then(
+      (release) => {
+        if (controller.signal.aborted) {
+          release()
+          return
+        }
+        releaseRef.current = release
+        setCurrentSrc(src)
+      },
+      () => {}
+    )
 
     return () => {
-      cancelled = true
+      controller.abort()
       releaseRef.current?.()
       releaseRef.current = null
     }
-  }, [src, attempt])
+  }, [src, attempt, near])
 
   React.useEffect(() => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
@@ -137,6 +184,7 @@ export function PhotoImage({
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         'bg-muted relative grid h-full w-full place-items-center overflow-hidden',
         containerClassName
@@ -171,7 +219,7 @@ export function PhotoImage({
             key={attempt}
             src={currentSrc}
             alt={alt}
-            loading="lazy"
+            loading={loadedUrls.has(currentSrc) ? 'lazy' : undefined}
             decoding="async"
             referrerPolicy="no-referrer"
             onLoad={handleLoad}

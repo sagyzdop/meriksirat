@@ -33,8 +33,8 @@ export function AlbumHeartButton({
         onToggle()
       }}
     >
-      <Heart className="size-4" fill={hearted ? 'currentColor' : 'none'} />
       {count}
+      <Heart className="size-4" fill={hearted ? 'currentColor' : 'none'} />
     </Button>
   )
 }

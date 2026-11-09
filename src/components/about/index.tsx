@@ -9,8 +9,8 @@ import {
 import { authClient } from '@/lib/auth/auth-client'
 import {
   ABOUT_LEGAL_LINKS,
+  BECOME_FLAMEKEEPER_PATH,
   aboutCopy,
-  becomeFlamekeeperPath,
 } from '@/lib/about/content'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,10 +30,15 @@ function BecomeFlamekeeperButton() {
   // The page itself reads nothing; the session is only probed in the browser
   // after load, so the cached HTML is identical for everyone.
   const { data: session } = authClient.useSession()
-  const to = becomeFlamekeeperPath(Boolean(session))
   return (
     <Button asChild>
-      <Link to={to}>Become a flamekeeper</Link>
+      {session ? (
+        <Link to={BECOME_FLAMEKEEPER_PATH}>Become a flamekeeper</Link>
+      ) : (
+        <Link to="/login" search={{ redirect: BECOME_FLAMEKEEPER_PATH }}>
+          Become a flamekeeper
+        </Link>
+      )}
     </Button>
   )
 }

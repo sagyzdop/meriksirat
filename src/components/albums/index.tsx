@@ -36,7 +36,7 @@ export function PublicAlbumsIndex({ user }: PublicAlbumsIndexProps) {
   }
 
   const handleFiltersChange = (next: Partial<AlbumListFilters>) => {
-    navigate({ search: { search: next.search ?? '' } })
+    navigate({ search: { search: next.search ?? '' }, replace: true })
   }
 
   const content = (

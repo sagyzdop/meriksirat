@@ -7,17 +7,20 @@ import {
 import { PRIVACY_URL, TERMS_URL } from '@/lib/flamekeeper/rules'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup } from '@/components/ui/field'
-import { useSearch } from '@tanstack/react-router'
 
-export function Page({ className, ...props }: React.ComponentProps<'div'>) {
-  const search = useSearch({ strict: false }) as { error?: string }
-  const error = search.error
+interface PageProps extends React.ComponentProps<'div'> {
+  error?: string
+  redirect?: string
+}
 
+export function Page({ className, error, redirect, ...props }: PageProps) {
   const handleGoogleSignIn = async () => {
     try {
       await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/login',
+        callbackURL: redirect
+          ? `/login?redirect=${encodeURIComponent(redirect)}`
+          : '/login',
         errorCallbackURL: '/login',
       })
     } catch (error) {

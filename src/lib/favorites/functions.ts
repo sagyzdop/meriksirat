@@ -27,6 +27,18 @@ async function requireFavoriter(headers: Headers) {
   return { database, sessionUser }
 }
 
+async function requireFavoriteWrite(headers: Headers) {
+  const context = await requireFavoriter(headers)
+  const { rateLimit } = await import('@/lib/ratelimit')
+  const limit = await rateLimit(headers, 'rl_favorites', context.sessionUser.id)
+  if (!limit.allowed) {
+    throw new Error(
+      `Too many favorites. Try again in ${limit.retryAfterSeconds} seconds.`
+    )
+  }
+  return context
+}
+
 export const getAlbumFavoritesFn = createServerFn({ method: 'GET' })
   .validator(AlbumIdSchema)
   .handler(async ({ data }): Promise<FavoriteRef[]> => {
@@ -56,7 +68,7 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
     const { and, eq, sql } = await import('drizzle-orm')
 
     const headers = getRequestHeaders()
-    const { database, sessionUser } = await requireFavoriter(headers)
+    const { database, sessionUser } = await requireFavoriteWrite(headers)
 
     const albumRow = await database
       .select()
@@ -212,7 +224,7 @@ export const setAlbumHeartFn = createServerFn({ method: 'POST' })
     const { and, eq, isNull, sql } = await import('drizzle-orm')
 
     const { database, sessionUser } =
-      await requireFavoriter(getRequestHeaders())
+      await requireFavoriteWrite(getRequestHeaders())
 
     const albumRow = await database
       .select({ id: album.id })

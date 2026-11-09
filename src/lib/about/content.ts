@@ -25,10 +25,6 @@ export const ABOUT_LEGAL_LINKS = [
 
 export const BECOME_FLAMEKEEPER_PATH = '/become-flamekeeper'
 
-export function becomeFlamekeeperPath(signedIn: boolean): string {
-  return signedIn ? BECOME_FLAMEKEEPER_PATH : '/login'
-}
-
 export function formatMinPledge(bytes: number): string {
   if (bytes >= GB) return `${Math.round((bytes / GB) * 10) / 10} GB`
   return `${Math.round(bytes / MB)} MB`

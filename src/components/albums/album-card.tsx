@@ -4,15 +4,20 @@ import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { authClient } from '@/lib/auth/auth-client'
 import type { AlbumSummary } from '@/lib/albums'
 import { useAlbumHearts } from '@/lib/favorites/use-album-hearts'
+import { albumCoverSrcSet } from '@/lib/albums/urls'
 import { albumStorageWarning } from '@/lib/albums/warning'
 import { AlbumHeartButton } from './album-heart-button'
 import { PhotoImage } from './photo-image'
+
+const ALBUM_CARD_SIZES =
+  '(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
 
 interface AlbumCardProps {
   album: AlbumSummary
@@ -29,7 +34,10 @@ export function AlbumCard({ album, showWarning }: AlbumCardProps) {
     : ''
 
   return (
-    <Card className="group relative mx-auto flex w-full flex-col overflow-hidden pt-0 transition-all hover:shadow-lg">
+    <Card
+      size="sm"
+      className="group relative mx-auto w-full gap-3 transition-all hover:shadow-lg data-[size=sm]:pt-0 data-[size=sm]:pb-3"
+    >
       <Link
         to="/albums/$albumId"
         params={{ albumId: album.id }}
@@ -37,10 +45,16 @@ export function AlbumCard({ album, showWarning }: AlbumCardProps) {
         className="absolute inset-0 z-10 rounded-xl outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       />
 
-      <div className="relative block aspect-video w-full overflow-hidden rounded-t-xl">
+      <div className="relative aspect-video w-full overflow-hidden rounded-t-xl">
         {album.coverUrl ? (
           <PhotoImage
             src={album.coverUrl}
+            srcSet={
+              album.coverFileId
+                ? albumCoverSrcSet(album.coverFileId)
+                : undefined
+            }
+            sizes={ALBUM_CARD_SIZES}
             alt={album.title}
             className="transition-transform duration-300 group-hover:scale-105"
           />
@@ -61,24 +75,27 @@ export function AlbumCard({ album, showWarning }: AlbumCardProps) {
       </div>
 
       <CardHeader>
-        <CardTitle className="line-clamp-1 min-h-6">{album.title}</CardTitle>
-        <CardDescription className="line-clamp-2 min-h-10">
+        <CardTitle className="line-clamp-2 min-h-[2lh]">
+          {album.title}
+        </CardTitle>
+        <CardDescription className="line-clamp-2 min-h-[2lh]">
           {album.description}
         </CardDescription>
-        <p className="flex min-h-5 items-center gap-1.5 truncate text-xs text-muted-foreground">
+      </CardHeader>
+
+      <CardFooter className="mt-auto justify-between gap-2 pr-2">
+        <p className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
           <Users className="size-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{authorsLabel}</span>
         </p>
-      </CardHeader>
-      <div className="relative z-20 px-4">
         <AlbumHeartButton
           hearted={hearts?.isHearted(album.id) ?? false}
           count={album.heartCount}
           disabled={!hearts}
           onToggle={() => hearts?.toggle(album.id)}
-          className="-ml-2"
+          className="relative z-20 h-7 shrink-0 px-2"
         />
-      </div>
+      </CardFooter>
     </Card>
   )
 }

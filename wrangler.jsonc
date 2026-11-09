@@ -77,6 +77,11 @@
       "namespace_id": "1008",
       "simple": { "limit": 10, "period": 60 },
     },
+    {
+      "name": "rl_favorites",
+      "namespace_id": "1009",
+      "simple": { "limit": 60, "period": 60 },
+    },
   ],
   /**
    * Cron Triggers
@@ -180,6 +185,11 @@
           "name": "rl_add_booking_items",
           "namespace_id": "2008",
           "simple": { "limit": 10, "period": 60 },
+        },
+        {
+          "name": "rl_favorites",
+          "namespace_id": "2009",
+          "simple": { "limit": 60, "period": 60 },
         },
     ],
   },

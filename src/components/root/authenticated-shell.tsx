@@ -7,7 +7,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { FlamekeeperBanner } from '@/components/shared/flamekeeper-banner'
 import { FlamekeeperInvitation } from '@/components/shared/flamekeeper-invitation'
 import { PublicAlbumsLayout } from '@/components/albums/public-layout'
-import { BirthdayWishDrawer } from '@/components/shared/birthday-wish-drawer'
 
 interface AuthenticatedShellProps {
   user: UserProfile
@@ -44,7 +43,6 @@ export function AuthenticatedShell({
         <div className="flex flex-1 min-w-0 flex-col">{children}</div>
       </SidebarInset>
       <Toaster />
-      <BirthdayWishDrawer userId={user.id} />
       <FlamekeeperInvitation
         user={{
           ...user,

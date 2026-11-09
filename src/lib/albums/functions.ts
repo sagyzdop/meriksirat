@@ -142,6 +142,9 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
       .set({ albumCount: sql`${user.albumCount} + 1` })
       .where(eq(user.id, currentUser.id))
 
+    const { invalidatePublicAlbumList } = await import('./server')
+    await invalidatePublicAlbumList()
+
     const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
     await logAlbumActivityByUser(currentUser.id, {
       albumId,
@@ -211,12 +214,13 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
     const database = db(env.meriksirat_d1 as D1Database)
 
     // The page is fully viewer-independent, so serve it from the short-lived
-    // page cache when possible (memo layer + KV; see server.ts).
+    // edge cache when possible (see server.ts). Heart counts change on every
+    // click, so they are always read fresh from D1 and laid over the cache.
     const { getCachedPublicPage, setCachedPublicPage } =
       await import('./server')
-    const { listAlbumsPaginated } = await import('./list')
+    const { listAlbumsPaginated, withLiveHeartCounts } = await import('./list')
     const cachedPage = (await getCachedPublicPage(data)) as AlbumListPage | null
-    if (cachedPage) return cachedPage
+    if (cachedPage) return withLiveHeartCounts(database, cachedPage)
 
     const page = await listAlbumsPaginated({
       database,
@@ -484,7 +488,8 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { invalidateCachedDetailCore } = await import('./server')
+    const { invalidateCachedDetailCore, invalidatePublicAlbumList } =
+      await import('./server')
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { renameDriveFile, DriveNotFoundError } =
@@ -530,6 +535,7 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
         .set(updates)
         .where(eq(album.id, data.albumId))
       await invalidateCachedDetailCore(data.albumId)
+      await invalidatePublicAlbumList()
     }
 
     const detailParts: string[] = []
@@ -595,8 +601,11 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { albumMember, user } = await import('@/db/schema')
     const { eq, sql } = await import('drizzle-orm')
-    const { getSessionUser, invalidateCachedDetailCore } =
-      await import('./server')
+    const {
+      getSessionUser,
+      invalidateCachedDetailCore,
+      invalidatePublicAlbumList,
+    } = await import('./server')
     const { newId } = await import('./ids')
 
     const headers = getRequestHeaders()
@@ -622,6 +631,7 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
         .where(eq(user.id, currentUser.id))
 
       await invalidateCachedDetailCore(row.id)
+      await invalidatePublicAlbumList()
 
       const { logAlbumActivityByUser } = await import('@/lib/telegram/logging')
       await logAlbumActivityByUser(currentUser.id, {
@@ -818,7 +828,8 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { album } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
-    const { invalidateCachedDetailCore } = await import('./server')
+    const { invalidateCachedDetailCore, invalidatePublicAlbumList } =
+      await import('./server')
     const { findAlbumFile } = await import('./listing-server')
 
     const { database, row } = await albumContext(data.albumId, [
@@ -836,6 +847,7 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
       .set({ coverFileId: data.fileId, updatedAt: new Date() })
       .where(eq(album.id, data.albumId))
     await invalidateCachedDetailCore(data.albumId)
+    await invalidatePublicAlbumList()
 
     return { success: true }
   })
@@ -848,8 +860,11 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
     const { db } = await import('@/db')
     const { albumMember, user } = await import('@/db/schema')
     const { and, eq, sql } = await import('drizzle-orm')
-    const { resolveAlbumAccess, invalidateCachedDetailCore } =
-      await import('./server')
+    const {
+      resolveAlbumAccess,
+      invalidateCachedDetailCore,
+      invalidatePublicAlbumList,
+    } = await import('./server')
 
     const headers = getRequestHeaders()
     const database = db(env.meriksirat_d1 as D1Database)
@@ -889,6 +904,7 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
       .set({ albumCount: sql`MAX(${user.albumCount} - 1, 0)` })
       .where(eq(user.id, data.userId))
     await invalidateCachedDetailCore(data.albumId)
+    await invalidatePublicAlbumList()
 
     if (currentUser) {
       const [{ logAlbumActivityByUser }, { formatUserDisplayName }] =

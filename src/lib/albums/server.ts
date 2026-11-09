@@ -311,22 +311,69 @@ function edgeCache() {
 
 const publicPageCache = edgeCache()
 
-function publicPageKey(query: unknown): string {
+// The Cache API is per data center and its keys are hashes, so a change can't
+// purge cached pages everywhere. Instead every key carries a version stored in
+// KV; bumping it orphans all cached pages at once. Readers memo the version
+// briefly, so a change shows everywhere within about a minute.
+const PUBLIC_LIST_VERSION_KEY = 'album:publist:version'
+const PUBLIC_LIST_VERSION_MEMO_MS = 15_000
+const PUBLIC_LIST_VERSION_KV_TTL_SECONDS = 30
+
+let publicListVersionMemo: { value: string; at: number } | null = null
+
+async function publicListVersion(): Promise<string> {
+  const memo = publicListVersionMemo
+  if (memo && Date.now() - memo.at < PUBLIC_LIST_VERSION_MEMO_MS) {
+    return memo.value
+  }
+  try {
+    const { env } = await import('cloudflare:workers')
+    const value =
+      (await (env.meriksirat_kv as KVNamespace).get(PUBLIC_LIST_VERSION_KEY, {
+        cacheTtl: PUBLIC_LIST_VERSION_KV_TTL_SECONDS,
+      })) ?? '0'
+    publicListVersionMemo = { value, at: Date.now() }
+    return value
+  } catch (error) {
+    console.warn('Failed to read public album list version:', error)
+    return memo?.value ?? '0'
+  }
+}
+
+/**
+ * Drop every cached public album list page. Call after a change the list
+ * shows (create, edit, cover, authors, delete), once the D1 write is done.
+ */
+export async function invalidatePublicAlbumList(): Promise<void> {
+  const value = Date.now().toString(36)
+  publicListVersionMemo = { value, at: Date.now() }
+  try {
+    const { env } = await import('cloudflare:workers')
+    await (env.meriksirat_kv as KVNamespace).put(PUBLIC_LIST_VERSION_KEY, value)
+  } catch (error) {
+    console.warn('Failed to invalidate public album list cache:', error)
+  }
+}
+
+async function publicPageKey(query: unknown): Promise<string> {
   const raw = JSON.stringify(query)
   let hash = 5381
   for (let i = 0; i < raw.length; i++) {
     hash = ((hash << 5) + hash + raw.charCodeAt(i)) | 0
   }
-  return `album:publist:${(hash >>> 0).toString(36)}`
+  const version = await publicListVersion()
+  return `album:publist:${version}:${(hash >>> 0).toString(36)}`
 }
 
-export function getCachedPublicPage(query: unknown): Promise<unknown | null> {
-  return publicPageCache.get(publicPageKey(query))
+export async function getCachedPublicPage(
+  query: unknown
+): Promise<unknown | null> {
+  return publicPageCache.get(await publicPageKey(query))
 }
 
-export function setCachedPublicPage(
+export async function setCachedPublicPage(
   query: unknown,
   page: unknown
 ): Promise<void> {
-  return publicPageCache.set(publicPageKey(query), page)
+  return publicPageCache.set(await publicPageKey(query), page)
 }

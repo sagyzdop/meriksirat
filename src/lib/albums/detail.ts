@@ -11,6 +11,7 @@ import type {
   AlbumPhoto,
   AlbumStorage,
 } from './types'
+import { invalidatePublicAlbumList } from './server'
 import { albumStatus, albumStorageHolder } from './status'
 import { albumCoverUrl } from './urls'
 
@@ -93,6 +94,7 @@ export async function loadAlbumDetail(
       .update(album)
       .set({ coverFileId, updatedAt: new Date() })
       .where(eq(album.id, row.id))
+    await invalidatePublicAlbumList()
   }
 
   const volumes = await database
@@ -131,6 +133,7 @@ export async function loadAlbumDetail(
       | 'coverUrl'
       | 'countWarning'
     >),
+    heartCount: row.heartCount,
     coverFileId,
     coverUrl: coverFileId ? albumCoverUrl(coverFileId) : null,
     photos,

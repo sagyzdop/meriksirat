@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 import type { Database } from '@/db'
 import { toDateOnlyString } from '@/lib/format'
 import { BIRTHDAYS_CALENDAR_ID, BIRTHDAY_STATUSES } from '../constants'
@@ -294,61 +293,4 @@ export const syncBirthdaysToCalendarFn = createServerFn({
   const { database } = await adminContext(['admin', 'manager'])
 
   return reconcileBirthdaysToCalendar(database)
-})
-
-/**
- * Announcement for the birthday-wish drawer. Shown to EVERY member (not just
- * the birthday person) when one or more Active/Board members have a birthday
- * today. Returns `null` when nobody has a birthday today so the drawer stays
- * hidden. Deliberately NOT admin-guarded: every member needs it.
- */
-export const getBirthdayWishMessageFn = createServerFn({
-  method: 'GET',
-}).handler(async (): Promise<string | null> => {
-  const { resolveSession } = await import('@/lib/auth/resolve-session')
-  const { env } = await import('cloudflare:workers')
-  const { db } = await import('@/db')
-  const { user } = await import('@/db/schema')
-  const { inArray, isNotNull, and, eq } = await import('drizzle-orm')
-
-  const headers = getRequestHeaders()
-  const session = await resolveSession(headers)
-  if (!session?.user) return null
-
-  const database = db(env.meriksirat_d1 as D1Database)
-  const members = await database
-    .select({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      birthday: user.birthday,
-    })
-    .from(user)
-    .where(
-      and(
-        inArray(user.status, [...BIRTHDAY_STATUSES]),
-        isNotNull(user.birthday),
-        eq(user.wantsBirthdayCongratulation, true)
-      )
-    )
-
-  const now = new Date()
-  const names = members
-    .map((member) => ({
-      member,
-      parsed: parseBirthday(member.birthday),
-    }))
-    .filter(
-      ({ parsed }) =>
-        parsed &&
-        parsed.month === now.getMonth() + 1 &&
-        parsed.day === now.getDate()
-    )
-    .map(({ member }) =>
-      [member.firstName, member.lastName].filter(Boolean).join(' ')
-    )
-    .filter(Boolean)
-
-  if (names.length === 0) return null
-
-  return `Today is the birthday of ${names.join(', ')}. Happy Birthday!`
 })

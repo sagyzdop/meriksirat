@@ -25,15 +25,3 @@ sequenceDiagram
 
 - The same reconcile runs automatically when a member changes status ([list](list.md)), finishes onboarding or edits their profile. Failures there are logged, never blocking.
 - Unparseable birthdays are skipped.
-
-## What is the birthday wish?
-
-```mermaid
-flowchart LR
-    S["Any signed-in user loads the app"] --> Q["getBirthdayWishMessageFn"]
-    Q --> F{"Active users with wantsBirthdayCongratulation whose birthday is today"}
-    F -->|"none"| N["No drawer"]
-    F -->|"some"| M["Drawer: Today is the birthday of A, B. Happy Birthday!"]
-```
-
-- Shown to everyone, not only admins. People who opted out of congratulations are left out.

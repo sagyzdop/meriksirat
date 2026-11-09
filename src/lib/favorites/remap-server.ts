@@ -4,6 +4,7 @@ import { album, favorite } from '@/db/schema'
 import {
   invalidateCachedDetailCore,
   invalidateCachedListing,
+  invalidatePublicAlbumList,
 } from '@/lib/albums/server'
 import { chunk } from '@/lib/utils'
 import { planRemap } from './remap'
@@ -87,5 +88,6 @@ export async function remapDriveFile(
   await Promise.all([
     invalidateCachedListing(row.driveFolderId),
     invalidateCachedDetailCore(albumId),
+    plan.coverFileId !== row.coverFileId && invalidatePublicAlbumList(),
   ])
 }

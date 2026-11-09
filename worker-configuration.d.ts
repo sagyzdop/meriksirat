@@ -13,6 +13,7 @@ interface __BaseEnv_Env {
 	rl_create_upload_session: RateLimit;
 	rl_create_booking: RateLimit;
 	rl_add_booking_items: RateLimit;
+	rl_favorites: RateLimit;
 	BETTER_AUTH_SECRET: string;
 	BETTER_AUTH_URL: string;
 	CLOUDFLARE_ACCOUNT_ID: string;

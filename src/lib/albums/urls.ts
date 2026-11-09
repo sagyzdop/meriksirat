@@ -31,6 +31,12 @@ export function albumCoverUrl(fileId: string): string {
   return driveCdnUrl(fileId, 800)
 }
 
+export function albumCoverSrcSet(fileId: string): string {
+  return [400, 600, 800]
+    .map((w) => `${driveCdnUrl(fileId, w)} ${w}w`)
+    .join(', ')
+}
+
 export function albumOgImageUrl(fileId: string): string {
   return driveCdnUrl(fileId, 1200)
 }

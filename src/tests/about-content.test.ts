@@ -1,16 +1,30 @@
 import { describe, it, expect } from 'vitest'
-import {
-  aboutCopy,
-  becomeFlamekeeperPath,
-  formatMinPledge,
-} from '../lib/about/content'
+import { aboutCopy, formatMinPledge } from '../lib/about/content'
+import { postLoginPath } from '../lib/access/access-rules'
 import { guestHtmlTtlSeconds } from '../lib/cache/guest-html'
 import { MIN_PLEDGE_BYTES } from '../lib/flamekeeper/rules'
 
-describe('become a flamekeeper button', () => {
-  it('sends signed-in visitors to the sign-up and signed-out ones to login', () => {
-    expect(becomeFlamekeeperPath(true)).toBe('/become-flamekeeper')
-    expect(becomeFlamekeeperPath(false)).toBe('/login')
+describe('postLoginPath', () => {
+  const member = { isMember: true, onboardingComplete: true }
+
+  it('follows a same-origin redirect after login', () => {
+    expect(postLoginPath(member, '/become-flamekeeper')).toBe(
+      '/become-flamekeeper'
+    )
+  })
+
+  it('falls back to home for missing or off-site redirects', () => {
+    expect(postLoginPath(member, undefined)).toBe('/equipment')
+    expect(postLoginPath(member, 'https://evil.example')).toBe('/equipment')
+    expect(postLoginPath(member, '//evil.example')).toBe('/equipment')
+    expect(postLoginPath(member, '/\\evil.example')).toBe('/equipment')
+    expect(postLoginPath(member, '/login')).toBe('/equipment')
+  })
+
+  it('sends members who still need onboarding there first', () => {
+    expect(
+      postLoginPath({ isMember: true, onboardingComplete: false }, '/x')
+    ).toBe('/onboarding')
   })
 })
 

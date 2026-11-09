@@ -95,6 +95,23 @@ export function homePath(user: EntryUser): HomePath {
   return user.isMember ? '/equipment' : '/account'
 }
 
+/** Where to land after login: a same-origin `redirect` path, else home. */
+export function postLoginPath(
+  user: EntryUser,
+  redirect: string | undefined
+): string {
+  if (needsOnboarding(user)) return '/onboarding'
+  if (
+    !redirect?.startsWith('/') ||
+    redirect.startsWith('//') ||
+    redirect.startsWith('/\\') ||
+    redirect.startsWith('/login')
+  ) {
+    return homePath(user)
+  }
+  return redirect
+}
+
 const NON_MEMBER_PATHS = ['/account', '/favorites', '/become-flamekeeper']
 
 export function nonMemberCanVisit(pathname: string): boolean {
