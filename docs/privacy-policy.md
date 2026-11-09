@@ -90,9 +90,8 @@ regulations require it.
   automatically. An administrator may schedule an album for deletion with notice
   (14 days by default), and its owner or an administrator may delete it at any
   time. When an album is deleted, its folder and photos are deleted, with no
-  backup copy. A page giving the album's title and the reason remains only when
-  the photos were lost with a flamekeeper or their folder was permanently
-  deleted.
+  backup copy. A page saying why remains only when an album's Google Drive folder
+  was permanently deleted and an administrator removed the album.
 - **Sessions** expire automatically. Telegram return-flow session data expires
   within an hour.
 

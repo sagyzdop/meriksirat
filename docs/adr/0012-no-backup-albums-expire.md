@@ -1,16 +1,20 @@
-# There is no backup; albums expire and leave a tombstone
+# There is no backup; deleted albums are gone
 
 > **Amended by [ADR-0015](0015-buffer-is-stable-photo-storage.md),
 > [ADR-0016](0016-drains-run-on-server-with-buffer-full-token.md) and
-> [ADR-0017](0017-drop-photo-table-read-from-drive.md).**
-> A full buffer pauses a drain and warns admins; it never deletes photos. Uploads
-> stop at a full buffer and never fall back to flamekeepers, so "the pool is full"
-> now means the buffer is full. The 14-day deletion applies only when a
-> flamekeeper's own access blocks the drain. Deleted folders become a warning with
-> a Drive link, and an admin may delete an album that is permanently gone. The
-> rest still holds: expiry, pins, suggested deletions and the Free up space panel,
-> and expiry is still the only automatic deletion. The text below is the original
-> decision, kept for history.
+> [ADR-0017](0017-drop-photo-table-read-from-drive.md), and superseded in part
+> by the removal of automatic expiry.**
+> There is no backup, and that still holds. Albums no longer expire, there are
+> no pins and no suggested deletions: an album is deleted only when its owner or
+> an admin deletes it, or when an admin schedules it for deletion (notice of 14
+> days by default, to the owner and everyone who favorited, cancellable; see
+> [GLOSSARY](../../GLOSSARY.md), Scheduled deletion). A full buffer pauses a
+> drain and warns admins; it never deletes photos. Uploads stop at a full buffer
+> and never fall back to flamekeepers. Drains copy photos back to the buffer rather than deleting them. The
+> tombstone page is now created only for folders that are permanently gone,
+> which an admin may remove. The text
+> below is the original decision, kept for history; its expiry, pin, reminder
+> and suggested-deletion parts are no longer true.
 
 There is no second copy of any photo. When a volume can't be moved (draining ran
 out of time, or the pool is full), its photos are deleted; a lost flamekeeper's

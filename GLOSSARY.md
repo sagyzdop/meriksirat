@@ -110,19 +110,15 @@ All volumes live in the `volume` table. The buffer's volumes are the rows with n
 _Avoid_: Chunk, shard, part
 
 **Favorite**:
-A photo a user has saved, keyed by user, album and Drive file ID. Moving a photo remaps its favorites and the album cover to the new file ID, through one shared remap that drains and offloads reuse. A Favorite whose photo no longer exists is left out of the lists, without an error. Albums with favorites come after albums without them in the deletion suggestions.
+A photo a user has saved, keyed by user, album and Drive file ID. Moving a photo remaps its favorites and the album cover to the new file ID, through one shared remap that drains and offloads reuse. A Favorite whose photo no longer exists is left out of the lists, without an error. Everyone who favorited a photo in an album gets its scheduled-deletion notice.
 _Avoid_: Bookmark, like, star
 
-**Expiry**:
-The date an album is deleted, by default two years after its event; shown on every unpinned album page, with a warning in its last 30 days. Expiry lists each volume fresh with its owner token and deletes what it finds; an unreachable flamekeeper's files are left in place.
-_Avoid_: TTL, deletion deadline
-
-**Pin**:
-An admin's mark that keeps an album past its expiry for as long as there is space.
-_Avoid_: Keep, archive
+**Scheduled deletion**:
+The date an admin sets for an album to be deleted: the day it is scheduled plus the Settings value "album deletion notice days" (default 14). The owner and everyone who favorited a photo in the album get a Telegram notice with the date (if they have linked Telegram), an admin can cancel it before then, and the hourly `deleteScheduledAlbums` step deletes it afterwards. An owner or album manager can also delete an album at once. There is no automatic expiry and no pin: nothing is deleted without an admin acting. An album whose event is over two years old only shows a warning that it may be deleted if storage runs low. Deleting lists each volume fresh with its owner token and deletes what it finds; an unreachable flamekeeper's files are left in place.
+_Avoid_: Expiry, TTL, deletion deadline
 
 **Tombstone**:
-The page an album's URL shows once the album has been deleted, saying why. An admin can delete an album whose folder is permanently gone, leaving a tombstone.
+The page an album's URL shows when its photos were lost rather than deleted on purpose, saying why. Today that is only a Drive folder that is permanently gone (an admin removes such an album); the `flamekeeper_left` and `flamekeeper_lost` reasons are still displayed but nothing creates them any more, since drains copy photos back to the buffer instead of deleting them. An album deleted by its owner, an admin or a scheduled deletion is removed entirely and leaves no tombstone.
 _Avoid_: Dead link, 404
 
 **Album owner**:

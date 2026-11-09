@@ -32,4 +32,4 @@ sequenceDiagram
 - What is left in Drive is the progress, so a retry continues where the last run stopped. Nothing is stored between attempts.
 - Files of a flamekeeper whose Google connection is lost cannot be listed or deleted. They are left and the album row is still removed.
 - Only the owner's album count drops. Co-authors' counts do not change.
-- Expiry by cron keeps a tombstone instead of removing the row, see [cron](../../cron/).
+- A scheduled deletion runs this same removal from the hourly cron and also removes the row. A tombstone is kept only for a folder that is permanently gone, see [cron](../../cron/).

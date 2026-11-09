@@ -63,7 +63,7 @@ sequenceDiagram
 ```
 
 - Only an owner, co-author or album manager gets the edit token and manage panel, see [photos](../member/albums/photos.md).
-- When the event is over two years old, a banner says the album may be deleted if storage runs low. Expiry and pinning are in the [GLOSSARY](../../../GLOSSARY.md).
+- When the event is over two years old, a banner says the album may be deleted if storage runs low. Nothing is deleted automatically; see Scheduled deletion in the [GLOSSARY](../../../GLOSSARY.md).
 - A failed Drive listing never breaks the page. It shows the last listing, or no photos.
 - Photos load from Google's image servers (600 px thumbnails, 1920 px viewer).
 

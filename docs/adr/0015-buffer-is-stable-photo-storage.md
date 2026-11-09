@@ -3,7 +3,7 @@
 New album photos are uploaded to the buffer, the club-run Google account defined
 in [GLOSSARY.md](../../GLOSSARY.md#save-nu-image-savenuimg), and not to
 flamekeepers. The buffer's 5 TB plan covers the roughly 640 GB expected at
-two-year expiry with room to spare. Photos no longer depend on any student's
+two-year retention with room to spare (an early estimate, since albums now stay until an admin deletes them). Photos no longer depend on any student's
 account, so no flamekeeper leaving, graduating or losing access puts photos at
 risk or starts a deadline. Flamekeepers become optional reserve capacity. They
 hold a photo only when an admin offloads it, which is never automatic.

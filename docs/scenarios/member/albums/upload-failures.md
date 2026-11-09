@@ -25,4 +25,4 @@ flowchart TD
 
 ## What does the rest of the system do after an upload?
 
-Nothing runs in the background for new uploads. The album page lists the buffer again when its expected count changed, so a new photo shows without Refresh, see [refresh](refresh.md). Hourly cron deletes expired albums and reminds owners and co-authors, see [cron](../../cron/). Flamekeepers hold no new photos.
+Nothing runs in the background for new uploads. The album page lists the buffer again when its expected count changed, so a new photo shows without Refresh, see [refresh](refresh.md). Hourly cron deletes albums an admin scheduled for deletion, see [cron](../../cron/). Flamekeepers hold no new photos.

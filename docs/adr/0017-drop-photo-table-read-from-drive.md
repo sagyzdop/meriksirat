@@ -70,7 +70,7 @@ an upload burst from a quiet album.
 ## Status
 
 Album pages read from these listings since [#18](https://github.com/sagyzdop/meriksirat/issues/18). Upload dedupe reads them too since [#20](https://github.com/sagyzdop/meriksirat/issues/20); the browser hashes a file only when a listed file has its size.
-Album expiry works from listings since [#21](https://github.com/sagyzdop/meriksirat/issues/21). It lists each volume fresh with its owner token and ignores the cache, and only a complete listing followed by successful deletes lets it tombstone. See `docs/scenarios/cron/albums-and-housekeeping/expiry-delete.md`.
+Album deletion works from listings since [#21](https://github.com/sagyzdop/meriksirat/issues/21). It lists each volume fresh with its owner token and ignores the cache, and only a complete listing followed by successful deletes lets the album row go. See [delete-album](../scenarios/member/albums/delete-album.md).
 The table, its backfill and the `dropped` photo state were removed in [#25](https://github.com/sagyzdop/meriksirat/issues/25), along with the columns and tables only they or the old drain and reservation code used (`album.photos_index*`, the flamekeeper drain columns, `health_cursor`, `leaderboard_anonymous`, the volume release-blocked columns and `upload_reservation`). The `volume.dropped_at` column stays, since the listing uses it.
 
 Deleting a photo or setting a cover is authorized by the listing: the file id must be listed in that album's own folders, which are read with each owner's token, and the listing says whose token acts on it. A cached listing that misses the file is refreshed once. A file id from another album or any other Drive file is refused before any token is used.

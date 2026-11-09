@@ -28,7 +28,7 @@ sequenceDiagram
 - The folder belongs to the master account. It holds no photos. Photos are uploaded later into Volume folders owned by the buffer, see [upload](upload.md).
 - The member flag set by an admin is required, and clearance level 3 or higher. Clearance alone is not enough.
 - The month folder uses the current UTC date, not the event date.
-- The expiry date is event date plus 2 years. Cron deletes expired albums and sends reminders, see [cron](../../cron/).
+- Albums do not expire. They are deleted only by their owner or an admin, or on a date an admin schedules, see [delete-album](delete-album.md) and the [GLOSSARY](../../../GLOSSARY.md).
 - If the database insert fails after the folder was made, the empty folder stays in Drive.
 
 ## What happens when someone edits the details?
@@ -48,7 +48,7 @@ sequenceDiagram
             W->>G: Rename the album folder
             Note over W,G: If the rename fails nothing is saved
         end
-        W->>D: Save fields. If the album is not pinned: expiresAt = event date + 2 years, reminder marks cleared
+        W->>D: Save fields
         W-->>M: Toast "Album updated"
     end
 ```

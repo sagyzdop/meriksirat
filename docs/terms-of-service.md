@@ -82,18 +82,16 @@ until it is deleted, which happens in one of these ways:
   An administrator can cancel a scheduled deletion before the date.
 - **By its owner or an administrator.** An album's owner, or an administrator or
   manager, may delete it at any time.
-- **When its storage is lost.** If the flamekeeper holding an album's photos
-  leaves or can no longer be reached before the photos can be moved, those photos
-  are deleted or become unavailable, and the album's page says why. The same page
-  is shown when an album's Google Drive folder is permanently deleted and an
-  administrator removes the album.
+- **When its Google Drive folder is gone.** If an album's folder is permanently
+  deleted from Google Drive, the photos cannot be recovered, and an administrator
+  may remove the album.
 
 Albums that are more than two years past their event are marked in the Platform
 as ones that may be deleted if storage runs low.
 
 A deleted album's folder and photos are removed, and there is no backup copy. In
-the second and third cases the album's address keeps a page that gives the
-title and the reason; after a scheduled deletion nothing remains.
+the third case the album's address keeps a page that says the folder is gone;
+after a scheduled or manual deletion nothing remains.
 
 ### 3.4 Storage Limits
 
