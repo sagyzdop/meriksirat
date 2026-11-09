@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db, type Database } from '@/db'
 import { bufferGrant, volume } from '@/db/schema'
 import { decryptToken, encryptToken } from './crypto'
@@ -211,7 +211,84 @@ export async function retireBufferGrants(
   return removed
 }
 
-/** Cancels a switch: staged copies stay dropped and are cleaned with this grant. */
+export async function reviveBufferGrant(
+  database: Database,
+  id: string,
+  refreshToken: string,
+  scopes: string
+): Promise<void> {
+  await replaceBufferGrantToken(database, id, refreshToken, scopes)
+  await database
+    .update(bufferGrant)
+    .set({ status: 'pending', retireAfter: null })
+    .where(eq(bufferGrant.id, id))
+  forgetBufferGrantRows()
+}
+
+export interface SwitchTarget {
+  /** Grant id volumes on the target carry while dropped. */
+  key: string
+  /** Grant id live volumes on the target carry; null for the env tokens. */
+  liveId: string | null
+  email: string
+  state: BufferState
+  /** Retiring grants still holding albums, or null for a switch to pending. */
+  from: string[] | null
+}
+
+/**
+ * Where buffer volumes are moving: the pending grant during a switch, or the
+ * active account while a cancelled or finished switch left albums behind on a
+ * retiring grant.
+ */
+export async function bufferSwitchTarget(
+  database: Database
+): Promise<SwitchTarget | null> {
+  const rows = await database.select().from(bufferGrant).all()
+  const pending = rows.find((r) => r.status === 'pending')
+  if (pending) {
+    return {
+      key: pending.id,
+      liveId: pending.id,
+      email: pending.email,
+      state: pending.state,
+      from: null,
+    }
+  }
+  const retiring = rows.filter((r) => r.status === 'retiring').map((r) => r.id)
+  if (retiring.length === 0) return null
+  const stranded = await database
+    .select({ id: volume.id })
+    .from(volume)
+    .where(
+      and(isNull(volume.droppedAt), inArray(volume.bufferGrantId, retiring))
+    )
+    .get()
+  if (!stranded) return null
+  const active = rows.find((r) => r.status === 'active')
+  if (active) {
+    return {
+      key: active.id,
+      liveId: active.id,
+      email: active.email,
+      state: active.state,
+      from: retiring,
+    }
+  }
+  if (!envRefreshToken()) return null
+  return {
+    key: ENV_GRANT_ID,
+    liveId: null,
+    email: legacyBufferEmail(),
+    state: 'ok',
+    from: retiring,
+  }
+}
+
+/**
+ * Cancels a switch. Partial copies stay dropped and are cleaned with this
+ * grant; albums it already took move back to the active account.
+ */
 export async function cancelPendingGrant(
   database: Database,
   now: Date = new Date()

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
 import {
   album,
@@ -9,7 +9,11 @@ import {
   user,
   volume,
 } from '@/db/schema'
-import { getBufferPlan } from '@/lib/buffer/grant'
+import {
+  bufferSwitchTarget,
+  ENV_GRANT_ID,
+  getBufferPlan,
+} from '@/lib/buffer/grant'
 import { nextVolumeNumber } from './volume-number'
 import {
   forgetBufferAccessToken,
@@ -288,6 +292,11 @@ export async function cleanDroppedVolumes(
   } = {}
 ): Promise<number> {
   const now = options.now ?? new Date()
+  // Dropped buffer volumes in the account a switch is moving to are its copies
+  // in progress, or originals it will reuse; they wait until it is done.
+  const switchKey = options.albumId
+    ? null
+    : ((await bufferSwitchTarget(database))?.key ?? null)
   const rows = await database
     .select({
       id: volume.id,
@@ -306,6 +315,12 @@ export async function cleanDroppedVolumes(
         options.albumId ? eq(volume.albumId, options.albumId) : undefined,
         options.flamekeeperUserId
           ? eq(volume.flamekeeperUserId, options.flamekeeperUserId)
+          : undefined,
+        switchKey
+          ? or(
+              isNotNull(volume.flamekeeperUserId),
+              sql`coalesce(${volume.bufferGrantId}, ${ENV_GRANT_ID}) != ${switchKey}`
+            )
           : undefined
       )
     )

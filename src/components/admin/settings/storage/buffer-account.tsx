@@ -66,7 +66,7 @@ export function BufferAccount({ connected, connectError }: Props) {
     run(async () => {
       await cancelBufferSwitchFn()
       await refresh()
-      toast.success('Switch cancelled, no album was changed')
+      toast.success('Switch cancelled, copied albums are moving back')
     }, 'Could not cancel the switch')
 
   const copyMore = () =>
@@ -178,8 +178,9 @@ export function BufferAccount({ connected, connectError }: Props) {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Cancel the switch?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Albums stay where they are. Partial copies in the new
-                        account are deleted.
+                        Albums already copied move back to the current account,
+                        reusing their originals there. Copies in the new account
+                        are then deleted.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -191,6 +192,30 @@ export function BufferAccount({ connected, connectError }: Props) {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+            ) : null}
+          </Item>
+        ) : null}
+
+        {data.returning ? (
+          <Item variant="outline" size="sm">
+            <ItemContent>
+              <p className="font-medium">Moving albums back</p>
+              <ItemDescription>
+                {data.returning.remaining} albums are still in a previous
+                account and are moving to the current one.
+              </ItemDescription>
+            </ItemContent>
+            {data.canEdit ? (
+              <ItemActions>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={copyMore}
+                >
+                  Move more now
+                </Button>
+              </ItemActions>
             ) : null}
           </Item>
         ) : null}

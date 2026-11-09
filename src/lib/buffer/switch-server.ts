@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne, or, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
 import { db, type Database } from '@/db'
 import { album, bufferGrant, volume } from '@/db/schema'
 import { createBudget, type Budget } from '@/lib/cron/budget'
@@ -7,24 +7,23 @@ import { nextVolumeNumber } from '@/lib/albums/volume-number'
 import { albumMoveInProgress } from '@/lib/albums/offload-pending'
 import {
   copyFilesInto,
+  deleteFiles,
   listIdentities,
   shareFolderWith,
 } from '@/lib/albums/storage-drive'
-import {
-  matchFiles,
-  matchVolumeCopies,
-  type OffloadCopy,
-} from '@/lib/albums/storage-plan'
+import { matchVolumeCopies, type OffloadCopy } from '@/lib/albums/storage-plan'
 import { afterMove, recordRemaps } from '@/lib/albums/storage-server'
 import { createDriveFolder, shareWithWriter } from '@/lib/google/google-drive'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { volumeFolderName } from '@/lib/pool/volumes'
 import {
+  bufferSwitchTarget,
   ENV_GRANT_ID,
   forgetBufferGrantRows,
   retireBufferGrants,
+  type SwitchTarget,
 } from './grant'
-import { RETIRE_WINDOW_MS } from './grant-rules'
+import { RETIRE_WINDOW_MS, reusableVolumeIds } from './grant-rules'
 import { getBufferAccessToken } from './tokens'
 
 const ALBUMS_PER_RUN = 25
@@ -35,37 +34,34 @@ export interface SwitchProgress {
   remaining: number
 }
 
-function remainingFilter(targetId: string) {
+function remainingFilter(target: SwitchTarget) {
   return and(
     isNull(volume.droppedAt),
-    or(isNull(volume.bufferGrantId), ne(volume.bufferGrantId, targetId))
+    target.from
+      ? inArray(volume.bufferGrantId, target.from)
+      : or(isNull(volume.bufferGrantId), ne(volume.bufferGrantId, target.key))
   )
 }
 
 export async function getSwitchProgress(
-  database: Database
+  database: Database,
+  target?: SwitchTarget | null
 ): Promise<SwitchProgress | null> {
-  const pending = await database
-    .select({ id: bufferGrant.id })
-    .from(bufferGrant)
-    .where(eq(bufferGrant.status, 'pending'))
+  const current =
+    target === undefined ? await bufferSwitchTarget(database) : target
+  if (!current) return null
+  const left = await database
+    .select({ n: sql<number>`count(DISTINCT ${volume.albumId})` })
+    .from(volume)
+    .where(remainingFilter(current))
     .get()
-  if (!pending) return null
-  const [left, done] = await Promise.all([
-    database
-      .select({ n: sql<number>`count(DISTINCT ${volume.albumId})` })
-      .from(volume)
-      .where(remainingFilter(pending.id))
-      .get(),
-    database
-      .select({ n: sql<number>`count(DISTINCT ${volume.albumId})` })
-      .from(volume)
-      .where(
-        and(isNull(volume.droppedAt), eq(volume.bufferGrantId, pending.id))
-      )
-      .get(),
-  ])
   const remaining = left?.n ?? 0
+  if (current.from) return { total: remaining, remaining }
+  const done = await database
+    .select({ n: sql<number>`count(DISTINCT ${volume.albumId})` })
+    .from(volume)
+    .where(and(isNull(volume.droppedAt), eq(volume.bufferGrantId, current.key)))
+    .get()
   return { total: remaining + (done?.n ?? 0), remaining }
 }
 
@@ -100,11 +96,50 @@ interface SourceVolume {
   bufferGrantId: string | null
 }
 
+/**
+ * A dropped volume on the target to finish instead of a new folder: the
+ * original this source was copied from, or a copy an earlier run started.
+ */
+async function findReusable(
+  database: Database,
+  albumId: string,
+  source: SourceVolume,
+  target: SwitchTarget
+): Promise<{ id: string; driveFolderId: string } | null> {
+  const ids = reusableVolumeIds(
+    { id: source.id, grantKey: source.bufferGrantId ?? ENV_GRANT_ID },
+    target.key
+  )
+  const rows = await database
+    .select({
+      id: volume.id,
+      driveFolderId: volume.driveFolderId,
+      bufferGrantId: volume.bufferGrantId,
+    })
+    .from(volume)
+    .where(
+      and(
+        eq(volume.albumId, albumId),
+        inArray(volume.id, ids),
+        isNotNull(volume.droppedAt),
+        isNull(volume.flamekeeperUserId)
+      )
+    )
+    .all()
+  for (const id of ids) {
+    const row = rows.find((r) => r.id === id)
+    if (row?.driveFolderId && row.bufferGrantId === target.key) {
+      return { id: row.id, driveFolderId: row.driveFolderId }
+    }
+  }
+  return null
+}
+
 async function stageCopy(
   database: Database,
   albumRow: { id: string; driveFolderId: string },
   source: SourceVolume,
-  pending: { id: string; email: string },
+  target: SwitchTarget,
   token: string,
   budget: Budget
 ): Promise<{ stagedId: string; copies: OffloadCopy[]; bytes: number } | null> {
@@ -116,15 +151,16 @@ async function stageCopy(
       .set({ number })
       .where(eq(volume.id, source.id))
   }
-  const stagedId = `${source.id}~${pending.id}`
-  let stagedFolder = (
-    await database
-      .select({ driveFolderId: volume.driveFolderId })
-      .from(volume)
-      .where(eq(volume.id, stagedId))
-      .get()
-  )?.driveFolderId
-  if (!stagedFolder) {
+  let staged = await findReusable(database, albumRow.id, source, target)
+  if (staged && staged.id !== `${source.id}~${target.key}`) {
+    const folderId = source.driveFolderId
+    if (!budget.take(1)) return null
+    await withGoogleToken(
+      (master) => shareFolderWith(master, folderId, target.email, 'reader'),
+      budget
+    )
+  }
+  if (!staged) {
     if (!budget.take(4)) return null
     const created = await withGoogleToken(async (master) => {
       const folder = await createDriveFolder(
@@ -135,20 +171,21 @@ async function stageCopy(
       const permissionId = await shareWithWriter(
         master,
         folder.id,
-        pending.email
+        target.email
       )
       await shareFolderWith(
         master,
         source.driveFolderId,
-        pending.email,
+        target.email,
         'reader'
       )
       return { folderId: folder.id, permissionId }
     }, budget)
+    const stagedId = `${source.id}~${target.key}`
     const values = {
       driveFolderId: created.folderId,
       permissionId: created.permissionId,
-      bufferGrantId: pending.id,
+      bufferGrantId: target.key,
       droppedAt: new Date(),
       expectedCount: 0,
       expectedBytes: 0,
@@ -157,21 +194,29 @@ async function stageCopy(
       .insert(volume)
       .values({ id: stagedId, albumId: albumRow.id, ...values })
       .onConflictDoUpdate({ target: volume.id, set: values })
-    stagedFolder = created.folderId
+    staged = { id: stagedId, driveFolderId: created.folderId }
   }
+  const stagedFolder = staged.driveFolderId
   const files = await listIdentities(token, source.driveFolderId, budget)
-  const existing = await listIdentities(token, stagedFolder, budget)
-  const toCopy = matchFiles(files, existing).missing
-  if (toCopy.length > 0) {
-    await copyFilesInto(token, toCopy, stagedFolder, budget)
+  const existing = matchVolumeCopies(
+    files,
+    await listIdentities(token, stagedFolder, budget)
+  )
+  // A reused folder can hold photos deleted from the album since it was copied.
+  if (existing.extras.length > 0) {
+    const failed = await deleteFiles(token, existing.extras, budget)
+    if (failed.length > 0) return null
+  }
+  if (existing.missing.length > 0) {
+    await copyFilesInto(token, existing.missing, stagedFolder, budget)
   }
   const listed = await listIdentities(token, stagedFolder, budget)
   const match = matchVolumeCopies(files, listed)
   if (match.missing.length > 0 || match.extras.length > 0) return null
   const latest = await listIdentities(token, source.driveFolderId, budget)
-  if (matchFiles(latest, listed).missing.length > 0) return null
+  if (matchVolumeCopies(latest, listed).missing.length > 0) return null
   return {
-    stagedId,
+    stagedId: staged.id,
     copies: match.copies,
     bytes: match.copies.reduce((n, c) => n + c.size, 0),
   }
@@ -180,7 +225,7 @@ async function stageCopy(
 async function migrateAlbum(
   database: Database,
   albumRow: { id: string; driveFolderId: string },
-  pending: { id: string; email: string },
+  target: SwitchTarget,
   token: string,
   budget: Budget
 ): Promise<void> {
@@ -193,7 +238,7 @@ async function migrateAlbum(
       flamekeeperUserId: volume.flamekeeperUserId,
     })
     .from(volume)
-    .where(and(eq(volume.albumId, albumRow.id), remainingFilter(pending.id)))
+    .where(and(eq(volume.albumId, albumRow.id), remainingFilter(target)))
     .all()
 
   for (const row of rows.filter((r) => r.flamekeeperUserId)) {
@@ -201,13 +246,13 @@ async function migrateAlbum(
       const folderId = row.driveFolderId
       if (!budget.take(1)) return
       await withGoogleToken(
-        (master) => shareFolderWith(master, folderId, pending.email, 'reader'),
+        (master) => shareFolderWith(master, folderId, target.email, 'reader'),
         budget
       )
     }
     await database
       .update(volume)
-      .set({ bufferGrantId: pending.id })
+      .set({ bufferGrantId: target.liveId })
       .where(eq(volume.id, row.id))
   }
 
@@ -221,7 +266,7 @@ async function migrateAlbum(
     if (!row.driveFolderId) {
       await database
         .update(volume)
-        .set({ bufferGrantId: pending.id })
+        .set({ bufferGrantId: target.liveId })
         .where(eq(volume.id, row.id))
       continue
     }
@@ -230,7 +275,7 @@ async function migrateAlbum(
       database,
       albumRow,
       source,
-      pending,
+      target,
       token,
       budget
     )
@@ -245,13 +290,14 @@ async function migrateAlbum(
     ready.flatMap((r) => r.copies)
   )
   const now = new Date()
-  const keepUntil = new Date(now.getTime() + RETIRE_WINDOW_MS)
+  // Moving albums back off a retiring grant leaves nothing to roll back to.
+  const dropAt = target.from ? now : new Date(now.getTime() + RETIRE_WINDOW_MS)
   await database.batch(
     ready.flatMap((r) => [
       database
         .update(volume)
         .set({
-          droppedAt: keepUntil,
+          droppedAt: dropAt,
           number: null,
           bufferGrantId: r.source.bufferGrantId ?? ENV_GRANT_ID,
         })
@@ -261,6 +307,7 @@ async function migrateAlbum(
         .set({
           droppedAt: null,
           number: r.source.number,
+          bufferGrantId: target.liveId,
           expectedCount: r.copies.length,
           expectedBytes: r.bytes,
           expectedChangedAt: now,
@@ -272,37 +319,30 @@ async function migrateAlbum(
 }
 
 /**
- * Copies every album's volumes to the pending buffer account, one album at a
- * time, and makes it the active buffer once nothing is left to copy. Originals
- * are dropped with a delay and removed later with the old account's token.
+ * Copies every album's volumes to the switch target one album at a time,
+ * finishing old copies still in the target account instead of starting over.
+ * A switch makes the pending account active once nothing is left to copy;
+ * originals are dropped with a delay and removed later with the old token.
  */
 export async function runBufferSwitch(
   database: Database,
   budget: Budget = createBudget()
 ): Promise<SwitchProgress | null> {
   await retireBufferGrants(database)
-  const pending = await database
-    .select({
-      id: bufferGrant.id,
-      email: bufferGrant.email,
-      state: bufferGrant.state,
-    })
-    .from(bufferGrant)
-    .where(eq(bufferGrant.status, 'pending'))
-    .get()
-  if (!pending) return null
-  if (pending.state !== 'ok') return getSwitchProgress(database)
+  const target = await bufferSwitchTarget(database)
+  if (!target) return null
+  if (target.state !== 'ok') return getSwitchProgress(database, target)
 
   const albums = await database
     .selectDistinct({ id: album.id, driveFolderId: album.driveFolderId })
     .from(volume)
     .innerJoin(album, eq(album.id, volume.albumId))
-    .where(remainingFilter(pending.id))
+    .where(remainingFilter(target))
     .limit(ALBUMS_PER_RUN)
     .all()
 
   if (albums.length === 0) {
-    await flip(database, pending.id)
+    if (!target.from) await flip(database, target.key)
     return null
   }
 
@@ -311,13 +351,13 @@ export async function runBufferSwitch(
     if (!budget.canAfford(ALBUM_MIN_BUDGET)) break
     try {
       if (await albumMoveInProgress(albumRow.id)) continue
-      token ??= await getBufferAccessToken(pending.id)
-      await migrateAlbum(database, albumRow, pending, token, budget)
+      token ??= await getBufferAccessToken(target.key)
+      await migrateAlbum(database, albumRow, target, token, budget)
     } catch (error) {
       console.warn(`Could not switch buffer for album ${albumRow.id}:`, error)
     }
   }
-  return getSwitchProgress(database)
+  return getSwitchProgress(database, target)
 }
 
 export async function runBufferSwitchStep(

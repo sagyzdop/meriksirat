@@ -8,6 +8,7 @@ import {
   needsMigration,
   planConnect,
   refuseBufferAccount,
+  reusableVolumeIds,
   stateForError,
 } from '@/lib/buffer/grant-rules'
 import { planBufferSource } from '@/lib/buffer/plan'
@@ -93,6 +94,20 @@ describe('switch rules', () => {
     expect(needsMigration(null, 'new')).toBe(true)
     expect(needsMigration('old', 'new')).toBe(true)
     expect(needsMigration('new', 'new')).toBe(false)
+  })
+
+  it('reuses the original when switching back, then a started copy', () => {
+    expect(reusableVolumeIds({ id: 'v1~B', grantKey: 'B' }, 'A')).toEqual([
+      'v1',
+      'v1~B~A',
+    ])
+    expect(reusableVolumeIds({ id: 'v1', grantKey: 'A' }, 'B')).toEqual([
+      'v1~B',
+    ])
+    expect(reusableVolumeIds({ id: 'v1~env', grantKey: 'env' }, 'B')).toEqual([
+      'v1',
+      'v1~env~B',
+    ])
   })
 
   it('retires only after the window with no volumes left', () => {

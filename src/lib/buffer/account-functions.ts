@@ -11,6 +11,8 @@ export interface BufferAccountOverview {
   encryptionReady: boolean
   active: BufferAccountView | null
   pending: (BufferAccountView & { total: number; remaining: number }) | null
+  /** Albums a cancelled or finished switch left on a retiring account. */
+  returning: { remaining: number } | null
   retiring: { email: string; retireAfter: number | null }[]
   canEdit: boolean
 }
@@ -18,14 +20,16 @@ export interface BufferAccountOverview {
 export const getBufferAccountFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<BufferAccountOverview> => {
     const { adminContext } = await import('@/lib/admin/server')
-    const { listBufferGrants, activeBufferEmail } = await import('./grant')
+    const { listBufferGrants, activeBufferEmail, bufferSwitchTarget } =
+      await import('./grant')
     const { getSwitchProgress } = await import('./switch-server')
     const { admin, database } = await adminContext(['admin', 'manager'])
 
     const rows = await listBufferGrants(database)
     const active = rows.find((r) => r.status === 'active')
     const pending = rows.find((r) => r.status === 'pending')
-    const progress = pending ? await getSwitchProgress(database) : null
+    const target = await bufferSwitchTarget(database)
+    const progress = target ? await getSwitchProgress(database, target) : null
     const envEmail = active ? null : await activeBufferEmail(database)
 
     return {
@@ -45,6 +49,8 @@ export const getBufferAccountFn = createServerFn({ method: 'GET' }).handler(
             remaining: progress?.remaining ?? 0,
           }
         : null,
+      returning:
+        target?.from && progress ? { remaining: progress.remaining } : null,
       retiring: rows
         .filter((r) => r.status === 'retiring')
         .map((r) => ({

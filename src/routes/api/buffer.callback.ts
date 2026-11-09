@@ -16,9 +16,11 @@ import {
   type ConnectRefusal,
 } from '@/lib/buffer/grant-rules'
 import {
+  ENV_GRANT_ID,
   legacyBufferEmail,
   listBufferGrants,
   replaceBufferGrantToken,
+  reviveBufferGrant,
   storeBufferGrant,
   forgetBufferGrantRows,
 } from '@/lib/buffer/grant'
@@ -167,13 +169,35 @@ export const Route = createFileRoute('/api/buffer/callback')({
         } else if (pending) {
           return redirectTo(origin, 'busy')
         } else {
-          await storeBufferGrant(database, {
-            id: newId(10),
-            email,
-            refreshToken: tokens.refresh_token,
-            scopes: tokens.scope ?? '',
-            status: 'pending',
-          })
+          // Switching back to a previous account keeps its grant, so the
+          // switch finds the originals it still holds instead of copying.
+          const previous = rows.find(
+            (r) => r.status === 'retiring' && normalizeEmail(r.email) === email
+          )
+          if (previous) {
+            await reviveBufferGrant(
+              database,
+              previous.id,
+              tokens.refresh_token,
+              tokens.scope ?? ''
+            )
+            forgetBufferAccessToken(previous.id)
+          } else {
+            const id = newId(10)
+            await storeBufferGrant(database, {
+              id,
+              email,
+              refreshToken: tokens.refresh_token,
+              scopes: tokens.scope ?? '',
+              status: 'pending',
+            })
+            if (email === normalizeEmail(legacyBufferEmail())) {
+              await database
+                .update(volume)
+                .set({ bufferGrantId: id })
+                .where(eq(volume.bufferGrantId, ENV_GRANT_ID))
+            }
+          }
         }
         return redirectTo(origin)
       },

@@ -102,6 +102,22 @@ export function needsMigration(
   return volumeGrantId !== targetGrantId
 }
 
+/**
+ * Dropped volumes a switch may finish instead of copying from scratch, best
+ * first: the original the source was itself copied from (switching back), then
+ * a copy an earlier run started. Keys are grant ids, the env tokens included.
+ */
+export function reusableVolumeIds(
+  source: { id: string; grantKey: string },
+  targetKey: string
+): string[] {
+  const suffix = `~${source.grantKey}`
+  const ids: string[] = []
+  if (source.id.endsWith(suffix)) ids.push(source.id.slice(0, -suffix.length))
+  ids.push(`${source.id}~${targetKey}`)
+  return ids
+}
+
 export function canRetire(
   grant: { status: BufferGrantStatus; retireAfter: Date | null },
   referencedVolumes: number,
