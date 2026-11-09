@@ -36,7 +36,7 @@ export function AlbumCard({ album, showWarning }: AlbumCardProps) {
   return (
     <Card
       size="sm"
-      className="group relative mx-auto w-full gap-3 transition-all hover:shadow-lg data-[size=sm]:pt-0 data-[size=sm]:pb-3"
+      className="group relative isolate mx-auto w-full gap-3 transition-all hover:shadow-lg data-[size=sm]:pt-0 data-[size=sm]:pb-3"
     >
       <Link
         to="/albums/$albumId"
