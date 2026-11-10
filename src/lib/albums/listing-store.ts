@@ -90,27 +90,26 @@ const hasFile = (fileId: string) =>
   sql`EXISTS (SELECT 1 FROM json_each(${albumListing.files}) WHERE json_extract(value, '$.id') = ${fileId})`
 
 /**
- * Add a photo the app just placed to its folder's stored listing, ahead of the
- * next listing. One statement, so parallel uploads cannot overwrite each other.
+ * Add photos the app just placed to their folder's stored listing, ahead of
+ * the next listing. One statement that skips files already there, so parallel
+ * uploads cannot overwrite each other or list a file twice, and the stored
+ * listing is scanned a fixed number of times whatever the batch size.
  * Nothing happens when the folder has never been listed; the next view lists it.
  */
-export async function addListedFile(
+export async function addListedFiles(
   database: Database,
   albumId: string,
   sourceKey: string,
-  file: ListingFile
+  files: ListingFile[]
 ): Promise<void> {
+  if (files.length === 0) return
   await database
     .update(albumListing)
     .set({
-      files: sql`json_insert(${albumListing.files}, '$[#]', json(${JSON.stringify(file)}))`,
+      files: sql`(SELECT json_group_array(json(v)) FROM (SELECT value AS v FROM json_each(${albumListing.files}) UNION ALL SELECT n.value FROM json_each(${JSON.stringify(files)}) AS n WHERE json_extract(n.value, '$.id') NOT IN (SELECT json_extract(value, '$.id') FROM json_each(${albumListing.files}))))`,
     })
     .where(
-      and(
-        eq(albumListing.albumId, albumId),
-        eq(albumListing.key, sourceKey),
-        sql`NOT ${hasFile(file.id)}`
-      )
+      and(eq(albumListing.albumId, albumId), eq(albumListing.key, sourceKey))
     )
 }
 
@@ -127,22 +126,23 @@ export async function removeListedFile(
     .where(and(eq(albumListing.albumId, albumId), hasFile(fileId)))
 }
 
-export async function isListedInBuffer(
+/**
+ * Which of `fileIds` the album's stored buffer listings already hold, in one
+ * pass over them.
+ */
+export async function listedBufferFileIds(
   database: Database,
   albumId: string,
-  fileId: string
-): Promise<boolean> {
-  const rows = await database
-    .select({ key: albumListing.key })
-    .from(albumListing)
-    .where(
-      and(
-        eq(albumListing.albumId, albumId),
-        like(albumListing.key, 'buffer:%'),
-        hasFile(fileId)
-      )
-    )
-  return rows.length > 0
+  fileIds: string[]
+): Promise<Set<string>> {
+  if (fileIds.length === 0) return new Set()
+  const rows = await database.all<{ id: string }>(
+    sql`SELECT DISTINCT json_extract(f.value, '$.id') AS id FROM ${albumListing}, json_each(${albumListing.files}) AS f WHERE ${albumListing.albumId} = ${albumId} AND ${like(albumListing.key, 'buffer:%')} AND json_extract(f.value, '$.id') IN (${sql.join(
+      fileIds.map((id) => sql`${id}`),
+      sql`, `
+    )})`
+  )
+  return new Set(rows.map((row) => row.id))
 }
 
 /**

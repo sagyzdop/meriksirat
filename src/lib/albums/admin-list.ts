@@ -62,7 +62,18 @@ function statusCondition(statuses: AlbumStatus[]): SQL {
     unhealthy: and(open, unhealthy)!,
     healthy: and(open, sql`not ${unhealthy}`)!,
   }
-  return or(...statuses.map((s) => parts[s]))!
+  const selected = new Set(statuses)
+  const conditions: SQL[] = []
+  const take = (group: AlbumStatus[], whole: SQL) => {
+    if (!group.every((s) => selected.has(s))) return
+    conditions.push(whole)
+    for (const s of group) selected.delete(s)
+  }
+  take(['healthy', 'unhealthy', 'rescued', 'scheduled_deletion'], live)
+  take(['healthy', 'unhealthy'], open)
+  take(['lost', 'deleted'], isNotNull(album.deletedAt))
+  for (const s of selected) conditions.push(parts[s])
+  return or(...conditions)!
 }
 
 function filterConditions(

@@ -11,11 +11,15 @@ import {
 } from '@/lib/google/google-drive'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { isImage } from '@/lib/albums/drive-photo'
-import { addListedFile, isListedInBuffer } from '@/lib/albums/listing-store'
+import { addListedFiles, listedBufferFileIds } from '@/lib/albums/listing-store'
 import { newId } from '@/lib/albums/ids'
 import { nextVolumeNumber } from '@/lib/albums/volume-number'
 import { hasOffloadPending } from '@/lib/albums/offload-pending'
-import { bufferSourceKey, volumeIdFromSourceKey } from '@/lib/albums/listing'
+import {
+  bufferSourceKey,
+  volumeIdFromSourceKey,
+  type ListingFile,
+} from '@/lib/albums/listing'
 import { pickVolumeWithRoom } from '@/lib/albums/volume-limit'
 import type { UploadSession } from '@/lib/albums/types'
 import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
@@ -323,8 +327,9 @@ async function mintBufferUpload(
 }
 
 /**
- * Registers several uploaded files of one album. Each file is checked on its
- * own; the volume and album totals are then raised once for the whole batch.
+ * Registers several uploaded files of one album. Each file is checked in Drive
+ * on its own; the stored listing is then checked and extended, and the volume
+ * and album totals raised, once for the whole batch.
  */
 export async function confirmBufferUploads(
   database: Database,
@@ -337,31 +342,58 @@ export async function confirmBufferUploads(
     .where(bufferVolumes(albumRow.id))
     .all()
 
-  const added = new Map<string, { count: number; bytes: number }>()
-  const results = await Promise.all(
-    fileIds.map(async (fileId) => {
-      try {
-        const counted = await confirmBufferFile(
-          database,
-          albumRow.id,
-          volumeRows,
-          fileId
-        )
-        if (counted) {
-          const total = added.get(counted.volumeId) ?? { count: 0, bytes: 0 }
-          added.set(counted.volumeId, {
-            count: total.count + 1,
-            bytes: total.bytes + counted.bytes,
-          })
-        }
-        return { added: !!counted }
-      } catch (error) {
-        console.warn(`Could not confirm upload ${fileId}:`, error)
-        return {
-          error: userMessage(error, 'Upload not confirmed'),
+  const checked = await Promise.all(
+    fileIds.map(
+      async (
+        fileId
+      ): Promise<{ file: CheckedBufferFile | null } | { error: string }> => {
+        try {
+          return { file: await checkBufferFile(volumeRows, fileId) }
+        } catch (error) {
+          console.warn(`Could not confirm upload ${fileId}:`, error)
+          return { error: userMessage(error, 'Upload not confirmed') }
         }
       }
+    )
+  )
+
+  const images = checked.flatMap((c) => ('file' in c && c.file ? [c.file] : []))
+  const listed = await listedBufferFileIds(
+    database,
+    albumRow.id,
+    images.map((image) => image.listed.id)
+  )
+  const fresh = new Map<string, CheckedBufferFile>()
+  for (const image of images) {
+    if (!listed.has(image.listed.id)) fresh.set(image.listed.id, image)
+  }
+
+  const added = new Map<string, { count: number; bytes: number }>()
+  const byVolume = new Map<string, ListingFile[]>()
+  for (const image of fresh.values()) {
+    const total = added.get(image.volumeId) ?? { count: 0, bytes: 0 }
+    added.set(image.volumeId, {
+      count: total.count + 1,
+      bytes: total.bytes + image.bytes,
     })
+    byVolume.set(image.volumeId, [
+      ...(byVolume.get(image.volumeId) ?? []),
+      image.listed,
+    ])
+  }
+  for (const [volumeId, files] of byVolume) {
+    await addListedFiles(
+      database,
+      albumRow.id,
+      bufferSourceKey(volumeId),
+      files
+    )
+  }
+
+  const results = checked.map((c) =>
+    'error' in c
+      ? { error: c.error }
+      : { added: !!c.file && fresh.get(c.file.listed.id) === c.file }
   )
 
   if (added.size > 0) {
@@ -383,12 +415,16 @@ export async function confirmBufferUploads(
   return results
 }
 
-async function confirmBufferFile(
-  database: Database,
-  albumId: string,
+interface CheckedBufferFile {
+  volumeId: string
+  bytes: number
+  listed: ListingFile
+}
+
+async function checkBufferFile(
   volumeRows: { id: string; driveFolderId: string | null }[],
   fileId: string
-): Promise<{ volumeId: string; bytes: number } | null> {
+): Promise<CheckedBufferFile | null> {
   const file = await withBufferToken((token) => getDriveFileMeta(token, fileId))
   const target = volumeRows.find((v) => isInVolumeFolder(file, v.driveFolderId))
   if (!target) {
@@ -400,11 +436,8 @@ async function confirmBufferFile(
     return null
   }
 
-  if (await isListedInBuffer(database, albumId, fileId)) return null
-
   const { parents: _parents, trashed: _trashed, ...listed } = file
-  await addListedFile(database, albumId, bufferSourceKey(target.id), listed)
-  return { volumeId: target.id, bytes: Number(file.size ?? 0) || 0 }
+  return { volumeId: target.id, bytes: Number(file.size ?? 0) || 0, listed }
 }
 
 export async function adjustExpected(

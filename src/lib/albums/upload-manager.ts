@@ -12,7 +12,7 @@ import {
   saveJobs,
   saveUploadFiles,
 } from './upload-storage'
-import { UserError, userMessage } from '@/lib/user-error'
+import { UserError, isUserError, userMessage } from '@/lib/user-error'
 
 export type UploadStatus =
   'queued' | 'uploading' | 'done' | 'duplicate' | 'error' | 'cancelled'
@@ -128,6 +128,8 @@ class UploadManager {
   private running = 0
   private readonly maxConcurrent = 2
   private readonly maxAttempts = 5
+  private serverFailures = 0
+  private readonly maxServerFailures = 3
   private rehydrated = false
 
   constructor() {
@@ -309,6 +311,7 @@ class UploadManager {
       attempts: 0,
       nextAttemptAt: undefined,
     })
+    this.serverFailures = 0
     this.pump()
   }
 
@@ -409,6 +412,7 @@ class UploadManager {
           })),
         },
       })
+      this.serverFailures = 0
       const toHash: UploadJob[] = []
       batch.forEach((job, i) => {
         if (!this.isActive(job.id)) return
@@ -431,6 +435,7 @@ class UploadManager {
       })
       if (toHash.length > 0) void this.hashFiles(toHash)
     } catch (error) {
+      this.serverCallFailed(error, [])
       for (const job of batch) {
         if (this.isActive(job.id)) {
           this.fail(job, error, (job.attempts ?? 0) + 1)
@@ -518,6 +523,7 @@ class UploadManager {
         albumId,
         batch.map((item) => item.fileId)
       )
+      this.serverFailures = 0
       batch.forEach((item, i) => {
         const result = results[i]
         if (result.kind === 'confirmed') {
@@ -527,11 +533,41 @@ class UploadManager {
         }
       })
     } catch (error) {
-      for (const item of batch) this.fail(item.job, error, item.attempt)
+      if (!this.serverCallFailed(error, batch)) {
+        for (const item of batch) this.fail(item.job, error, item.attempt)
+      }
     } finally {
       this.confirming = false
       this.pump()
     }
+  }
+
+  /**
+   * Count a server call that failed with anything but a UserError. After a few
+   * in a row (most often this tab still runs a build the Worker no longer
+   * has), stop every waiting upload instead of retrying each one against the
+   * Worker. Returns whether the queue was stopped.
+   */
+  private serverCallFailed(error: unknown, batch: PendingConfirm[]): boolean {
+    if (isUserError(error)) return false
+    this.serverFailures++
+    if (this.serverFailures < this.maxServerFailures) return false
+    const stopped = {
+      status: 'error' as const,
+      finishedAt: Date.now(),
+      error:
+        'Uploads stopped after repeated server errors. Reload the page, then retry.',
+    }
+    for (const item of [...batch, ...this.confirms]) {
+      this.patch(item.job.id, { ...stopped, attempts: item.attempt })
+    }
+    this.confirms = []
+    for (const job of this.snapshot) {
+      if (job.status !== 'queued') continue
+      this.sessionsById.delete(job.id)
+      this.patch(job.id, stopped)
+    }
+    return true
   }
 
   private async confirmUploads(albumId: string, fileIds: string[]) {
@@ -539,6 +575,7 @@ class UploadManager {
       try {
         return await confirmPhotoUploadsFn({ data: { albumId, fileIds } })
       } catch (error) {
+        if (isUserError(error)) throw error
         if (attempt >= 3) throw new TransientUploadError(String(error))
         await new Promise((r) => setTimeout(r, 500 * attempt))
       }

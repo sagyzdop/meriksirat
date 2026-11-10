@@ -380,6 +380,9 @@ export const album = sqliteTable(
     index('album_ownerUserId_idx').on(table.ownerUserId),
     index('album_scheduledDeletionAt_idx').on(table.scheduledDeletionAt),
     index('album_createdAt_id_idx').on(table.createdAt, table.id),
+    index('album_photosCheckedAt_live_idx')
+      .on(table.photosCheckedAt)
+      .where(sql`${table.deletedAt} IS NULL`),
   ]
 )
 

@@ -1,0 +1,1 @@
+CREATE INDEX `album_photosCheckedAt_live_idx` ON `album` (`photos_checked_at`) WHERE "album"."deleted_at" IS NULL;

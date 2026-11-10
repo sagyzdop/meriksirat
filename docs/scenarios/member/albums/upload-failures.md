@@ -20,6 +20,7 @@ flowchart TD
     T{"Attempt number"} -- "under 5" --> W["Wait about 1, 2, 4, 8 seconds (plus or minus 20 percent), queue again"]
     T -- "5th" --> M["Upload failed after 5 attempts, retry manually"]
     M --> R["Retry button: attempt count reset, queued again"]
+    X["3 server calls in a row fail with a non-user error (often a tab running a build the Worker no longer has)"] --> X1["Every queued or waiting job fails: Uploads stopped after repeated server errors. Reload the page, then retry."]
 ```
 
 - An uploaded file waits up to 4 seconds to share a confirm request. If the page reloads in that window, the job starts over and uploads a second copy, as when confirm keeps failing.
