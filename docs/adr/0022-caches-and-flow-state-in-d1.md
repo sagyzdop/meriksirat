@@ -16,7 +16,10 @@ every write deletes expired rows. OAuth connect state uses the `verification`
 table (`src/lib/oauth-state.ts`).
 
 This replaces the KV storage described in
-[ADR-0017](0017-drop-photo-table-read-from-drive.md); the listing design there
-is otherwise unchanged. KV keeps only rarely written markers: `buffer:usage`,
-`buffer:alert`, the drain-paused alert, the public album list version and
-`telegram-bot:configured-version`.
+[ADR-0017](0017-drop-photo-table-read-from-drive.md). The remaining markers
+(`buffer:usage`, `buffer:alert`, the drain-paused alert, the public album list
+version and `telegram-bot:configured-version`) moved to `app_state` right after,
+with a NULL `expires_at` for the ones that never expire, and the KV binding was
+removed. The album detail cache was deleted outright: it cached a D1 result in
+D1. The album listing left `app_state` for real tables in
+[ADR-0023](0023-photos-are-rows-reconciled-with-drive.md).

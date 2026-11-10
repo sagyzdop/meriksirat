@@ -9,7 +9,17 @@ vi.mock('@/lib/telegram/api', () => ({
 }))
 
 import { createBudget } from '@/lib/cron/budget'
-import { configureTelegramBotOncePerDeploy } from '@/lib/telegram/configure'
+import {
+  configureTelegramBotOncePerDeploy as configureOnce,
+  type MarkerStore,
+} from '@/lib/telegram/configure'
+
+type TestEnv = ReturnType<typeof env>
+
+const configureTelegramBotOncePerDeploy = (
+  e: TestEnv,
+  budget: ReturnType<typeof createBudget>
+) => configureOnce(e, budget, e.markers)
 
 function fakeKv(initial: Record<string, string> = {}) {
   const store = new Map(Object.entries(initial))
@@ -20,13 +30,13 @@ function fakeKv(initial: Record<string, string> = {}) {
       put: async (key: string, value: string) => {
         store.set(key, value)
       },
-    } as unknown as KVNamespace,
+    } satisfies MarkerStore,
   }
 }
 
-function env(kv: KVNamespace, version = 'v1', token: string | null = 't') {
+function env(kv: MarkerStore, version = 'v1', token: string | null = 't') {
   return {
-    meriksirat_kv: kv,
+    markers: kv,
     TELEGRAM_BOT_TOKEN: token ?? undefined,
     CF_VERSION_METADATA: { id: version, tag: '', timestamp: '' },
   }

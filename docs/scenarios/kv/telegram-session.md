@@ -1,6 +1,6 @@
 # State: telegram-session
 
-Key `session:{chatId}`. Stored in the D1 `app_state` table (`src/lib/app-state.ts`), not in KV, since [ADR-0022](../../adr/0022-caches-and-flow-state-in-d1.md).
+Key `session:{chatId}`. Stored in the D1 `app_state` table (`src/lib/app-state.ts`), not in KV ([ADR-0022](../../adr/0022-caches-and-flow-state-in-d1.md)).
 
 What does the bot remember between messages of a flow?
 

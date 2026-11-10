@@ -20,7 +20,6 @@ import {
   planListingRefresh,
   planListingSources,
   readAlbumListing,
-  sameListingEntry,
 } from './listing'
 import type {
   AlbumListing,
@@ -29,7 +28,7 @@ import type {
   ListingOwner,
   ListingSource,
 } from './listing'
-import { getCachedListing, rememberListing, setCachedListing } from './server'
+import { loadListingEntry, saveListingEntry } from './photo-store'
 
 export function withListingOwnerToken<T>(
   database: Database,
@@ -153,11 +152,11 @@ async function checkFolderState(
 export async function loadAlbumListing(
   database: Database,
   row: { id: string; driveFolderId: string },
-  options: { force?: boolean; strictStamp?: boolean; persist?: boolean } = {}
+  options: { force?: boolean; strictStamp?: boolean; budget?: Budget } = {}
 ): Promise<AlbumListing> {
   const [sources, entry] = await Promise.all([
     loadListingSources(database, row),
-    getCachedListing(row.driveFolderId),
+    loadListingEntry(database, row.id),
   ])
   const now = Date.now()
   const plan = planListingRefresh({
@@ -171,7 +170,7 @@ export async function loadAlbumListing(
     return readAlbumListing({ entry, sources, now })
   }
 
-  const budget = createBudget(LISTING_DRIVE_BUDGET)
+  const budget = options.budget ?? createBudget(LISTING_DRIVE_BUDGET)
   const folderState = await checkFolderState(row.driveFolderId, budget)
   const due = sources.filter((s) => plan.actions[s.key] === 'list')
 
@@ -193,10 +192,10 @@ export async function loadAlbumListing(
     folderState,
     outcomes,
   })
-  if (options.persist !== false && !sameListingEntry(entry, next)) {
-    await setCachedListing(row.driveFolderId, next)
-  } else {
-    rememberListing(row.driveFolderId, next)
+  try {
+    await saveListingEntry(database, row.id, entry, next)
+  } catch (error) {
+    console.warn(`Could not store the photo rows of album ${row.id}:`, error)
   }
   const listing = readAlbumListing({ entry: next, sources, now })
   await syncAlbumTotals(database, row.id, listing)
@@ -231,8 +230,8 @@ async function syncAlbumTotals(
 /**
  * Authorizes an action on one file of an album. A file counts only when a
  * listing of this album's own folders (each read with its owner's token) shows
- * it, so a client cannot aim a privileged token at any other Drive file. A
- * cached listing that misses the file is refreshed once before giving up.
+ * it, so a client cannot aim a privileged token at any other Drive file. When
+ * the stored photos miss the file, Drive is listed once before giving up.
  */
 export async function findAlbumFile(
   database: Database,

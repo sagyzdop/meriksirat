@@ -31,6 +31,7 @@ describe('planScheduledRun', () => {
       'deleteScheduledAlbums',
       'checkBufferUsage',
       'switchBuffer',
+      'reconcileAlbums',
     ])
   })
 

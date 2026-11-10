@@ -1,5 +1,11 @@
 # Drop the photo table; read photos from Drive and cache the listings
 
+> **Amended by [ADR-0022](0022-caches-and-flow-state-in-d1.md) and [ADR-0023](0023-photos-are-rows-reconciled-with-drive.md).**
+> Nothing is in KV any more, and photos are rows in D1 again (`photo`, `photo_source`),
+> written on upload and delete and reconciled with Drive hourly. Photo identity,
+> the remap on moves and the count warning below still hold. The text below is the
+> original decision, kept for history.
+
 The `photo` table, its backfill and the `dropped` state are removed. The table
 existed so the app could keep a stable photo ID and delete photos with their
 owner's token. Photos now sit on the buffer or on a flamekeeper, and the app

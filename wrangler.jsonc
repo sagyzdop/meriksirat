@@ -24,12 +24,6 @@
   "observability": {
     "enabled": true,
   },
-  "kv_namespaces": [
-    {
-      "binding": "meriksirat_kv",
-      "id": "af581732fe484f5aa188c9814a1ea4dd",
-    },
-  ],
   /**
    * Rate Limiting Bindings
    * Replaces the KV-backed fixed-window rate limiter. These bindings use
@@ -131,12 +125,6 @@
         "binding": "meriksirat_d1",
         "database_name": "meriksirat-preview",
         "database_id": "f8c2bfb6-20ca-4c9f-8d61-f947beb783b7",
-      },
-    ],
-    "kv_namespaces": [
-      {
-        "binding": "meriksirat_kv",
-        "id": "e2b80b385a4c4ff6a314e5f3be40c39f",
       },
     ],
     "r2_buckets": [

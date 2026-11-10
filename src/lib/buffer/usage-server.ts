@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
+import { deleteState, readState, writeState } from '@/lib/app-state'
 import { bufferGrant } from '@/db/schema'
 import { loadSettings } from '@/lib/booking/load-settings'
 import { getDriveStorageQuota } from '@/lib/google/google-drive'
@@ -34,14 +35,9 @@ export interface CachedBufferUsage extends BufferUsage {
   checkedAt: number
 }
 
-async function kv(): Promise<KVNamespace> {
-  const { env } = await import('cloudflare:workers')
-  return env.meriksirat_kv
-}
-
 export async function readBufferUsage(): Promise<CachedBufferUsage | null> {
   try {
-    const raw = await (await kv()).get(USAGE_KEY)
+    const raw = await readState(USAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<CachedBufferUsage>
     if (
@@ -75,11 +71,7 @@ export async function refreshBufferUsage(): Promise<CachedBufferUsage> {
   lastUsage = usage
   if (!planUsageWrite(previous, usage)) return usage
   try {
-    await (
-      await kv()
-    ).put(USAGE_KEY, JSON.stringify(usage), {
-      expirationTtl: USAGE_TTL_SECONDS,
-    })
+    await writeState(USAGE_KEY, JSON.stringify(usage), USAGE_TTL_SECONDS)
   } catch (error) {
     console.warn('Failed to cache buffer usage:', error)
   }
@@ -105,8 +97,8 @@ export async function getBufferUsage(
   }
 }
 
-async function readMarker(store: KVNamespace): Promise<BufferMarker | null> {
-  const value = await store.get(MARKER_KEY)
+async function readMarker(): Promise<BufferMarker | null> {
+  const value = await readState(MARKER_KEY)
   return value === 'warn' || value === 'full' ? value : null
 }
 
@@ -165,7 +157,6 @@ function alertText(overview: BufferOverview, alertPercent: number): string {
 export async function runBufferUsageCheck(
   env: {
     meriksirat_d1: D1Database
-    meriksirat_kv: KVNamespace
     TELEGRAM_BOT_TOKEN?: string
   },
   budget: Budget
@@ -174,7 +165,6 @@ export async function runBufferUsageCheck(
   await checkBufferState(env, database, budget)
   if ((await getBufferPlan(database)).kind === 'unavailable') return
 
-  const store = env.meriksirat_kv as KVNamespace
   let usage = await readBufferUsage()
   if (!usage || Date.now() - usage.checkedAt >= CRON_REFRESH_MS) {
     if (!budget.take(REFRESH_COST)) return
@@ -197,7 +187,7 @@ export async function runBufferUsageCheck(
       await setBufferGrantState(live.id, 'ok', database)
     }
   }
-  const marker = await readMarker(store)
+  const marker = await readMarker()
   const plan = planBufferAlert(overview.level, marker)
   if (plan.notify) {
     const result = await sendAdminsTelegramResult(
@@ -209,8 +199,8 @@ export async function runBufferUsageCheck(
     if (result !== 'sent') return
   }
   if (plan.marker === marker) return
-  if (plan.marker) await store.put(MARKER_KEY, plan.marker)
-  else await store.delete(MARKER_KEY)
+  if (plan.marker) await writeState(MARKER_KEY, plan.marker, null)
+  else await deleteState(MARKER_KEY)
 }
 
 async function checkBufferState(

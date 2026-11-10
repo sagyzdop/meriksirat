@@ -133,7 +133,7 @@ export const listMyFavoritesFn = createServerFn({ method: 'GET' }).handler(
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { album, favorite } = await import('@/db/schema')
     const { and, desc, eq, isNull } = await import('drizzle-orm')
-    const { getCachedListing } = await import('@/lib/albums/server')
+    const { loadListingEntry } = await import('@/lib/albums/photo-store')
     const { albumsToRead, planFavoriteList } = await import('./remap')
 
     const { database, sessionUser } =
@@ -154,11 +154,10 @@ export const listMyFavoritesFn = createServerFn({ method: 'GET' }).handler(
       .limit(FAVORITE_LIST_LIMIT)
       .all()
 
-    const folderByAlbum = new Map(rows.map((r) => [r.albumId, r.driveFolderId]))
     const listings: Parameters<typeof planFavoriteList>[0]['listings'] = {}
     await Promise.all(
       albumsToRead(rows, FAVORITE_ALBUM_READS).map(async (albumId) => {
-        const entry = await getCachedListing(folderByAlbum.get(albumId)!)
+        const entry = await loadListingEntry(database, albumId)
         if (!entry) return
         const sources = Object.values(entry.sources)
         listings[albumId] = {

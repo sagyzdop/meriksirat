@@ -315,7 +315,7 @@ async function migrateAlbum(
         .where(eq(volume.id, r.stagedId)),
     ]) as unknown as Parameters<typeof database.batch>[0]
   )
-  await afterMove(albumRow.id, albumRow.driveFolderId)
+  await afterMove(albumRow.id)
 }
 
 /**

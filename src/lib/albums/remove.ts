@@ -12,11 +12,8 @@ import {
   type Budget,
 } from '@/lib/cron/budget'
 import type { TombstoneReason } from './tombstone'
-import {
-  invalidateCachedDetailCore,
-  invalidateCachedListing,
-  invalidatePublicAlbumList,
-} from './server'
+import { invalidatePublicAlbumList } from './server'
+import { forgetAlbumListing } from './photo-store'
 
 type AlbumRecord = typeof album.$inferSelect
 
@@ -96,8 +93,7 @@ export async function removeAlbum(
     throw new AlbumDeletionDeferredError()
   }
   await deleteAlbumFolder(database, row, accessToken, { ...options, budget })
-  await invalidateCachedListing(row.driveFolderId)
-  await invalidateCachedDetailCore(row.id)
+  await forgetAlbumListing(row.id, database)
 
   if (options.tombstone) {
     await database.delete(favorite).where(eq(favorite.albumId, row.id))
@@ -143,8 +139,7 @@ export async function tombstoneGoneAlbum(
       updatedAt: new Date(),
     })
     .where(eq(album.id, row.id))
-  await invalidateCachedListing(row.driveFolderId)
-  await invalidateCachedDetailCore(row.id)
+  await forgetAlbumListing(row.id, database)
   await invalidatePublicAlbumList()
   if (!row.deletedAt) {
     await database

@@ -11,7 +11,7 @@ sequenceDiagram
     autonumber
     actor M as Owner, co-author or album manager
     participant W as Worker
-    participant K as D1 app_state
+    participant K as D1 photo rows
     participant D as D1
     participant G as Drive
     M->>W: setCoverPhotoFn or deletePhotoFn(albumId, fileId)

@@ -26,7 +26,7 @@ sequenceDiagram
 
 - The app never restores or recreates a folder. An owner can take a binned folder out of the bin in Drive.
 - Only admins get the button, not managers. Nothing is deleted in Drive, files in flamekeepers' Drives are left alone.
-- The state is noticed when a listing is next due (up to 12 hours) or on Refresh.
+- The state is noticed when the hourly reconcile next checks the album (about once every 24 hours), when a view has to list Drive, or on Refresh.
 
 ## What does "Fewer photos than expected" mean?
 

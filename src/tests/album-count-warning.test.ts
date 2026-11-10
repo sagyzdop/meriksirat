@@ -4,6 +4,7 @@ import {
   planAccept,
   planCountWarning,
 } from '@/lib/albums/count-warning'
+import { LISTING_FRESH_MS } from '@/lib/albums/listing'
 import type {
   AlbumListing,
   ListingFile,
@@ -176,7 +177,7 @@ describe('planCountWarning', () => {
       bufferVolume(
         [file('a')],
         { count: 3, bytes: 300 },
-        { listedAt: NOW - 13 * 3600_000 }
+        { listedAt: NOW - LISTING_FRESH_MS - 1 }
       ),
     ])
     expect(planCountWarning({ listing: l, viewer: ADMIN, now: NOW })).toBeNull()

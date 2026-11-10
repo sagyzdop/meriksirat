@@ -32,7 +32,7 @@ sequenceDiagram
     actor A as Admin or manager
     participant W as Worker
     participant D as Drive quota (buffer token)
-    participant KV
+    participant S as D1 app_state
     participant TG as Telegram
     A->>W: Save limit (GB) and alert %
     W->>D: read current usage (cached up to 10 min)
@@ -44,7 +44,7 @@ sequenceDiagram
     Note over W,TG: Hourly checkBufferUsage
     W->>D: refresh usage if cache older than 50 min
     W->>W: level = ok, warn (>= alert %) or full (>= effective limit)
-    W->>KV: compare with marker buffer:alert
+    W->>S: compare with marker buffer:alert
     W->>TG: one message to admins per crossing of warn and of full
 ```
 

@@ -6,6 +6,8 @@ Which tables hold albums, who holds their photos, and who can edit or favorite t
 erDiagram
     user ||--o{ album : owns
     album ||--o{ volume : "photos held in"
+    album ||--o{ photo_source : "listed from"
+    album ||--o{ photo : shows
     user ||--o{ volume : "holds as flamekeeper"
     album ||--o{ album_member : "edited by"
     user ||--o{ album_member : joins
@@ -26,6 +28,25 @@ erDiagram
         ts deletedAt
         text tombstoneReason "folder_deleted, flamekeeper_left, flamekeeper_lost"
         ts rescuedAt
+        text folderState "ok, trashed, missing"
+        ts photosCheckedAt
+    }
+    photo_source {
+        text albumId PK, FK
+        text key PK "buffer, buffer:id, master, flamekeeper:id"
+        text folderId
+        text stamp
+        text status
+        int listedAt
+        int failedAt
+    }
+    photo {
+        text albumId PK, FK
+        text sourceKey PK
+        text fileId PK
+        int size
+        text md5
+        text meta "Drive file as listed, JSON"
     }
     volume {
         text id PK
@@ -57,6 +78,6 @@ erDiagram
 - A row with `droppedAt` set is not live: it is skipped by listings and the storage holder, and the cleanup of dropped volumes deletes what its folder still holds, then the row. Offloads and rescues stage their new volumes as dropped rows and make them live in one batch ([album-offload](../kv/album-offload.md)).
 - `volume.flamekeeperUserId` points at `user`, not at the `flamekeeper` table.
 - `album_member` is unique on `(albumId, userId)`: a user who opens the edit link becomes a co-author.
-- `favorite` stores a Drive file id, not a photo row; photos exist only in Drive. When a file moves to another account, favorites are remapped.
-- `photoCount` and `photoBytes` are totals synced from the listing cache ([album-listing](../kv/album-listing.md)).
-- Deleting an album cascades to volumes, members and favorites.
+- `favorite` stores a Drive file id. A photo's identity is still its current Drive file id, so when a file moves to another account, favorites are remapped and the album's `photo` rows are rebuilt from Drive.
+- `photo` and `photo_source` are what album pages read; uploads, deletes and listings of Drive keep them current ([album-listing](../kv/album-listing.md)). `photoCount` and `photoBytes` are totals synced from a complete listing.
+- Deleting an album cascades to volumes, members, favorites, photo sources and photos.

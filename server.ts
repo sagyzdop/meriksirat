@@ -14,7 +14,6 @@ import { guestHtmlTtlSeconds } from './src/lib/cache/guest-html'
 interface Env {
   meriksirat_d1: D1Database
   meriksirat_r2: R2Bucket
-  meriksirat_kv: KVNamespace
   TELEGRAM_BOT_TOKEN?: string
   TELEGRAM_CLUB_CHANNEL_ID?: string
   BETTER_AUTH_URL?: string
@@ -153,6 +152,8 @@ const STEPS: Record<CronStepName, () => Promise<Step>> = {
     import('./src/lib/buffer/usage-server').then((m) => m.runBufferUsageCheck),
   switchBuffer: () =>
     import('./src/lib/buffer/switch-server').then((m) => m.runBufferSwitchStep),
+  reconcileAlbums: () =>
+    import('./src/lib/albums/reconcile-cron').then((m) => m.runAlbumReconcile),
   graduateFlamekeepers: () =>
     import('./src/lib/pool/graduation-server').then(
       (m) => m.runGraduationMaintenance

@@ -2,13 +2,7 @@ import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { albumMember, user } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { deleteState, readState, writeState } from '@/lib/app-state'
-import {
-  LISTING_STORE_TTL_SECONDS,
-  newerListingEntry,
-  parseListingEntry,
-} from './listing'
-import type { AlbumListingEntry } from './listing'
+import { readState, writeState } from '@/lib/app-state'
 import type { AlbumAccessLevel } from './types'
 
 export interface SessionUser {
@@ -108,67 +102,7 @@ export function requireAccess(
   }
 }
 
-function listingKey(folderId: string): string {
-  return `album:list:${folderId}`
-}
-
-// Last entry this isolate wrote. When a write to the store fails, the next
-// view still finds the fresh listing here instead of re-listing Drive.
-const LISTING_MEMO_MAX = 50
-const listingMemo = new Map<string, AlbumListingEntry>()
-
-export function rememberListing(
-  folderId: string,
-  entry: AlbumListingEntry
-): void {
-  listingMemo.delete(folderId)
-  if (listingMemo.size >= LISTING_MEMO_MAX) {
-    const oldest = listingMemo.keys().next().value
-    if (oldest !== undefined) listingMemo.delete(oldest)
-  }
-  listingMemo.set(folderId, entry)
-}
-
-export async function getCachedListing(
-  folderId: string
-): Promise<AlbumListingEntry | null> {
-  const remembered = listingMemo.get(folderId) ?? null
-  try {
-    const raw = await readState(listingKey(folderId))
-    return newerListingEntry(parseListingEntry(raw), remembered)
-  } catch (error) {
-    console.warn('Failed to read album listing cache:', error)
-    return remembered
-  }
-}
-
-export async function setCachedListing(
-  folderId: string,
-  entry: AlbumListingEntry
-): Promise<void> {
-  rememberListing(folderId, entry)
-  try {
-    await writeState(
-      listingKey(folderId),
-      JSON.stringify(entry),
-      LISTING_STORE_TTL_SECONDS
-    )
-  } catch (error) {
-    console.warn('Failed to write album listing cache:', error)
-  }
-}
-
-export async function invalidateCachedListing(folderId: string): Promise<void> {
-  listingMemo.delete(folderId)
-  try {
-    await deleteState(listingKey(folderId))
-  } catch (error) {
-    console.warn('Failed to invalidate album listing cache:', error)
-  }
-}
-
-// The per-isolate memo absorbs repeat traffic for viewer-independent payloads
-// before it reaches D1.
+// The per-isolate memo absorbs repeat traffic for viewer-independent payloads.
 const MEM_TTL_MS = 30_000
 const MEM_MAX_ENTRIES = 25
 
@@ -192,33 +126,6 @@ function memSet(key: string, value: string): void {
   memStore.set(key, { value, expiresAt: Date.now() + MEM_TTL_MS })
 }
 
-function memoStateCache(ttlSeconds: number, label: string) {
-  return {
-    async get(key: string): Promise<unknown | null> {
-      const fromMem = memGet(key)
-      if (fromMem !== null) return parseCached(fromMem)
-      try {
-        const raw = await readState(key)
-        if (!raw) return null
-        memSet(key, raw)
-        return parseCached(raw)
-      } catch (error) {
-        console.warn(`Failed to read ${label} cache:`, error)
-        return null
-      }
-    },
-    async set(key: string, value: unknown): Promise<void> {
-      const raw = JSON.stringify(value)
-      memSet(key, raw)
-      try {
-        await writeState(key, raw, ttlSeconds)
-      } catch (error) {
-        console.warn(`Failed to write ${label} cache:`, error)
-      }
-    },
-  }
-}
-
 function parseCached(raw: string): unknown | null {
   try {
     const parsed: unknown = JSON.parse(raw)
@@ -229,38 +136,8 @@ function parseCached(raw: string): unknown | null {
   }
 }
 
-// Every change to a core invalidates it explicitly, so the TTL only bounds how
-// long an unnoticed change (such as a renamed author) can linger.
-const detailCache = memoStateCache(6 * 3600, 'album detail')
-
-function detailCoreKey(albumId: string): string {
-  return `album:detail:${albumId}`
-}
-
-export function getCachedDetailCore(albumId: string): Promise<unknown | null> {
-  return detailCache.get(detailCoreKey(albumId))
-}
-
-export function setCachedDetailCore(
-  albumId: string,
-  core: unknown
-): Promise<void> {
-  return detailCache.set(detailCoreKey(albumId), core)
-}
-
-export async function invalidateCachedDetailCore(
-  albumId: string
-): Promise<void> {
-  memStore.delete(detailCoreKey(albumId))
-  try {
-    await deleteState(detailCoreKey(albumId))
-  } catch (error) {
-    console.warn('Failed to invalidate album detail cache:', error)
-  }
-}
-
 // The public list is viewer-independent and only needs to be roughly fresh, so
-// it lives in the edge Cache API, which has no write quota, instead of KV.
+// it lives in the edge Cache API.
 const PUBLIC_PAGE_TTL_SECONDS = 600
 
 function edgeCache() {
@@ -304,11 +181,10 @@ const publicPageCache = edgeCache()
 
 // The Cache API is per data center and its keys are hashes, so a change can't
 // purge cached pages everywhere. Instead every key carries a version stored in
-// KV; bumping it orphans all cached pages at once. Readers memo the version
-// briefly, so a change shows everywhere within about a minute.
+// D1; bumping it orphans all cached pages at once. Readers memo the version
+// briefly, so a change shows everywhere within seconds.
 const PUBLIC_LIST_VERSION_KEY = 'album:publist:version'
 const PUBLIC_LIST_VERSION_MEMO_MS = 15_000
-const PUBLIC_LIST_VERSION_KV_TTL_SECONDS = 30
 
 let publicListVersionMemo: { value: string; at: number } | null = null
 
@@ -318,11 +194,7 @@ async function publicListVersion(): Promise<string> {
     return memo.value
   }
   try {
-    const { env } = await import('cloudflare:workers')
-    const value =
-      (await (env.meriksirat_kv as KVNamespace).get(PUBLIC_LIST_VERSION_KEY, {
-        cacheTtl: PUBLIC_LIST_VERSION_KV_TTL_SECONDS,
-      })) ?? '0'
+    const value = (await readState(PUBLIC_LIST_VERSION_KEY)) ?? '0'
     publicListVersionMemo = { value, at: Date.now() }
     return value
   } catch (error) {
@@ -339,8 +211,7 @@ export async function invalidatePublicAlbumList(): Promise<void> {
   const value = Date.now().toString(36)
   publicListVersionMemo = { value, at: Date.now() }
   try {
-    const { env } = await import('cloudflare:workers')
-    await (env.meriksirat_kv as KVNamespace).put(PUBLIC_LIST_VERSION_KEY, value)
+    await writeState(PUBLIC_LIST_VERSION_KEY, value, null)
   } catch (error) {
     console.warn('Failed to invalidate public album list cache:', error)
   }

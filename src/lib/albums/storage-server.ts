@@ -87,7 +87,7 @@ import { withListingOwnerToken } from './listing-server'
 import { albumStorageHolder } from './status'
 import { packFiles } from './volume-limit'
 import { newId } from './ids'
-import { invalidateCachedDetailCore, invalidateCachedListing } from './server'
+import { forgetAlbumListing } from './photo-store'
 
 const ID_CHUNK = 90
 const OVERVIEW_MAX_AGE_MS = 10 * 60 * 1000
@@ -251,14 +251,8 @@ async function dropEmptyFolder(
   }
 }
 
-export async function afterMove(
-  albumId: string,
-  driveFolderId: string
-): Promise<void> {
-  await Promise.all([
-    invalidateCachedListing(driveFolderId),
-    invalidateCachedDetailCore(albumId),
-  ])
+export async function afterMove(albumId: string): Promise<void> {
+  await forgetAlbumListing(albumId)
 }
 
 async function listOrEmpty(
@@ -650,7 +644,7 @@ export async function rescueAlbumVolume(
     ] as unknown as Parameters<typeof database.batch>[0])
     await clearRescueMarker(albumId)
     await syncKeepingStates(database, [...released.keys()])
-    await afterMove(albumId, albumRow.driveFolderId)
+    await afterMove(albumId)
     try {
       await cleanDroppedVolumes(database, budget ?? createBudget(), {
         albumId,
@@ -1112,7 +1106,7 @@ export async function completeOffload(
       : undefined
     if (committed) {
       await clearOffloadPending(albumId)
-      await afterMove(albumId, albumRow.driveFolderId)
+      await afterMove(albumId)
       return { ok: true, done: true }
     }
     await database.batch([
@@ -1144,7 +1138,7 @@ export async function completeOffload(
     ] as unknown as Parameters<typeof database.batch>[0])
     await clearOffloadPending(albumId)
     await syncKeepingStates(database, [...added.keys()])
-    await afterMove(albumId, albumRow.driveFolderId)
+    await afterMove(albumId)
     try {
       await cleanDroppedVolumes(database, budget, {
         albumId,
@@ -1193,7 +1187,6 @@ export async function scheduleAlbumsDeletion(
   const { notifyAlbumScheduledDeletion } = await import('@/lib/pool/notices')
   for (const a of due) {
     await notifyAlbumScheduledDeletion(database, env, a, at)
-    await invalidateCachedDetailCore(a.id)
   }
   return { scheduled: due.length, skipped: unique.length - due.length }
 }
@@ -1216,6 +1209,5 @@ export async function cancelAlbumsDeletion(
       .set({ scheduledDeletionAt: null, updatedAt: now })
       .where(inArray(album.id, ids))
   }
-  for (const a of albums) await invalidateCachedDetailCore(a.id)
   return { cancelled: albums.length }
 }

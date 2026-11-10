@@ -48,7 +48,6 @@ flowchart LR
   Cron[Cron Triggers] --> Worker
   Worker --> D1[(D1 / Drizzle)]
   Worker --> R2[(R2: images)]
-  Worker --> KV[(KV: markers)]
   Worker --> Google[Google Calendar + Drive]
   Worker --> Telegram
 ```
@@ -58,7 +57,7 @@ flowchart LR
 | Frontend       | React 19, TanStack Start, Router and Query                    |
 | UI             | Tailwind CSS v4, shadcn/ui, Radix UI                          |
 | Runtime        | Cloudflare Workers (`server.ts`), Smart Placement             |
-| Data           | D1 (SQLite) with Drizzle ORM, R2 for images, KV for markers   |
+| Data           | D1 (SQLite) with Drizzle ORM, R2 for images                   |
 | Auth           | Better Auth with Google OAuth                                 |
 | Integrations   | Google Calendar and Drive APIs, Telegram Bot API              |
 | Rate limiting  | Workers native rate limit bindings                            |
@@ -158,6 +157,6 @@ npm run deploy
 
 - [Glossary](GLOSSARY.md): the domain vocabulary used across code and docs
 - [ADRs](docs/adr/): architectural decisions
-- [Scenarios](docs/scenarios/README.md): behavior by role (anonymous, member, flamekeeper, admin), cron jobs, KV usage and the database ERD
+- [Scenarios](docs/scenarios/README.md): behavior by role (anonymous, member, flamekeeper, admin), cron jobs, stored state and the database ERD
 - [FAQ](docs/faq.md), [Terms of Service](docs/terms-of-service.md) and [Privacy Policy](docs/privacy-policy.md)
 - [AGENTS.md](AGENTS.md): conventions for contributors and coding agents

@@ -103,7 +103,7 @@ export const getAlbumStatsFn = createServerFn({ method: 'GET' })
     }
 
     if (unsynced.length > 0) {
-      const { getCachedListing } = await import('@/lib/albums/server')
+      const { loadListingEntry } = await import('@/lib/albums/photo-store')
       const { listedMasterFiles } = await import('@/lib/albums/listing')
       const { getGoogleAccessToken } =
         await import('@/lib/google/google-calendar-auth')
@@ -117,7 +117,7 @@ export const getAlbumStatsFn = createServerFn({ method: 'GET' })
           chunk.map(async (row) => {
             try {
               let files = listedMasterFiles(
-                await getCachedListing(row.driveFolderId)
+                await loadListingEntry(database, row.id)
               )
               if (!files) {
                 files = await listDriveFolderFiles(
@@ -259,7 +259,8 @@ export const getAdminDashboardAlertsFn = createServerFn({
 }).handler(async (): Promise<DashboardAlert[]> => {
   const { adminContext } = await import('@/lib/admin/server')
   const { booking, user, album } = await import('@/db/schema')
-  const { eq, and, gte, lte, gt, or, isNull, sql } = await import('drizzle-orm')
+  const { eq, and, gte, lte, gt, ne, or, isNull, sql } =
+    await import('drizzle-orm')
 
   const { database } = await adminContext(['admin', 'manager'])
 
@@ -354,34 +355,13 @@ export const getAdminDashboardAlertsFn = createServerFn({
     })
   }
 
-  // Albums whose Drive folder is in the bin or deleted (cached state only,
-  // so this is cheap — it never calls the Drive API).
-  const albumRows = await database
-    .select({
-      id: album.id,
-      title: album.title,
-      driveFolderId: album.driveFolderId,
-    })
+  // Albums whose Drive folder was in the bin or deleted at the last listing.
+  const problemAlbums = await database
+    .select({ title: album.title })
     .from(album)
-    .where(isNull(album.deletedAt))
+    .where(and(isNull(album.deletedAt), ne(album.folderState, 'ok')))
     .all()
-
-  const problemTitles: string[] = []
-  if (albumRows.length > 0) {
-    const { getCachedListing } = await import('@/lib/albums/server')
-    await Promise.all(
-      albumRows.map(async (row) => {
-        try {
-          const cached = await getCachedListing(row.driveFolderId)
-          if (cached && cached.folderState !== 'ok') {
-            problemTitles.push(row.title)
-          }
-        } catch {
-          // ignore cache read failures
-        }
-      })
-    )
-  }
+  const problemTitles = problemAlbums.map((row) => row.title)
   if (problemTitles.length > 0) {
     const preview = problemTitles.slice(0, 3).join(', ')
     alerts.push({

@@ -8,12 +8,14 @@ import {
 } from './drive-photo'
 import type { AlbumPhoto } from './types'
 
-export const LISTING_FRESH_MS = 12 * 60 * 60 * 1000
+// A view lists Drive again by age only when the hourly reconcile has not
+// reached the album for this long.
+export const LISTING_FRESH_MS = 7 * 24 * 60 * 60 * 1000
+export const LISTING_RECONCILE_MS = 24 * 60 * 60 * 1000
 export const LISTING_RETRY_MS = 15 * 60 * 1000
 export const LISTING_STAMP_THROTTLE_MS = 5 * 60 * 1000
 export const LISTING_SETTLE_MS = 30 * 1000
 export const LISTING_STALE_LIMIT_MS = 7 * 24 * 60 * 60 * 1000
-export const LISTING_STORE_TTL_SECONDS = 8 * 24 * 60 * 60
 export const LISTING_DRIVE_BUDGET = RUN_SUBREQUEST_BUDGET
 
 export const BUFFER_SOURCE_KEY = 'buffer'
@@ -444,49 +446,4 @@ export function listedMasterFiles(
 ): ListingFile[] | null {
   const master = entry?.sources.master
   return master?.status === 'ok' ? master.files : null
-}
-
-export function sameListingEntry(
-  a: AlbumListingEntry | null,
-  b: AlbumListingEntry
-): boolean {
-  return !!a && JSON.stringify(a) === JSON.stringify(b)
-}
-
-function entryTime(entry: AlbumListingEntry): number {
-  let latest = 0
-  for (const source of Object.values(entry.sources)) {
-    latest = Math.max(latest, source.listedAt ?? 0, source.failedAt ?? 0)
-  }
-  return latest
-}
-
-export function newerListingEntry(
-  a: AlbumListingEntry | null,
-  b: AlbumListingEntry | null
-): AlbumListingEntry | null {
-  if (!a || !b) return a ?? b
-  return entryTime(b) > entryTime(a) ? b : a
-}
-
-export function parseListingEntry(
-  raw: string | null
-): AlbumListingEntry | null {
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw) as Partial<AlbumListingEntry> | null
-    if (!parsed || typeof parsed !== 'object') return null
-    const { folderState, sources } = parsed
-    if (
-      folderState !== 'ok' &&
-      folderState !== 'trashed' &&
-      folderState !== 'missing'
-    ) {
-      return null
-    }
-    if (!sources || typeof sources !== 'object') return null
-    return { folderState, sources }
-  } catch {
-    return null
-  }
 }

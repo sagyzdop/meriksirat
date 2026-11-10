@@ -10,7 +10,8 @@ flowchart TD
     D --> E[deleteScheduledAlbums]
     E --> F[checkBufferUsage]
     F --> F2[switchBuffer]
-    F2 --> G[Telegram bot configuration]
+    F2 --> F3[reconcileAlbums]
+    F3 --> G[Telegram bot configuration]
 ```
 
 What does the health check do?
@@ -41,7 +42,7 @@ How does a draining or banned flamekeeper end, and what happens to a lost one's 
 ```mermaid
 flowchart TD
     A["drainFlamekeepers: up to 10 Draining rows, 2 requests each"] --> B{Live volumes held?}
-    B -- some, buffer full --> P["Pause, alert admins once per 24 h<br/>(KV drain-paused)"]
+    B -- some, buffer full --> P["Pause, alert admins once per 24 h<br/>(marker drain-paused)"]
     B -- some --> R["Rescue up to 3 albums to the buffer<br/>(needs 12 requests each)"]
     B -- none --> C["Clean this flamekeeper's dropped volumes:<br/>delete the originals with their token"]
     R --> C
@@ -69,10 +70,11 @@ flowchart TD
     G --> I[Compute level: ok, warn, full]
     H --> I
     I --> J{Crossed 90% or 100% since the last marker?}
-    J -- yes --> K[Telegram every admin, set KV buffer:alert]
+    J -- yes --> K[Telegram every admin, set marker buffer:alert]
     J -- level ok --> L[Clear marker]
 ```
 
-- Telegram bot configuration runs after the steps. It calls `setMyCommands` only when the deployed version differs from the KV marker [telegram-bot-version](../kv/telegram-bot-version.md).
+- Telegram bot configuration runs after the steps. It calls `setMyCommands` only when the deployed version differs from the stored marker [telegram-bot-version](../kv/telegram-bot-version.md).
 - The lost grace period comes from the `lostGraceDays` setting (default 7) and the graduation stop lead from `graduationPromptDays` (default 60); the code constants are only the defaults.
-- Related KV keys: [drain-paused](../kv/drain-paused.md), [buffer-usage](../kv/buffer-usage.md).
+- `reconcileAlbums` runs last and spends what the earlier steps left. It takes up to 10 albums not checked for 24 hours, oldest first (never-checked first), lists each one's folders in Drive and rewrites the `photo` rows that differ, then stamps `album.photosCheckedAt`. It stops when fewer than 6 requests remain. See [album-listing](../kv/album-listing.md).
+- Related stored keys: [drain-paused](../kv/drain-paused.md), [buffer-usage](../kv/buffer-usage.md).

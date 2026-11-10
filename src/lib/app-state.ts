@@ -18,11 +18,11 @@ export function splitStateValue(
 }
 
 export function joinStateParts(
-  rows: { value: string; expiresAt: Date }[],
+  rows: { value: string; expiresAt: Date | null }[],
   now: Date
 ): string | null {
   if (rows.length === 0) return null
-  if (rows.some((row) => row.expiresAt.getTime() <= now.getTime())) return null
+  if (rows.some((row) => row.expiresAt && row.expiresAt <= now)) return null
   return rows.map((row) => row.value).join('')
 }
 
@@ -45,11 +45,12 @@ export async function readState(key: string): Promise<string | null> {
 export async function writeState(
   key: string,
   value: string,
-  ttlSeconds: number
+  ttlSeconds: number | null
 ): Promise<void> {
   const store = await database()
   const now = new Date()
-  const expiresAt = new Date(now.getTime() + ttlSeconds * 1000)
+  const expiresAt =
+    ttlSeconds === null ? null : new Date(now.getTime() + ttlSeconds * 1000)
   const [first, ...rest] = splitStateValue(value).map((part, index) =>
     store.insert(appState).values({ key, part: index, value: part, expiresAt })
   )

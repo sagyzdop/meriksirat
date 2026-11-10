@@ -100,8 +100,8 @@ A photo gallery: one public folder in the club's master Google Drive account, wh
 _Avoid_: Gallery, collection
 
 **Photo**:
-One image in an album, identified by its current Drive file ID, which changes when the photo moves to another account. Listed from Drive and cached, with no photo record of its own.
-The photo table was removed in #25 ([ADR-0017](docs/adr/0017-drop-photo-table-read-from-drive.md)). The album row keeps a photo count and byte total that uploads, deletes and complete listings maintain.
+One image in an album, identified by its current Drive file ID, which changes when the photo moves to another account. Recorded as a row in the `photo` table.
+Photos are rows in the `photo` table, written on upload and delete and reconciled with Drive hourly ([ADR-0023](docs/adr/0023-photos-are-rows-reconciled-with-drive.md)); a photo's identity is still its Drive file id ([ADR-0017](docs/adr/0017-drop-photo-table-read-from-drive.md)). The album row keeps a photo count and byte total that uploads, deletes and complete listings maintain.
 _Avoid_: Image, file, picture
 
 **Volume**:

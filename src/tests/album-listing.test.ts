@@ -12,8 +12,6 @@ import {
   findListedFileOwner,
   listingTotals,
   listingPhotos,
-  newerListingEntry,
-  parseListingEntry,
   planListingRefresh,
   planListingSources,
   readAlbumListing,
@@ -595,21 +593,6 @@ describe('album folder state', () => {
   })
 })
 
-describe('reading a cached entry', () => {
-  it('ignores the older cache shape and anything unreadable', () => {
-    expect(parseListingEntry(null)).toBeNull()
-    expect(parseListingEntry('not json')).toBeNull()
-    expect(
-      parseListingEntry(JSON.stringify({ files: [], folderState: 'ok' }))
-    ).toBeNull()
-  })
-
-  it('round-trips an entry', () => {
-    const entry = freshEntry(sourcesOf(), { buffer: [file('a')] })
-    expect(parseListingEntry(JSON.stringify(entry))).toEqual(entry)
-  })
-})
-
 describe('who owns a file in the album', () => {
   const sources = sourcesOf({ flamekeeperVolumes: [keeper('amina')] })
   const listing = readAlbumListing({
@@ -706,33 +689,6 @@ describe('album totals from a listing', () => {
     expect(
       listingTotals(readAlbumListing({ entry, sources, now: NOW }))
     ).toBeNull()
-  })
-})
-
-describe('newerListingEntry', () => {
-  const entry = (listedAt: number) => ({
-    folderState: 'ok' as const,
-    sources: {
-      master: {
-        folderId: 'f',
-        stamp: '',
-        status: 'ok' as const,
-        listedAt,
-        failedAt: null,
-        files: [],
-      },
-    },
-  })
-
-  it('prefers the entry that was listed last', () => {
-    expect(newerListingEntry(entry(1), entry(2))).toEqual(entry(2))
-    expect(newerListingEntry(entry(5), entry(2))).toEqual(entry(5))
-  })
-
-  it('falls back to whichever entry exists', () => {
-    expect(newerListingEntry(null, entry(2))).toEqual(entry(2))
-    expect(newerListingEntry(entry(2), null)).toEqual(entry(2))
-    expect(newerListingEntry(null, null)).toBeNull()
   })
 })
 

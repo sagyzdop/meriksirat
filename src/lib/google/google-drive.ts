@@ -237,7 +237,7 @@ export async function getDriveFileMeta(
 ): Promise<DriveFileWithParents> {
   const params = new URLSearchParams({
     fields:
-      'id, name, mimeType, size, createdTime, parents, trashed, imageMediaMetadata',
+      'id, name, mimeType, size, md5Checksum, createdTime, parents, trashed, imageMediaMetadata',
   })
   const response = await driveFetch(
     accessToken,

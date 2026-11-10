@@ -15,7 +15,7 @@ sequenceDiagram
     B-->>U: Heart flips at once
     B->>W: setFavoriteFn(albumId, driveFileId, favorite)
     opt Favoriting
-        W->>W: Check the file in the album's cached listing
+        W->>W: Check the file in the album's photo rows
         Note over W: Only a complete listing that lacks the file refuses "Photo not found in this album"
     end
     alt Refused
@@ -40,7 +40,7 @@ sequenceDiagram
     participant B as Browser
     participant W as Worker
     participant D as D1
-    participant K as D1 app_state
+    participant K as D1 photo rows
     U->>B: Open My Favorites
     B->>W: listMyFavoritesFn()
     W->>D: Favorites joined to live albums, newest first, up to 1000

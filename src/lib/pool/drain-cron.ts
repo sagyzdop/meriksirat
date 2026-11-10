@@ -1,6 +1,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { db, type Database } from '@/db'
 import { flamekeeper, user, volume } from '@/db/schema'
+import { readState, writeState } from '@/lib/app-state'
 import {
   cleanDroppedVolumes,
   rescueAlbumVolume,
@@ -21,7 +22,6 @@ const RESCUE_COST = 12
 
 type DrainEnv = {
   meriksirat_d1: D1Database
-  meriksirat_kv?: KVNamespace
   TELEGRAM_BOT_TOKEN?: string
 }
 
@@ -34,7 +34,7 @@ async function alertOncePerDay(
 ): Promise<void> {
   const key = `drain-paused:${userId}`
   try {
-    if (env.meriksirat_kv && (await env.meriksirat_kv.get(key))) return
+    if (await readState(key)) return
   } catch (error) {
     console.warn('Could not read drain alert marker:', error)
   }
@@ -44,9 +44,9 @@ async function alertOncePerDay(
     text,
     budget
   )
-  if (result !== 'sent' || !env.meriksirat_kv) return
+  if (result !== 'sent') return
   try {
-    await env.meriksirat_kv.put(key, '1', { expirationTtl: ALERT_TTL_SECONDS })
+    await writeState(key, '1', ALERT_TTL_SECONDS)
   } catch (error) {
     console.warn('Could not write drain alert marker:', error)
   }

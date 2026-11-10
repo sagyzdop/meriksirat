@@ -357,6 +357,14 @@ export const album = sqliteTable(
     scheduledDeletionAt: integer('scheduled_deletion_at', {
       mode: 'timestamp_ms',
     }),
+    // What the last listing found: the folder itself, in the bin, or gone.
+    folderState: text('folder_state', {
+      enum: ['ok', 'trashed', 'missing'],
+    })
+      .default('ok')
+      .notNull(),
+    // Last time the hourly reconcile compared the photo rows with Drive.
+    photosCheckedAt: integer('photos_checked_at', { mode: 'timestamp_ms' }),
     editShareToken: text('edit_share_token').notNull().unique(),
     event: text('event').notNull().default(''),
     eventDate: integer('event_date', { mode: 'timestamp_ms' }).notNull(),
@@ -611,15 +619,57 @@ export const bufferGrant = sqliteTable(
   ]
 )
 
-// Short-lived caches and flow state (album listings, offload plans, Telegram
-// sessions). A value over the D1 row limit is split across parts.
+// One row per place an album's photos are listed from: `buffer`,
+// `buffer:{volumeId}`, `master` or `flamekeeper:{volumeId}`. Holds how the last
+// listing of that folder went and the volume stamp it matched.
+export const photoSource = sqliteTable(
+  'photo_source',
+  {
+    albumId: text('album_id')
+      .notNull()
+      .references(() => album.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    folderId: text('folder_id').notNull(),
+    stamp: text('stamp').notNull(),
+    status: text('status', {
+      enum: ['ok', 'partial', 'failed', 'missing', 'unavailable'],
+    }).notNull(),
+    listedAt: integer('listed_at'),
+    failedAt: integer('failed_at'),
+  },
+  (table) => [primaryKey({ columns: [table.albumId, table.key] })]
+)
+
+// The photos the app shows. Written on upload, delete and each listing of a
+// source; `meta` is the Drive file as listed.
+export const photo = sqliteTable(
+  'photo',
+  {
+    albumId: text('album_id')
+      .notNull()
+      .references(() => album.id, { onDelete: 'cascade' }),
+    sourceKey: text('source_key').notNull(),
+    fileId: text('file_id').notNull(),
+    size: integer('size').default(0).notNull(),
+    md5: text('md5'),
+    meta: text('meta').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.albumId, table.sourceKey, table.fileId] }),
+    index('photo_albumId_fileId_idx').on(table.albumId, table.fileId),
+  ]
+)
+
+// Flow state and markers (offload plans, Telegram sessions, alert markers).
+// A value over the D1 row limit is split across parts.
 export const appState = sqliteTable(
   'app_state',
   {
     key: text('key').notNull(),
     part: integer('part').default(0).notNull(),
     value: text('value').notNull(),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    // NULL never expires.
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
     primaryKey({ columns: [table.key, table.part] }),

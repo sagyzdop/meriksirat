@@ -1,23 +1,30 @@
-# State: album-listing
+# State: album photos
 
-Key `album:list:{driveFolderId}`. Stored in the D1 `app_state` table (`src/lib/app-state.ts`), not in KV, since [ADR-0022](../../adr/0022-caches-and-flow-state-in-d1.md).
+Tables `photo` and `photo_source`, plus `album.folderState` and `album.photosCheckedAt`. Code: `src/lib/albums/photo-store.ts` (reads and writes), `photo-rows.ts` (the row plan), `listing.ts` (the rules). Decision: [ADR-0023](../../adr/0023-photos-are-rows-reconciled-with-drive.md).
 
-How does an album page avoid listing Drive folders on every view?
+How does an album page show photos without listing Drive?
 
 ```mermaid
 flowchart TD
-    A[Album page, favorites or dashboard needs photos] --> B{Per-isolate memo or stored entry?}
+    A[Album page, favorites, dashboard, upload check, delete or cover] --> B{photo_source rows for the album?}
     B -- none --> D[Check folder state and list each volume in Drive]
-    B -- entry --> C{Fresh? 12 h, retry 15 min after a failure}
-    C -- yes --> R[Read photos from the entry]
-    C -- no --> D
-    D --> E[write album:list:folder, TTL 8 days]
+    B -- rows --> C{A source due? stamp changed, failed 15 min ago, never listed, or not listed for 7 days}
+    C -- no --> R[Read photos from the photo rows]
+    C -- yes --> D
+    D --> E[Write only the source rows and photo rows that changed]
     E --> R
-    X[Move, offload, remove or favorite remap] --> Y[delete album:list:folder]
+    U[Upload confirmed] --> U2[Insert the photo row]
+    X[Photo deleted] --> X2[Delete the photo row]
+    M[Move, offload, album removal or favorite remap] --> M2[Delete the album's rows, next view lists Drive]
+    H[Hourly reconcileAlbums] --> D
 ```
 
-- Value: JSON listing entry per source (`buffer:{volumeId}` and `flamekeeper:{volumeId}`): files, folder state, last check times. TTL 8 days (`LISTING_STORE_TTL_SECONDS`); a stale entry is served up to 7 days when Drive fails.
-- Writer: `setCachedListing` from `loadAlbumListing` (`src/lib/albums/listing-server.ts`), only when the entry changed. Readers: the same function, `src/lib/favorites/functions.ts`, `src/lib/admin/functions/dashboard-stats.ts`. Invalidated in `remove.ts`, `storage-server.ts` and `favorites/remap-server.ts`.
-- A 50-entry memo per Worker isolate holds the last written entry, so a failed write does not trigger another Drive listing. An entry larger than a D1 row is split across `part` rows.
+- `photo_source`: one row per place photos are listed from (`buffer`, `buffer:{volumeId}`, `master`, `flamekeeper:{volumeId}`) with its folder, the volume stamp it matched (`expectedCount:expectedBytes`), status (`ok`, `partial`, `failed`, `missing`, `unavailable`) and when it was last listed or last failed.
+- `photo`: one row per file under `(albumId, sourceKey, fileId)`. `meta` is the Drive file as listed (name, type, size, checksum, EXIF); `size` and `md5` are copied out for queries. Rows read back in insertion order, which is Drive's creation order.
+- Views never list Drive because of age alone unless a source has gone 7 days without a listing (`LISTING_FRESH_MS`), which only happens when the hourly step is behind. The hourly [reconcileAlbums](../cron/hourly.md) step lists each album about once every 24 hours (`LISTING_RECONCILE_MS`) and is what notices changes made in Drive behind the app.
+- An upload inserts its row at confirm, so the photo shows at once and the duplicate check sees it. The confirm also changes the volume's stamp, so that buffer volume is listed once more after the upload burst settles (at most every 5 minutes during it), which fills in EXIF that Drive had not extracted yet.
+- A listing that found the same files writes only the source row. A listing that could not finish keeps the previous rows of the sources it did not reach, and a source that keeps failing shows its last photos for up to 7 days.
+- A move gives every photo a new Drive file id, so it deletes the album's rows and the next view lists Drive, as before.
+- Deleting a photo and setting a cover are authorized against these rows: the file must be a row of this album, and its source says whose token acts on it. A miss lists Drive once before refusing.
+- The rows also feed the photo count and total bytes on `album` ([albums-and-storage](../erd/albums-and-storage.md)), and `album.folderState` feeds the dashboard's "folder in the bin or deleted" alert.
 - Elsewhere: the public album list page (edge Cache API, 10 minutes) and guest HTML in `server.ts`.
-- Why: listing Drive costs outside requests and seconds; the cache also feeds the photo count and total bytes synced to `album` ([albums-and-storage](../erd/albums-and-storage.md)).

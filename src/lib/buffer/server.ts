@@ -11,11 +11,15 @@ import {
 } from '@/lib/google/google-drive'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { isImage } from '@/lib/albums/drive-photo'
-import { getCachedListing } from '@/lib/albums/server'
+import { addPhotoRow, hasBufferPhotoRow } from '@/lib/albums/photo-store'
 import { newId } from '@/lib/albums/ids'
 import { nextVolumeNumber } from '@/lib/albums/volume-number'
 import { hasOffloadPending } from '@/lib/albums/offload-pending'
-import { isBufferSourceKey, volumeIdFromSourceKey } from '@/lib/albums/listing'
+import {
+  BUFFER_SOURCE_KEY,
+  bufferSourceKey,
+  volumeIdFromSourceKey,
+} from '@/lib/albums/listing'
 import { pickVolumeWithRoom } from '@/lib/albums/volume-limit'
 import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
 import {
@@ -283,6 +287,7 @@ export async function confirmBufferUpload(
     .select({ id: volume.id, driveFolderId: volume.driveFolderId })
     .from(volume)
     .where(bufferVolumes(albumRow.id))
+    .orderBy(asc(volume.createdAt), asc(volume.id))
     .all()
 
   const file = await withBufferToken((token) => getDriveFileMeta(token, fileId))
@@ -296,12 +301,15 @@ export async function confirmBufferUpload(
     return false
   }
 
-  const sources = (await getCachedListing(albumRow.driveFolderId))?.sources
-  const counted = Object.entries(sources ?? {}).some(
-    ([key, source]) =>
-      isBufferSourceKey(key) && source.files.some((f) => f.id === fileId)
-  )
-  if (counted) return true
+  if (await hasBufferPhotoRow(database, albumRow.id, fileId)) return true
+
+  // The first buffer volume lists under the plain key, the rest by id.
+  const sourceKey =
+    target.id === volumeRows[0].id
+      ? BUFFER_SOURCE_KEY
+      : bufferSourceKey(target.id)
+  const { parents: _parents, trashed: _trashed, ...listed } = file
+  await addPhotoRow(database, albumRow.id, sourceKey, listed)
 
   const bytes = Number(file.size ?? 0) || 0
   await adjustExpected(database, target.id, 1, bytes)
