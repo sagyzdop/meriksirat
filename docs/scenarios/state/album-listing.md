@@ -1,6 +1,6 @@
 # State: album listings
 
-Table `album_listing`, plus `album.folderState` and `album.photosCheckedAt`. Code: `src/lib/albums/listing-store.ts` (reads and writes), `listing-rows.ts` (the row plan), `listing.ts` (the rules). History: [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md) cached listings, [ADR-0023](../../adr/0023-photos-are-rows-reconciled-with-drive.md) made one row per photo; `album_listing` replaced those rows with one row per folder, so a view reads a couple of rows instead of one per photo.
+Table `album_listing`, plus `album.folderState` and `album.photosCheckedAt`. Code: `src/lib/albums/listing-store.ts` (reads and writes), `listing-rows.ts` (the row plan), `listing.ts` (the rules). Decision: [ADR-0024](../../adr/0024-album-listings-are-one-row-per-folder.md). History: [ADR-0017](../../adr/0017-drop-photo-table-read-from-drive.md) cached listings, [ADR-0023](../../adr/0023-photos-are-rows-reconciled-with-drive.md) made one row per photo.
 
 How does an album page show photos without listing Drive?
 

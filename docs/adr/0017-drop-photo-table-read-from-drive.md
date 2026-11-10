@@ -1,7 +1,7 @@
 # Drop the photo table; read photos from Drive and cache the listings
 
-> **Amended by [ADR-0022](0022-caches-and-flow-state-in-d1.md) and [ADR-0023](0023-photos-are-rows-reconciled-with-drive.md).**
-> Nothing is in KV any more, and photos are rows in D1 again (`photo`, `photo_source`),
+> **Amended by [ADR-0022](0022-caches-and-flow-state-in-d1.md), [ADR-0023](0023-photos-are-rows-reconciled-with-drive.md) and [ADR-0024](0024-album-listings-are-one-row-per-folder.md).**
+> Nothing is in KV any more, and photos are rows in D1 again (`album_listing`),
 > written on upload and delete and reconciled with Drive hourly. Photo identity,
 > the remap on moves and the count warning below still hold. The text below is the
 > original decision, kept for history.

@@ -1,5 +1,11 @@
 # Photos are rows in D1, reconciled with Drive in the background
 
+> **Amended by [ADR-0024](0024-album-listings-are-one-row-per-folder.md).**
+> The rows are now one per folder (`album_listing`) with the files as JSON, not
+> one per photo (`photo`, `photo_source`). Reconciliation, the stamp, the 7-day
+> rule and the hourly budget below still hold. The text below is the original
+> decision, kept for history.
+
 [ADR-0017](0017-drop-photo-table-read-from-drive.md) removed the photo table and
 made a cached Drive listing the only record of an album's photos. The app is the
 only writer of those photos, so it was re-discovering in Drive what it had just

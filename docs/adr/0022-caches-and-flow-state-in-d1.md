@@ -22,4 +22,5 @@ version and `telegram-bot:configured-version`) moved to `app_state` right after,
 with a NULL `expires_at` for the ones that never expire, and the KV binding was
 removed. The album detail cache was deleted outright: it cached a D1 result in
 D1. The album listing left `app_state` for real tables in
-[ADR-0023](0023-photos-are-rows-reconciled-with-drive.md).
+[ADR-0023](0023-photos-are-rows-reconciled-with-drive.md), since reduced to one
+row per folder in [ADR-0024](0024-album-listings-are-one-row-per-folder.md).
