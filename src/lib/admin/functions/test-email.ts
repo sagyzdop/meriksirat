@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { UserError } from '@/lib/user-error'
 
 export const sendTestEmailFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<{ sentTo: string }> => {
@@ -16,7 +17,7 @@ export const sendTestEmailFn = createServerFn({ method: 'POST' }).handler(
     })
 
     if (!sent) {
-      throw new Error('Failed to send test email. Check the server logs.')
+      throw new UserError('Failed to send test email. Check the server logs.')
     }
 
     return { sentTo: admin.email }

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cancelBookingItemFn } from '@/lib/booking'
 import type { BookingItemWithEquipment } from '@/lib/booking/types'
+import { errorMessage } from '@/lib/utils'
 
 interface CancelBookingItemDialogProps {
   bookingId: number
@@ -43,9 +44,7 @@ export function CancelBookingItemDialog({
       onOpenChange(false)
       onCancelled?.()
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to cancel item'
-      )
+      toast.error(errorMessage(error, 'Failed to cancel item'))
     } finally {
       setIsCancelling(false)
     }

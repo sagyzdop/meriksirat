@@ -14,36 +14,42 @@ sequenceDiagram
     participant W as Worker
     participant G as Drive
     M->>B: Choose or drop image files
-    B->>B: Skip duplicates already queued, save jobs (localStorage) and files (IndexedDB), run 2 at a time
-    B->>W: createUploadSessionFn(albumId, name, type, size)
-    W->>G: Master token: folder state
-    W->>W: Compare size with the album listing
-    opt A listed photo has the same size
-        W-->>B: Ask for the MD5
-        B->>W: Same call with the MD5 of the file
+    B->>B: Skip duplicates already queued, save jobs (localStorage) and files (IndexedDB)
+    B->>W: createUploadSessionsFn(albumId, up to 10 files: name, type, size, MD5 if known)
+    W->>G: Master token: folder state, once for the batch
+    W->>W: One SQL query: stored listing files with the same sizes
+    loop Each file
+        alt Same size as a listed photo and no MD5 sent
+            W-->>B: needs-hash
+        else Same size and MD5 as a listed photo
+            W-->>B: duplicate
+        else New photo
+            W->>W: startBufferUploads (next diagram)
+            W-->>B: One-time upload address, or the error for this file
+        end
     end
-    alt Same size and MD5 as a listed photo
-        W-->>B: Error, photo already exists
-    else New photo
-        W->>W: startBufferUpload (next diagram)
-        W-->>B: One-time upload address
-    end
-    B->>G: PUT the bytes to the upload address
+    B->>B: Hash the needs-hash files, send them in the next batch
+    B->>G: PUT the bytes to the upload addresses, 2 at a time
     G-->>B: New file id
-    B->>W: confirmPhotoUploadFn(albumId, fileId)
-    W->>G: Buffer token: read the file
-    alt Not in one of the album's buffer Volume folders
-        W-->>B: Error Uploaded file not found in the album folder
-    else Not an image
-        W->>G: Delete the file
-        W-->>B: registered false
-    else Image
-        W-->>B: registered true (counts go up unless the listing already shows it)
+    B->>W: confirmPhotoUploadsFn(albumId, up to 10 file ids)
+    Note over B,W: Sent when 10 are waiting, nothing else is uploading, or the oldest waited 4 seconds
+    loop Each file
+        W->>G: Buffer token: read the file
+        alt Not in one of the album's buffer Volume folders
+            W-->>B: failed, Uploaded file not found in the album folder
+        else Not an image
+            W->>G: Delete the file
+            W-->>B: confirmed
+        else Image
+            W-->>B: confirmed (counted unless the listing already shows it)
+        end
     end
+    W->>W: Raise Volume and album totals once for the batch
     B->>B: When all jobs finish, reload the album
 ```
 
-- Files up to 5 GB. Filenames are ignored for duplicate detection: size first, then MD5 hashed in the browser only when a size matches.
+- Files up to 5 GB. Filenames are ignored for duplicate detection: size first, then MD5 hashed in the browser only when a size matches. The check reads the stored [album listing](../../state/album-listing.md) inside D1 and does not list Drive, so a photo added to Drive behind the app is only caught once a view or the hourly step has listed it.
+- Sessions and confirms go in batches of up to 10 files (`UPLOAD_BATCH_MAX`) so each photo costs the Worker a fraction of a request, which keeps it under the free plan's 10 ms CPU limit. Sessions for the next batch are minted while the current uploads run.
 - The queue survives a page refresh. A job whose file is gone fails with "File is no longer available — choose it again".
 - Uploads are paused while the album folder is in the bin or deleted, see [warnings](warnings.md).
 - Confirming adds 1 and the file size to the Volume's expected count and bytes and to the album's photo count and bytes. A confirm for a file the cached buffer listing already shows is accepted without adding.
@@ -52,11 +58,11 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A["startBufferUpload"] --> B{"Buffer configured and token works?"}
+    A["startBufferUploads, once per batch"] --> B{"Buffer configured and token works?"}
     B -- no --> X1["Error: photo storage not available, tell an admin"]
     B -- yes --> C{"Buffer usage at 100 percent? (cached, refreshed after 10 minutes)"}
     C -- yes --> X2["Error: storage is full, photos stay on the device"]
-    C -- no --> D{"Newest buffer Volume has room for this file within 256 MB?"}
+    C -- no --> D{"Newest buffer Volume has room for this file within 256 MB, counting earlier files of the batch?"}
     D -- yes --> F["Reuse that Volume folder"]
     D -- no --> E["Master creates a new Volume folder in the album folder and shares it with the buffer as editor"]
     E --> F

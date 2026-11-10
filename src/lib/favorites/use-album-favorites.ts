@@ -5,6 +5,7 @@ import { setFavoriteFn } from './functions'
 import { applyFavoriteToggle, isPhotoFavorited } from './logic'
 import type { FavoritablePhoto, FavoriteRef } from './logic'
 import { favoriteQueries } from './queries'
+import { errorMessage } from '@/lib/utils'
 
 export interface FavoritesControl {
   isFavorite: (photo: FavoritablePhoto) => boolean
@@ -38,9 +39,7 @@ export function useAlbumFavorites(
     },
     onError: (error, _vars, context) => {
       queryClient.setQueryData(options.queryKey, context?.previous)
-      toast.error(
-        error instanceof Error ? error.message : 'Could not update favorite'
-      )
+      toast.error(errorMessage(error, 'Could not update favorite'))
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: favoriteQueries.all })

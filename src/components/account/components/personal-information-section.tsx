@@ -15,6 +15,7 @@ import {
   type ProfileFieldKey,
 } from '@/lib/user/profile-fields'
 import type { UserProfile } from '@/lib/user/types'
+import { UserError } from '@/lib/user-error'
 
 type Drafts = Record<ProfileFieldKey, string>
 
@@ -77,7 +78,7 @@ export function PersonalInformationSection({ user }: { user: UserProfile }) {
   const relink = () =>
     runRelink(async () => {
       const { url } = await getTelegramUpdateLinkUrlFn()
-      if (!url) throw new Error('No Telegram link available')
+      if (!url) throw new UserError('No Telegram link available')
       window.open(url, '_blank')
       toast.success('Open Telegram and tap Start to relink your username')
     }, 'Could not open Telegram')

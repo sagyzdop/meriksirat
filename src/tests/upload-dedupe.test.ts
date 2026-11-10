@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  duplicateMessage,
-  isDuplicateRejection,
-  planDuplicateCheck,
-  planEnqueue,
-} from '@/lib/albums/upload-dedupe'
+import { planDuplicateCheck, planEnqueue } from '@/lib/albums/upload-dedupe'
 
 const job = (
   id: string,
@@ -125,18 +120,5 @@ describe('planDuplicateCheck', () => {
     expect(planDuplicateCheck(100, 'AAA', [listed(100, 'aaa')])).toEqual({
       kind: 'duplicate',
     })
-  })
-})
-
-describe('duplicate rejection', () => {
-  it('recognises the rejection the server raises for a duplicate', () => {
-    expect(isDuplicateRejection(new Error(duplicateMessage('IMG_1.jpg')))).toBe(
-      true
-    )
-  })
-
-  it('does not mistake other failures for a duplicate', () => {
-    expect(isDuplicateRejection(new Error('Network down'))).toBe(false)
-    expect(isDuplicateRejection('already exists in this album')).toBe(false)
   })
 })

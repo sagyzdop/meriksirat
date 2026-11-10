@@ -5,6 +5,7 @@ import { db } from '@/db'
 import { user } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import type { AdminUser } from './types'
+import { UserError } from '@/lib/user-error'
 
 /**
  * Centralized admin permission checking function
@@ -19,7 +20,7 @@ export async function checkAdminPermission(
 
   if (!session?.user) {
     console.warn('Unauthorized admin access attempt: No session')
-    throw new Error('Unauthorized: No session')
+    throw new UserError('Unauthorized: No session')
   }
 
   const database = db(env.meriksirat_d1 as D1Database)
@@ -45,7 +46,7 @@ export async function checkAdminPermission(
     console.warn(
       `Unauthorized admin access attempt: User ${session.user.id} not found in database`
     )
-    throw new Error('Unauthorized: User not found')
+    throw new UserError('Unauthorized: User not found')
   }
 
   const hasPermission = requiredRoles.includes(
@@ -57,7 +58,7 @@ export async function checkAdminPermission(
     console.warn(
       `Unauthorized admin access attempt by user ${userData.id} (${userData.email}) with role ${userData.role}. Required roles: ${requiredRoles.join(', ')}`
     )
-    throw new Error('Insufficient permissions')
+    throw new UserError('Insufficient permissions')
   }
 
   return userData

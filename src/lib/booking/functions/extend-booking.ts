@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { ExtendBookingSchema } from '../types'
 import { formatBookingDetailsPlain } from '../details'
 import { formatUserDisplayName } from '@/lib/utils'
+import { UserError } from '@/lib/user-error'
 
 const EXTEND_BOOKING_MINUTES = 30
 
@@ -60,7 +61,7 @@ export const extendBookingFn = createServerFn({ method: 'POST' })
 
     const parent = parentRows[0]
     if (!parent) {
-      throw new Error('Booking not found')
+      throw new UserError('Booking not found')
     }
 
     if (parent.userId !== session.user.id) {
@@ -69,7 +70,7 @@ export const extendBookingFn = createServerFn({ method: 'POST' })
     }
 
     if (parent.status === 'cancelled' || parent.status === 'returned') {
-      throw new Error(
+      throw new UserError(
         `A booking with status "${parent.status}" cannot be extended`
       )
     }
@@ -90,9 +91,9 @@ export const extendBookingFn = createServerFn({ method: 'POST' })
     )
     if (!extensionCheck.allowed) {
       if (extensionCheck.reason === 'midnight') {
-        throw new Error('This booking cannot be extended past midnight')
+        throw new UserError('This booking cannot be extended past midnight')
       }
-      throw new Error(
+      throw new UserError(
         'This booking cannot be extended beyond the club operating hours'
       )
     }
@@ -115,7 +116,7 @@ export const extendBookingFn = createServerFn({ method: 'POST' })
     )
 
     if (activeItems.length === 0) {
-      throw new Error('Booking has no items that can be extended')
+      throw new UserError('Booking has no items that can be extended')
     }
 
     const now = new Date()
@@ -150,7 +151,7 @@ export const extendBookingFn = createServerFn({ method: 'POST' })
         .filter((item): item is { equipmentName: string } => Boolean(item))
 
       if (conflicts.length > 0) {
-        throw new Error(
+        throw new UserError(
           `Cannot extend the booking: ${conflicts
             .map((c) => c.equipmentName)
             .join(', ')} is not available for the extra 30 minutes`

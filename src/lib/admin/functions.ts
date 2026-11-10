@@ -5,6 +5,7 @@ import {
   DeleteCategorySchema,
   UpdateCategorySortOrderSchema,
 } from './types'
+import { UserError } from '@/lib/user-error'
 
 export const createCategoryFn = createServerFn({ method: 'POST' })
   .validator(CreateCategorySchema)
@@ -22,7 +23,7 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
       .get()
 
     if (existingCategory) {
-      throw new Error('Category name already exists')
+      throw new UserError('Category name already exists')
     }
 
     const result = await database
@@ -53,7 +54,7 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!existingCategory) {
-      throw new Error('Category not found')
+      throw new UserError('Category not found')
     }
 
     if (data.name) {
@@ -64,7 +65,7 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
         .get()
 
       if (nameConflict && nameConflict.id !== data.categoryId) {
-        throw new Error('Category name already exists')
+        throw new UserError('Category name already exists')
       }
     }
 
@@ -96,7 +97,7 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!categoryToDelete) {
-      throw new Error('Category not found')
+      throw new UserError('Category not found')
     }
 
     let uncategorizedCategory = await database

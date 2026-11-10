@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { UserError } from '@/lib/user-error'
 
 const clubCodeSchema = z.object({
   code: z.string().min(1, 'Enter the club code').max(64),
@@ -51,7 +52,7 @@ export const updateUserOnboardingFn = createServerFn({ method: 'POST' })
     const { loadAccessRules } = await import('@/lib/access/server')
     const rules = await loadAccessRules(database, session.user.id)
     if (!rules.canBook) {
-      throw new Error('Club membership is required')
+      throw new UserError('Club membership is required')
     }
 
     const { saveGraduationDate } = await import('@/lib/pool/stop-server')
@@ -86,7 +87,7 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
     const { loadAccessRules } = await import('@/lib/access/server')
     const rules = await loadAccessRules(database, session.user.id)
     if (!rules.canBook) {
-      throw new Error('Club membership is required')
+      throw new UserError('Club membership is required')
     }
 
     if (!data.skipTelegram) {
@@ -97,7 +98,7 @@ export const completeTelegramOnboardingFn = createServerFn({ method: 'POST' })
         .get()
 
       if (!userData?.telegramChatId) {
-        throw new Error('Telegram not linked')
+        throw new UserError('Telegram not linked')
       }
     }
 

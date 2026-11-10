@@ -18,6 +18,7 @@ import {
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type * as schema from '@/db/schema'
 import { buildPageInfo } from '@/lib/pagination'
+import { UserError } from '@/lib/user-error'
 
 type UserIdentity = {
   firstName?: string | null
@@ -101,21 +102,21 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       !Number.isFinite(endMs) ||
       endMs <= startMs
     ) {
-      throw new Error('Invalid booking times')
+      throw new UserError('Invalid booking times')
     }
 
     if (startMs < Date.now() + MIN_BOOKING_ADVANCE_MS) {
-      throw new Error(
+      throw new UserError(
         'Bookings must start at least 1 hour from now. Please select a later time slot.'
       )
     }
 
     if (endMs - startMs > MAX_BOOKING_DURATION_MS) {
-      throw new Error('Bookings cannot be longer than 48 hours.')
+      throw new UserError('Bookings cannot be longer than 48 hours.')
     }
 
     if (startMs > Date.now() + MAX_BOOKING_HORIZON_MS) {
-      throw new Error('Bookings must start within 60 days.')
+      throw new UserError('Bookings must start within 60 days.')
     }
 
     const { session, database, headers } =
@@ -138,7 +139,9 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       session.user.id
     )
     if (!bookingRateLimit.allowed) {
-      throw new Error('Too many booking requests. Please try again shortly.')
+      throw new UserError(
+        'Too many booking requests. Please try again shortly.'
+      )
     }
 
     const userId = session.user.id
@@ -347,19 +350,19 @@ export const cancelBookingFn = createServerFn({ method: 'POST' })
     const bookingData = bookingItemData[0]
 
     if (!bookingData) {
-      throw new Error('Booking not found')
+      throw new UserError('Booking not found')
     }
 
     if (bookingData.userId !== userId) {
-      throw new Error('Unauthorized')
+      throw new UserError('Unauthorized')
     }
 
     if (bookingData.status === 'cancelled') {
-      throw new Error('Booking is already cancelled')
+      throw new UserError('Booking is already cancelled')
     }
 
     if (bookingData.status !== 'booked') {
-      throw new Error(
+      throw new UserError(
         'Only upcoming bookings can be cancelled. This booking has already started and must be returned through the Telegram bot.'
       )
     }
@@ -456,15 +459,15 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
     const bookingData = bookingItemData[0]
 
     if (!bookingData) {
-      throw new Error('Booking not found')
+      throw new UserError('Booking not found')
     }
 
     if (bookingData.userId !== userId) {
-      throw new Error('Unauthorized')
+      throw new UserError('Unauthorized')
     }
 
     if (bookingData.status === 'cancelled') {
-      throw new Error('Cannot update a cancelled booking')
+      throw new UserError('Cannot update a cancelled booking')
     }
 
     const newStartTime = data.startTime || bookingData.startTime.toISOString()
@@ -493,7 +496,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
         new Date(newStartTime).getTime() <
         Date.now() + MIN_BOOKING_ADVANCE_MS
       ) {
-        throw new Error(
+        throw new UserError(
           'Bookings must start at least 1 hour from now. Please select a later time slot.'
         )
       }

@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { updateCategoryFn } from '@/lib/admin'
 import { toast } from 'sonner'
 import { CategoryWithCount } from '..'
+import { errorMessage } from '@/lib/utils'
 
 interface EditCategoryDialogProps {
   open: boolean
@@ -78,7 +79,7 @@ export function EditCategoryDialog({
           toast.error('Category not found')
           onClose()
         } else {
-          toast.error(error.message)
+          toast.error(errorMessage(error, 'Failed to update category'))
         }
       } else {
         toast.error('Failed to update category')

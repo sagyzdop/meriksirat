@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRouter, useSearch } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { addBookingItemsFn } from '@/lib/booking'
+import { errorMessage } from '@/lib/utils'
 
 /**
  * useAddBookingItems consumes an `equipmentIds` search param (set when the
@@ -54,11 +55,9 @@ export function useAddBookingItems(bookingId: number) {
         clearSearch()
       } catch (error) {
         if (cancelled) return
-        if (error instanceof Error && error.message) {
-          toast.error(error.message)
-        } else {
-          toast.error('Failed to add equipment to this booking')
-        }
+        toast.error(
+          errorMessage(error, 'Failed to add equipment to this booking')
+        )
         clearSearch()
       } finally {
         processing.current = false

@@ -12,8 +12,9 @@ import { logBookingActivityById } from '@/lib/telegram/logging'
 import { recomputeBookingStatus } from '@/lib/booking/status'
 import { ownsBooking } from '@/lib/booking/ownership'
 import { START_WINDOW_GRACE_MS } from '@/lib/booking/operating-hours'
+import { UserError } from '@/lib/user-error'
 
-export class BookingStartError extends Error {}
+export class BookingStartError extends UserError {}
 
 /**
  * Shared "start booking" logic used by both the web "Start pickup" flow and the

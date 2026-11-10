@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { BufferState } from './grant-rules'
+import { UserError } from '@/lib/user-error'
 
 export interface BufferAccountView {
   email: string
@@ -71,7 +72,7 @@ export const startBufferConnectFn = createServerFn({ method: 'POST' }).handler(
     const { admin, database } = await adminContext(['admin'])
 
     if (!process.env.BUFFER_ENCRYPTION_KEY?.trim()) {
-      throw new Error(
+      throw new UserError(
         'BUFFER_ENCRYPTION_KEY is not set. Add it as a Worker secret first.'
       )
     }

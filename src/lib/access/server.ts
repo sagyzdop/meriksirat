@@ -3,6 +3,7 @@ import { flamekeeper, settings, user } from '@/db/schema'
 import type { db as createDb } from '@/db'
 import { generateClubCode } from './club-code'
 import { getAccessRules, type AccessRules } from './access-rules'
+import { UserError } from '@/lib/user-error'
 
 type Database = ReturnType<typeof createDb>
 
@@ -43,7 +44,7 @@ export async function loadAccessRules(
     .where(eq(user.id, userId))
     .get()
 
-  if (!row) throw new Error('User not found')
+  if (!row) throw new UserError('User not found')
 
   const fk = await database
     .select({ state: flamekeeper.state })
@@ -61,5 +62,5 @@ export async function assertAccess(
   message: string
 ): Promise<void> {
   const rules = await loadAccessRules(database, userId)
-  if (!rules[rule]) throw new Error(message)
+  if (!rules[rule]) throw new UserError(message)
 }

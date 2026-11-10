@@ -1,13 +1,10 @@
 import { useSyncExternalStore } from 'react'
-import { confirmPhotoUploadFn, createUploadSessionFn } from './functions'
+import { confirmPhotoUploadsFn, createUploadSessionsFn } from './functions'
 import { BUFFER_FULL_MESSAGE } from '@/lib/buffer/messages'
 import { toast } from 'sonner'
-import {
-  NEEDS_HASH_MESSAGE,
-  isDuplicateRejection,
-  planEnqueue,
-} from './upload-dedupe'
+import { planEnqueue } from './upload-dedupe'
 import { md5OfFile } from './file-md5'
+import { UPLOAD_BATCH_MAX } from './types'
 import {
   deleteUploadFiles,
   getUploadFiles,
@@ -15,6 +12,7 @@ import {
   saveJobs,
   saveUploadFiles,
 } from './upload-storage'
+import { UserError, userMessage } from '@/lib/user-error'
 
 export type UploadStatus =
   'queued' | 'uploading' | 'done' | 'duplicate' | 'error' | 'cancelled'
@@ -72,10 +70,9 @@ class TransientUploadError extends Error {
   }
 }
 
-class QuotaExceededUploadError extends Error {
+class QuotaExceededUploadError extends UserError {
   constructor() {
     super(BUFFER_FULL_MESSAGE)
-    this.name = 'QuotaExceededUploadError'
   }
 }
 
@@ -89,12 +86,28 @@ function retryDelay(attempt: number): number {
 }
 
 /**
+ * How long an uploaded file may wait for others to share its confirm request.
+ * A file still waiting when the page reloads is uploaded again, so keep short.
+ */
+const CONFIRM_WAIT_MS = 4000
+
+interface PendingConfirm {
+  job: UploadJob
+  fileId: string
+  attempt: number
+  since: number
+}
+
+/**
  * Global upload manager (module singleton).
  *
  * State lives outside React so uploads keep running when the user navigates
  * away from the album page. Components subscribe via `useUploads()`.
  * Each file is uploaded directly to Google Drive (mint a resumable session on
  * the server, then PUT the bytes in the browser via XHR for progress events).
+ * Sessions are minted and uploads confirmed in batches of up to
+ * UPLOAD_BATCH_MAX files, so each photo costs the Worker a fraction of a
+ * request instead of two or three.
  *
  * Jobs and their `File` payloads are persisted (localStorage + IndexedDB), so
  * a page refresh restores in-flight uploads and resumes them instead of
@@ -105,6 +118,13 @@ class UploadManager {
   private listeners = new Set<() => void>()
   private filesById = new Map<string, File>()
   private xhrsById = new Map<string, XMLHttpRequest>()
+  private sessionsById = new Map<string, string>()
+  private md5ById = new Map<string, string>()
+  private hashing = new Set<string>()
+  private opening = false
+  private confirms: PendingConfirm[] = []
+  private confirming = false
+  private confirmTimer: ReturnType<typeof setTimeout> | null = null
   private running = 0
   private readonly maxConcurrent = 2
   private readonly maxAttempts = 5
@@ -258,6 +278,8 @@ class UploadManager {
   cancel(id: string): void {
     this.xhrsById.get(id)?.abort()
     this.filesById.delete(id)
+    this.sessionsById.delete(id)
+    this.md5ById.delete(id)
     this.patch(id, { status: 'cancelled', finishedAt: Date.now() })
     void deleteUploadFiles([id])
     this.pump()
@@ -326,116 +348,196 @@ class UploadManager {
     void deleteUploadFiles([...expiredIds])
   }
 
+  private isActive(id: string): boolean {
+    const status = this.snapshot.find((job) => job.id === id)?.status
+    return status === 'queued' || status === 'uploading'
+  }
+
   private pump(): void {
     const now = Date.now()
+    const ready = (job: UploadJob) =>
+      job.status === 'queued' &&
+      (job.nextAttemptAt === undefined || job.nextAttemptAt <= now) &&
+      !this.hashing.has(job.id)
+
     while (this.running < this.maxConcurrent) {
       const next = this.snapshot.find(
-        (job) =>
-          job.status === 'queued' &&
-          (job.nextAttemptAt === undefined || job.nextAttemptAt <= now)
+        (job) => ready(job) && this.sessionsById.has(job.id)
       )
       if (!next) break
       this.running++
       void this.run(next)
     }
+
+    // Mint the next batch of sessions while the current uploads run, so a
+    // free slot never waits on the Worker.
+    const withSession = this.snapshot.filter(
+      (job) => ready(job) && this.sessionsById.has(job.id)
+    ).length
+    if (!this.opening && withSession < this.maxConcurrent) {
+      const first = this.snapshot.find(
+        (job) => ready(job) && !this.sessionsById.has(job.id)
+      )
+      if (first) {
+        void this.openSessions(
+          this.snapshot
+            .filter(
+              (job) =>
+                job.albumId === first.albumId &&
+                ready(job) &&
+                !this.sessionsById.has(job.id)
+            )
+            .slice(0, UPLOAD_BATCH_MAX)
+        )
+      }
+    }
+
+    this.flushConfirms()
+  }
+
+  private async openSessions(batch: UploadJob[]): Promise<void> {
+    this.opening = true
+    try {
+      const results = await createUploadSessionsFn({
+        data: {
+          albumId: batch[0].albumId,
+          files: batch.map((job) => ({
+            fileName: job.name,
+            mimeType: job.mimeType,
+            size: job.size,
+            md5: this.md5ById.get(job.id),
+          })),
+        },
+      })
+      const toHash: UploadJob[] = []
+      batch.forEach((job, i) => {
+        if (!this.isActive(job.id)) return
+        const result = results[i]
+        const attempt = (job.attempts ?? 0) + 1
+        switch (result.kind) {
+          case 'session':
+            this.sessionsById.set(job.id, result.uploadUrl)
+            break
+          case 'needs-hash':
+            toHash.push(job)
+            break
+          case 'duplicate':
+            this.markDuplicate(job, attempt)
+            break
+          case 'failed':
+            this.fail(job, new UserError(result.message), attempt)
+            break
+        }
+      })
+      if (toHash.length > 0) void this.hashFiles(toHash)
+    } catch (error) {
+      for (const job of batch) {
+        if (this.isActive(job.id)) {
+          this.fail(job, error, (job.attempts ?? 0) + 1)
+        }
+      }
+    } finally {
+      this.opening = false
+      this.pump()
+    }
+  }
+
+  private async hashFiles(jobs: UploadJob[]): Promise<void> {
+    jobs.forEach((job) => this.hashing.add(job.id))
+    for (const job of jobs) {
+      try {
+        const file = this.filesById.get(job.id)
+        if (!file) throw new UserError('Upload file is missing')
+        this.md5ById.set(job.id, await md5OfFile(file))
+      } catch (error) {
+        this.fail(job, error, (job.attempts ?? 0) + 1)
+      } finally {
+        this.hashing.delete(job.id)
+      }
+    }
+    this.pump()
   }
 
   private async run(job: UploadJob): Promise<void> {
     const attempt = (job.attempts ?? 0) + 1
+    const uploadUrl = this.sessionsById.get(job.id)!
+    this.sessionsById.delete(job.id)
     this.patch(job.id, { status: 'uploading', progress: 0 })
     try {
-      const session = {
-        albumId: job.albumId,
-        fileName: job.name,
-        mimeType: job.mimeType,
-        size: job.size,
-      }
-      const { uploadUrl } = await this.openSession(job.id, session)
-
       const fileId = await this.putFile(job.id, uploadUrl)
-      if (fileId) await this.confirmUpload(job.albumId, fileId)
-      this.patch(job.id, {
-        status: 'done',
-        progress: 100,
-        attempts: attempt,
-        finishedAt: Date.now(),
-      })
-      this.filesById.delete(job.id)
-      void deleteUploadFiles([job.id])
-    } catch (error) {
-      const current = this.snapshot.find((j) => j.id === job.id)
-      if (current?.status !== 'cancelled') {
-        if (isDuplicateRejection(error)) {
-          // The server refused to start the upload, so nothing was sent.
-          this.patch(job.id, {
-            status: 'duplicate',
-            progress: 0,
-            attempts: attempt,
-            error: undefined,
-            finishedAt: Date.now(),
-          })
-          this.filesById.delete(job.id)
-          void deleteUploadFiles([job.id])
-          toast.warning(`"${job.name}" is already in this album, skipped`)
-        } else if (isTransientError(error) && attempt < this.maxAttempts) {
-          // Transient failure (network error, timeout, 5xx, 429): back off
-          // and re-queue automatically. `nextAttemptAt` is persisted so a
-          // page refresh doesn't shortcut the wait.
-          const delay = retryDelay(attempt)
-          this.patch(job.id, {
-            status: 'queued',
-            attempts: attempt,
-            nextAttemptAt: Date.now() + delay,
-            error: undefined,
-          })
-          setTimeout(() => this.pump(), delay)
-        } else {
-          this.patch(job.id, {
-            status: 'error',
-            attempts: attempt,
-            finishedAt: Date.now(),
-            error:
-              error instanceof Error
-                ? isTransientError(error)
-                  ? `Upload failed after ${attempt} attempts — retry manually`
-                  : error.message
-                : 'Upload failed',
-          })
-        }
+      if (fileId) {
+        this.confirms.push({ job, fileId, attempt, since: Date.now() })
+      } else {
+        this.finish(job, attempt)
       }
+    } catch (error) {
+      this.fail(job, error, attempt)
     } finally {
       this.running--
       this.pump()
     }
   }
 
-  private async openSession(
-    jobId: string,
-    session: {
-      albumId: string
-      fileName: string
-      mimeType: string
-      size: number
+  /**
+   * Send the uploaded files of one album for confirmation once a batch is
+   * full, nothing else is uploading, or the oldest has waited CONFIRM_WAIT_MS.
+   */
+  private flushConfirms(): void {
+    if (this.confirming || this.confirms.length === 0) return
+    const albumId = this.confirms[0].job.albumId
+    const batch = this.confirms
+      .filter((item) => item.job.albumId === albumId)
+      .slice(0, UPLOAD_BATCH_MAX)
+    const waited = Date.now() - this.confirms[0].since
+    if (
+      batch.length < UPLOAD_BATCH_MAX &&
+      this.running > 0 &&
+      waited < CONFIRM_WAIT_MS
+    ) {
+      this.confirmTimer ??= setTimeout(() => {
+        this.confirmTimer = null
+        this.flushConfirms()
+      }, CONFIRM_WAIT_MS - waited)
+      return
     }
-  ) {
+    if (this.confirmTimer) {
+      clearTimeout(this.confirmTimer)
+      this.confirmTimer = null
+    }
+    this.confirms = this.confirms.filter((item) => !batch.includes(item))
+    void this.sendConfirms(albumId, batch)
+  }
+
+  private async sendConfirms(
+    albumId: string,
+    batch: PendingConfirm[]
+  ): Promise<void> {
+    this.confirming = true
     try {
-      return await createUploadSessionFn({ data: session })
+      const results = await this.confirmUploads(
+        albumId,
+        batch.map((item) => item.fileId)
+      )
+      batch.forEach((item, i) => {
+        const result = results[i]
+        if (result.kind === 'confirmed') {
+          this.finish(item.job, item.attempt)
+        } else {
+          this.fail(item.job, new UserError(result.message), item.attempt)
+        }
+      })
     } catch (error) {
-      if (!(error instanceof Error) || error.message !== NEEDS_HASH_MESSAGE) {
-        throw error
-      }
-      const file = this.filesById.get(jobId)
-      if (!file) throw new Error('Upload file is missing')
-      const md5 = await md5OfFile(file)
-      return createUploadSessionFn({ data: { ...session, md5 } })
+      for (const item of batch) this.fail(item.job, error, item.attempt)
+    } finally {
+      this.confirming = false
+      this.pump()
     }
   }
 
-  private async confirmUpload(albumId: string, fileId: string): Promise<void> {
+  private async confirmUploads(albumId: string, fileIds: string[]) {
     for (let attempt = 1; ; attempt++) {
       try {
-        await confirmPhotoUploadFn({ data: { albumId, fileId } })
-        return
+        return await confirmPhotoUploadsFn({ data: { albumId, fileIds } })
       } catch (error) {
         if (attempt >= 3) throw new TransientUploadError(String(error))
         await new Promise((r) => setTimeout(r, 500 * attempt))
@@ -443,11 +545,66 @@ class UploadManager {
     }
   }
 
+  private finish(job: UploadJob, attempt: number): void {
+    this.filesById.delete(job.id)
+    this.md5ById.delete(job.id)
+    void deleteUploadFiles([job.id])
+    if (!this.isActive(job.id)) return
+    this.patch(job.id, {
+      status: 'done',
+      progress: 100,
+      attempts: attempt,
+      finishedAt: Date.now(),
+    })
+  }
+
+  private markDuplicate(job: UploadJob, attempt: number): void {
+    // The server refused to start the upload, so nothing was sent.
+    this.patch(job.id, {
+      status: 'duplicate',
+      progress: 0,
+      attempts: attempt,
+      error: undefined,
+      finishedAt: Date.now(),
+    })
+    this.filesById.delete(job.id)
+    this.md5ById.delete(job.id)
+    void deleteUploadFiles([job.id])
+    toast.warning(`"${job.name}" is already in this album, skipped`)
+  }
+
+  private fail(job: UploadJob, error: unknown, attempt: number): void {
+    this.sessionsById.delete(job.id)
+    if (!this.isActive(job.id)) return
+    if (isTransientError(error) && attempt < this.maxAttempts) {
+      // Transient failure (network error, timeout, 5xx, 429): back off
+      // and re-queue automatically. `nextAttemptAt` is persisted so a
+      // page refresh doesn't shortcut the wait.
+      const delay = retryDelay(attempt)
+      this.patch(job.id, {
+        status: 'queued',
+        attempts: attempt,
+        nextAttemptAt: Date.now() + delay,
+        error: undefined,
+      })
+      setTimeout(() => this.pump(), delay)
+    } else {
+      this.patch(job.id, {
+        status: 'error',
+        attempts: attempt,
+        finishedAt: Date.now(),
+        error: isTransientError(error)
+          ? `Upload failed after ${attempt} attempts — retry manually`
+          : userMessage(error, 'Upload failed'),
+      })
+    }
+  }
+
   private putFile(jobId: string, uploadUrl: string): Promise<string | null> {
     return new Promise((resolve, reject) => {
       const file = this.filesById.get(jobId)
       if (!file) {
-        reject(new Error('Upload file is missing'))
+        reject(new UserError('Upload file is missing'))
         return
       }
 
@@ -482,7 +639,7 @@ class UploadManager {
         ) {
           reject(new TransientUploadError(`Upload failed (${xhr.status})`))
         } else {
-          reject(new Error(`Upload failed (${xhr.status})`))
+          reject(new UserError(`Upload failed (${xhr.status})`))
         }
       }
       xhr.onerror = () => {
@@ -495,7 +652,7 @@ class UploadManager {
       }
       xhr.onabort = () => {
         this.xhrsById.delete(jobId)
-        reject(new Error('Upload cancelled'))
+        reject(new UserError('Upload cancelled'))
       }
 
       this.xhrsById.set(jobId, xhr)

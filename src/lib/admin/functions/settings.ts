@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { UserError } from '@/lib/user-error'
 
 /**
  * Schema for updating system settings
@@ -71,7 +72,7 @@ export const updateSettingsFn = createServerFn({ method: 'POST' })
       data.operatingHoursEnd !== undefined &&
       data.operatingHoursStart >= data.operatingHoursEnd
     ) {
-      throw new Error('Operating hours start must be before end time')
+      throw new UserError('Operating hours start must be before end time')
     }
 
     // Check if settings exist
@@ -119,7 +120,7 @@ export const updateSettingsFn = createServerFn({ method: 'POST' })
       const limitBytes = Math.round(gbToBytes(data.bufferLimitBytes))
       const usage = await getBufferUsage(10 * 60 * 1000)
       if (usage && limitBytes < usage.usedBytes) {
-        throw new Error(
+        throw new UserError(
           'The buffer ceiling cannot be lower than the space already used'
         )
       }

@@ -1,5 +1,6 @@
 import SparkMD5 from 'spark-md5'
 import type { FileIdentity, OffloadMint } from './storage-plan'
+import { UserError } from '@/lib/user-error'
 
 export interface OffloadRun {
   albumId: string
@@ -20,7 +21,7 @@ const MAX_ATTEMPTS = 5
 const MINT_GROUP = 20
 const DOWNLOAD = 'https://www.googleapis.com/drive/v3/files'
 
-class TransientError extends Error {}
+class TransientError extends UserError {}
 
 class ExpiredTokenError extends Error {}
 
@@ -80,7 +81,7 @@ async function download(
       if (isTransient(response.status)) {
         throw new TransientError(`Download failed (${response.status})`)
       }
-      throw new Error(`Could not read ${file.name} (${response.status})`)
+      throw new UserError(`Could not read ${file.name} (${response.status})`)
     }
     const buffer = await response.arrayBuffer()
     if (file.md5 && SparkMD5.ArrayBuffer.hash(buffer) !== file.md5) {
@@ -124,7 +125,7 @@ async function upload(
       body: new Blob([]),
       signal,
     })
-    if (!response.ok) throw new Error(`Could not upload ${file.name}`)
+    if (!response.ok) throw new UserError(`Could not upload ${file.name}`)
     return
   }
   let offset = 0
@@ -155,7 +156,7 @@ async function upload(
       if (isTransient(response.status)) {
         throw new TransientError(`Upload failed (${response.status})`)
       }
-      throw new Error(`Could not upload ${file.name} (${response.status})`)
+      throw new UserError(`Could not upload ${file.name} (${response.status})`)
     }, signal)
     if (result === 'done') {
       onBytes(size)
@@ -205,7 +206,7 @@ export async function runOffload(
       continue
     }
     const uploadUrl = urls.get(file.id)
-    if (!uploadUrl) throw new Error(`No upload address for ${file.name}`)
+    if (!uploadUrl) throw new UserError(`No upload address for ${file.name}`)
 
     options.onFile(albumId, index, 'copying')
     let data: ArrayBuffer
@@ -218,7 +219,9 @@ export async function runOffload(
         data = await download(file, token, signal)
       } catch (again) {
         if (again instanceof ExpiredTokenError) {
-          throw new Error('The buffer refused the download; try again later')
+          throw new UserError(
+            'The buffer refused the download; try again later'
+          )
         }
         throw again
       }

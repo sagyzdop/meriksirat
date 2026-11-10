@@ -8,6 +8,7 @@ import { Page } from '@/components/bookings/bookings_/$bookingId.edit'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import { z } from 'zod'
 import { numberArrayParam } from '@/lib/search-params'
+import { UserError } from '@/lib/user-error'
 
 const EditBookingSearchSchema = z.object({
   equipmentIds: numberArrayParam(),
@@ -21,7 +22,7 @@ export const Route = createFileRoute(
   loader: async ({ params, context }) => {
     const bookingId = params.bookingId
     if (!bookingId) {
-      throw new Error('Booking ID is required')
+      throw new UserError('Booking ID is required')
     }
 
     // Prefetch operating hours so the time slot picker never shows
@@ -38,7 +39,7 @@ export const Route = createFileRoute(
       })
 
       if (!booking) {
-        throw new Error('Booking not found')
+        throw new UserError('Booking not found')
       }
 
       await settingsPromise
@@ -50,7 +51,7 @@ export const Route = createFileRoute(
       }
     } catch (error) {
       console.error('Failed to load booking:', error)
-      throw new Error('Failed to load booking data')
+      throw new UserError('Failed to load booking data')
     }
   },
 })

@@ -23,6 +23,7 @@ import { cancelBookingItemFn } from '@/lib/booking'
 import type { BookingItemWithEquipment } from '@/lib/booking/types'
 import type { BookingCollapsibleRowData } from './types'
 import { formatDate } from '@/lib/format'
+import { errorMessage } from '@/lib/utils'
 
 interface BookingCollapsibleContentProps {
   booking: BookingCollapsibleRowData
@@ -75,9 +76,7 @@ export function BookingCollapsibleContent({
       router.invalidate()
       setPendingCancelItem(null)
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to cancel item'
-      )
+      toast.error(errorMessage(error, 'Failed to cancel item'))
     } finally {
       setIsCancellingItem(false)
     }

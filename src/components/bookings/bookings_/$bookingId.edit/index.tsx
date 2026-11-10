@@ -36,6 +36,7 @@ import type {
   BookingWithItems,
   BookingItemWithEquipment,
 } from '@/lib/booking/types'
+import { errorMessage } from '@/lib/utils'
 
 interface PageProps {
   booking: BookingWithItems
@@ -120,11 +121,9 @@ export function Page({
       }, 1500)
     } catch (error) {
       console.error('Failed to update booking:', error)
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to update booking. Please try again.'
-      toast.error(errorMessage)
+      toast.error(
+        errorMessage(error, 'Failed to update booking. Please try again.')
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -145,11 +144,9 @@ export function Page({
       }, 1500)
     } catch (error) {
       console.error('Failed to cancel booking:', error)
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to cancel booking. Please try again.'
-      toast.error(errorMessage)
+      toast.error(
+        errorMessage(error, 'Failed to cancel booking. Please try again.')
+      )
     } finally {
       setIsCancelling(false)
     }

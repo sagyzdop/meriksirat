@@ -13,6 +13,7 @@ import { BookingWithItems } from '@/lib/booking/types'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { cancelBookingFn } from '@/lib/booking'
+import { errorMessage } from '@/lib/utils'
 
 interface CancelBookingDialogProps {
   booking: BookingWithItems | null
@@ -53,9 +54,7 @@ export function CancelBookingDialog({
       }
     } catch (error) {
       console.error('Error cancelling booking:', error)
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to cancel booking'
-      )
+      toast.error(errorMessage(error, 'Failed to cancel booking'))
     } finally {
       setIsLoading(false)
     }

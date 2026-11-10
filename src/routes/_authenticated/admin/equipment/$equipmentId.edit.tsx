@@ -2,6 +2,7 @@ import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { getAdminEquipmentByIdFn, getCategoriesFn } from '@/lib/equipment'
 import { Page } from '@/components/admin/equipment/$equipmentId.edit'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { UserError } from '@/lib/user-error'
 
 export const Route = createFileRoute(
   '/_authenticated/admin/equipment/$equipmentId/edit'
@@ -10,7 +11,7 @@ export const Route = createFileRoute(
   loader: async ({ params }) => {
     const equipmentId = parseInt(params.equipmentId)
     if (!equipmentId || isNaN(equipmentId)) {
-      throw new Error('Equipment ID is required')
+      throw new UserError('Equipment ID is required')
     }
 
     try {
@@ -21,7 +22,7 @@ export const Route = createFileRoute(
       ])
 
       if (!equipment) {
-        throw new Error('Equipment not found')
+        throw new UserError('Equipment not found')
       }
 
       return {
@@ -31,7 +32,7 @@ export const Route = createFileRoute(
       }
     } catch (error) {
       console.error('Failed to load equipment:', error)
-      throw new Error('Failed to load equipment data')
+      throw new UserError('Failed to load equipment data')
     }
   },
 })

@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { UserError } from '@/lib/user-error'
 
 export const Route = createFileRoute('/_authenticated/admin')({
   beforeLoad: ({ context }) => {
@@ -8,7 +9,7 @@ export const Route = createFileRoute('/_authenticated/admin')({
       console.warn(
         `Unauthorized admin access attempt by user ${user.id} with role ${user.role || 'null'}`
       )
-      throw new Error('Page not found')
+      throw new UserError('Page not found')
     }
 
     return { adminUser: user }

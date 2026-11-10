@@ -4,6 +4,7 @@ import { getAdminBookingByIdFn, getTelegramBotUsernameFn } from '@/lib/booking'
 import { z } from 'zod'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import { numberArrayParam } from '@/lib/search-params'
+import { UserError } from '@/lib/user-error'
 
 const BookingDetailSearchSchema = z.object({
   bookingId: z.coerce.number().optional(),
@@ -19,14 +20,14 @@ export const Route = createFileRoute(
     const bookingId = parseInt(params.bookingId || '0')
 
     if (!bookingId || Number.isNaN(bookingId)) {
-      throw new Error('Invalid booking ID')
+      throw new UserError('Invalid booking ID')
     }
 
     try {
       const booking = await getAdminBookingByIdFn({ data: { bookingId } })
 
       if (!booking) {
-        throw new Error('Booking not found')
+        throw new UserError('Booking not found')
       }
 
       return {

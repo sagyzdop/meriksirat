@@ -14,6 +14,7 @@ import { deleteCategoryFn } from '@/lib/admin'
 import { toast } from 'sonner'
 import { CategoryWithCount } from '..'
 import { AlertTriangle } from 'lucide-react'
+import { errorMessage } from '@/lib/utils'
 
 interface DeleteCategoryDialogProps {
   open: boolean
@@ -55,7 +56,7 @@ export function DeleteCategoryDialog({
           toast.error('Category not found')
           onClose()
         } else {
-          toast.error(error.message)
+          toast.error(errorMessage(error, 'Failed to delete category'))
         }
       } else {
         toast.error('Failed to delete category')

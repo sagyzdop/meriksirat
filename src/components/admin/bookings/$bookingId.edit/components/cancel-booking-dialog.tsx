@@ -12,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { errorMessage } from '@/lib/utils'
 
 interface CancelBookingDialogProps {
   open: boolean
@@ -45,9 +46,7 @@ export function CancelBookingDialog({
       onCancelled()
     } catch (error) {
       onError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to cancel booking. Please try again.'
+        errorMessage(error, 'Failed to cancel booking. Please try again.')
       )
       onOpenChange(false)
     } finally {

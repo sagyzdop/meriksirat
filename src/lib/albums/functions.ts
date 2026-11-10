@@ -5,9 +5,9 @@ import {
   AlbumIdSchema,
   AlbumListQuerySchema,
   ClaimEditAccessSchema,
-  ConfirmPhotoUploadSchema,
+  ConfirmPhotoUploadsSchema,
   CreateAlbumSchema,
-  CreateUploadSessionSchema,
+  CreateUploadSessionsSchema,
   DeletePhotoSchema,
   RemoveMemberSchema,
   SetCoverPhotoSchema,
@@ -19,14 +19,12 @@ import type {
   AlbumAuthorRow,
   AlbumDetail,
   AlbumListPage,
-  UploadSession,
+  UploadConfirmResult,
+  UploadSessionResult,
 } from './types'
 import { AdminAlbumSearchSchema } from '@/lib/search-params'
-import {
-  NEEDS_HASH_MESSAGE,
-  duplicateMessage,
-  planDuplicateCheck,
-} from './upload-dedupe'
+import { planDuplicateCheck } from './upload-dedupe'
+import { UserError } from '@/lib/user-error'
 
 type Database = ReturnType<(typeof import('@/db'))['db']>
 
@@ -38,7 +36,7 @@ async function loadAlbumOrNull(database: Database, albumId: string) {
 
 async function loadAlbum(database: Database, albumId: string) {
   const row = await loadAlbumOrNull(database, albumId)
-  if (!row || row.deletedAt) throw new Error('Album not found')
+  if (!row || row.deletedAt) throw new UserError('Album not found')
   return row
 }
 
@@ -97,9 +95,9 @@ export const createAlbumFn = createServerFn({ method: 'POST' })
 
     const headers = getRequestHeaders()
     const currentUser = await getSessionUser(headers)
-    if (!currentUser) throw new Error('Unauthorized')
+    if (!currentUser) throw new UserError('Unauthorized')
     if (currentUser.clearanceLevel < ALBUM_CREATE_MIN_CLEARANCE) {
-      throw new Error(
+      throw new UserError(
         `Album creation requires clearance level ${ALBUM_CREATE_MIN_CLEARANCE} or higher`
       )
     }
@@ -207,7 +205,7 @@ export const getPublicAlbumsFn = createServerFn({ method: 'GET' })
     // scripted client from hammering D1 reads.
     const limit = await rateLimit(headers, 'rl_public_albums')
     if (!limit.allowed) {
-      throw new Error(
+      throw new UserError(
         `Too many requests. Try again in ${limit.retryAfterSeconds} seconds.`
       )
     }
@@ -327,7 +325,7 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
       const { rateLimit } = await import('@/lib/ratelimit')
       const limit = await rateLimit(headers, 'rl_album_detail')
       if (!limit.allowed) {
-        throw new Error(
+        throw new UserError(
           `Too many requests. Try again in ${limit.retryAfterSeconds} seconds.`
         )
       }
@@ -363,7 +361,9 @@ export const refreshAlbumFn = createServerFn({ method: 'POST' })
       const { rateLimit } = await import('@/lib/ratelimit')
       const rl = await rateLimit(headers, 'rl_refresh_album', currentUser.id)
       if (!rl.allowed) {
-        throw new Error('Too many refresh requests. Please try again shortly.')
+        throw new UserError(
+          'Too many refresh requests. Please try again shortly.'
+        )
       }
     }
 
@@ -391,12 +391,12 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
 
     const isAdmin = currentUser?.role === 'admin'
     if (!currentUser || (!isAdmin && row.ownerUserId !== currentUser.id)) {
-      throw new Error('Only the album owner or an admin can accept this.')
+      throw new UserError('Only the album owner or an admin can accept this.')
     }
     const { volumeIdFromSourceKey } = await import('./listing')
     const volumeId = volumeIdFromSourceKey(data.volumeKey)
     if (!volumeId) {
-      throw new Error('This volume has no fewer-photos warning to accept.')
+      throw new UserError('This volume has no fewer-photos warning to accept.')
     }
 
     const listing = await loadAlbumListing(database, row, { force: true })
@@ -405,7 +405,7 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
       volumeKey: data.volumeKey,
       now: Date.now(),
     })
-    if (!plan.ok) throw new Error(plan.message)
+    if (!plan.ok) throw new UserError(plan.message)
 
     await database
       .update(volume)
@@ -436,7 +436,7 @@ export const deleteGoneAlbumFn = createServerFn({ method: 'POST' })
 
     const isAdmin = currentUser?.role === 'admin'
     if (!currentUser || !isAdmin) {
-      throw new Error('Only an admin can delete this album.')
+      throw new UserError('Only an admin can delete this album.')
     }
 
     const accessToken = await getGoogleAccessToken()
@@ -449,7 +449,7 @@ export const deleteGoneAlbumFn = createServerFn({ method: 'POST' })
       verdict = folderCheckVerdict({ error })
     }
     const decision = canDeleteGoneAlbum(verdict, { isAdmin })
-    if (!decision.ok) throw new Error(decision.message)
+    if (!decision.ok) throw new UserError(decision.message)
 
     await tombstoneGoneAlbum(database, row)
 
@@ -487,11 +487,11 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
         await renameDriveFile(accessToken, row.driveFolderId, data.title.trim())
       } catch (error) {
         if (error instanceof DriveNotFoundError) {
-          throw new Error(
+          throw new UserError(
             'The album folder was deleted from Google Drive, so it cannot be renamed.'
           )
         }
-        throw new Error('Failed to rename the Drive folder')
+        throw new UserError('Failed to rename the Drive folder')
       }
     }
 
@@ -518,7 +518,7 @@ export const updateAlbumFn = createServerFn({ method: 'POST' })
     if (data.eventDate !== undefined) {
       const eventDate = new Date(data.eventDate)
       if (!data.eventDate.trim() || Number.isNaN(eventDate.getTime())) {
-        throw new Error('Event date is required')
+        throw new UserError('Event date is required')
       }
       updates.eventDate = eventDate
     }
@@ -601,13 +601,13 @@ export const claimEditAccessFn = createServerFn({ method: 'POST' })
 
     const headers = getRequestHeaders()
     const currentUser = await getSessionUser(headers)
-    if (!currentUser) throw new Error('Unauthorized')
+    if (!currentUser) throw new UserError('Unauthorized')
 
     const database = db(env.meriksirat_d1 as D1Database)
     const row = await loadAlbum(database, data.albumId)
 
     if (row.editShareToken !== data.token) {
-      throw new Error('Invalid share link')
+      throw new UserError('Invalid share link')
     }
 
     if (row.ownerUserId !== currentUser.id) {
@@ -666,13 +666,14 @@ export const rotateEditTokenFn = createServerFn({ method: 'POST' })
     return { success: true, editShareToken }
   })
 
-export const createUploadSessionFn = createServerFn({ method: 'POST' })
-  .validator(CreateUploadSessionSchema)
-  .handler(async ({ data }): Promise<UploadSession> => {
+export const createUploadSessionsFn = createServerFn({ method: 'POST' })
+  .validator(CreateUploadSessionsSchema)
+  .handler(async ({ data }): Promise<UploadSessionResult[]> => {
     const { getGoogleAccessToken } =
       await import('@/lib/google/google-calendar-auth')
     const { getDriveFolderState } = await import('@/lib/google/google-drive')
-    const { startBufferUpload } = await import('@/lib/buffer/server')
+    const { startBufferUploads } = await import('@/lib/buffer/server')
+    const { listedFilesOfSizes } = await import('./listing-store')
 
     const { database, row, headers } = await albumContext(data.albumId, [
       'owner',
@@ -689,44 +690,63 @@ export const createUploadSessionFn = createServerFn({ method: 'POST' })
       row.driveFolderId
     )
     if (folderState === 'trashed') {
-      throw new Error(
+      throw new UserError(
         'The album folder is in the Google Drive bin, so uploads are paused.'
       )
     }
     if (folderState === 'missing') {
-      throw new Error(
+      throw new UserError(
         'The album folder was deleted from Google Drive, so uploads are paused.'
       )
     }
 
-    const { loadAlbumListing } = await import('./listing-server')
-    const listing = await loadAlbumListing(database, row)
-    const check = planDuplicateCheck(data.size, data.md5, listing.files)
-    if (check.kind === 'needs-hash') throw new Error(NEEDS_HASH_MESSAGE)
-    if (check.kind === 'duplicate') {
-      throw new Error(duplicateMessage(data.fileName))
-    }
+    const listed = await listedFilesOfSizes(database, row.id, [
+      ...new Set(data.files.map((file) => file.size)),
+    ])
+    const checks = data.files.map((file) =>
+      planDuplicateCheck(file.size, file.md5, listed)
+    )
+    const fresh = data.files.filter((_, i) => checks[i].kind === 'unique')
+    const started =
+      fresh.length > 0
+        ? await startBufferUploads(
+            database,
+            row,
+            fresh.map((file) => ({
+              name: file.fileName,
+              mimeType: file.mimeType,
+              bytes: file.size,
+            })),
+            headers.get('origin') ?? undefined
+          )
+        : []
 
-    return startBufferUpload(database, row, {
-      name: data.fileName,
-      mimeType: data.mimeType,
-      bytes: data.size,
-      origin: headers.get('origin') ?? undefined,
+    let next = 0
+    return checks.map((check): UploadSessionResult => {
+      if (check.kind !== 'unique') return { kind: check.kind }
+      const result = started[next++]
+      return 'uploadUrl' in result
+        ? { kind: 'session', uploadUrl: result.uploadUrl }
+        : { kind: 'failed', message: result.error }
     })
   })
 
-export const confirmPhotoUploadFn = createServerFn({ method: 'POST' })
-  .validator(ConfirmPhotoUploadSchema)
-  .handler(async ({ data }) => {
+export const confirmPhotoUploadsFn = createServerFn({ method: 'POST' })
+  .validator(ConfirmPhotoUploadsSchema)
+  .handler(async ({ data }): Promise<UploadConfirmResult[]> => {
     const { database, row } = await albumContext(data.albumId, [
       'owner',
       'editor',
       'manager',
     ])
 
-    const { confirmBufferUpload } = await import('@/lib/buffer/server')
-    const registered = await confirmBufferUpload(database, row, data.fileId)
-    return { registered }
+    const { confirmBufferUploads } = await import('@/lib/buffer/server')
+    const results = await confirmBufferUploads(database, row, data.fileIds)
+    return results.map((result) =>
+      'error' in result
+        ? { kind: 'failed', message: result.error }
+        : { kind: 'confirmed' }
+    )
   })
 
 export const deletePhotoFn = createServerFn({ method: 'POST' })
@@ -748,7 +768,7 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     // Only a file this album's own folders list can be deleted, and only with
     // the token of whoever the listing says owns it.
     const listed = await findAlbumFile(database, row, data.fileId)
-    if (!listed) throw new Error('Photo not found in this album')
+    if (!listed) throw new UserError('Photo not found in this album')
     const bytes = Number(listed.file.size ?? 0) || 0
 
     await withListingOwnerToken(database, listed.owner, (token) =>
@@ -823,7 +843,7 @@ export const setCoverPhotoFn = createServerFn({ method: 'POST' })
     ])
 
     if (!(await findAlbumFile(database, row, data.fileId))) {
-      throw new Error('Photo not found in this album')
+      throw new UserError('Photo not found in this album')
     }
 
     await database
@@ -856,7 +876,7 @@ export const removeMemberFn = createServerFn({ method: 'POST' })
     const isSelfRemoval =
       access === 'editor' && !!currentUser && data.userId === currentUser.id
     if (access !== 'owner' && access !== 'manager' && !isSelfRemoval) {
-      throw new Error('Insufficient permissions')
+      throw new UserError('Insufficient permissions')
     }
 
     const removedUser = await database

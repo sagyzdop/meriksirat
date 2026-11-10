@@ -4,6 +4,7 @@ import { SetAlbumHeartSchema, SetFavoriteSchema } from './types'
 import type { FavoriteRef } from './logic'
 import type { AlbumSummary } from '@/lib/albums/types'
 import type { FavoritePhoto } from './types'
+import { UserError } from '@/lib/user-error'
 
 async function sessionAndDb(headers: Headers) {
   const { getSessionUser } = await import('@/lib/albums/server')
@@ -17,13 +18,13 @@ async function sessionAndDb(headers: Headers) {
 
 async function requireFavoriter(headers: Headers) {
   const { database, sessionUser } = await sessionAndDb(headers)
-  if (!sessionUser) throw new Error('Sign in to favorite photos')
+  if (!sessionUser) throw new UserError('Sign in to favorite photos')
   const { loadAccessRules } = await import('@/lib/access/server')
   const rules = await loadAccessRules(database, sessionUser.id).catch(
     () => null
   )
-  if (!rules) throw new Error('Sign in to favorite photos')
-  if (!rules.canFavorite) throw new Error('You cannot favorite photos')
+  if (!rules) throw new UserError('Sign in to favorite photos')
+  if (!rules.canFavorite) throw new UserError('You cannot favorite photos')
   return { database, sessionUser }
 }
 
@@ -32,7 +33,7 @@ async function requireFavoriteWrite(headers: Headers) {
   const { rateLimit } = await import('@/lib/ratelimit')
   const limit = await rateLimit(headers, 'rl_favorites', context.sessionUser.id)
   if (!limit.allowed) {
-    throw new Error(
+    throw new UserError(
       `Too many favorites. Try again in ${limit.retryAfterSeconds} seconds.`
     )
   }
@@ -75,7 +76,7 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
       .from(album)
       .where(eq(album.id, data.albumId))
       .get()
-    if (!albumRow) throw new Error('Album not found')
+    if (!albumRow) throw new UserError('Album not found')
 
     if (data.favorite) {
       const { loadAlbumListing } = await import('@/lib/albums/listing-server')
@@ -84,7 +85,7 @@ export const setFavoriteFn = createServerFn({ method: 'POST' })
         listing.complete &&
         !listing.files.some((f) => f.id === data.driveFileId)
       ) {
-        throw new Error('Photo not found in this album')
+        throw new UserError('Photo not found in this album')
       }
     }
 
@@ -230,7 +231,7 @@ export const setAlbumHeartFn = createServerFn({ method: 'POST' })
       .from(album)
       .where(and(eq(album.id, data.albumId), isNull(album.deletedAt)))
       .get()
-    if (!albumRow) throw new Error('Album not found')
+    if (!albumRow) throw new UserError('Album not found')
 
     const isHearted = sql`EXISTS (SELECT 1 FROM ${albumFavorite} WHERE ${albumFavorite.userId} = ${sessionUser.id} AND ${albumFavorite.albumId} = ${albumRow.id})`
 

@@ -6,18 +6,6 @@ interface PlannedJob {
   albumId: string
 }
 
-export const NEEDS_HASH_MESSAGE = 'Duplicate check needs the file hash'
-
-export const duplicateMessage = (name: string) =>
-  `Photo "${name}" already exists in this album`
-
-export function isDuplicateRejection(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    error.message.includes('already exists in this album')
-  )
-}
-
 const fileKey = (name: string, size: number) => `${size}:${name}`
 
 export function planEnqueue(

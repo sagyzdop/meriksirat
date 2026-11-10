@@ -30,6 +30,7 @@ import type {
   BookingItemWithEquipment,
   BookingWithItems,
 } from '@/lib/booking/types'
+import { errorMessage } from '@/lib/utils'
 
 interface BookingDetailProps {
   booking: BookingWithItems
@@ -90,9 +91,7 @@ export function BookingDetail({
       router.invalidate()
       setShowStartDialog(false)
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to start booking'
-      )
+      toast.error(errorMessage(error, 'Failed to start booking'))
     } finally {
       setIsStarting(false)
     }
@@ -108,9 +107,7 @@ export function BookingDetail({
       router.invalidate()
       setShowCancelDialog(false)
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to cancel booking'
-      )
+      toast.error(errorMessage(error, 'Failed to cancel booking'))
     } finally {
       setIsCancelling(false)
     }

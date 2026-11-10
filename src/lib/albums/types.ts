@@ -62,9 +62,11 @@ export const DeletePhotoSchema = z.object({
   fileId: z.string(),
 })
 
-export const ConfirmPhotoUploadSchema = z.object({
+export const UPLOAD_BATCH_MAX = 10
+
+export const ConfirmPhotoUploadsSchema = z.object({
   albumId: z.string(),
-  fileId: z.string().min(1).max(200),
+  fileIds: z.array(z.string().min(1).max(200)).min(1).max(UPLOAD_BATCH_MAX),
 })
 
 export const AcceptFewerPhotosSchema = z.object({
@@ -82,19 +84,26 @@ export const RemoveMemberSchema = z.object({
   userId: z.string(),
 })
 
-export const CreateUploadSessionSchema = z.object({
+export const CreateUploadSessionsSchema = z.object({
   albumId: z.string(),
-  fileName: z.string().min(1).max(255),
-  mimeType: z.string().min(1).max(100),
-  size: z
-    .number()
-    .int()
-    .positive()
-    .max(5 * 1024 * 1024 * 1024),
-  md5: z
-    .string()
-    .regex(/^[0-9a-fA-F]{32}$/)
-    .optional(),
+  files: z
+    .array(
+      z.object({
+        fileName: z.string().min(1).max(255),
+        mimeType: z.string().min(1).max(100),
+        size: z
+          .number()
+          .int()
+          .positive()
+          .max(5 * 1024 * 1024 * 1024),
+        md5: z
+          .string()
+          .regex(/^[0-9a-fA-F]{32}$/)
+          .optional(),
+      })
+    )
+    .min(1)
+    .max(UPLOAD_BATCH_MAX),
 })
 
 export type AlbumAccessLevel = 'none' | 'owner' | 'editor' | 'manager'
@@ -229,6 +238,15 @@ export interface AlbumDetail extends AlbumSummary {
    */
   countWarning: CountWarning | null
 }
+
+export type UploadSessionResult =
+  | { kind: 'session'; uploadUrl: string }
+  | { kind: 'duplicate' }
+  | { kind: 'needs-hash' }
+  | { kind: 'failed'; message: string }
+
+export type UploadConfirmResult =
+  { kind: 'confirmed' } | { kind: 'failed'; message: string }
 
 export interface UploadSession {
   uploadUrl: string

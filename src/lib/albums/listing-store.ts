@@ -146,6 +146,24 @@ export async function isListedInBuffer(
 }
 
 /**
+ * The size and checksum of every stored file of the album whose size is one of
+ * `sizes`. D1 scans the stored listings, so the Worker never parses them.
+ */
+export async function listedFilesOfSizes(
+  database: Database,
+  albumId: string,
+  sizes: number[]
+): Promise<{ size: string | null; md5Checksum: string | null }[]> {
+  if (sizes.length === 0) return []
+  return database.all(
+    sql`SELECT json_extract(f.value, '$.size') AS size, json_extract(f.value, '$.md5Checksum') AS md5Checksum FROM ${albumListing}, json_each(${albumListing.files}) AS f WHERE ${albumListing.albumId} = ${albumId} AND CAST(json_extract(f.value, '$.size') AS INTEGER) IN (${sql.join(
+      sizes.map((size) => sql`${size}`),
+      sql`, `
+    )})`
+  )
+}
+
+/**
  * Drop an album's stored listings so the next view lists Drive again. Call
  * after a move, which gives every photo a new Drive file.
  */

@@ -11,6 +11,7 @@ import {
 import { formatUserDisplayName } from '@/lib/utils'
 import { formatBookingDetailsPlain } from '../details'
 import { buildPageInfo } from '@/lib/pagination'
+import { UserError } from '@/lib/user-error'
 
 /**
  * Get all bookings with comprehensive filtering and pagination for admin oversight
@@ -162,7 +163,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     // Admins may only change a booking's status to `cancelled`. Other statuses
     // are derived automatically (start/overdue/return) and are rejected here.
     if (data.status && data.status !== 'cancelled') {
-      throw new Error(
+      throw new UserError(
         'Admins can only change a booking status to "cancelled". Other statuses are set automatically.'
       )
     }
@@ -192,14 +193,14 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
     const bookingData = bookingDataResult[0]
 
     if (!bookingData) {
-      throw new Error('Booking not found')
+      throw new UserError('Booking not found')
     }
 
     // Responsibility chain: a booking can only be cancelled before it has
     // started. Once equipment is checked out (active/overdue/partially
     // returned), it must be returned through the Telegram bot instead.
     if (data.status === 'cancelled' && bookingData.status !== 'booked') {
-      throw new Error(
+      throw new UserError(
         'Only upcoming bookings can be cancelled. This booking has already started and must be returned through the Telegram bot.'
       )
     }
@@ -225,7 +226,7 @@ export const updateBookingStatusAdminFn = createServerFn({ method: 'POST' })
       .where(eq(bookingItem.bookingId, data.bookingId))
 
     if (items.length === 0) {
-      throw new Error('Booking has no items')
+      throw new UserError('Booking has no items')
     }
 
     // If times are changing, check availability on all item calendars

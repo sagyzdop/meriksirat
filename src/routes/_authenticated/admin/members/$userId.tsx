@@ -10,6 +10,7 @@ import { adminDashboardQueries } from '@/lib/admin/dashboard-queries'
 import { Page } from '@/components/admin/members/$userId'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import type { AdminUserAlbumsFilters } from '@/lib/admin/dashboard-types'
+import { UserError } from '@/lib/user-error'
 
 const searchSchema = z.object({
   albumSearch: AdminAlbumFiltersShape.search,
@@ -49,20 +50,20 @@ export const Route = createFileRoute('/_authenticated/admin/members/$userId')({
   loader: async ({ params }) => {
     const userId = params.userId
     if (!userId) {
-      throw new Error('User ID is required')
+      throw new UserError('User ID is required')
     }
 
     try {
       const user = await getAdminUserByIdFn({ data: { userId } })
 
       if (!user) {
-        throw new Error('User not found')
+        throw new UserError('User not found')
       }
 
       return { user: { ...user, birthday: user.birthday as string | null } }
     } catch (error) {
       console.error('Failed to load user:', error)
-      throw new Error('Failed to load user data')
+      throw new UserError('Failed to load user data')
     }
   },
 })

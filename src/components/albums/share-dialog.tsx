@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { albumShareText, rotateEditTokenFn } from '@/lib/albums'
 import type { AlbumDetail } from '@/lib/albums'
+import { errorMessage } from '@/lib/utils'
 
 interface ShareDialogProps {
   open: boolean
@@ -76,9 +77,7 @@ export function ShareDialog({
       }
       onChanged()
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to rotate edit link'
-      )
+      toast.error(errorMessage(error, 'Failed to rotate edit link'))
     } finally {
       setRotating(false)
     }

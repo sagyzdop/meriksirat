@@ -20,6 +20,7 @@ import {
   minutesToTime,
 } from '@/lib/booking'
 import { extendBookingFn } from '@/lib/booking'
+import { errorMessage } from '@/lib/utils'
 
 interface ExtendBookingButtonProps {
   bookingId: number
@@ -89,9 +90,7 @@ export function ExtendBookingButton({
       setConfirmOpen(false)
       onExtend?.(result)
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to extend the booking'
-      )
+      toast.error(errorMessage(error, 'Failed to extend the booking'))
     } finally {
       setIsExtending(false)
     }

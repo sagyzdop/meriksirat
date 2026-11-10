@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { FavoriteButton } from '@/components/shared/favorite-button'
-import { cn } from '@/lib/utils'
+import { cn, errorMessage } from '@/lib/utils'
 import { downloadPhotoFile } from '@/lib/albums/download'
 import type { PhotoLightboxProps } from './types'
 import { useZoom } from './use-zoom'
@@ -115,9 +115,7 @@ export function PhotoLightbox({
     try {
       await downloadPhotoFile(photo)
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not download photo'
-      )
+      toast.error(errorMessage(error, 'Could not download photo'))
     } finally {
       setDownloading(false)
     }

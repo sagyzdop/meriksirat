@@ -18,6 +18,7 @@ import {
   BulkDeleteEquipmentSchema,
 } from './types'
 import { buildPageInfo } from '@/lib/pagination'
+import { UserError, isUserError } from '@/lib/user-error'
 
 export const getEquipmentFn = createServerFn({
   method: 'GET',
@@ -117,7 +118,7 @@ export const createEquipmentFn = createServerFn({ method: 'POST' })
       .get()
 
     if (existingEquipment) {
-      throw new Error(
+      throw new UserError(
         'Google Calendar ID already exists. Each equipment must have a unique calendar.'
       )
     }
@@ -129,7 +130,7 @@ export const createEquipmentFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!categoryExists) {
-      throw new Error('Selected category does not exist')
+      throw new UserError('Selected category does not exist')
     }
 
     const result = await database
@@ -168,7 +169,7 @@ export const updateEquipmentFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!existingEquipment) {
-      throw new Error('Equipment not found')
+      throw new UserError('Equipment not found')
     }
 
     if (
@@ -187,7 +188,7 @@ export const updateEquipmentFn = createServerFn({ method: 'POST' })
         .get()
 
       if (calendarIdConflict) {
-        throw new Error(
+        throw new UserError(
           'Google Calendar ID already exists. Each equipment must have a unique calendar.'
         )
       }
@@ -201,7 +202,7 @@ export const updateEquipmentFn = createServerFn({ method: 'POST' })
         .get()
 
       if (!categoryExists) {
-        throw new Error('Selected category does not exist')
+        throw new UserError('Selected category does not exist')
       }
     }
 
@@ -224,7 +225,7 @@ export const bulkUpdateEquipmentClearanceFn = createServerFn({ method: 'POST' })
     const { database } = await adminContext(['admin', 'manager'])
 
     if (data.equipmentIds.length === 0) {
-      throw new Error('No equipment IDs provided')
+      throw new UserError('No equipment IDs provided')
     }
 
     await database
@@ -245,7 +246,7 @@ export const bulkUpdateEquipmentCategoryFn = createServerFn({ method: 'POST' })
     const { database } = await adminContext(['admin', 'manager'])
 
     if (data.equipmentIds.length === 0) {
-      throw new Error('No equipment IDs provided')
+      throw new UserError('No equipment IDs provided')
     }
 
     const categoryExists = await database
@@ -255,7 +256,7 @@ export const bulkUpdateEquipmentCategoryFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!categoryExists) {
-      throw new Error('Selected category does not exist')
+      throw new UserError('Selected category does not exist')
     }
 
     await database
@@ -276,7 +277,7 @@ export const bulkUpdateEquipmentStatusFn = createServerFn({ method: 'POST' })
     const { database } = await adminContext(['admin', 'manager'])
 
     if (data.equipmentIds.length === 0) {
-      throw new Error('No equipment IDs provided')
+      throw new UserError('No equipment IDs provided')
     }
 
     await database
@@ -336,7 +337,7 @@ export const deleteEquipmentFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!equipmentToDelete) {
-      throw new Error('Equipment not found')
+      throw new UserError('Equipment not found')
     }
 
     const activeBookings = await database
@@ -477,7 +478,7 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
     if (!allowedTypes.includes(data.contentType)) {
-      throw new Error(
+      throw new UserError(
         'Invalid file type. Only JPEG, PNG, and WebP images are allowed.'
       )
     }
@@ -487,7 +488,7 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
 
     const maxSize = 5 * 1024 * 1024 // 5MB
     if (imageBuffer.length > maxSize) {
-      throw new Error('File size too large. Maximum size is 5MB.')
+      throw new UserError('File size too large. Maximum size is 5MB.')
     }
 
     const equipmentExists = await database
@@ -497,7 +498,7 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!equipmentExists) {
-      throw new Error('Equipment not found')
+      throw new UserError('Equipment not found')
     }
 
     try {
@@ -529,8 +530,6 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
       }
     } catch (error) {
       console.error('Image upload error:', error)
-      throw new Error(
-        `Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      throw isUserError(error) ? error : new UserError('Failed to upload image')
     }
   })

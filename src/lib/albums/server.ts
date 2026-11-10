@@ -4,6 +4,7 @@ import { albumMember, user } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { readState, writeState } from '@/lib/app-state'
 import type { AlbumAccessLevel } from './types'
+import { UserError } from '@/lib/user-error'
 
 export interface SessionUser {
   id: string
@@ -98,7 +99,7 @@ export function requireAccess(
   allowed: AlbumAccessLevel[]
 ): void {
   if (!allowed.includes(access)) {
-    throw new Error('Insufficient permissions')
+    throw new UserError('Insufficient permissions')
   }
 }
 

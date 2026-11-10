@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { createCategoryFn } from '@/lib/admin'
 import { toast } from 'sonner'
+import { errorMessage } from '@/lib/utils'
 
 interface CreateCategoryDialogProps {
   open: boolean
@@ -67,7 +68,7 @@ export function CreateCategoryDialog({
         if (error.message.includes('already exists')) {
           setErrors({ name: 'A category with this name already exists' })
         } else {
-          toast.error(error.message)
+          toast.error(errorMessage(error, 'Failed to create category'))
         }
       } else {
         toast.error('Failed to create category')

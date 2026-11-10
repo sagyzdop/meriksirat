@@ -32,6 +32,7 @@ Full-stack equipment booking platform: React 19 / TanStack Start (file-router) +
 - Build UI from `src/components/ui/` (shadcn) and `src/components/shared/`; reuse over recreate. No comments unless asked.
 - Routes: `/account` (was `/profile`), `/admin/members` (with birthdays and violations; was `/admin/users`), `/admin/equipment/categories`. Dates go through `formatDate`/`formatDateTime` in `src/lib/format.ts`; storage usage UI is in `src/components/shared/storage-usage.tsx`.
 - `routeTree.gen.ts` is generated — do not edit.
+- Errors meant for users are `UserError` (`src/lib/user-error.ts`); any other error reaches the browser as "Internal error" (middleware in `src/start.ts`). Show errors only through `errorMessage(error, fallback)`, never `error.message`.
 
 ## Database / schema
 

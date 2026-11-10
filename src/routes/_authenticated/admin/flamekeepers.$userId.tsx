@@ -6,6 +6,7 @@ import { adminDashboardQueries } from '@/lib/admin/dashboard-queries'
 import { flamekeeperQueries } from '@/lib/flamekeeper/queries'
 import { Page } from '@/components/admin/flamekeepers/$userId'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
+import { UserError } from '@/lib/user-error'
 
 export const Route = createFileRoute(
   '/_authenticated/admin/flamekeepers/$userId'
@@ -13,7 +14,7 @@ export const Route = createFileRoute(
   component: RouteComponent,
   loader: async ({ params, context }) => {
     const userId = params.userId
-    if (!userId) throw new Error('User ID is required')
+    if (!userId) throw new UserError('User ID is required')
 
     try {
       const user = await getAdminUserByIdFn({ data: { userId } })
@@ -26,7 +27,7 @@ export const Route = createFileRoute(
       return { user: { ...user, birthday: user.birthday as string | null } }
     } catch (error) {
       console.error('Failed to load flamekeeper:', error)
-      throw new Error('Failed to load flamekeeper data')
+      throw new UserError('Failed to load flamekeeper data')
     }
   },
 })

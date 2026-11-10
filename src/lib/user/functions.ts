@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { UpdateUserProfileSchema, type UserProfile } from './types'
+import { UserError } from '@/lib/user-error'
 
 export const getUserFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<UserProfile | null> => {
@@ -56,7 +57,7 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
     const { session, database } = await userContext()
 
     if (Object.values(data).every((value) => value === undefined)) {
-      throw new Error('No valid fields provided for update')
+      throw new UserError('No valid fields provided for update')
     }
 
     const { graduationDate, ...fields } = data

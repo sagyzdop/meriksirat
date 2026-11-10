@@ -88,6 +88,7 @@ import { albumStorageHolder } from './status'
 import { packFiles } from './volume-limit'
 import { newId } from './ids'
 import { forgetAlbumListing } from './listing-store'
+import { UserError, userMessage } from '@/lib/user-error'
 
 const ID_CHUNK = 90
 const OVERVIEW_MAX_AGE_MS = 10 * 60 * 1000
@@ -659,7 +660,7 @@ export async function rescueAlbumVolume(
     console.warn(`Rescue of album ${albumId} did not finish:`, error)
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : 'Rescue failed',
+      reason: userMessage(error, 'Rescue failed'),
     }
   }
 }
@@ -703,7 +704,7 @@ export async function startOffload(
   ])
   const free = new Map(candidates.map((c) => [c.userId, c.freeBytes]))
   const plan = await getBufferPlan(database)
-  if (plan.kind === 'unavailable') throw new Error(plan.message)
+  if (plan.kind === 'unavailable') throw new UserError(plan.message)
 
   const budget = createBudget(REQUEST_BUDGET)
   const sessions: Omit<OffloadStart, 'downloadToken'>[] = []
@@ -802,11 +803,12 @@ export async function startOffload(
       })
     } catch (error) {
       console.warn(`Could not start the offload of album ${id}:`, error)
-      firstFailure ??= error instanceof Error ? error.message : 'Failed'
+      firstFailure ??= userMessage(error, 'Could not start the move')
     }
   }
 
-  if (sessions.length === 0) throw new Error(firstFailure ?? 'Nothing to move')
+  if (sessions.length === 0)
+    throw new UserError(firstFailure ?? 'Nothing to move')
   const downloadToken = await withBufferToken(async (t) => t, budget)
   return sessions.map((s) => ({ ...s, downloadToken }))
 }
@@ -823,8 +825,9 @@ async function createOffloadVolume(
     .from(user)
     .where(eq(user.id, dest.destUserId))
     .get()
-  if (!owner) throw new Error('A flamekeeper in this move no longer exists')
-  if (!budget.take(3)) throw new Error('Too many folders at once, try again')
+  if (!owner) throw new UserError('A flamekeeper in this move no longer exists')
+  if (!budget.take(3))
+    throw new UserError('Too many folders at once, try again')
   const number = await nextVolumeNumber(database, albumRow.id)
   const setup = await withGoogleToken(async (master) => {
     const created = await createDriveFolder(
@@ -860,15 +863,15 @@ export async function mintOffloadUploads(
   input: { albumId: string; fileIds: string[]; origin?: string }
 ): Promise<OffloadMint> {
   const pending = await readOffloadPending(input.albumId)
-  if (!pending) throw new Error(EXPIRED)
+  if (!pending) throw new UserError(EXPIRED)
   const plan = await getBufferPlan(database)
-  if (plan.kind === 'unavailable') throw new Error(plan.message)
+  if (plan.kind === 'unavailable') throw new UserError(plan.message)
   const albumRow = await database
     .select({ id: album.id, driveFolderId: album.driveFolderId })
     .from(album)
     .where(eq(album.id, input.albumId))
     .get()
-  if (!albumRow) throw new Error('Album not found')
+  if (!albumRow) throw new UserError('Album not found')
 
   const budget = createBudget(REQUEST_BUDGET)
   const wanted = new Set(input.fileIds.slice(0, MINT_BATCH))
@@ -917,7 +920,7 @@ export async function mintOffloadUploads(
 }
 
 export async function offloadDownloadToken(albumId: string): Promise<string> {
-  if (!(await readOffloadPending(albumId))) throw new Error(EXPIRED)
+  if (!(await readOffloadPending(albumId))) throw new UserError(EXPIRED)
   forgetBufferAccessToken()
   return withBufferToken(async (t) => t)
 }
@@ -1153,7 +1156,7 @@ export async function completeOffload(
     console.warn(`Offload of album ${albumId} did not complete:`, error)
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : 'Offload failed',
+      reason: userMessage(error, 'Offload failed'),
     }
   }
 }

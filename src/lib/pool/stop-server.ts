@@ -9,6 +9,7 @@ import { graduationDateError } from '@/lib/graduation-date'
 import { loadSettings } from '@/lib/booking/load-settings'
 import { planGraduation } from './graduation'
 import { planEnd, planOptOut, type StopPlan, type StopReason } from './stop'
+import { UserError } from '@/lib/user-error'
 
 export async function loadFlamekeeperState(database: Database, userId: string) {
   const row = await database
@@ -61,7 +62,7 @@ export async function applyStopPlan(
       await endFlamekeeping(database, userId, now)
       return true
     case 'refuse':
-      throw new Error(plan.message)
+      throw new UserError(plan.message)
     case 'none':
       return false
   }
@@ -73,7 +74,7 @@ export async function optOutFlamekeeper(
   now: Date = new Date()
 ): Promise<StopStatus> {
   const row = await loadFlamekeeperState(database, userId)
-  if (!row) throw new Error('You are not a flamekeeper')
+  if (!row) throw new UserError('You are not a flamekeeper')
   const stopped = await applyStopPlan(database, userId, planOptOut(row), now)
   if (!stopped) return { state: row.state }
   return { state: (await loadFlamekeeperState(database, userId))!.state }
@@ -93,12 +94,12 @@ export async function changePledge(
     .from(flamekeeper)
     .where(eq(flamekeeper.userId, userId))
     .get()
-  if (!row) throw new Error('You are not a flamekeeper')
+  if (!row) throw new UserError('You are not a flamekeeper')
   if (
     input.pledgedBytes < MIN_PLEDGE_BYTES &&
     input.pledgedBytes < row.pledgedBytes
   ) {
-    throw new Error(`Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
+    throw new UserError(`Pledge at least ${formatGb(MIN_PLEDGE_BYTES)}`)
   }
   await database.batch([
     database
@@ -150,7 +151,7 @@ export async function saveGraduationDate(
     },
     now
   )
-  if (error) throw new Error(error)
+  if (error) throw new UserError(error)
   if (row && row.state !== 'drained') {
     await changePledge(
       database,

@@ -25,6 +25,7 @@ import { formatBytes } from '@/lib/format'
 import { errorMessage } from '@/lib/utils'
 import type { AdminAlbumRow } from '@/lib/albums/types'
 import { SkippedItems, movableIds, previewSkips } from './move-preview-summary'
+import { UserError } from '@/lib/user-error'
 
 type RunStatus =
   | 'waiting'
@@ -175,7 +176,7 @@ export function MoveToFlamekeeperDialog({
   ): Promise<boolean> => {
     patchRun(albumId, { status: 'starting', error: undefined })
     const [session] = await startOffloadFn({ data: { albumIds: [albumId] } })
-    if (!session) throw new Error('Could not start the move')
+    if (!session) throw new UserError('Could not start the move')
     patchRun(albumId, {
       status: 'copying',
       bytesDone: 0,

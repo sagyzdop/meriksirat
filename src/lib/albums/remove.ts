@@ -14,15 +14,15 @@ import {
 import type { TombstoneReason } from './tombstone'
 import { invalidatePublicAlbumList } from './server'
 import { forgetAlbumListing } from './listing-store'
+import { UserError } from '@/lib/user-error'
 
 type AlbumRecord = typeof album.$inferSelect
 
-export class AlbumDeletionDeferredError extends Error {
+export class AlbumDeletionDeferredError extends UserError {
   constructor() {
     super(
       'This album is too large to delete in one go. Some photos were deleted; try again to continue.'
     )
-    this.name = 'AlbumDeletionDeferredError'
   }
 }
 

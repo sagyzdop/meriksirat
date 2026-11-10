@@ -9,6 +9,7 @@ import {
   type MyFlamekeeper,
   type StopStatus,
 } from './types'
+import { UserError } from '@/lib/user-error'
 
 export const getMyFlamekeeperFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<MyFlamekeeper | null> => {
@@ -60,13 +61,13 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
     const { isMasterEmail, MASTER_FLAMEKEEPER_MESSAGE } =
       await import('./master')
     if (isMasterEmail(session.user.email, process.env.GOOGLE_MASTER_EMAIL)) {
-      throw new Error(MASTER_FLAMEKEEPER_MESSAGE)
+      throw new UserError(MASTER_FLAMEKEEPER_MESSAGE)
     }
     const { bufferEmails } = await import('@/lib/buffer/grant')
     const { isBufferEmail, BUFFER_ACCOUNT_MESSAGE } =
       await import('@/lib/buffer/grant-rules')
     if (isBufferEmail(session.user.email, await bufferEmails(database))) {
-      throw new Error(BUFFER_ACCOUNT_MESSAGE)
+      throw new UserError(BUFFER_ACCOUNT_MESSAGE)
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID
@@ -82,13 +83,13 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
     if (data.mode === 'signup') {
       const rules = await loadAccessRules(database, session.user.id)
       if (!rules.canBecomeFlamekeeper) {
-        throw new Error(
+        throw new UserError(
           'Only @nu.edu.kz accounts that are not already flamekeepers can sign up.'
         )
       }
-      if (!isValidPledgeGb(data.pledgeGb)) throw new Error('Invalid pledge')
+      if (!isValidPledgeGb(data.pledgeGb)) throw new UserError('Invalid pledge')
       if (!isValidGraduationDate(data.graduationDate)) {
-        throw new Error('Expected graduation date must be in the future')
+        throw new UserError('Expected graduation date must be in the future')
       }
       pending = {
         userId: session.user.id,
@@ -103,7 +104,7 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
         .where(eq(flamekeeper.userId, session.user.id))
         .get()
       if (!existing || existing.state !== 'lost') {
-        throw new Error('Only a lost flamekeeper can reconnect Drive')
+        throw new UserError('Only a lost flamekeeper can reconnect Drive')
       }
       const owner = await database
         .select({ graduationDate: user.graduationDate })
@@ -141,16 +142,16 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
     const { eq } = await import('drizzle-orm')
     const { gbToBytes, isValidPledgeGb } = await import('./rules')
 
-    if (!isValidPledgeGb(data.pledgeGb)) throw new Error('Invalid pledge')
+    if (!isValidPledgeGb(data.pledgeGb)) throw new UserError('Invalid pledge')
 
     const existing = await database
       .select()
       .from(flamekeeper)
       .where(eq(flamekeeper.userId, session.user.id))
       .get()
-    if (!existing) throw new Error('You are not a flamekeeper')
+    if (!existing) throw new UserError('You are not a flamekeeper')
     if (existing.state === 'drained') {
-      throw new Error('Sign up again to resume flamekeeping')
+      throw new UserError('Sign up again to resume flamekeeping')
     }
 
     const { graduationDateError } = await import('@/lib/graduation-date')
@@ -164,7 +165,7 @@ export const updateFlamekeeperFn = createServerFn({ method: 'POST' })
       isFlamekeeper: true,
       current: owner?.graduationDate,
     })
-    if (dateError) throw new Error(dateError)
+    if (dateError) throw new UserError(dateError)
 
     const { changePledge } = await import('@/lib/pool/stop-server')
     await changePledge(database, session.user.id, {
@@ -188,7 +189,7 @@ export const confirmGraduationFn = createServerFn({ method: 'POST' })
       .from(flamekeeper)
       .where(eq(flamekeeper.userId, session.user.id))
       .get()
-    if (!existing) throw new Error('You are not a flamekeeper')
+    if (!existing) throw new UserError('You are not a flamekeeper')
     const owner = await database
       .select({ graduationDate: user.graduationDate })
       .from(user)
@@ -196,7 +197,7 @@ export const confirmGraduationFn = createServerFn({ method: 'POST' })
       .get()
 
     const date = data.graduationDate ?? owner?.graduationDate
-    if (!date) throw new Error('Enter your expected graduation month')
+    if (!date) throw new UserError('Enter your expected graduation month')
     const { saveGraduationDate } = await import('@/lib/pool/stop-server')
     await saveGraduationDate(database, session.user.id, date)
     return { success: true }
@@ -284,7 +285,7 @@ export const deleteMyAccountFn = createServerFn({ method: 'POST' }).handler(
 
     const rules = await loadAccessRules(database, session.user.id)
     if (!rules.canDeleteAccount) {
-      throw new Error(
+      throw new UserError(
         'Club members keep their account. Other accounts can be deleted once any flamekeeping has stopped.'
       )
     }

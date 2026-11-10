@@ -6,6 +6,7 @@ import {
 } from '../types'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type * as schema from '@/db/schema'
+import { UserError } from '@/lib/user-error'
 
 /**
  * Per-item booking action for the web UI.
@@ -32,7 +33,7 @@ async function assertBookingAccess(params: {
 
   const bookingData = bookingRow[0]
   if (!bookingData) {
-    throw new Error('Booking not found')
+    throw new UserError('Booking not found')
   }
 
   if (bookingData.userId !== params.sessionUserId) {
@@ -42,7 +43,7 @@ async function assertBookingAccess(params: {
 
   // Items may only be added/cancelled while the booking has not been started.
   if (bookingData.status !== 'booked') {
-    throw new Error(
+    throw new UserError(
       'Items can only be added or cancelled while the booking has not started'
     )
   }
@@ -77,7 +78,7 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       session.user.id
     )
     if (!addItemsRateLimit.allowed) {
-      throw new Error('Too many requests. Please try again shortly.')
+      throw new UserError('Too many requests. Please try again shortly.')
     }
 
     await assertBookingAccess({
@@ -99,7 +100,7 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!bookingRow) {
-      throw new Error('Booking not found')
+      throw new UserError('Booking not found')
     }
 
     const ownerRow = await database
@@ -123,7 +124,7 @@ export const addBookingItemsFn = createServerFn({ method: 'POST' })
 
     const equipmentIds = data.equipmentIds.filter((id) => !existingIds.has(id))
     if (equipmentIds.length === 0) {
-      throw new Error('Selected equipment is already part of this booking')
+      throw new UserError('Selected equipment is already part of this booking')
     }
 
     const items = await loadBookableEquipment(database, equipmentIds)
@@ -196,13 +197,13 @@ export const cancelBookingItemFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!itemBelongsToBooking(itemRow?.bookingId, data.bookingId)) {
-      throw new Error('Item not found')
+      throw new UserError('Item not found')
     }
 
     const result = await cancelBookingItems(database, [data.itemId])
 
     if (result.updated.length === 0) {
-      throw new Error('Item is already cancelled or returned')
+      throw new UserError('Item is already cancelled or returned')
     }
 
     for (const bookingId of result.touchedBookings) {
@@ -275,7 +276,7 @@ export const getBookingWindowFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!row) {
-      throw new Error('Booking not found')
+      throw new UserError('Booking not found')
     }
 
     return {

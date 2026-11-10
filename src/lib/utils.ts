@@ -38,9 +38,7 @@ export function formatUserDisplayName(user: UserIdentity): string {
   return telegramHandle ? `${baseName} (${telegramHandle})` : baseName
 }
 
-export function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback
-}
+export { userMessage as errorMessage } from './user-error'
 
 export function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = []

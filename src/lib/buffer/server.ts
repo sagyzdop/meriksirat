@@ -17,6 +17,7 @@ import { nextVolumeNumber } from '@/lib/albums/volume-number'
 import { hasOffloadPending } from '@/lib/albums/offload-pending'
 import { bufferSourceKey, volumeIdFromSourceKey } from '@/lib/albums/listing'
 import { pickVolumeWithRoom } from '@/lib/albums/volume-limit'
+import type { UploadSession } from '@/lib/albums/types'
 import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
 import {
   bufferUploadMessage,
@@ -28,6 +29,7 @@ import { MOVING_ALBUM_MESSAGE, OFFLOADED_ALBUM_MESSAGE } from './messages'
 import { withBufferToken } from './tokens'
 import { bufferUploadBlock } from './usage'
 import { getBufferOverview } from './usage-server'
+import { UserError, userMessage } from '@/lib/user-error'
 
 const UPLOAD_USAGE_MAX_AGE_MS = 10 * 60 * 1000
 
@@ -136,7 +138,7 @@ export async function ensureBufferVolume(
       }
       const winner = (await loadAll()).find((v) => v.id === existing?.id)
       if (!winner?.driveFolderId) {
-        throw new Error('Could not set up the album storage, try again')
+        throw new UserError('Could not set up the album storage, try again')
       }
       if (winner.permissionId) {
         return { volumeId: winner.id, folderId: winner.driveFolderId }
@@ -201,32 +203,80 @@ async function albumUploadBlock(
   return null
 }
 
-export async function startBufferUpload(
+type UploadFile = { name: string; mimeType: string; bytes: number }
+
+/**
+ * Starts the uploads of several files of one album. The buffer checks run once
+ * for the whole batch; each file gets its own upload address or error.
+ */
+export async function startBufferUploads(
   database: Database,
   albumRow: { id: string; driveFolderId: string },
-  file: { name: string; mimeType: string; bytes: number; origin?: string }
-): Promise<{ uploadUrl: string }> {
+  files: UploadFile[],
+  origin?: string
+): Promise<(UploadSession | { error: string })[]> {
   const plan = await getBufferPlan(database)
   if (plan.kind === 'unavailable') {
     console.warn(
       `Buffer is not configured, missing: ${plan.missing.join(', ')}`
     )
-    throw new Error(plan.message)
+    throw new UserError(plan.message)
   }
 
   const blocked = bufferUploadBlock(
     await getBufferOverview(UPLOAD_USAGE_MAX_AGE_MS)
   )
-  if (blocked) throw new Error(blocked)
+  if (blocked) throw new UserError(blocked)
   const moving = await albumUploadBlock(database, albumRow.id)
-  if (moving) throw new Error(moving)
+  if (moving) throw new UserError(moving)
 
+  const pendingBytes = new Map<string, number>()
+  const results: (UploadSession | { error: string })[] = []
+  for (const file of files) {
+    try {
+      const { volumeId, uploadUrl } = await mintBufferUpload(
+        database,
+        albumRow,
+        plan,
+        file,
+        pendingBytes,
+        origin
+      )
+      pendingBytes.set(volumeId, (pendingBytes.get(volumeId) ?? 0) + file.bytes)
+      results.push({ uploadUrl })
+    } catch (error) {
+      results.push({
+        error: userMessage(error, 'Upload failed'),
+      })
+    }
+  }
+  if (plan.grantId && results.some((result) => 'uploadUrl' in result)) {
+    await clearState(plan.grantId, 'missing').catch(() => {})
+  }
+  return results
+}
+
+async function mintBufferUpload(
+  database: Database,
+  albumRow: { id: string; driveFolderId: string },
+  plan: { email: string; grantId: string | null },
+  file: UploadFile,
+  pendingBytes: Map<string, number>,
+  origin?: string
+): Promise<{ volumeId: string; uploadUrl: string }> {
   let retried = false
   let currentVolumeId: string | null = null
   while (true) {
     try {
       const { volumeId, folderId } = await withGoogleToken((token) =>
-        ensureBufferVolume(database, token, albumRow, plan, file.bytes)
+        ensureBufferVolume(
+          database,
+          token,
+          albumRow,
+          plan,
+          file.bytes,
+          pendingBytes
+        )
       )
       currentVolumeId = volumeId
       const uploadUrl = await withBufferToken(
@@ -236,14 +286,12 @@ export async function startBufferUpload(
             folderId,
             mimeType: file.mimeType,
             size: file.bytes,
-            origin: file.origin,
+            origin,
           }),
         undefined,
         plan.grantId
       )
-      if (plan.grantId)
-        await clearState(plan.grantId, 'missing').catch(() => {})
-      return { uploadUrl }
+      return { volumeId, uploadUrl }
     } catch (error) {
       if (error instanceof DriveNotFoundError) {
         const decision = decideMissingVolumeFolder({
@@ -260,57 +308,103 @@ export async function startBufferUpload(
         if (plan.grantId) {
           await setBufferGrantState(plan.grantId, 'missing').catch(() => {})
         }
-        throw new Error(
+        throw new UserError(
           'The album storage folder could not be found in Google Drive, so uploads are paused.'
         )
       }
       const message = bufferUploadMessage(error)
       if (message) {
         console.warn('Buffer upload could not start:', error)
-        throw new Error(message)
+        throw new UserError(message)
       }
       throw error
     }
   }
 }
 
-export async function confirmBufferUpload(
+/**
+ * Registers several uploaded files of one album. Each file is checked on its
+ * own; the volume and album totals are then raised once for the whole batch.
+ */
+export async function confirmBufferUploads(
   database: Database,
   albumRow: { id: string; driveFolderId: string },
-  fileId: string
-): Promise<boolean> {
+  fileIds: string[]
+): Promise<({ added: boolean } | { error: string })[]> {
   const volumeRows = await database
     .select({ id: volume.id, driveFolderId: volume.driveFolderId })
     .from(volume)
     .where(bufferVolumes(albumRow.id))
     .all()
 
+  const added = new Map<string, { count: number; bytes: number }>()
+  const results = await Promise.all(
+    fileIds.map(async (fileId) => {
+      try {
+        const counted = await confirmBufferFile(
+          database,
+          albumRow.id,
+          volumeRows,
+          fileId
+        )
+        if (counted) {
+          const total = added.get(counted.volumeId) ?? { count: 0, bytes: 0 }
+          added.set(counted.volumeId, {
+            count: total.count + 1,
+            bytes: total.bytes + counted.bytes,
+          })
+        }
+        return { added: !!counted }
+      } catch (error) {
+        console.warn(`Could not confirm upload ${fileId}:`, error)
+        return {
+          error: userMessage(error, 'Upload not confirmed'),
+        }
+      }
+    })
+  )
+
+  if (added.size > 0) {
+    let count = 0
+    let bytes = 0
+    for (const [volumeId, total] of added) {
+      await adjustExpected(database, volumeId, total.count, total.bytes)
+      count += total.count
+      bytes += total.bytes
+    }
+    await database
+      .update(album)
+      .set({
+        photoCount: sql`${album.photoCount} + ${count}`,
+        photoBytes: sql`${album.photoBytes} + ${bytes}`,
+      })
+      .where(eq(album.id, albumRow.id))
+  }
+  return results
+}
+
+async function confirmBufferFile(
+  database: Database,
+  albumId: string,
+  volumeRows: { id: string; driveFolderId: string | null }[],
+  fileId: string
+): Promise<{ volumeId: string; bytes: number } | null> {
   const file = await withBufferToken((token) => getDriveFileMeta(token, fileId))
   const target = volumeRows.find((v) => isInVolumeFolder(file, v.driveFolderId))
   if (!target) {
-    throw new Error('Uploaded file not found in the album folder')
+    throw new UserError('Uploaded file not found in the album folder')
   }
 
   if (!isImage(file)) {
     await withBufferToken((token) => deleteDriveFile(token, fileId))
-    return false
+    return null
   }
 
-  if (await isListedInBuffer(database, albumRow.id, fileId)) return true
+  if (await isListedInBuffer(database, albumId, fileId)) return null
 
   const { parents: _parents, trashed: _trashed, ...listed } = file
-  await addListedFile(database, albumRow.id, bufferSourceKey(target.id), listed)
-
-  const bytes = Number(file.size ?? 0) || 0
-  await adjustExpected(database, target.id, 1, bytes)
-  await database
-    .update(album)
-    .set({
-      photoCount: sql`${album.photoCount} + 1`,
-      photoBytes: sql`${album.photoBytes} + ${bytes}`,
-    })
-    .where(eq(album.id, albumRow.id))
-  return true
+  await addListedFile(database, albumId, bufferSourceKey(target.id), listed)
+  return { volumeId: target.id, bytes: Number(file.size ?? 0) || 0 }
 }
 
 export async function adjustExpected(

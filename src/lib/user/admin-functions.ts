@@ -11,6 +11,7 @@ import {
   UnbanUserSchema,
 } from './types'
 import { buildPagination } from '@/lib/pagination'
+import { UserError } from '@/lib/user-error'
 
 export const getAdminUsersFn = createServerFn({ method: 'GET' })
   .validator(AdminUserFiltersSchema)
@@ -129,13 +130,13 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
       .get()
 
     if (!targetUser) {
-      throw new Error('User not found')
+      throw new UserError('User not found')
     }
 
     if (data.role && ['admin', 'manager'].includes(data.role)) {
       const { getAccessRules } = await import('@/lib/access/access-rules')
       if (!getAccessRules(targetUser).canHoldStaffRole) {
-        throw new Error(
+        throw new UserError(
           'Only club members can be assigned the manager or admin role.'
         )
       }
@@ -143,7 +144,7 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
 
     if (data.role && ['admin', 'manager'].includes(data.role)) {
       if (adminUser.role !== 'admin') {
-        throw new Error(
+        throw new UserError(
           'Insufficient permissions to assign admin or manager roles. Only admins can assign these roles.'
         )
       }
@@ -151,7 +152,7 @@ export const updateUserAdminFn = createServerFn({ method: 'POST' })
 
     const { userId, ...fields } = data
     if (Object.values(fields).every((value) => value === undefined)) {
-      throw new Error('No valid fields provided for update')
+      throw new UserError('No valid fields provided for update')
     }
 
     await database.update(user).set(fields).where(eq(user.id, userId))
@@ -202,7 +203,7 @@ export const bulkUpdateUserClearanceFn = createServerFn({ method: 'POST' })
     const { database } = await adminContext(['admin', 'manager'])
 
     if (data.userIds.length === 0) {
-      throw new Error('No user IDs provided')
+      throw new UserError('No user IDs provided')
     }
 
     await database
@@ -251,7 +252,7 @@ export const getAdminUserByIdFn = createServerFn({ method: 'GET' })
       .get()
 
     if (!userData) {
-      throw new Error('User not found')
+      throw new UserError('User not found')
     }
 
     const { graduationDate, ...rest } = userData
@@ -274,7 +275,7 @@ export const resetUserViolationCountersFn = createServerFn({ method: 'POST' })
       .where(eq(user.id, data.userId))
 
     if (result.meta.changes === 0) {
-      throw new Error('User not found')
+      throw new UserError('User not found')
     }
 
     return { success: true }

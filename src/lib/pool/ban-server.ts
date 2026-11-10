@@ -16,6 +16,7 @@ import {
   endFlamekeeping,
   loadFlamekeeperState,
 } from './stop-server'
+import { UserError } from '@/lib/user-error'
 
 const CANCELS_PER_RUN = 3
 const STOPS_PER_RUN = 10
@@ -118,20 +119,20 @@ export async function banUser(
   input: { actorId: string; targetId: string; reason: string }
 ): Promise<void> {
   const check = checkBan(input)
-  if (!check.ok) throw new Error(check.message)
+  if (!check.ok) throw new UserError(check.message)
 
   const target = await database
     .select({ id: user.id, email: user.email, bannedAt: user.bannedAt })
     .from(user)
     .where(eq(user.id, input.targetId))
     .get()
-  if (!target) throw new Error('User not found')
+  if (!target) throw new UserError('User not found')
   if (isMasterEmail(target.email, process.env.GOOGLE_MASTER_EMAIL)) {
-    throw new Error(
+    throw new UserError(
       'The club account owns every album folder and cannot be banned.'
     )
   }
-  if (target.bannedAt) throw new Error('User is already banned')
+  if (target.bannedAt) throw new UserError('User is already banned')
 
   const now = new Date()
   await database
@@ -173,8 +174,8 @@ export async function unbanUser(
     .from(user)
     .where(eq(user.id, input.targetId))
     .get()
-  if (!target) throw new Error('User not found')
-  if (!target.bannedAt) throw new Error('User is not banned')
+  if (!target) throw new UserError('User not found')
+  if (!target.bannedAt) throw new UserError('User is not banned')
 
   await database
     .update(user)

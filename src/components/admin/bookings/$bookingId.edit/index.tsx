@@ -36,6 +36,7 @@ import type {
   BookingItemWithEquipment,
 } from '@/lib/booking/types'
 import { formatDateTime } from '@/lib/format'
+import { errorMessage } from '@/lib/utils'
 
 const editBookingSchema = z.object({
   notes: z.string().optional(),
@@ -165,9 +166,7 @@ export function Page({ booking, bookingId, telegramBotUsername }: PageProps) {
       }, 2000)
     } catch (error) {
       setError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to update booking. Please try again.'
+        errorMessage(error, 'Failed to update booking. Please try again.')
       )
     } finally {
       setIsSubmitting(false)

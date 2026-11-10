@@ -20,6 +20,7 @@ import { EquipmentTable } from '@/components/shared/equipment-table'
 import { AddEquipmentButton } from '@/components/shared/add-equipment-button'
 import { useBackNavigation } from '@/hooks/use-back-navigation'
 import { BookingConfirmationDialog } from '@/components/bookings/new/components/booking-confirmation-dialog'
+import { errorMessage } from '@/lib/utils'
 
 export function NewBookingPage() {
   const router = useRouter()
@@ -215,9 +216,7 @@ export function NewBookingPage() {
           .join(', ')
         toast.error(`Time slot unavailable for: ${conflictNames}`)
       } else {
-        toast.error(
-          error instanceof Error ? error.message : 'Failed to create booking'
-        )
+        toast.error(errorMessage(error, 'Failed to create booking'))
       }
     } finally {
       setIsBooking(false)

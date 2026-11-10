@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { StartBookingSchema } from '../types'
 import { startBooking } from '../start-booking'
+import { UserError } from '@/lib/user-error'
 
 /**
  * Start a booking (pickup) from the web app. Verifies the caller is the
@@ -24,11 +25,11 @@ export const startBookingFn = createServerFn({ method: 'POST' })
 
     const parent = bookingData[0]
     if (!parent) {
-      throw new Error('Booking not found')
+      throw new UserError('Booking not found')
     }
 
     if (parent.userId !== session.user.id) {
-      throw new Error('You can only start your own bookings')
+      throw new UserError('You can only start your own bookings')
     }
 
     await startBooking(database, data.bookingId)
