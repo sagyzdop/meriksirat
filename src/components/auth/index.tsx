@@ -31,11 +31,13 @@ export function Page({ className, error, redirect, ...props }: PageProps) {
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
-        <img
-          src="/logo.png"
-          alt="NU Image logo"
-          className="size-12 shrink-0 rounded-md object-contain"
-        />
+        <a href="/" aria-label="NU Image home">
+          <img
+            src="/logo.png"
+            alt="NU Image logo"
+            className="size-12 shrink-0 rounded-md object-contain"
+          />
+        </a>
         <h1 className="text-xl font-bold">Welcome to NU Image</h1>
         <FieldDescription className="text-center">
           Use NU account
