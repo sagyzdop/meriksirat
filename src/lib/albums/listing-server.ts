@@ -72,18 +72,9 @@ export async function loadListingSources(
     .orderBy(asc(volume.createdAt), asc(volume.id))
     .all()
   const buffers = rows.filter((v) => v.userId === null && !v.droppedAt)
-  const buffer = buffers[0]
   return planListingSources({
     albumFolderId: row.driveFolderId,
-    bufferVolume: buffer
-      ? {
-          driveFolderId: buffer.driveFolderId,
-          expectedCount: buffer.expectedCount,
-          expectedBytes: buffer.expectedBytes,
-          expectedChangedAt: buffer.expectedChangedAt?.getTime() ?? null,
-        }
-      : null,
-    moreBufferVolumes: buffers.slice(1).map((v) => ({
+    bufferVolumes: buffers.map((v) => ({
       id: v.id,
       driveFolderId: v.driveFolderId,
       expectedCount: v.expectedCount,

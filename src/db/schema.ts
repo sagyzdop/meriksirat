@@ -379,6 +379,7 @@ export const album = sqliteTable(
   (table) => [
     index('album_ownerUserId_idx').on(table.ownerUserId),
     index('album_scheduledDeletionAt_idx').on(table.scheduledDeletionAt),
+    index('album_createdAt_id_idx').on(table.createdAt, table.id),
   ]
 )
 
@@ -619,8 +620,8 @@ export const bufferGrant = sqliteTable(
   ]
 )
 
-// One row per place an album's photos are listed from: `buffer`,
-// `buffer:{volumeId}`, `master` or `flamekeeper:{volumeId}`. Holds how the last
+// One row per place an album's photos are listed from: `buffer:{volumeId}`,
+// `flamekeeper:{volumeId}` or `master` (the album's own folder). Holds how the last
 // listing of that folder went and the volume stamp it matched.
 export const photoSource = sqliteTable(
   'photo_source',
@@ -656,7 +657,6 @@ export const photo = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.albumId, table.sourceKey, table.fileId] }),
-    index('photo_albumId_fileId_idx').on(table.albumId, table.fileId),
   ]
 )
 

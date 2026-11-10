@@ -29,5 +29,5 @@ sequenceDiagram
 
 - A volume that fails to list keeps its last good listing, so Refresh never empties an album because Drive had a bad moment.
 - The page shows the returned album directly, so warnings appear even if storing the rows fails.
-- Not needed after an upload. It picks up changes made outside the app before the hourly reconcile reaches the album (about once every 24 hours).
+- Not needed after an upload. It picks up changes made outside the app before the hourly reconcile reaches the album, which can take up to two weeks, or a view lists it after 7 days.
 - Folder health (ok, in the bin, deleted) is re-checked each time, see [warnings](warnings.md).

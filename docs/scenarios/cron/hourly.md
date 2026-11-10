@@ -76,5 +76,5 @@ flowchart TD
 
 - Telegram bot configuration runs after the steps. It calls `setMyCommands` only when the deployed version differs from the stored marker [telegram-bot-version](../kv/telegram-bot-version.md).
 - The lost grace period comes from the `lostGraceDays` setting (default 7) and the graduation stop lead from `graduationPromptDays` (default 60); the code constants are only the defaults.
-- `reconcileAlbums` runs last and spends what the earlier steps left. It takes up to 10 albums not checked for 24 hours, oldest first (never-checked first), lists each one's folders in Drive and rewrites the `photo` rows that differ, then stamps `album.photosCheckedAt`. It stops when fewer than 6 requests remain. See [album-listing](../kv/album-listing.md).
+- `reconcileAlbums` runs last and spends what the earlier steps left. It takes up to 10 albums not checked for 24 hours, oldest first (never-checked first; in practice fewer, so a pass over a couple of thousand albums takes about two weeks), lists each one's folders in Drive and rewrites the `photo` rows that differ, then stamps `album.photosCheckedAt`. It stops when fewer than 6 requests remain. See [album-listing](../kv/album-listing.md).
 - Related stored keys: [drain-paused](../kv/drain-paused.md), [buffer-usage](../kv/buffer-usage.md).

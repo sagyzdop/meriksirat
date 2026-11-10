@@ -18,15 +18,12 @@ export const LISTING_SETTLE_MS = 30 * 1000
 export const LISTING_STALE_LIMIT_MS = 7 * 24 * 60 * 60 * 1000
 export const LISTING_DRIVE_BUDGET = RUN_SUBREQUEST_BUDGET
 
-export const BUFFER_SOURCE_KEY = 'buffer'
-
 export const bufferSourceKey = (volumeId: string) => `buffer:${volumeId}`
 
 export const flamekeeperSourceKey = (volumeId: string) =>
   `flamekeeper:${volumeId}`
 
-export const isBufferSourceKey = (key: string) =>
-  key === BUFFER_SOURCE_KEY || key.startsWith('buffer:')
+export const isBufferSourceKey = (key: string) => key.startsWith('buffer:')
 
 export function volumeIdFromSourceKey(key: string): string | null {
   for (const prefix of ['buffer:', 'flamekeeper:']) {
@@ -54,13 +51,7 @@ export interface ListingSource {
 
 export interface ListingSourcesInput {
   albumFolderId: string
-  bufferVolume: {
-    driveFolderId: string | null
-    expectedCount: number | null
-    expectedBytes: number | null
-    expectedChangedAt?: number | null
-  } | null
-  moreBufferVolumes?: {
+  bufferVolumes: {
     id: string
     driveFolderId: string | null
     expectedCount: number | null
@@ -84,22 +75,7 @@ export function planListingSources(
   input: ListingSourcesInput
 ): ListingSource[] {
   const sources: ListingSource[] = []
-  const buffer = input.bufferVolume
-  if (buffer?.driveFolderId) {
-    sources.push({
-      key: BUFFER_SOURCE_KEY,
-      owner: { kind: 'buffer' },
-      folderId: buffer.driveFolderId,
-      stamp: `${buffer.expectedCount ?? ''}:${buffer.expectedBytes ?? ''}`,
-      changedAt: buffer.expectedChangedAt ?? null,
-      listable: true,
-      expected:
-        buffer.expectedCount === null || buffer.expectedBytes === null
-          ? null
-          : { count: buffer.expectedCount, bytes: buffer.expectedBytes },
-    })
-  }
-  for (const more of input.moreBufferVolumes ?? []) {
+  for (const more of input.bufferVolumes) {
     if (!more.driveFolderId) continue
     sources.push({
       key: bufferSourceKey(more.id),

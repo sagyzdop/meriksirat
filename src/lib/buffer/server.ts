@@ -15,11 +15,7 @@ import { addPhotoRow, hasBufferPhotoRow } from '@/lib/albums/photo-store'
 import { newId } from '@/lib/albums/ids'
 import { nextVolumeNumber } from '@/lib/albums/volume-number'
 import { hasOffloadPending } from '@/lib/albums/offload-pending'
-import {
-  BUFFER_SOURCE_KEY,
-  bufferSourceKey,
-  volumeIdFromSourceKey,
-} from '@/lib/albums/listing'
+import { bufferSourceKey, volumeIdFromSourceKey } from '@/lib/albums/listing'
 import { pickVolumeWithRoom } from '@/lib/albums/volume-limit'
 import { isInVolumeFolder, volumeFolderName } from '@/lib/pool/volumes'
 import {
@@ -287,7 +283,6 @@ export async function confirmBufferUpload(
     .select({ id: volume.id, driveFolderId: volume.driveFolderId })
     .from(volume)
     .where(bufferVolumes(albumRow.id))
-    .orderBy(asc(volume.createdAt), asc(volume.id))
     .all()
 
   const file = await withBufferToken((token) => getDriveFileMeta(token, fileId))
@@ -303,13 +298,8 @@ export async function confirmBufferUpload(
 
   if (await hasBufferPhotoRow(database, albumRow.id, fileId)) return true
 
-  // The first buffer volume lists under the plain key, the rest by id.
-  const sourceKey =
-    target.id === volumeRows[0].id
-      ? BUFFER_SOURCE_KEY
-      : bufferSourceKey(target.id)
   const { parents: _parents, trashed: _trashed, ...listed } = file
-  await addPhotoRow(database, albumRow.id, sourceKey, listed)
+  await addPhotoRow(database, albumRow.id, bufferSourceKey(target.id), listed)
 
   const bytes = Number(file.size ?? 0) || 0
   await adjustExpected(database, target.id, 1, bytes)
@@ -341,28 +331,10 @@ export async function adjustExpected(
 
 export async function adjustExpectedByKey(
   database: Database,
-  albumId: string,
   volumeKey: string,
   countDelta: number,
   bytesDelta: number
 ): Promise<void> {
-  const volumeId = await resolveVolumeId(database, albumId, volumeKey)
+  const volumeId = volumeIdFromSourceKey(volumeKey)
   if (volumeId) await adjustExpected(database, volumeId, countDelta, bytesDelta)
-}
-
-export async function resolveVolumeId(
-  database: Database,
-  albumId: string,
-  volumeKey: string
-): Promise<string | null> {
-  const keyed = volumeIdFromSourceKey(volumeKey)
-  if (keyed) return keyed
-  if (volumeKey !== 'buffer') return null
-  const first = await database
-    .select({ id: volume.id })
-    .from(volume)
-    .where(bufferVolumes(albumId))
-    .orderBy(asc(volume.createdAt), asc(volume.id))
-    .get()
-  return first?.id ?? null
 }

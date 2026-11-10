@@ -33,7 +33,7 @@ erDiagram
     }
     photo_source {
         text albumId PK, FK
-        text key PK "buffer, buffer:id, master, flamekeeper:id"
+        text key PK "buffer:id, flamekeeper:id, master"
         text folderId
         text stamp
         text status
@@ -80,4 +80,5 @@ erDiagram
 - `album_member` is unique on `(albumId, userId)`: a user who opens the edit link becomes a co-author.
 - `favorite` stores a Drive file id. A photo's identity is still its current Drive file id, so when a file moves to another account, favorites are remapped and the album's `photo` rows are rebuilt from Drive.
 - `photo` and `photo_source` are what album pages read; uploads, deletes and listings of Drive keep them current ([album-listing](../kv/album-listing.md)). `photoCount` and `photoBytes` are totals synced from a complete listing.
+- `album` is indexed on `(createdAt, id)`, the order the album lists page through, so a page reads about as many rows as it shows.
 - Deleting an album cascades to volumes, members, favorites, photo sources and photos.

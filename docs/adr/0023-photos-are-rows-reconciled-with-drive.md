@@ -12,8 +12,9 @@ Photos are rows again. `photo` has one row per file and `photo_source` one row
 per folder they are listed from, with the state of its last listing
 (`src/lib/albums/photo-store.ts`). An upload inserts its row at confirm and a
 delete removes it. Views read the rows. Listing Drive is now reconciliation: the
-hourly `reconcileAlbums` step lists each album about once a day with the budget
-the other steps leave, and a view lists only what the rules in `listing.ts`
+hourly `reconcileAlbums` step lists the albums checked longest ago with the budget
+the other steps leave (a few an hour, so about two weeks for a pass over 2,200
+albums), and a view lists only what the rules in `listing.ts`
 still call due (a changed volume stamp, a failed listing, a source never listed,
 or one the hourly step has not reached for 7 days). A listing writes only the
 rows that differ.
@@ -28,6 +29,14 @@ flamekeeper are unchanged; they read the same data from rows.
 Existing albums need no backfill: an album without rows is listed on its first
 view or by the hourly step, whichever comes first.
 
-The cost is that the rows can disagree with Drive for up to a day when files
+The cost is that the rows can disagree with Drive for up to 7 days when files
 change behind the app, where the old design noticed within 12 hours of a view.
 Refresh still lists at once.
+
+D1 bills rows, not queries: an album view reads one row per photo, and a photo
+insert writes one row per index. `photo` therefore has only its primary key, and
+there is no bulk backfill: 298,000 photos would be several days of the free
+plan's 100,000 rows written, and running out blocks every write in the app.
+
+Every buffer source is keyed `buffer:{volumeId}`. The first buffer volume used to
+be the plain key `buffer`.

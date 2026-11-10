@@ -393,8 +393,8 @@ export const acceptFewerPhotosFn = createServerFn({ method: 'POST' })
     if (!currentUser || (!isAdmin && row.ownerUserId !== currentUser.id)) {
       throw new Error('Only the album owner or an admin can accept this.')
     }
-    const { resolveVolumeId } = await import('@/lib/buffer/server')
-    const volumeId = await resolveVolumeId(database, row.id, data.volumeKey)
+    const { volumeIdFromSourceKey } = await import('./listing')
+    const volumeId = volumeIdFromSourceKey(data.volumeKey)
     if (!volumeId) {
       throw new Error('This volume has no fewer-photos warning to accept.')
     }
@@ -756,7 +756,7 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
     )
     if (listed.owner.kind !== 'master') {
       const { adjustExpectedByKey } = await import('@/lib/buffer/server')
-      await adjustExpectedByKey(database, row.id, listed.volumeKey, -1, -bytes)
+      await adjustExpectedByKey(database, listed.volumeKey, -1, -bytes)
     }
     if (listed.owner.kind === 'flamekeeper') {
       await database

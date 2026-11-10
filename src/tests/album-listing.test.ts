@@ -43,11 +43,14 @@ function sourcesOf(
 ) {
   return planListingSources({
     albumFolderId: ROOT,
-    bufferVolume: {
-      driveFolderId: 'buffer-folder',
-      expectedCount: 2,
-      expectedBytes: 200,
-    },
+    bufferVolumes: [
+      {
+        id: 'b',
+        driveFolderId: 'buffer-folder',
+        expectedCount: 2,
+        expectedBytes: 200,
+      },
+    ],
     flamekeeperVolumes: [],
     ...input,
   })
@@ -132,13 +135,16 @@ describe('what to list, and with whose token', () => {
 
   it('expects nothing from a buffer volume that carries no expected values', () => {
     const sources = sourcesOf({
-      bufferVolume: {
-        driveFolderId: 'buffer-folder',
-        expectedCount: null,
-        expectedBytes: null,
-      },
+      bufferVolumes: [
+        {
+          id: 'b',
+          driveFolderId: 'buffer-folder',
+          expectedCount: null,
+          expectedBytes: null,
+        },
+      ],
     })
-    const buffer = sources.find((s) => s.key === 'buffer')
+    const buffer = sources.find((s) => s.key === 'buffer:b')
     expect(buffer?.expected).toBeNull()
   })
 
@@ -150,7 +156,7 @@ describe('what to list, and with whose token', () => {
       ],
     })
     expect(sources.map((s) => s.key)).toEqual([
-      'buffer',
+      'buffer:b',
       'master',
       'flamekeeper:v1',
       'flamekeeper:v2',
@@ -159,11 +165,14 @@ describe('what to list, and with whose token', () => {
 
   it('has nothing to list for a volume with no folder yet', () => {
     const sources = sourcesOf({
-      bufferVolume: {
-        driveFolderId: null,
-        expectedCount: 0,
-        expectedBytes: 0,
-      },
+      bufferVolumes: [
+        {
+          id: 'b',
+          driveFolderId: null,
+          expectedCount: 0,
+          expectedBytes: 0,
+        },
+      ],
       flamekeeperVolumes: [keeper('amina', { driveFolderId: null })],
     })
     expect(sources.map((s) => s.owner.kind)).toEqual(['master'])
@@ -234,18 +243,21 @@ describe('when a cached listing can be used', () => {
   it('re-lists only the buffer after an upload or deletion changes its expected values', () => {
     const entry = freshEntry(sourcesOf())
     const afterUpload = sourcesOf({
-      bufferVolume: {
-        driveFolderId: 'buffer-folder',
-        expectedCount: 3,
-        expectedBytes: 300,
-      },
+      bufferVolumes: [
+        {
+          id: 'b',
+          driveFolderId: 'buffer-folder',
+          expectedCount: 3,
+          expectedBytes: 300,
+        },
+      ],
     })
     const plan = planListingRefresh({
       sources: afterUpload,
       entry,
       now: NOW + 1000,
     })
-    expect(plan.actions.buffer).toBe('list')
+    expect(plan.actions['buffer:b']).toBe('list')
     expect(plan.actions.master).toBe('reuse')
     expect(plan.checkFolder).toBe(true)
   })
@@ -258,7 +270,7 @@ describe('when a cached listing can be used', () => {
       now: NOW + 1000,
     })
     expect(plan.actions['flamekeeper:amina']).toBe('list')
-    expect(plan.actions.buffer).toBe('reuse')
+    expect(plan.actions['buffer:b']).toBe('reuse')
   })
 
   it('lists everything when an owner presses Refresh', () => {
@@ -293,7 +305,7 @@ describe('merging volume listings into one album', () => {
   it('shows photos from every volume, sorted by capture time', () => {
     const sources = sourcesOf({ flamekeeperVolumes: [keeper('amina')] })
     const entry = freshEntry(sources, {
-      buffer: [file('b', { createdTime: '2026-03-01T00:00:00.000Z' })],
+      'buffer:b': [file('b', { createdTime: '2026-03-01T00:00:00.000Z' })],
       master: [file('m', { createdTime: '2026-01-01T00:00:00.000Z' })],
       'flamekeeper:amina': [
         file('f', { createdTime: '2026-02-01T00:00:00.000Z' }),
@@ -316,7 +328,7 @@ describe('merging volume listings into one album', () => {
   it('shows one photo when a move leaves the same file in two volumes, preferring the buffer', () => {
     const sources = sourcesOf({ flamekeeperVolumes: [keeper('amina')] })
     const entry = freshEntry(sources, {
-      buffer: [file('copy', { md5Checksum: 'abc' })],
+      'buffer:b': [file('copy', { md5Checksum: 'abc' })],
       'flamekeeper:amina': [file('original', { md5Checksum: 'abc' })],
     })
     const listing = readAlbumListing({ entry, sources, now: NOW })
@@ -349,9 +361,9 @@ describe('merging volume listings into one album', () => {
 
   it('reports each volume’s count and bytes against its expected values', () => {
     const sources = sourcesOf()
-    const entry = freshEntry(sources, { buffer: [file('a')] })
+    const entry = freshEntry(sources, { 'buffer:b': [file('a')] })
     const buffer = readAlbumListing({ entry, sources, now: NOW }).volumes.find(
-      (v) => v.key === 'buffer'
+      (v) => v.key === 'buffer:b'
     )
     expect(buffer).toMatchObject({
       status: 'ok',
@@ -366,7 +378,7 @@ describe('merging volume listings into one album', () => {
     const many = (prefix: string, n: number) =>
       Array.from({ length: n }, (_, i) => file(`${prefix}${i}`))
     const entry = freshEntry(sources, {
-      buffer: many('b', 2600),
+      'buffer:b': many('b', 2600),
       'flamekeeper:amina': many('f', 900),
     })
     const listing = readAlbumListing({ entry, sources, now: NOW })
@@ -379,7 +391,7 @@ describe('when a listing fails', () => {
   const sources = sourcesOf()
   const before = freshEntry(
     sources,
-    { buffer: [file('a')], master: [file('m')] },
+    { 'buffer:b': [file('a')], master: [file('m')] },
     NOW - LISTING_FRESH_MS
   )
 
@@ -390,7 +402,7 @@ describe('when a listing fails', () => {
       now: at,
       folderState: 'ok',
       outcomes: {
-        buffer: { kind: 'failed' },
+        'buffer:b': { kind: 'failed' },
         master: { kind: 'listed', files: [file('m')], complete: true },
       },
     })
@@ -411,7 +423,7 @@ describe('when a listing fails', () => {
     })
     expect(listing.files.map((f) => f.id).sort()).toEqual(['a', 'm'])
     expect(listing.complete).toBe(false)
-    expect(listing.volumes.find((v) => v.key === 'buffer')?.status).toBe(
+    expect(listing.volumes.find((v) => v.key === 'buffer:b')?.status).toBe(
       'failed'
     )
   })
@@ -433,13 +445,13 @@ describe('when a listing fails', () => {
       entry: failed,
       now: NOW + LISTING_RETRY_MS - 1,
     })
-    expect(soon.actions.buffer).toBe('reuse')
+    expect(soon.actions['buffer:b']).toBe('reuse')
     const later = planListingRefresh({
       sources,
       entry: failed,
       now: NOW + LISTING_RETRY_MS,
     })
-    expect(later.actions.buffer).toBe('list')
+    expect(later.actions['buffer:b']).toBe('list')
     expect(later.actions.master).toBe('reuse')
   })
 
@@ -479,14 +491,14 @@ describe('when a listing fails', () => {
       now: NOW,
       folderState: 'ok',
       outcomes: {
-        buffer: { kind: 'listed', files: [file('a')], complete: false },
+        'buffer:b': { kind: 'listed', files: [file('a')], complete: false },
         master: { kind: 'listed', files: [], complete: true },
       },
     })
     const listing = readAlbumListing({ entry, sources, now: NOW })
     expect(listing.files.map((f) => f.id)).toEqual(['a'])
     expect(listing.complete).toBe(false)
-    expect(listing.volumes.find((v) => v.key === 'buffer')?.status).toBe(
+    expect(listing.volumes.find((v) => v.key === 'buffer:b')?.status).toBe(
       'partial'
     )
   })
@@ -498,12 +510,12 @@ describe('when a listing fails', () => {
       now: NOW,
       folderState: 'ok',
       outcomes: {
-        buffer: { kind: 'skipped' },
+        'buffer:b': { kind: 'skipped' },
         master: { kind: 'listed', files: [file('m')], complete: true },
       },
     })
     const plan = planListingRefresh({ sources, entry, now: NOW + 1 })
-    expect(plan.actions.buffer).toBe('list')
+    expect(plan.actions['buffer:b']).toBe('list')
     expect(
       readAlbumListing({ entry, sources, now: NOW }).files.map((f) => f.id)
     ).toContain('a')
@@ -516,12 +528,12 @@ describe('when a listing fails', () => {
       now: NOW,
       folderState: 'ok',
       outcomes: {
-        buffer: { kind: 'gone' },
+        'buffer:b': { kind: 'gone' },
         master: { kind: 'listed', files: [], complete: true },
       },
     })
     const listing = readAlbumListing({ entry, sources, now: NOW })
-    expect(listing.volumes.find((v) => v.key === 'buffer')?.status).toBe(
+    expect(listing.volumes.find((v) => v.key === 'buffer:b')?.status).toBe(
       'missing'
     )
     expect(listing.files).toEqual([])
@@ -534,7 +546,7 @@ describe('when a listing fails', () => {
 
 describe('album folder state', () => {
   const sources = sourcesOf()
-  const before = freshEntry(sources, { buffer: [file('a')] })
+  const before = freshEntry(sources, { 'buffer:b': [file('a')] })
 
   it('shows no photos and reports missing when the folder is permanently gone', () => {
     const entry = applyListingOutcomes({
@@ -597,7 +609,7 @@ describe('who owns a file in the album', () => {
   const sources = sourcesOf({ flamekeeperVolumes: [keeper('amina')] })
   const listing = readAlbumListing({
     entry: freshEntry(sources, {
-      buffer: [file('b1', { size: '300' })],
+      'buffer:b': [file('b1', { size: '300' })],
       master: [file('m1')],
       'flamekeeper:amina': [file('f1')],
     }),
@@ -629,7 +641,7 @@ describe('who owns a file in the album', () => {
   it('does not treat a non-image in a folder as a photo of the album', () => {
     const withPdf = readAlbumListing({
       entry: freshEntry(sources, {
-        buffer: [file('doc', { mimeType: 'application/pdf' })],
+        'buffer:b': [file('doc', { mimeType: 'application/pdf' })],
       }),
       sources,
       now: NOW,
@@ -658,7 +670,7 @@ describe('album totals from a listing', () => {
 
   it('counts the photos and bytes across every volume once all were listed', () => {
     const listing = read({
-      buffer: [file('a', { size: '300' })],
+      'buffer:b': [file('a', { size: '300' })],
       master: [file('b', { size: '100' })],
       'flamekeeper:amina': [file('c', { size: '50' })],
     })
@@ -671,8 +683,8 @@ describe('album totals from a listing', () => {
 
   it('gives no totals while a volume could not be listed, so the stored ones are not overwritten with a low number', () => {
     const listing = read(
-      { buffer: [file('a')] },
-      { buffer: { kind: 'failed' } }
+      { 'buffer:b': [file('a')] },
+      { 'buffer:b': { kind: 'failed' } }
     )
     expect(listingTotals(listing)).toBeNull()
   })
@@ -695,12 +707,15 @@ describe('album totals from a listing', () => {
 describe('stamp-driven listing during an upload burst', () => {
   const bufferSource = (changedAt: number | null, expectedCount = 3) =>
     sourcesOf({
-      bufferVolume: {
-        driveFolderId: 'buffer-folder',
-        expectedCount,
-        expectedBytes: 300,
-        expectedChangedAt: changedAt,
-      },
+      bufferVolumes: [
+        {
+          id: 'b',
+          driveFolderId: 'buffer-folder',
+          expectedCount,
+          expectedBytes: 300,
+          expectedChangedAt: changedAt,
+        },
+      ],
     })
 
   const listedEntry = (listedAt: number): AlbumListingEntry =>
@@ -710,7 +725,7 @@ describe('stamp-driven listing during an upload burst', () => {
       now: listedAt,
       folderState: 'ok',
       outcomes: {
-        buffer: {
+        'buffer:b': {
           kind: 'listed',
           files: [file('a'), file('b')],
           complete: true,
@@ -729,7 +744,7 @@ describe('stamp-driven listing during an upload burst', () => {
       entry: listedEntry(NOW),
       now,
       ...extra,
-    }).actions.buffer
+    }).actions['buffer:b']
 
   it('reuses a listing that is a few minutes old while uploads keep arriving', () => {
     expect(actionOf(NOW + 110_000, NOW + 2 * 60_000)).toBe('reuse')
@@ -763,6 +778,6 @@ describe('stamp-driven listing during an upload burst', () => {
       sources: bufferSource(NOW + 60_000),
       now: NOW + 2 * 60_000,
     }).volumes
-    expect(volumes.find((v) => v.key === 'buffer')?.stampStale).toBe(true)
+    expect(volumes.find((v) => v.key === 'buffer:b')?.stampStale).toBe(true)
   })
 })
