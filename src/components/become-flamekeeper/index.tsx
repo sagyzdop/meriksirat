@@ -164,6 +164,11 @@ export function Page({ graduationDate, connectError }: PageProps) {
                   ? 'Filled in from your profile.'
                   : 'Month and year. It must be in the future.'}
             </p>
+            <p className="text-sm text-muted-foreground italic">
+              Foundation year students: set it to the end of the current
+              academic year, since your account is suspended and later deleted
+              if you do not move on to the bachelor's program.
+            </p>
           </div>
         </div>
       )}
