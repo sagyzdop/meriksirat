@@ -2,7 +2,7 @@ import { and, eq, inArray, or, sql } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { album, favorite } from '@/db/schema'
 import { invalidatePublicAlbumList } from '@/lib/albums/server'
-import { forgetAlbumListing } from '@/lib/albums/photo-store'
+import { forgetAlbumListing } from '@/lib/albums/listing-store'
 import { chunk } from '@/lib/utils'
 import { planRemap } from './remap'
 

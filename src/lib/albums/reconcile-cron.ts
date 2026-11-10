@@ -10,9 +10,10 @@ const ALBUMS_PER_RUN = 10
 const MIN_ALBUM_COST = 6
 
 /**
- * Hourly step: compare the stored photo rows with Drive for the albums checked
- * longest ago, with whatever the earlier steps left of the run's budget. This
- * is what notices photos added, changed or removed in Drive behind the app.
+ * Hourly step: list Drive again for the albums checked longest ago, with
+ * whatever the earlier steps left of the run's budget, and store what changed.
+ * This is what notices photos added, changed or removed in Drive behind the
+ * app, so album views do not have to.
  */
 export async function runAlbumReconcile(
   env: { meriksirat_d1: D1Database },

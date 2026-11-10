@@ -103,7 +103,7 @@ export const getAlbumStatsFn = createServerFn({ method: 'GET' })
     }
 
     if (unsynced.length > 0) {
-      const { loadListingEntry } = await import('@/lib/albums/photo-store')
+      const { loadListingEntry } = await import('@/lib/albums/listing-store')
       const { listedMasterFiles } = await import('@/lib/albums/listing')
       const { getGoogleAccessToken } =
         await import('@/lib/google/google-calendar-auth')

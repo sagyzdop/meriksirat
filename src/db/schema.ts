@@ -363,7 +363,7 @@ export const album = sqliteTable(
     })
       .default('ok')
       .notNull(),
-    // Last time the hourly reconcile compared the photo rows with Drive.
+    // Last time the hourly reconcile compared the stored listing with Drive.
     photosCheckedAt: integer('photos_checked_at', { mode: 'timestamp_ms' }),
     editShareToken: text('edit_share_token').notNull().unique(),
     event: text('event').notNull().default(''),
@@ -620,11 +620,13 @@ export const bufferGrant = sqliteTable(
   ]
 )
 
-// One row per place an album's photos are listed from: `buffer:{volumeId}`,
-// `flamekeeper:{volumeId}` or `master` (the album's own folder). Holds how the last
-// listing of that folder went and the volume stamp it matched.
-export const photoSource = sqliteTable(
-  'photo_source',
+// What the last listing of each folder of an album found. One row per folder
+// the album's photos are listed from: `buffer:{volumeId}`,
+// `flamekeeper:{volumeId}` or `master` (the album's own folder). `files` is the
+// JSON array of Drive files as listed. A volume is capped at 256 MB, which
+// keeps a row far below D1's 2 MB row limit.
+export const albumListing = sqliteTable(
+  'album_listing',
   {
     albumId: text('album_id')
       .notNull()
@@ -637,27 +639,9 @@ export const photoSource = sqliteTable(
     }).notNull(),
     listedAt: integer('listed_at'),
     failedAt: integer('failed_at'),
+    files: text('files').default('[]').notNull(),
   },
   (table) => [primaryKey({ columns: [table.albumId, table.key] })]
-)
-
-// The photos the app shows. Written on upload, delete and each listing of a
-// source; `meta` is the Drive file as listed.
-export const photo = sqliteTable(
-  'photo',
-  {
-    albumId: text('album_id')
-      .notNull()
-      .references(() => album.id, { onDelete: 'cascade' }),
-    sourceKey: text('source_key').notNull(),
-    fileId: text('file_id').notNull(),
-    size: integer('size').default(0).notNull(),
-    md5: text('md5'),
-    meta: text('meta').notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.albumId, table.sourceKey, table.fileId] }),
-  ]
 )
 
 // Flow state and markers (offload plans, Telegram sessions, alert markers).

@@ -11,7 +11,7 @@ import {
 } from '@/lib/google/google-drive'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import { isImage } from '@/lib/albums/drive-photo'
-import { addPhotoRow, hasBufferPhotoRow } from '@/lib/albums/photo-store'
+import { addListedFile, isListedInBuffer } from '@/lib/albums/listing-store'
 import { newId } from '@/lib/albums/ids'
 import { nextVolumeNumber } from '@/lib/albums/volume-number'
 import { hasOffloadPending } from '@/lib/albums/offload-pending'
@@ -296,10 +296,10 @@ export async function confirmBufferUpload(
     return false
   }
 
-  if (await hasBufferPhotoRow(database, albumRow.id, fileId)) return true
+  if (await isListedInBuffer(database, albumRow.id, fileId)) return true
 
   const { parents: _parents, trashed: _trashed, ...listed } = file
-  await addPhotoRow(database, albumRow.id, bufferSourceKey(target.id), listed)
+  await addListedFile(database, albumRow.id, bufferSourceKey(target.id), listed)
 
   const bytes = Number(file.size ?? 0) || 0
   await adjustExpected(database, target.id, 1, bytes)

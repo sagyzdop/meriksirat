@@ -133,7 +133,7 @@ export const listMyFavoritesFn = createServerFn({ method: 'GET' }).handler(
     const { getRequestHeaders } = await import('@tanstack/react-start/server')
     const { album, favorite } = await import('@/db/schema')
     const { and, desc, eq, isNull } = await import('drizzle-orm')
-    const { loadListingEntry } = await import('@/lib/albums/photo-store')
+    const { loadListingEntry } = await import('@/lib/albums/listing-store')
     const { albumsToRead, planFavoriteList } = await import('./remap')
 
     const { database, sessionUser } =

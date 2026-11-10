@@ -13,7 +13,7 @@ import {
 } from '@/lib/cron/budget'
 import type { TombstoneReason } from './tombstone'
 import { invalidatePublicAlbumList } from './server'
-import { forgetAlbumListing } from './photo-store'
+import { forgetAlbumListing } from './listing-store'
 
 type AlbumRecord = typeof album.$inferSelect
 

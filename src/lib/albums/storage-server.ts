@@ -87,7 +87,7 @@ import { withListingOwnerToken } from './listing-server'
 import { albumStorageHolder } from './status'
 import { packFiles } from './volume-limit'
 import { newId } from './ids'
-import { forgetAlbumListing } from './photo-store'
+import { forgetAlbumListing } from './listing-store'
 
 const ID_CHUNK = 90
 const OVERVIEW_MAX_AGE_MS = 10 * 60 * 1000

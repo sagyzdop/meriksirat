@@ -28,7 +28,7 @@ import type {
   ListingOwner,
   ListingSource,
 } from './listing'
-import { loadListingEntry, saveListingEntry } from './photo-store'
+import { loadListingEntry, saveListingEntry } from './listing-store'
 
 export function withListingOwnerToken<T>(
   database: Database,
@@ -186,7 +186,7 @@ export async function loadAlbumListing(
   try {
     await saveListingEntry(database, row.id, entry, next)
   } catch (error) {
-    console.warn(`Could not store the photo rows of album ${row.id}:`, error)
+    console.warn(`Could not store the listing of album ${row.id}:`, error)
   }
   const listing = readAlbumListing({ entry: next, sources, now })
   await syncAlbumTotals(database, row.id, listing)
@@ -222,7 +222,7 @@ async function syncAlbumTotals(
  * Authorizes an action on one file of an album. A file counts only when a
  * listing of this album's own folders (each read with its owner's token) shows
  * it, so a client cannot aim a privileged token at any other Drive file. When
- * the stored photos miss the file, Drive is listed once before giving up.
+ * the stored listing misses the file, Drive is listed once before giving up.
  */
 export async function findAlbumFile(
   database: Database,

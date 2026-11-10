@@ -734,7 +734,7 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { album, favorite, flamekeeper } = await import('@/db/schema')
     const { and, eq, sql } = await import('drizzle-orm')
-    const { removePhotoRow } = await import('./photo-store')
+    const { removeListedFile } = await import('./listing-store')
     const { deleteDriveFile } = await import('@/lib/google/google-drive')
     const { findAlbumFile, withListingOwnerToken } =
       await import('./listing-server')
@@ -787,7 +787,7 @@ export const deletePhotoFn = createServerFn({ method: 'POST' })
           )
         ),
     ])
-    await removePhotoRow(database, row.id, data.fileId)
+    await removeListedFile(database, row.id, data.fileId)
 
     if (row.coverFileId === data.fileId) {
       await database
