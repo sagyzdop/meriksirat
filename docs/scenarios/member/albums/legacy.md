@@ -11,7 +11,7 @@ sequenceDiagram
     autonumber
     actor U as Viewer
     participant W as Worker
-    participant K as KV
+    participant K as D1 app_state
     participant D as D1
     participant G as Drive
     U->>W: getAlbumFn(albumId)

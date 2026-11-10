@@ -13,7 +13,7 @@ export const LISTING_RETRY_MS = 15 * 60 * 1000
 export const LISTING_STAMP_THROTTLE_MS = 5 * 60 * 1000
 export const LISTING_SETTLE_MS = 30 * 1000
 export const LISTING_STALE_LIMIT_MS = 7 * 24 * 60 * 60 * 1000
-export const LISTING_KV_TTL_SECONDS = 8 * 24 * 60 * 60
+export const LISTING_STORE_TTL_SECONDS = 8 * 24 * 60 * 60
 export const LISTING_DRIVE_BUDGET = RUN_SUBREQUEST_BUDGET
 
 export const BUFFER_SOURCE_KEY = 'buffer'

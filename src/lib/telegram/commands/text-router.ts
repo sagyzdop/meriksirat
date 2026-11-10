@@ -8,7 +8,7 @@
  */
 
 import type { BotContext } from '../context'
-import { getSession, setSession } from '../kv-session'
+import { getSession, setSession } from '../session'
 import { getLinkedUserId, replyKeyboard } from '../server-utils'
 import { showMainMenu, BACK_TO_MENU, backToMenuMarkup } from '../menu'
 import { fetchBookingItems } from '../booking-queries'
@@ -118,7 +118,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
   if (!ctx.message || !chatId || !('text' in ctx.message)) return
   const text = (ctx.message.text || '').trim()
 
-  const session = await getSession(ctx.env.meriksirat_kv, chatId)
+  const session = await getSession(chatId)
   if (!session || !session.step) {
     await showMainMenu(ctx)
     return
@@ -143,21 +143,21 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
         }
         const found = await renderStartConfirm(ctx, userId, bookingId)
         if (found) {
-          await setSession(ctx.env.meriksirat_kv, chatId, {
+          await setSession(chatId, {
             ...session,
             step: 'awaiting_start_confirm',
             startBookingId: bookingId,
           })
         }
       } else if (session.step === 'awaiting_booking_selection') {
-        await setSession(ctx.env.meriksirat_kv, chatId, {
+        await setSession(chatId, {
           ...session,
           step: 'awaiting_item_selection',
           selectedBookingIds: [bookingId],
         })
         await renderReturnItemSelection(ctx, bookingId)
       } else {
-        await setSession(ctx.env.meriksirat_kv, chatId, {
+        await setSession(chatId, {
           ...session,
           step: 'awaiting_cancel_items',
           cancelBookingId: bookingId,
@@ -222,7 +222,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
         return
       }
 
-      await setSession(ctx.env.meriksirat_kv, chatId, {
+      await setSession(chatId, {
         ...session,
         step: 'awaiting_photo',
         selectedItemIds: itemIds,
@@ -244,7 +244,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
       }
 
       if (text === BACK_TO_BOOKINGS) {
-        await setSession(ctx.env.meriksirat_kv, chatId, {
+        await setSession(chatId, {
           ...session,
           step: 'awaiting_cancel_selection',
           cancelBookingId: undefined,
@@ -278,7 +278,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
         return
       }
 
-      await setSession(ctx.env.meriksirat_kv, chatId, {
+      await setSession(chatId, {
         ...session,
         step: 'awaiting_cancel_confirm',
         pendingCancelItemIds: itemIds,
@@ -303,7 +303,7 @@ export async function handleFlowText(ctx: BotContext): Promise<void> {
         await ctx.reply(result.message, backToMenuMarkup())
       } else if (text === CANCEL_BUTTON) {
         if (session.cancelBookingId) {
-          await setSession(ctx.env.meriksirat_kv, chatId, {
+          await setSession(chatId, {
             ...session,
             step: 'awaiting_cancel_items',
             pendingCancelItemIds: undefined,

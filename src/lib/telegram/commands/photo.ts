@@ -5,7 +5,7 @@
  */
 
 import type { BotContext } from '../context'
-import { getSession } from '../kv-session'
+import { getSession } from '../session'
 import { db } from '@/db'
 import { bookingItem } from '@/db/schema'
 import { inArray } from 'drizzle-orm'
@@ -45,7 +45,7 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
     }
     const photoFileId = photoArray[photoArray.length - 1].file_id
 
-    const session = await getSession(ctx.env.meriksirat_kv, chatId)
+    const session = await getSession(chatId)
 
     if (!session || session.step !== 'awaiting_photo') {
       return

@@ -611,6 +611,22 @@ export const bufferGrant = sqliteTable(
   ]
 )
 
+// Short-lived caches and flow state (album listings, offload plans, Telegram
+// sessions). A value over the D1 row limit is split across parts.
+export const appState = sqliteTable(
+  'app_state',
+  {
+    key: text('key').notNull(),
+    part: integer('part').default(0).notNull(),
+    value: text('value').notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.key, table.part] }),
+    index('app_state_expiresAt_idx').on(table.expiresAt),
+  ]
+)
+
 export const settings = sqliteTable('settings', {
   id: text('id').primaryKey().default('global'),
 

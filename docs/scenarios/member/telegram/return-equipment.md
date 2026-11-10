@@ -12,7 +12,7 @@ sequenceDiagram
     actor M as Member
     participant W as Worker
     participant D as D1
-    participant K as KV
+    participant K as D1 app_state
     participant C as Calendar
     participant T as Telegram
     M->>W: "↩️ Return Equipment" or /return_equipment

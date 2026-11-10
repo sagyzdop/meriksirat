@@ -1,6 +1,6 @@
-# KV: album-offload
+# State: album-offload
 
-Keys `album:offload:{albumId}` and `album:rescue:{albumId}`.
+Keys `album:offload:{albumId}` and `album:rescue:{albumId}`. Stored in the D1 `app_state` table (`src/lib/app-state.ts`), not in KV, since [ADR-0022](../../adr/0022-caches-and-flow-state-in-d1.md).
 
 How does an admin-started move to flamekeepers survive between its browser steps?
 
@@ -8,14 +8,14 @@ How does an admin-started move to flamekeepers survive between its browser steps
 sequenceDiagram
     participant A as Admin browser
     participant S as Server (storage-server.ts)
-    participant K as KV album:offload:albumId
+    participant K as app_state album:offload:albumId
     A->>S: startOffload
-    S->>K: put plan of volumes and files, TTL 6 h
+    S->>K: write plan of volumes and files, TTL 6 h
     S-->>A: files to copy
     A->>S: mintOffloadUploads (batches)
-    S->>K: get plan, put it back once a volume folder is created
+    S->>K: read plan, write it back once a volume folder is created
     A->>S: completeOffload (repeated until done)
-    S->>K: get plan, put progress when a call runs out of budget
+    S->>K: read plan, write progress when a call runs out of budget
     S->>K: delete plan after the volume swap
 ```
 

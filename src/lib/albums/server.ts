@@ -2,8 +2,9 @@ import { resolveSession } from '@/lib/auth/resolve-session'
 import { db } from '@/db'
 import { albumMember, user } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { deleteState, readState, writeState } from '@/lib/app-state'
 import {
-  LISTING_KV_TTL_SECONDS,
+  LISTING_STORE_TTL_SECONDS,
   newerListingEntry,
   parseListingEntry,
 } from './listing'
@@ -111,8 +112,8 @@ function listingKey(folderId: string): string {
   return `album:list:${folderId}`
 }
 
-// Last entry this isolate wrote. When a KV write is refused (daily quota), the
-// next view still finds the fresh listing here instead of re-listing Drive.
+// Last entry this isolate wrote. When a write to the store fails, the next
+// view still finds the fresh listing here instead of re-listing Drive.
 const LISTING_MEMO_MAX = 50
 const listingMemo = new Map<string, AlbumListingEntry>()
 
@@ -133,10 +134,7 @@ export async function getCachedListing(
 ): Promise<AlbumListingEntry | null> {
   const remembered = listingMemo.get(folderId) ?? null
   try {
-    const { env } = await import('cloudflare:workers')
-    const raw = await (env.meriksirat_kv as KVNamespace).get(
-      listingKey(folderId)
-    )
+    const raw = await readState(listingKey(folderId))
     return newerListingEntry(parseListingEntry(raw), remembered)
   } catch (error) {
     console.warn('Failed to read album listing cache:', error)
@@ -150,11 +148,10 @@ export async function setCachedListing(
 ): Promise<void> {
   rememberListing(folderId, entry)
   try {
-    const { env } = await import('cloudflare:workers')
-    await (env.meriksirat_kv as KVNamespace).put(
+    await writeState(
       listingKey(folderId),
       JSON.stringify(entry),
-      { expirationTtl: LISTING_KV_TTL_SECONDS }
+      LISTING_STORE_TTL_SECONDS
     )
   } catch (error) {
     console.warn('Failed to write album listing cache:', error)
@@ -164,15 +161,14 @@ export async function setCachedListing(
 export async function invalidateCachedListing(folderId: string): Promise<void> {
   listingMemo.delete(folderId)
   try {
-    const { env } = await import('cloudflare:workers')
-    await (env.meriksirat_kv as KVNamespace).delete(listingKey(folderId))
+    await deleteState(listingKey(folderId))
   } catch (error) {
     console.warn('Failed to invalidate album listing cache:', error)
   }
 }
 
-// KV free tier allows 1,000 writes/day: the per-isolate memo absorbs repeat
-// traffic for viewer-independent payloads.
+// The per-isolate memo absorbs repeat traffic for viewer-independent payloads
+// before it reaches D1.
 const MEM_TTL_MS = 30_000
 const MEM_MAX_ENTRIES = 25
 
@@ -196,14 +192,13 @@ function memSet(key: string, value: string): void {
   memStore.set(key, { value, expiresAt: Date.now() + MEM_TTL_MS })
 }
 
-function memoKvCache(ttlSeconds: number, label: string) {
+function memoStateCache(ttlSeconds: number, label: string) {
   return {
     async get(key: string): Promise<unknown | null> {
       const fromMem = memGet(key)
       if (fromMem !== null) return parseCached(fromMem)
       try {
-        const { env } = await import('cloudflare:workers')
-        const raw = await (env.meriksirat_kv as KVNamespace).get(key)
+        const raw = await readState(key)
         if (!raw) return null
         memSet(key, raw)
         return parseCached(raw)
@@ -216,10 +211,7 @@ function memoKvCache(ttlSeconds: number, label: string) {
       const raw = JSON.stringify(value)
       memSet(key, raw)
       try {
-        const { env } = await import('cloudflare:workers')
-        await (env.meriksirat_kv as KVNamespace).put(key, raw, {
-          expirationTtl: ttlSeconds,
-        })
+        await writeState(key, raw, ttlSeconds)
       } catch (error) {
         console.warn(`Failed to write ${label} cache:`, error)
       }
@@ -239,7 +231,7 @@ function parseCached(raw: string): unknown | null {
 
 // Every change to a core invalidates it explicitly, so the TTL only bounds how
 // long an unnoticed change (such as a renamed author) can linger.
-const detailCache = memoKvCache(6 * 3600, 'album detail')
+const detailCache = memoStateCache(6 * 3600, 'album detail')
 
 function detailCoreKey(albumId: string): string {
   return `album:detail:${albumId}`
@@ -261,8 +253,7 @@ export async function invalidateCachedDetailCore(
 ): Promise<void> {
   memStore.delete(detailCoreKey(albumId))
   try {
-    const { env } = await import('cloudflare:workers')
-    await (env.meriksirat_kv as KVNamespace).delete(detailCoreKey(albumId))
+    await deleteState(detailCoreKey(albumId))
   } catch (error) {
     console.warn('Failed to invalidate album detail cache:', error)
   }

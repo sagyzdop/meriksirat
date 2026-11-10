@@ -48,7 +48,7 @@ flowchart LR
   Cron[Cron Triggers] --> Worker
   Worker --> D1[(D1 / Drizzle)]
   Worker --> R2[(R2: images)]
-  Worker --> KV[(KV: caches)]
+  Worker --> KV[(KV: markers)]
   Worker --> Google[Google Calendar + Drive]
   Worker --> Telegram
 ```
@@ -58,7 +58,7 @@ flowchart LR
 | Frontend       | React 19, TanStack Start, Router and Query                    |
 | UI             | Tailwind CSS v4, shadcn/ui, Radix UI                          |
 | Runtime        | Cloudflare Workers (`server.ts`), Smart Placement             |
-| Data           | D1 (SQLite) with Drizzle ORM, R2 for images, KV for caches    |
+| Data           | D1 (SQLite) with Drizzle ORM, R2 for images, KV for markers   |
 | Auth           | Better Auth with Google OAuth                                 |
 | Integrations   | Google Calendar and Drive APIs, Telegram Bot API              |
 | Rate limiting  | Workers native rate limit bindings                            |

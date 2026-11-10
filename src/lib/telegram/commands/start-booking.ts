@@ -11,7 +11,7 @@ import type { BotContext } from '../context'
 import { db } from '@/db'
 import { eq, and, inArray, notInArray } from 'drizzle-orm'
 import { booking, bookingItem, equipment } from '@/db/schema'
-import { setSession } from '../kv-session'
+import { setSession } from '../session'
 import { requireLinkedUser, replyKeyboard } from '../server-utils'
 import { formatClubTime } from '@/lib/club-time'
 import { BACK_TO_MENU, backToMenuMarkup } from '../menu'
@@ -97,7 +97,7 @@ export async function renderStartBookingList(ctx: BotContext): Promise<void> {
     return
   }
 
-  await setSession(ctx.env.meriksirat_kv, chatId, {
+  await setSession(chatId, {
     step: 'awaiting_start_selection',
     userId,
     activeBookingIds: bookings.map((b) => b.id),

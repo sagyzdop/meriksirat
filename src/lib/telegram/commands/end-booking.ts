@@ -7,7 +7,7 @@
  */
 
 import type { BotContext } from '../context'
-import { setSession } from '../kv-session'
+import { setSession } from '../session'
 import { BOOKING_STATUS } from '../types'
 import { requireLinkedUser, replyKeyboard } from '../server-utils'
 import { BACK_TO_MENU, backToMenuMarkup } from '../menu'
@@ -45,7 +45,7 @@ export async function renderEndBookingList(ctx: BotContext): Promise<void> {
 
   const activeBookingIds = bookings.map((b) => b.id)
 
-  await setSession(ctx.env.meriksirat_kv, chatId, {
+  await setSession(chatId, {
     step: 'awaiting_booking_selection',
     userId,
     activeBookingIds,
@@ -86,7 +86,7 @@ export async function renderReturnItemSelection(
     return
   }
 
-  await setSession(ctx.env.meriksirat_kv, chatId, {
+  await setSession(chatId, {
     step: 'awaiting_item_selection',
     userId,
     activeBookingIds: [bookingId],

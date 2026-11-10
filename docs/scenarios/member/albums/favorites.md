@@ -40,7 +40,7 @@ sequenceDiagram
     participant B as Browser
     participant W as Worker
     participant D as D1
-    participant K as KV
+    participant K as D1 app_state
     U->>B: Open My Favorites
     B->>W: listMyFavoritesFn()
     W->>D: Favorites joined to live albums, newest first, up to 1000
