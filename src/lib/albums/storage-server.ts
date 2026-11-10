@@ -43,6 +43,7 @@ import {
 import { syncKeepingStates } from '@/lib/pool/server'
 import { volumeFolderName } from '@/lib/pool/volumes'
 import { chunk } from '@/lib/utils'
+import { formatLongDate } from '@/lib/club-time'
 import {
   copyFilesInto,
   deleteFiles,
@@ -1161,10 +1162,18 @@ export async function completeOffload(
   }
 }
 
+type LogActor = {
+  firstName?: string | null
+  lastName?: string | null
+  name?: string | null
+  telegramUsername?: string | null
+}
+
 export async function scheduleAlbumsDeletion(
   database: Database,
   albumIds: string[],
   env: { TELEGRAM_BOT_TOKEN?: string; BETTER_AUTH_URL?: string },
+  actor: LogActor | null = null,
   now: Date = new Date()
 ): Promise<{ scheduled: number; skipped: number }> {
   const unique = [...new Set(albumIds)]
@@ -1187,16 +1196,27 @@ export async function scheduleAlbumsDeletion(
       .set({ scheduledDeletionAt: at, updatedAt: now })
       .where(and(inArray(album.id, ids), isNull(album.deletedAt)))
   }
-  const { notifyAlbumScheduledDeletion } = await import('@/lib/pool/notices')
+  const { notifyAlbumScheduledDeletion, emailAlbumScheduledDeletion } =
+    await import('@/lib/pool/notices')
+  const { logAlbumActivity } = await import('@/lib/telegram/logging')
   for (const a of due) {
     await notifyAlbumScheduledDeletion(database, env, a, at)
+    await emailAlbumScheduledDeletion(database, env, a, at)
+    await logAlbumActivity({
+      albumId: a.id,
+      albumTitle: a.title,
+      action: 'scheduled_deletion',
+      actor,
+      details: [`Deletes on ${formatLongDate(at)}`],
+    })
   }
   return { scheduled: due.length, skipped: unique.length - due.length }
 }
 
 export async function cancelAlbumsDeletion(
   database: Database,
-  albumIds: string[]
+  albumIds: string[],
+  actor: LogActor | null = null
 ): Promise<{ cancelled: number }> {
   const unique = [...new Set(albumIds)]
   const albums = (await loadAlbums(database, unique)).filter(
@@ -1211,6 +1231,15 @@ export async function cancelAlbumsDeletion(
       .update(album)
       .set({ scheduledDeletionAt: null, updatedAt: now })
       .where(inArray(album.id, ids))
+  }
+  const { logAlbumActivity } = await import('@/lib/telegram/logging')
+  for (const a of albums) {
+    await logAlbumActivity({
+      albumId: a.id,
+      albumTitle: a.title,
+      action: 'deletion_cancelled',
+      actor,
+    })
   }
   return { cancelled: albums.length }
 }

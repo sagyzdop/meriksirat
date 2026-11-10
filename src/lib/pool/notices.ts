@@ -106,3 +106,45 @@ export async function notifyAlbumScheduledDeletion(
     return 0
   }
 }
+
+const MAX_DELETION_EMAILS = 50
+
+export async function emailAlbumScheduledDeletion(
+  database: Database,
+  env: NoticeEnv,
+  album: { id: string; title: string },
+  deletionAt: Date
+): Promise<number> {
+  try {
+    const rows = await database
+      .selectDistinct({ email: user.email, name: user.name })
+      .from(favorite)
+      .innerJoin(user, eq(user.id, favorite.userId))
+      .where(eq(favorite.albumId, album.id))
+      .limit(MAX_DELETION_EMAILS)
+      .all()
+    if (rows.length === 0) return 0
+    const origin = siteOrigin(
+      env.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL
+    )
+    const { sendEmail } = await import('@/lib/google/email')
+    let sent = 0
+    for (const row of rows) {
+      const body = deletionNoticeText(
+        album.title,
+        formatLongDate(deletionAt),
+        origin ? `${origin}/albums/${album.id}` : undefined
+      )
+      const ok = await sendEmail({
+        to: row.email,
+        subject: `The album "${album.title}" is scheduled for deletion`,
+        text: `Hi ${row.name},\n\nYou favorited photos in this album. ${body}\n\nMerikSirat`,
+      })
+      if (ok) sent++
+    }
+    return sent
+  } catch (error) {
+    console.error(`Failed to email about album ${album.id}:`, error)
+    return 0
+  }
+}

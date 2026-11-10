@@ -118,7 +118,7 @@ export function aboutCopy() {
             'As our archive continues to grow, older albums may eventually need to be removed to make room for new ones.'
           ),
           p(
-            'Albums will remain available until they are scheduled for deletion by our administrators. When that happens, we will provide advance notice so that everyone has an opportunity to download the photos they want to keep.'
+            'Albums will remain available until they are scheduled for deletion by our administrators. When that happens, we will provide advance notice so that everyone has an opportunity to download the photos they want to keep. Everyone who favorited the album gets an email with the date it will go, so add an album to favorites to get notified!'
           ),
           p(
             'The more Flamekeepers join us, the longer we can preserve these memories.'

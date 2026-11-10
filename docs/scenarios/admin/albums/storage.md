@@ -84,10 +84,12 @@ flowchart TD
     S["Schedule deletion (one or many)"] --> D["Date = today + 'album deletion notice days' from Settings (default 14)"]
     D --> W["scheduleAlbumsDeletionFn: albums not deleted and not yet scheduled"]
     W --> N["Telegram notice to owner and everyone who favorited, with the date"]
+    W --> E["Email from the master account to everyone who favorited (up to 50)"]
+    W --> L["Log to the club Telegram channel"]
     W --> St["Status: Scheduled for deletion"]
     St --> C{"Cancel deletion before the date?"}
     C -->|"yes"| K["cancelAlbumsDeletionFn clears the date"]
-    C -->|"no"| H["Hourly deleteScheduledAlbums removes it (3 per run)"]
+    C -->|"no"| H["Hourly deleteScheduledAlbums removes the photos and keeps the row as a tombstone (3 per run)"]
 ```
 
 - Already scheduled albums are skipped. Users without a linked Telegram chat get no notice.

@@ -18,6 +18,7 @@ export async function runScheduledDeletion(
   const due = await database
     .select({
       id: album.id,
+      title: album.title,
       driveFolderId: album.driveFolderId,
       ownerUserId: album.ownerUserId,
       deletedAt: album.deletedAt,
@@ -49,9 +50,21 @@ export async function runScheduledDeletion(
         accessToken = await getGoogleAccessToken()
       }
       removed++
-      await removeAlbum(database, byId.get(id)!, accessToken, {
+      const row = byId.get(id)!
+      await removeAlbum(database, row, accessToken, {
         strictDrive: true,
         budget,
+        tombstone: 'scheduled_deletion',
+      })
+      const { logAlbumActivity } = await import('@/lib/telegram/logging')
+      await logAlbumActivity({
+        albumId: id,
+        albumTitle: row.title,
+        action: 'scheduled_deleted',
+        actor: null,
+        details: [
+          'Photos removed; the album link now shows a deletion notice.',
+        ],
       })
     } catch (error) {
       if (error instanceof AlbumDeletionDeferredError) {

@@ -62,7 +62,7 @@ What do scheduled deletions and the buffer check do?
 ```mermaid
 flowchart TD
     A["Albums with scheduledDeletionAt in the past, not deleted"] --> B["Up to 3 per run, start rotates by hour,<br/>each needs 8 requests"]
-    B --> C[removeAlbum with the master token]
+    B --> C["removeAlbum with the master token, tombstone scheduled_deletion, channel log"]
     C -- deferred --> D[Retry next run]
     E[checkBufferUsage] --> F{Usage cache older than 50 min?}
     F -- yes --> G["Read Drive quota (4 requests)"]

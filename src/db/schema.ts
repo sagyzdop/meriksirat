@@ -350,7 +350,12 @@ export const album = sqliteTable(
     favoriteCount: integer('favorite_count').default(0).notNull(),
     heartCount: integer('heart_count').default(0).notNull(),
     tombstoneReason: text('tombstone_reason', {
-      enum: ['folder_deleted', 'flamekeeper_left', 'flamekeeper_lost'],
+      enum: [
+        'folder_deleted',
+        'flamekeeper_left',
+        'flamekeeper_lost',
+        'scheduled_deletion',
+      ],
     }),
     deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     rescuedAt: integer('rescued_at', { mode: 'timestamp_ms' }),

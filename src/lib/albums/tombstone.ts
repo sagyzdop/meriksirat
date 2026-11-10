@@ -1,5 +1,8 @@
 export type TombstoneReason =
-  'folder_deleted' | 'flamekeeper_left' | 'flamekeeper_lost'
+  | 'folder_deleted'
+  | 'flamekeeper_left'
+  | 'flamekeeper_lost'
+  | 'scheduled_deletion'
 
 export function tombstoneCopy(reason: TombstoneReason): {
   title: string
@@ -17,6 +20,12 @@ export function tombstoneCopy(reason: TombstoneReason): {
         title: 'This album is gone',
         description:
           'The flamekeeper who stored these photos could no longer be reached, so the photos dropped out of the app.',
+      }
+    case 'scheduled_deletion':
+      return {
+        title: 'This album was deleted',
+        description:
+          'An admin scheduled this album for deletion and the notice period ended, so its photos were removed.',
       }
     case 'folder_deleted':
       return {
