@@ -158,7 +158,7 @@ _Avoid_: Invite code, password
 **Buffer**:
 The club-run Google account (today `nuimage.storage@gmail.com`, on a 5 TB plan) that an admin connects in Settings > Storage. New album photos are uploaded to it, and photos leaving a flamekeeper are copied back to it. One full-scope token, stored encrypted and used only by the server, does uploads, reads and drains ([ADR-0021](docs/adr/0021-buffer-account-is-a-stored-grant.md)). It is not a flamekeeper and cannot sign in. Switching it copies every album to the new account first.
 Uploads go to it as of #17. Photos come back to it from flamekeepers by Move to Buffer, a drain or the rescue of a lost flamekeeper, copied with the buffer token.
-Usage is read from the Drive quota. At 90% admins get one Telegram warning per crossing and `@nu.edu.kz` users see a banner asking for flamekeepers, with no mention of storage. At 100% uploads are refused with a plain message and the files stay in the uploader's browser (#26, [scenario](docs/scenarios/kv/buffer-usage.md)). Setup is in the README, "Connecting the buffer account".
+Usage is read from the Drive quota. At 90% admins get one Telegram warning per crossing and `@nu.edu.kz` users see a banner asking for flamekeepers, with no mention of storage. At 100% uploads are refused with a plain message and the files stay in the uploader's browser (#26, [scenario](docs/scenarios/state/buffer-usage.md)). Setup is in the README, "Connecting the buffer account".
 _Avoid_: Storage account, main account, master
 
 **Flamekeeper**:

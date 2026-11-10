@@ -27,7 +27,7 @@ sequenceDiagram
 ```
 
 - Shown on one album only when flamekeepers hold it; the bulk button is always there and the preview skips what does not apply.
-- Runs on the server within a request budget. An album that does not finish says so; running it again continues from the copies already made (an `app_state` marker `album:rescue:{id}` keeps them from being cleaned up meanwhile, [album-offload](../../kv/album-offload.md)).
+- Runs on the server within a request budget. An album that does not finish says so; running it again continues from the copies already made (an `app_state` marker `album:rescue:{id}` keeps them from being cleaned up meanwhile, [album-offload](../../state/album-offload.md)).
 - A lost flamekeeper's photos can still be copied, since the volume folder is shared with the buffer. Their originals stay in their Drive until they reconnect, then the cleanup deletes them.
 - Fails with "The buffer is full" when the buffer lacks room, and refuses when the buffer cannot read a volume folder.
 

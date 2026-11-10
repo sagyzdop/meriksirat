@@ -6,8 +6,7 @@ Which tables hold albums, who holds their photos, and who can edit or favorite t
 erDiagram
     user ||--o{ album : owns
     album ||--o{ volume : "photos held in"
-    album ||--o{ photo_source : "listed from"
-    album ||--o{ photo : shows
+    album ||--o{ album_listing : "listed from"
     user ||--o{ volume : "holds as flamekeeper"
     album ||--o{ album_member : "edited by"
     user ||--o{ album_member : joins
@@ -31,22 +30,15 @@ erDiagram
         text folderState "ok, trashed, missing"
         ts photosCheckedAt
     }
-    photo_source {
+    album_listing {
         text albumId PK, FK
         text key PK "buffer:id, flamekeeper:id, master"
         text folderId
-        text stamp
+        text stamp "volume expectedCount:expectedBytes at listing"
         text status
         int listedAt
         int failedAt
-    }
-    photo {
-        text albumId PK, FK
-        text sourceKey PK
-        text fileId PK
-        int size
-        text md5
-        text meta "Drive file as listed, JSON"
+        text files "Drive files as listed, JSON"
     }
     volume {
         text id PK
@@ -75,10 +67,10 @@ erDiagram
 ```
 
 - A volume holds at most 256 MB. Rows with no `flamekeeperUserId` are the buffer's; flamekeeper rows are created by an offload and carry `expected*` like the buffer's (legacy flamekeeper rows keep them NULL).
-- A row with `droppedAt` set is not live: it is skipped by listings and the storage holder, and the cleanup of dropped volumes deletes what its folder still holds, then the row. Offloads and rescues stage their new volumes as dropped rows and make them live in one batch ([album-offload](../kv/album-offload.md)).
+- A row with `droppedAt` set is not live: it is skipped by listings and the storage holder, and the cleanup of dropped volumes deletes what its folder still holds, then the row. Offloads and rescues stage their new volumes as dropped rows and make them live in one batch ([album-offload](../state/album-offload.md)).
 - `volume.flamekeeperUserId` points at `user`, not at the `flamekeeper` table.
 - `album_member` is unique on `(albumId, userId)`: a user who opens the edit link becomes a co-author.
-- `favorite` stores a Drive file id. A photo's identity is still its current Drive file id, so when a file moves to another account, favorites are remapped and the album's `photo` rows are rebuilt from Drive.
-- `photo` and `photo_source` are what album pages read; uploads, deletes and listings of Drive keep them current ([album-listing](../kv/album-listing.md)). `photoCount` and `photoBytes` are totals synced from a complete listing.
+- `favorite` stores a Drive file id. A photo's identity is still its current Drive file id, so when a file moves to another account, favorites are remapped and the album's listing rows are dropped so the next view lists Drive.
+- `album_listing` is what album pages read; uploads, deletes and listings of Drive keep it current ([album-listing](../state/album-listing.md)). `photoCount` and `photoBytes` are totals synced from a complete listing.
 - `album` is indexed on `(createdAt, id)`, the order the album lists page through, so a page reads about as many rows as it shows.
-- Deleting an album cascades to volumes, members, favorites, photo sources and photos.
+- Deleting an album cascades to volumes, members, favorites and album listings.

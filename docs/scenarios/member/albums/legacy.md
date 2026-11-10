@@ -11,11 +11,11 @@ sequenceDiagram
     autonumber
     actor U as Viewer
     participant W as Worker
-    participant K as D1 photo rows
+    participant K as D1 album_listing rows
     participant D as D1
     participant G as Drive
     U->>W: getAlbumFn(albumId)
-    W->>K: Read the album's photo rows
+    W->>K: Read the album's listing rows
     opt A section is due
         W->>G: List the folder with its holder's token
         W->>K: Write the rows that changed
@@ -26,6 +26,6 @@ sequenceDiagram
     W-->>U: Photos from the rows
 ```
 
-- An old album has no photo rows until it is first viewed or the hourly reconcile reaches it; either one lists Drive and records them, so nothing has to be migrated by hand.
+- An old album has no listing rows until it is first viewed or the hourly reconcile reaches it; either one lists Drive and records them, so nothing has to be migrated by hand.
 - Old flamekeeper and master volumes have no expected count, so they never raise the fewer-photos warning, see [warnings](warnings.md).
 - Delete and cover work the same, but delete uses the holding flamekeeper's token, see [photos](photos.md).

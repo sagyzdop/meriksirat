@@ -10,6 +10,6 @@ What the app does, from a click, Telegram tap or cron run through to what the pe
 | [admin](admin/) | Dashboard, club members, equipment, bookings, albums, flamekeepers, settings |
 | [cron](cron/) | The 5-minute, hourly and daily runs, starting at the [overview](cron/overview.md) |
 | [erd](erd/) | Tables by domain |
-| [kv](kv/) | Stored state: the album photo rows, and the `app_state` keys (offload plans, Telegram sessions, alert markers). Nothing is in KV any more |
+| [state](state/) | Stored state: the album listings (`album_listing`), and the `app_state` keys (offload plans, Telegram sessions, alert markers). Nothing is in KV any more |
 
 When you change behaviour, change its diagram in the same commit.
