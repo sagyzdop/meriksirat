@@ -3,7 +3,6 @@ export type BufferState = 'ok' | 'auth_failed' | 'quota_full' | 'missing'
 
 export const RETIRE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 export const BUFFER_SCOPE = 'https://www.googleapis.com/auth/drive'
-export const BUFFER_OAUTH_PREFIX = 'buffer-oauth:'
 
 export function bufferCallbackUrl(origin: string): string {
   return `${origin}/api/buffer/callback`

@@ -64,12 +64,11 @@ export const getBufferAccountFn = createServerFn({ method: 'GET' }).handler(
 export const startBufferConnectFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<{ url: string }> => {
     const { adminContext } = await import('@/lib/admin/server')
-    const { env } = await import('cloudflare:workers')
     const { getRequest } = await import('@tanstack/react-start/server')
     const { buildBufferAuthUrl } = await import('./connect-url')
-    const { bufferCallbackUrl, BUFFER_OAUTH_PREFIX } =
-      await import('./grant-rules')
-    const { admin } = await adminContext(['admin'])
+    const { bufferCallbackUrl } = await import('./grant-rules')
+    const { saveOAuthState } = await import('@/lib/oauth-state')
+    const { admin, database } = await adminContext(['admin'])
 
     if (!process.env.BUFFER_ENCRYPTION_KEY?.trim()) {
       throw new Error(
@@ -79,12 +78,9 @@ export const startBufferConnectFn = createServerFn({ method: 'POST' }).handler(
     const clientId = process.env.GOOGLE_CLIENT_ID
     if (!clientId) throw new Error('GOOGLE_CLIENT_ID not set')
 
-    const nonce = crypto.randomUUID()
-    await env.meriksirat_kv.put(
-      `${BUFFER_OAUTH_PREFIX}${nonce}`,
-      JSON.stringify({ userId: admin.id }),
-      { expirationTtl: 600 }
-    )
+    const nonce = await saveOAuthState(database, 'buffer', {
+      userId: admin.id,
+    })
     const origin = new URL(getRequest().url).origin
     return {
       url: buildBufferAuthUrl({

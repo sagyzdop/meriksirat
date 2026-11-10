@@ -6,8 +6,8 @@ import { flamekeeper, user, volume } from '@/db/schema'
 import { newId } from '@/lib/albums/ids'
 import { resolveSession } from '@/lib/auth/resolve-session'
 import { decodeIdTokenPayload } from '@/lib/flamekeeper/rules'
+import { takeOAuthState } from '@/lib/oauth-state'
 import {
-  BUFFER_OAUTH_PREFIX,
   bufferCallbackUrl,
   hasFullDriveScope,
   normalizeEmail,
@@ -63,13 +63,13 @@ export const Route = createFileRoute('/api/buffer/callback')({
         if (me?.role !== 'admin') return redirectTo(origin, 'session')
 
         if (!nonce) return redirectTo(origin, 'state')
-        const key = `${BUFFER_OAUTH_PREFIX}${nonce}`
-        const raw = await env.meriksirat_kv.get(key)
-        if (raw) await env.meriksirat_kv.delete(key)
-        if (!raw) return redirectTo(origin, 'state')
-        if (
-          (JSON.parse(raw) as { userId: string }).userId !== session.user.id
-        ) {
+        const started = await takeOAuthState<{ userId: string }>(
+          database,
+          'buffer',
+          nonce
+        )
+        if (!started) return redirectTo(origin, 'state')
+        if (started.userId !== session.user.id) {
           return redirectTo(origin, 'session')
         }
         if (requestUrl.searchParams.get('error') || !code) {

@@ -6,6 +6,7 @@ import { flamekeeper, flamekeeperGrant, user } from '@/db/schema'
 import { isMasterEmail } from '@/lib/flamekeeper/master'
 import { forgetFlamekeeperAccessToken } from '@/lib/flamekeeper/tokens'
 import { resolveSession } from '@/lib/auth/resolve-session'
+import { takeOAuthState } from '@/lib/oauth-state'
 import {
   decodeIdTokenPayload,
   driveAccountMatches,
@@ -52,12 +53,12 @@ export const Route = createFileRoute('/api/flamekeeper/callback')({
         const failPath = '/become-flamekeeper'
 
         if (!nonce) return redirectTo(origin, failPath, 'state')
-        const key = `flamekeeper-oauth:${nonce}`
-        const raw = await env.meriksirat_kv.get(key)
-        if (raw) await env.meriksirat_kv.delete(key)
-        if (!raw) return redirectTo(origin, failPath, 'state')
-
-        const pending = JSON.parse(raw) as PendingConnect
+        const pending = await takeOAuthState<PendingConnect>(
+          database,
+          'flamekeeper',
+          nonce
+        )
+        if (!pending) return redirectTo(origin, failPath, 'state')
         if (pending.userId !== session.user.id) {
           return redirectTo(origin, failPath, 'session')
         }

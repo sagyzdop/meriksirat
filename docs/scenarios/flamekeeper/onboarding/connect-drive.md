@@ -9,23 +9,22 @@ sequenceDiagram
     autonumber
     actor U as Person
     participant W as Worker
-    participant KV
     participant G as Google
     participant D1
     U->>W: startDriveConnectFn (signup with pledge and month, or reconnect)
     W->>W: check eligibility, refuse the master account
-    W->>KV: flamekeeper-oauth:nonce = pledge, month, terms time (10 min)
+    W->>D1: verification row oauth-state:flamekeeper:nonce = pledge, month, terms time (10 min)
     W-->>U: Google consent URL (offline access, login_hint = account email)
     U->>G: approve
     G->>W: GET /api/flamekeeper/callback?code&state
-    W->>KV: read and delete the nonce
+    W->>D1: delete the nonce row and read what it held
     W->>G: exchange code for tokens
     W->>W: run the checks below
     W->>D1: batch: set graduation date, upsert flamekeeper (Active), upsert grant
     W-->>U: redirect /account?flamekeeper=connected (toast "Drive connected")
 ```
 
-The nonce is single use. Signup requires `canBecomeFlamekeeper`, a valid pledge option and a future graduation month. Reconnect requires state Lost and reuses the stored pledge.
+The nonce is a random UUID kept in the D1 `verification` table (`src/lib/oauth-state.ts`), not in KV, so connecting never depends on the daily KV write quota. It carries the pledge and terms acceptance through the redirect without trusting the browser, lasts 10 minutes and is single use because the callback deletes it on first read. The buffer account connect uses the same store under `oauth-state:buffer:`. Signup requires `canBecomeFlamekeeper`, a valid pledge option and a future graduation month. Reconnect requires state Lost and reuses the stored pledge.
 
 ## What makes the callback fail?
 
@@ -33,7 +32,7 @@ The nonce is single use. Signup requires `canBecomeFlamekeeper`, a valid pledge 
 flowchart TD
     A["Callback"] --> B{"Signed in?"}
     B -- no --> L["Redirect /login"]
-    B -- yes --> C{"Nonce found in KV?"}
+    B -- yes --> C{"Nonce found and not expired?"}
     C -- no --> E1["state: request expired"]
     C -- yes --> D{"Nonce user = session user?"}
     D -- no --> E2["session: session changed"]

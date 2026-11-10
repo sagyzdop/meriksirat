@@ -46,7 +46,6 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { userContext } = await import('@/lib/auth/context')
     const { session, database } = await userContext()
-    const { env } = await import('cloudflare:workers')
     const { flamekeeper, user } = await import('@/db/schema')
     const { eq } = await import('drizzle-orm')
     const { loadAccessRules } = await import('@/lib/access/server')
@@ -119,12 +118,8 @@ export const startDriveConnectFn = createServerFn({ method: 'POST' })
       }
     }
 
-    const nonce = crypto.randomUUID()
-    await env.meriksirat_kv.put(
-      `flamekeeper-oauth:${nonce}`,
-      JSON.stringify(pending),
-      { expirationTtl: 600 }
-    )
+    const { saveOAuthState } = await import('@/lib/oauth-state')
+    const nonce = await saveOAuthState(database, 'flamekeeper', pending)
 
     const origin = new URL(getRequest().url).origin
     return {
