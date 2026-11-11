@@ -489,7 +489,7 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
     }
 
     const equipmentExists = await database
-      .select({ id: equipment.id })
+      .select({ id: equipment.id, imagePath: equipment.imagePath })
       .from(equipment)
       .where(eq(equipment.id, data.equipmentId))
       .get()
@@ -519,6 +519,13 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
           updatedAt: new Date(),
         })
         .where(eq(equipment.id, data.equipmentId))
+
+      const previous = equipmentExists.imagePath
+      if (previous?.startsWith('equipment-images/') && previous !== fileName) {
+        await env.meriksirat_r2.delete(previous).catch((error) => {
+          console.warn('Failed to delete replaced equipment image:', error)
+        })
+      }
 
       return {
         success: true,

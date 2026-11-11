@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -54,6 +55,7 @@ interface PageProps {
 
 export function Page({ equipment, categories, equipmentId }: PageProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const goBack = useBackNavigation('/admin/equipment')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -105,6 +107,8 @@ export function Page({ equipment, categories, equipmentId }: PageProps) {
       } else {
         setSuccess(`Equipment "${data.modelName}" updated successfully!`)
       }
+
+      await queryClient.invalidateQueries({ queryKey: ['equipment'] })
 
       setTimeout(() => {
         navigate({ to: '/admin/equipment' })
