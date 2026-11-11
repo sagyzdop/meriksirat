@@ -1,19 +1,9 @@
 import { uploadEquipmentImageFn } from '@/lib/equipment'
+import { shrinkImage } from '@/lib/equipment/shrink-image'
 
 export async function uploadEquipmentImage(equipmentId: number, file: File) {
-  const reader = new FileReader()
-  const imageData = await new Promise<string>((resolve, reject) => {
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-
-  return uploadEquipmentImageFn({
-    data: {
-      equipmentId,
-      imageData,
-      contentType: file.type,
-      fileName: file.name,
-    },
-  })
+  const form = new FormData()
+  form.set('equipmentId', String(equipmentId))
+  form.set('file', await shrinkImage(file))
+  return uploadEquipmentImageFn({ data: form })
 }

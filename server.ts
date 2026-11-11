@@ -10,6 +10,10 @@ import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 import { type Budget } from './src/lib/cron/budget'
 import { planScheduledRun, type CronStepName } from './src/lib/cron/schedule'
 import { guestHtmlTtlSeconds } from './src/lib/cache/guest-html'
+import {
+  PUBLIC_IMAGE_CACHE_CONTROL,
+  publicImageKey,
+} from './src/lib/cache/public-image'
 
 interface Env {
   meriksirat_d1: D1Database
@@ -114,8 +118,42 @@ async function serveGuestHtmlCache(
   }
 }
 
+/**
+ * Equipment photos skip the app: no router, session or rate limit. The edge
+ * cache answers repeat requests and browsers keep each key for good.
+ */
+async function servePublicImage(
+  request: Request,
+  key: string,
+  env: Env,
+  ctx: ExecutionContext
+): Promise<Response> {
+  const cache = (caches as unknown as { default: Cache }).default
+  const hit = await cache.match(request)
+  if (hit) return hit
+  const object = await env.meriksirat_r2.get(key)
+  if (!object) return new Response('Image not found', { status: 404 })
+  const response = new Response(object.body, {
+    headers: {
+      'Content-Type': object.httpMetadata?.contentType || 'image/jpeg',
+      'Cache-Control': PUBLIC_IMAGE_CACHE_CONTROL,
+      ETag: object.httpEtag,
+    },
+  })
+  ctx.waitUntil(cache.put(request, response.clone()))
+  return response
+}
+
 export default {
   ...serverEntry,
+
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    if (request.method === 'GET') {
+      const key = publicImageKey(new URL(request.url).pathname)
+      if (key) return servePublicImage(request, key, env, ctx)
+    }
+    return serverEntry.fetch(request)
+  },
 
   // Handle scheduled cron triggers
   async scheduled(

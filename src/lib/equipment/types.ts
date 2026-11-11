@@ -98,12 +98,20 @@ export const DeleteEquipmentSchema = z.object({
   equipmentId: z.number(),
 })
 
-export const UploadEquipmentImageSchema = z.object({
-  equipmentId: z.number(),
-  imageData: z.string(), // base64 encoded image data
-  contentType: z.string(),
-  fileName: z.string(),
-})
+export function parseEquipmentImageForm(data: unknown): {
+  equipmentId: number
+  file: Blob
+} {
+  if (!(data instanceof FormData)) throw new Error('Expected FormData')
+  const equipmentId = z.coerce
+    .number()
+    .int()
+    .positive()
+    .parse(data.get('equipmentId'))
+  const file = data.get('file')
+  if (!(file instanceof Blob)) throw new Error('Expected an image file')
+  return { equipmentId, file }
+}
 
 export const BulkUpdateEquipmentClearanceSchema = z.object({
   equipmentIds: z.array(z.number()),

@@ -11,7 +11,7 @@ import {
   CreateEquipmentSchema,
   UpdateEquipmentSchema,
   DeleteEquipmentSchema,
-  UploadEquipmentImageSchema,
+  parseEquipmentImageForm,
   BulkUpdateEquipmentClearanceSchema,
   BulkUpdateEquipmentCategorySchema,
   BulkUpdateEquipmentStatusSchema,
@@ -467,7 +467,7 @@ export const getAdminEquipmentFn = createServerFn({
   })
 
 export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
-  .validator(UploadEquipmentImageSchema)
+  .validator(parseEquipmentImageForm)
   .handler(async ({ data }) => {
     const { adminContext } = await import('@/lib/admin/server')
     const { env } = await import('cloudflare:workers')
@@ -477,17 +477,14 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
     const { database } = await adminContext(['admin', 'manager'])
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(data.contentType)) {
+    if (!allowedTypes.includes(data.file.type)) {
       throw new UserError(
         'Invalid file type. Only JPEG, PNG, and WebP images are allowed.'
       )
     }
 
-    const base64Data = data.imageData.split(',')[1] || data.imageData
-    const imageBuffer = Buffer.from(base64Data, 'base64')
-
     const maxSize = 5 * 1024 * 1024 // 5MB
-    if (imageBuffer.length > maxSize) {
+    if (data.file.size > maxSize) {
       throw new UserError('File size too large. Maximum size is 5MB.')
     }
 
@@ -502,14 +499,14 @@ export const uploadEquipmentImageFn = createServerFn({ method: 'POST' })
     }
 
     try {
-      const fileExtension = data.contentType.split('/')[1]
+      const fileExtension = data.file.type.split('/')[1]
       const fileName = `equipment-images/${data.equipmentId}-${Date.now()}.${fileExtension}`
 
-      const r2Response = await env.meriksirat_r2.put(fileName, imageBuffer, {
-        httpMetadata: {
-          contentType: data.contentType,
-        },
-      })
+      const r2Response = await env.meriksirat_r2.put(
+        fileName,
+        await data.file.arrayBuffer(),
+        { httpMetadata: { contentType: data.file.type } }
+      )
 
       if (!r2Response) {
         throw new Error('Failed to upload image to storage')
