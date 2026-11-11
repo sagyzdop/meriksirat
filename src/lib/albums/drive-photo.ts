@@ -1,5 +1,4 @@
-import { albumPhotoUrls } from './urls'
-import type { AlbumPhoto, AlbumPhotoExif } from './types'
+import type { AlbumPhoto, AlbumPhotoDetails, AlbumPhotoExif } from './types'
 
 export interface DriveFileLike {
   id: string
@@ -59,7 +58,10 @@ export function driveFileToAlbumPhoto(f: DriveFileLike): AlbumPhoto {
     parseCapturedAt(f.imageMediaMetadata?.time)?.toISOString() ||
     f.createdTime ||
     ''
-  const { url, thumbnailUrl } = albumPhotoUrls(f.id)
+  return { id: f.id, name: f.name, capturedAt }
+}
+
+export function driveFileToPhotoDetails(f: DriveFileLike): AlbumPhotoDetails {
   const meta = f.imageMediaMetadata
   const exif = meta && {
     ...pickExif(meta),
@@ -67,15 +69,9 @@ export function driveFileToAlbumPhoto(f: DriveFileLike): AlbumPhoto {
     ...(meta.height != null && { height: meta.height }),
   }
   return {
-    id: f.id,
-    name: f.name,
     mimeType: f.mimeType,
     size: f.size ? Number(f.size) : null,
-    capturedAt,
-    createdAt: f.createdTime ?? '',
-    url,
-    thumbnailUrl,
-    ...(exif && { exif }),
+    exif: exif && Object.keys(exif).length > 0 ? exif : null,
   }
 }
 

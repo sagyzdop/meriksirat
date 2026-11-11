@@ -127,6 +127,26 @@ export async function removeListedFile(
 }
 
 /**
+ * One file of the album's stored listings, found by D1 so the Worker parses
+ * only that file and never the whole listing.
+ */
+export async function findStoredFile(
+  database: Database,
+  albumId: string,
+  fileId: string
+): Promise<ListingFile | null> {
+  const row = await database.get<{ file: string } | undefined>(
+    sql`SELECT f.value AS file FROM ${albumListing}, json_each(${albumListing.files}) AS f WHERE ${albumListing.albumId} = ${albumId} AND json_extract(f.value, '$.id') = ${fileId} LIMIT 1`
+  )
+  if (!row) return null
+  try {
+    return JSON.parse(row.file) as ListingFile
+  } catch {
+    return null
+  }
+}
+
+/**
  * Which of `fileIds` the album's stored buffer listings already hold, in one
  * pass over them.
  */

@@ -168,14 +168,55 @@ export async function listDriveFolderUpTo(
   folderId: string,
   mayRequest: () => boolean
 ): Promise<{ files: DriveFileMeta[]; complete: boolean }> {
-  const files: DriveFileMeta[] = []
+  return listFilesUpTo<DriveFileMeta>(
+    accessToken,
+    `'${folderId}' in parents`,
+    LISTING_FIELDS,
+    mayRequest
+  )
+}
+
+// Folder ids per query in listDriveFoldersUpTo, which keeps the URL short.
+export const FOLDERS_PER_LISTING = 40
+
+/**
+ * List the files directly inside several folders with one query per page, so
+ * an album split into many volumes costs one request instead of one each.
+ * Each file carries `parents` to tell which folder it is in.
+ */
+export async function listDriveFoldersUpTo(
+  accessToken: string,
+  folderIds: string[],
+  mayRequest: () => boolean
+): Promise<{
+  files: (DriveFileMeta & { parents?: string[] })[]
+  complete: boolean
+}> {
+  if (folderIds.length > FOLDERS_PER_LISTING) {
+    throw new Error(`At most ${FOLDERS_PER_LISTING} folders per listing`)
+  }
+  return listFilesUpTo(
+    accessToken,
+    `(${folderIds.map((id) => `'${id}' in parents`).join(' or ')})`,
+    LISTING_FIELDS.replace('files(id,', 'files(id, parents,'),
+    mayRequest
+  )
+}
+
+async function listFilesUpTo<T>(
+  accessToken: string,
+  inFolders: string,
+  fields: string,
+  mayRequest: () => boolean
+): Promise<{ files: T[]; complete: boolean }> {
+  const files: T[] = []
   let pageToken: string | undefined
 
   do {
     if (!mayRequest()) return { files, complete: false }
     const params = new URLSearchParams({
-      q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
-      fields: LISTING_FIELDS,
+      q: `${inFolders} and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
+      fields,
       pageSize: '1000',
       orderBy: 'createdTime',
     })
@@ -186,7 +227,7 @@ export async function listDriveFolderUpTo(
       `${API}/files?${params.toString()}`
     )
     const data = (await response.json()) as {
-      files?: DriveFileMeta[]
+      files?: T[]
       nextPageToken?: string
     }
     files.push(...(data.files ?? []))

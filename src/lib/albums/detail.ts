@@ -2,13 +2,13 @@ import { eq } from 'drizzle-orm'
 import type { Database } from '@/db'
 import { album, albumMember, flamekeeper, user, volume } from '@/db/schema'
 import { planCountWarning } from './count-warning'
-import { listingPhotos } from './listing'
+import { listingBytes, listingPhotos } from './listing'
+import type { ListingFile } from './listing'
 import { loadAlbumListing } from './listing-server'
 import type {
   AlbumAccessLevel,
   AlbumAuthor,
   AlbumDetail,
-  AlbumPhoto,
   AlbumStorage,
 } from './types'
 import { invalidatePublicAlbumList } from './server'
@@ -17,12 +17,13 @@ import { albumCoverUrl } from './urls'
 
 export type AlbumRecord = typeof album.$inferSelect
 
-function defaultCoverFileId(photos: AlbumPhoto[]): string | null {
-  let earliest: AlbumPhoto | null = null
-  for (const photo of photos) {
-    const createdAt = photo.createdAt
-    if (!createdAt) continue
-    if (!earliest || createdAt < (earliest.createdAt ?? 0)) earliest = photo
+function defaultCoverFileId(files: ListingFile[]): string | null {
+  let earliest: ListingFile | null = null
+  for (const file of files) {
+    if (!file.createdTime) continue
+    if (!earliest || file.createdTime < (earliest.createdTime ?? '')) {
+      earliest = file
+    }
   }
   return earliest?.id ?? null
 }
@@ -88,7 +89,7 @@ export async function loadAlbumDetail(
   const listing = await loadAlbumListing(database, row, options)
   const photos = listingPhotos(listing)
 
-  const coverFileId = row.coverFileId ?? defaultCoverFileId(photos)
+  const coverFileId = row.coverFileId ?? defaultCoverFileId(listing.files)
   if (!row.coverFileId && coverFileId && listing.complete) {
     await database
       .update(album)
@@ -128,6 +129,7 @@ export async function loadAlbumDetail(
       | 'access'
       | 'editShareToken'
       | 'photos'
+      | 'photoBytes'
       | 'folderState'
       | 'coverFileId'
       | 'coverUrl'
@@ -137,6 +139,7 @@ export async function loadAlbumDetail(
     coverFileId,
     coverUrl: coverFileId ? albumCoverUrl(coverFileId) : null,
     photos,
+    photoBytes: listingBytes(listing),
     folderState: listing.folderState,
     ownership,
     access,
@@ -179,6 +182,7 @@ export function buildTombstoneDetail(row: AlbumRecord): AlbumDetail {
     coAuthorCount: 0,
     authors: [],
     photos: [],
+    photoBytes: 0,
     access: 'none',
     editShareToken: null,
     folderState: 'ok',

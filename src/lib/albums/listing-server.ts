@@ -7,8 +7,10 @@ import type { Budget } from '@/lib/cron/budget'
 import { withFlamekeeperToken } from '@/lib/flamekeeper/tokens'
 import { withGoogleToken } from '@/lib/google/google-calendar-auth'
 import {
+  FOLDERS_PER_LISTING,
   getDriveFolderState,
   listDriveFolderUpTo,
+  listDriveFoldersUpTo,
 } from '@/lib/google/google-drive'
 import type { DriveFolderState } from '@/lib/google/google-drive'
 import {
@@ -17,9 +19,11 @@ import {
   classifyListingError,
   findListedFile,
   listingTotals,
+  planListingBatches,
   planListingRefresh,
   planListingSources,
   readAlbumListing,
+  splitBatchFiles,
 } from './listing'
 import type {
   AlbumListing,
@@ -116,11 +120,53 @@ async function listSource(
         listDriveFolderUpTo(token, source.folderId, () => budget.take(1)),
       budget
     )
+    if (!result.complete && result.files.length === 0)
+      return { kind: 'skipped' }
     return { kind: 'listed', ...result }
   } catch (error) {
     const kind = classifyListingError(error)
     console.warn(`Could not list ${source.key} (${source.folderId}):`, error)
     return { kind }
+  }
+}
+
+async function listBatch(
+  database: Database,
+  batch: ListingSource[],
+  budget: Budget
+): Promise<Record<string, ListingOutcome>> {
+  if (batch.length === 1) {
+    return { [batch[0].key]: await listSource(database, batch[0], budget) }
+  }
+  const each = (outcome: ListingOutcome) =>
+    Object.fromEntries(batch.map((source) => [source.key, outcome]))
+  if (!budget.canAfford(2)) return each({ kind: 'skipped' })
+  budget.spend(1)
+  try {
+    const result = await withListingOwnerToken(
+      database,
+      batch[0].owner,
+      (token) =>
+        listDriveFoldersUpTo(
+          token,
+          batch.map((source) => source.folderId),
+          () => budget.take(1)
+        ),
+      budget
+    )
+    if (!result.complete && result.files.length === 0) {
+      return each({ kind: 'skipped' })
+    }
+    const split = splitBatchFiles(batch, result.files)
+    return Object.fromEntries(
+      batch.map((source) => [
+        source.key,
+        { kind: 'listed', files: split[source.key], complete: result.complete },
+      ])
+    )
+  } catch (error) {
+    console.warn(`Could not list ${batch.length} volumes together:`, error)
+    return each({ kind: 'failed' })
   }
 }
 
@@ -170,8 +216,8 @@ export async function loadAlbumListing(
     for (const source of due) outcomes[source.key] = { kind: 'failed' }
   } else if (folderState !== 'missing') {
     await Promise.all(
-      due.map(async (source) => {
-        outcomes[source.key] = await listSource(database, source, budget)
+      planListingBatches(due, FOLDERS_PER_LISTING).map(async (batch) => {
+        Object.assign(outcomes, await listBatch(database, batch, budget))
       })
     )
   }

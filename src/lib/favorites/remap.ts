@@ -1,4 +1,3 @@
-import { albumPhotoUrls } from '@/lib/albums/urls'
 import { driveFileToAlbumPhoto } from '@/lib/albums/drive-photo'
 import type { DriveFileLike } from '@/lib/albums/drive-photo'
 import type { FavoritePhoto } from './types'
@@ -90,10 +89,7 @@ export function planFavoriteList(input: {
       photos.push({
         id: f.driveFileId,
         name: 'Photo',
-        mimeType: 'image/jpeg',
-        size: null,
         capturedAt: base.favoritedAt,
-        ...albumPhotoUrls(f.driveFileId),
         ...base,
       })
     }

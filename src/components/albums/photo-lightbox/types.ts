@@ -12,4 +12,5 @@ export interface PhotoLightboxProps {
   onDeletePhoto?: (photo: AlbumPhoto) => void
   favorites?: FavoritesControl
   getAlbumId?: (photo: AlbumPhoto) => string | undefined
+  albumId?: string
 }

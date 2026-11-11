@@ -1,10 +1,13 @@
+import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { AlbumPhoto } from '@/lib/albums'
+import { albumQueries } from '@/lib/albums/queries'
 import { formatBytes, formatDateTime } from '@/lib/format'
 
 interface InfoPanelProps {
   photo: AlbumPhoto
+  albumId?: string
   index: number
   total: number
   open: boolean
@@ -13,12 +16,17 @@ interface InfoPanelProps {
 
 export function InfoPanel({
   photo,
+  albumId,
   index,
   total,
   open,
   onClose,
 }: InfoPanelProps) {
-  const exif = photo.exif
+  const { data: details } = useQuery({
+    ...albumQueries.photoDetails(albumId ?? '', photo.id),
+    enabled: open && !!albumId,
+  })
+  const exif = details?.exif
   if (!open) return null
 
   return (
@@ -54,12 +62,14 @@ export function InfoPanel({
             </div>
             <div>
               <div className="text-xs font-medium text-zinc-400">Type</div>
-              <div className="mt-0.5 break-words">{photo.mimeType}</div>
+              <div className="mt-0.5 break-words">
+                {details?.mimeType ?? '—'}
+              </div>
             </div>
             <div>
               <div className="text-xs font-medium text-zinc-400">Size</div>
               <div className="mt-0.5">
-                {photo.size != null ? formatBytes(photo.size) : '—'}
+                {details?.size != null ? formatBytes(details.size) : '—'}
               </div>
             </div>
             <div>

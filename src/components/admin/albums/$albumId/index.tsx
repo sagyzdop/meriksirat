@@ -103,7 +103,7 @@ export function Page({ albumId }: PageProps) {
     )
   }
 
-  const photoBytes = album.photos.reduce((n, p) => n + (p.size ?? 0), 0)
+  const photoBytes = album.photoBytes
   const owner = authors.find((a) => a.authorRole === 'owner')
   const row = toRow(album, photoBytes, owner?.email ?? null)
   const ownerName = owner?.name ?? album.authors[0]?.name ?? 'Unknown'

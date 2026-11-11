@@ -345,6 +345,7 @@ export function AlbumPage({ albumId, edit, authUser }: AlbumPageProps) {
         onSetCover={canManage ? handleSetCover : undefined}
         onDeletePhoto={canManage ? handleDeletePhoto : undefined}
         favorites={favorites}
+        albumId={albumId}
       />
 
       {canManage && (

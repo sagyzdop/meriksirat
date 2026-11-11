@@ -12,15 +12,18 @@ import {
   findListedFileOwner,
   listingTotals,
   listingPhotos,
+  planListingBatches,
   planListingRefresh,
   planListingSources,
   readAlbumListing,
+  splitBatchFiles,
   volumeIdFromSourceKey,
 } from '@/lib/albums/listing'
 import type {
   AlbumListingEntry,
   ListingFile,
   ListingOutcome,
+  ListingSource,
 } from '@/lib/albums/listing'
 import { DriveNotFoundError } from '@/lib/google/google-drive'
 
@@ -503,6 +506,24 @@ describe('when a listing fails', () => {
     )
   })
 
+  it('keeps the files it had when a listing stops early', () => {
+    const entry = applyListingOutcomes({
+      sources,
+      entry: before,
+      now: NOW,
+      folderState: 'ok',
+      outcomes: {
+        'buffer:b': { kind: 'listed', files: [file('z')], complete: false },
+        master: { kind: 'listed', files: [], complete: true },
+      },
+    })
+    const listing = readAlbumListing({ entry, sources, now: NOW })
+    expect(listing.files.map((f) => f.id).sort()).toEqual(['a', 'z'])
+    expect(listing.volumes.find((v) => v.key === 'buffer:b')?.status).toBe(
+      'partial'
+    )
+  })
+
   it('tries a skipped volume again on the next view, keeping what it had', () => {
     const entry = applyListingOutcomes({
       sources,
@@ -779,5 +800,51 @@ describe('stamp-driven listing during an upload burst', () => {
       now: NOW + 2 * 60_000,
     }).volumes
     expect(volumes.find((v) => v.key === 'buffer:b')?.stampStale).toBe(true)
+  })
+})
+
+describe('listing many volumes at once', () => {
+  const buffer = (id: string, grantId?: string): ListingSource => ({
+    key: `buffer:${id}`,
+    owner: { kind: 'buffer', grantId },
+    folderId: `folder-${id}`,
+    stamp: '',
+    changedAt: null,
+    listable: true,
+    expected: null,
+  })
+  const master: ListingSource = {
+    key: 'master',
+    owner: { kind: 'master' },
+    folderId: 'album-folder',
+    stamp: '',
+    changedAt: null,
+    listable: true,
+    expected: null,
+  }
+
+  it('lists buffer volumes of one grant together, in batches', () => {
+    const batches = planListingBatches(
+      [buffer('a'), master, buffer('b'), buffer('c'), buffer('d', 'g2')],
+      2
+    )
+    expect(batches.map((b) => b.map((s) => s.key))).toEqual([
+      ['master'],
+      ['buffer:a', 'buffer:b'],
+      ['buffer:c'],
+      ['buffer:d'],
+    ])
+  })
+
+  it('gives each volume the files in its folder, without parents', () => {
+    const split = splitBatchFiles(
+      [buffer('a'), buffer('b')],
+      [
+        { ...file('1'), parents: ['folder-a'] },
+        { ...file('2'), parents: ['folder-b'] },
+        { ...file('3'), parents: ['elsewhere'] },
+      ]
+    )
+    expect(split).toEqual({ 'buffer:a': [file('1')], 'buffer:b': [file('2')] })
   })
 })

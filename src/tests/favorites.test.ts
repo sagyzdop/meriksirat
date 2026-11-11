@@ -107,14 +107,14 @@ describe('planFavoriteList', () => {
     })
   })
 
-  it('shows a placeholder with working URLs when there is no cached listing', () => {
+  it('shows a placeholder when there is no cached listing', () => {
     const photos = planFavoriteList({
       favorites: [fav('a', 'f9')],
       listings: {},
     })
     expect(photos).toHaveLength(1)
     expect(photos[0].id).toBe('f9')
-    expect(photos[0].thumbnailUrl).toContain('f9')
+    expect(photos[0].name).toBe('Photo')
   })
 
   it('omits a favorite whose photo is gone from a complete listing', () => {

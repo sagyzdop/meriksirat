@@ -203,6 +203,51 @@ export function planListingRefresh(input: {
   }
 }
 
+/**
+ * Groups the sources to list so buffer volumes, which share one token, are
+ * listed together with one query per group. Every other source is listed alone.
+ */
+export function planListingBatches(
+  sources: ListingSource[],
+  perBatch: number
+): ListingSource[][] {
+  const batches: ListingSource[][] = []
+  const buffers = new Map<string, ListingSource[]>()
+  for (const source of sources) {
+    if (source.owner.kind !== 'buffer') {
+      batches.push([source])
+      continue
+    }
+    const grant = source.owner.grantId ?? ''
+    const group = buffers.get(grant) ?? []
+    group.push(source)
+    buffers.set(grant, group)
+  }
+  for (const group of buffers.values()) {
+    for (let i = 0; i < group.length; i += perBatch) {
+      batches.push(group.slice(i, i + perBatch))
+    }
+  }
+  return batches
+}
+
+/** The files of one batched listing, by the source whose folder holds them. */
+export function splitBatchFiles(
+  batch: ListingSource[],
+  files: (ListingFile & { parents?: string[] })[]
+): Record<string, ListingFile[]> {
+  const keyByFolder = new Map(batch.map((s) => [s.folderId, s.key]))
+  const out: Record<string, ListingFile[]> = {}
+  for (const source of batch) out[source.key] = []
+  for (const { parents, ...file } of files) {
+    for (const parent of parents ?? []) {
+      const key = keyByFolder.get(parent)
+      if (key) out[key].push(file)
+    }
+  }
+  return out
+}
+
 export type ListingOutcome =
   | { kind: 'listed'; files: ListingFile[]; complete: boolean }
   | { kind: 'failed' }
@@ -211,6 +256,17 @@ export type ListingOutcome =
 
 export function classifyListingError(error: unknown): 'gone' | 'failed' {
   return error instanceof DriveNotFoundError ? 'gone' : 'failed'
+}
+
+// A listing that stopped early read only its first pages, so the files it had
+// before still count until a complete listing replaces them.
+function withEarlierFiles(
+  read: ListingFile[],
+  earlier: ListingFile[]
+): ListingFile[] {
+  if (earlier.length === 0) return read
+  const ids = new Set(read.map((f) => f.id))
+  return [...read, ...earlier.filter((f) => !ids.has(f.id))]
 }
 
 function nextSource(
@@ -232,7 +288,9 @@ function nextSource(
         status: outcome.complete ? 'ok' : 'partial',
         listedAt: now,
         failedAt: outcome.complete ? null : now,
-        files: outcome.files,
+        files: outcome.complete
+          ? outcome.files
+          : withEarlierFiles(outcome.files, base.files),
       }
     case 'gone':
       return {
@@ -402,6 +460,10 @@ export function findListedFileOwner(
   return findListedFile(listing, fileId)?.owner ?? null
 }
 
+export function listingBytes(listing: AlbumListing): number {
+  return listing.files.reduce((sum, f) => sum + fileBytes(f), 0)
+}
+
 export function listingTotals(
   listing: AlbumListing
 ): { count: number; bytes: number } | null {
@@ -413,7 +475,7 @@ export function listingTotals(
   }
   return {
     count: listing.files.length,
-    bytes: listing.files.reduce((sum, f) => sum + fileBytes(f), 0),
+    bytes: listingBytes(listing),
   }
 }
 

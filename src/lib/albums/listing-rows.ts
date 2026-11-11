@@ -85,10 +85,10 @@ export function planListingSave(
   }
   for (const [key, source] of Object.entries(next.sources)) {
     const before = previous?.sources[key]
-    const files = JSON.stringify(source.files)
+    const same = before?.files === source.files
+    const files = same ? null : JSON.stringify(source.files)
     const filesChanged =
-      !before ||
-      (before.files !== source.files && JSON.stringify(before.files) !== files)
+      !before || (!same && JSON.stringify(before.files) !== files)
     if (before && !filesChanged && sameState(before, source)) continue
     plan.put.push({
       key,

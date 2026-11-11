@@ -26,10 +26,16 @@ export const Route = createFileRoute('/albums/$albumId')({
       context.queryClient.ensureQueryData(albumKey),
     ])
     const album = context.queryClient.getQueryData(albumKey.queryKey)
-    return { user, album }
+    const head = album && {
+      id: album.id,
+      title: album.title,
+      description: album.description,
+      coverFileId: album.coverFileId,
+    }
+    return { user, head }
   },
   head: ({ loaderData }) => {
-    const album = loaderData?.album
+    const album = loaderData?.head
     if (!album) return {}
 
     const title = album.title

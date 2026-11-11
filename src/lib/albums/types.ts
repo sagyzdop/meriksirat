@@ -57,6 +57,11 @@ export const ClaimEditAccessSchema = z.object({
   token: z.string(),
 })
 
+export const PhotoDetailsSchema = z.object({
+  albumId: z.string(),
+  fileId: z.string().min(1).max(200),
+})
+
 export const DeletePhotoSchema = z.object({
   albumId: z.string(),
   fileId: z.string(),
@@ -138,21 +143,21 @@ export interface AlbumPhotoExif {
   whiteBalance?: string
 }
 
+/**
+ * What a grid needs of one photo. Album pages ship one per photo, so it stays
+ * this small: the image URLs come from `albumPhotoUrls(id)` and the rest is
+ * fetched as `AlbumPhotoDetails` when the details panel opens.
+ */
 export interface AlbumPhoto {
   id: string
-  photoId?: string | null
   name: string
+  capturedAt: string
+}
+
+export interface AlbumPhotoDetails {
   mimeType: string
   size: number | null
-  capturedAt: string
-  /**
-   * Drive creation time (ISO). Used to pick the default cover: the first
-   * uploaded photo in the folder.
-   */
-  createdAt?: string
-  url: string
-  thumbnailUrl: string
-  exif?: AlbumPhotoExif
+  exif: AlbumPhotoExif | null
 }
 
 export interface AlbumSummary {
@@ -220,6 +225,7 @@ export interface AlbumAuthorRow {
 
 export interface AlbumDetail extends AlbumSummary {
   photos: AlbumPhoto[]
+  photoBytes: number
   access: AlbumAccessLevel
   editShareToken: string | null
   /**

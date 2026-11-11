@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
 import type { AlbumPhoto } from '@/lib/albums'
+import { albumPhotoUrls } from '@/lib/albums/urls'
 import { FavoriteButton } from '@/components/shared/favorite-button'
 import type { FavoritesControl } from '@/lib/favorites/use-album-favorites'
 import { PhotoImage } from './photo-image'
@@ -22,6 +23,7 @@ interface PhotoGridProps {
   onDeletePhoto?: (photo: AlbumPhoto) => void
   favorites?: FavoritesControl
   getAlbumId?: (photo: AlbumPhoto) => string | undefined
+  albumId?: string
 }
 
 export function PhotoGrid({
@@ -32,6 +34,7 @@ export function PhotoGrid({
   onDeletePhoto,
   favorites,
   getAlbumId,
+  albumId,
 }: PhotoGridProps) {
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
 
@@ -77,7 +80,7 @@ export function PhotoGrid({
             className="group relative aspect-square cursor-pointer outline-none focus-visible:ring-ring/50 focus-visible:z-10 focus-visible:ring-[3px]"
           >
             <PhotoImage
-              src={photo.thumbnailUrl}
+              src={albumPhotoUrls(photo.id).thumbnailUrl}
               alt={photo.name}
               className="transition-transform duration-300 group-hover:scale-105"
             />
@@ -109,6 +112,7 @@ export function PhotoGrid({
           onDeletePhoto={onDeletePhoto}
           favorites={favorites}
           getAlbumId={getAlbumId}
+          albumId={albumId}
         />
       )}
     </>

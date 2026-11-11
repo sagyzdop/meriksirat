@@ -23,6 +23,7 @@ import {
 import { FavoriteButton } from '@/components/shared/favorite-button'
 import { cn, errorMessage } from '@/lib/utils'
 import { downloadPhotoFile } from '@/lib/albums/download'
+import { albumPhotoUrls } from '@/lib/albums/urls'
 import type { PhotoLightboxProps } from './types'
 import { useZoom } from './use-zoom'
 import { InfoPanel } from './info-panel'
@@ -40,6 +41,7 @@ export function PhotoLightbox({
   onDeletePhoto,
   favorites,
   getAlbumId,
+  albumId: pageAlbumId,
 }: PhotoLightboxProps) {
   const photo = photos[index]
   const albumId = getAlbumId?.(photo)
@@ -130,9 +132,9 @@ export function PhotoLightbox({
       {/* Image area */}
       <div className="relative h-full w-full overflow-hidden">
         {/* Thumbnail placeholder behind the full image */}
-        {photo.thumbnailUrl && !imgLoaded && (
+        {!imgLoaded && (
           <img
-            src={photo.thumbnailUrl}
+            src={albumPhotoUrls(photo.id).thumbnailUrl}
             alt=""
             aria-hidden
             loading="eager"
@@ -143,7 +145,7 @@ export function PhotoLightbox({
         )}
         <img
           key={photo.id}
-          src={photo.url}
+          src={albumPhotoUrls(photo.id).url}
           alt={photo.name}
           loading="eager"
           decoding="async"
@@ -296,6 +298,7 @@ export function PhotoLightbox({
       {/* Info panel */}
       <InfoPanel
         photo={photo}
+        albumId={albumId ?? pageAlbumId}
         index={index}
         total={photos.length}
         open={infoOpen}

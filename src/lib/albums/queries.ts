@@ -8,6 +8,7 @@ import {
   getAlbumAuthorsFn,
   getAlbumFn,
   getMyAlbumsFn,
+  getPhotoDetailsFn,
   getPublicAlbumsFn,
 } from './functions'
 import type {
@@ -17,6 +18,7 @@ import type {
   AlbumDetail,
   AlbumListFilters,
   AlbumListPage,
+  AlbumPhotoDetails,
   AlbumOwnershipFilter,
 } from './types'
 
@@ -81,5 +83,12 @@ export const albumQueries = {
       staleTime: 15_000,
       queryFn: async (): Promise<AlbumDetail | null> =>
         (await getAlbumFn({ data: { albumId } })) ?? null,
+    }),
+  photoDetails: (albumId: string, fileId: string) =>
+    queryOptions({
+      queryKey: [...albumQueries.all, 'photo', albumId, fileId],
+      staleTime: Infinity,
+      queryFn: async (): Promise<AlbumPhotoDetails | null> =>
+        (await getPhotoDetailsFn({ data: { albumId, fileId } })) ?? null,
     }),
 }

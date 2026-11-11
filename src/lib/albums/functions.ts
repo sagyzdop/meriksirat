@@ -9,6 +9,7 @@ import {
   CreateAlbumSchema,
   CreateUploadSessionsSchema,
   DeletePhotoSchema,
+  PhotoDetailsSchema,
   RemoveMemberSchema,
   SetCoverPhotoSchema,
   UpdateAlbumSchema,
@@ -19,6 +20,7 @@ import type {
   AlbumAuthorRow,
   AlbumDetail,
   AlbumListPage,
+  AlbumPhotoDetails,
   UploadConfirmResult,
   UploadSessionResult,
 } from './types'
@@ -340,6 +342,34 @@ export const getAlbumFn = createServerFn({ method: 'GET' })
     const core = await buildAlbumCore(database, row)
 
     return loadAlbumDetail(database, core, row, access, currentUser)
+  })
+
+export const getPhotoDetailsFn = createServerFn({ method: 'GET' })
+  .validator(PhotoDetailsSchema)
+  .handler(async ({ data }): Promise<AlbumPhotoDetails | null> => {
+    const { getRequestHeaders } = await import('@tanstack/react-start/server')
+    const { env } = await import('cloudflare:workers')
+    const { db } = await import('@/db')
+    const { getSessionUser } = await import('./server')
+    const { findStoredFile } = await import('./listing-store')
+    const { driveFileToPhotoDetails } = await import('./drive-photo')
+
+    const headers = getRequestHeaders()
+    if (!(await getSessionUser(headers))) {
+      const { rateLimit } = await import('@/lib/ratelimit')
+      const limit = await rateLimit(headers, 'rl_album_detail')
+      if (!limit.allowed) {
+        throw new UserError(
+          `Too many requests. Try again in ${limit.retryAfterSeconds} seconds.`
+        )
+      }
+    }
+
+    const database = db(env.meriksirat_d1 as D1Database)
+    const row = await loadAlbumOrNull(database, data.albumId)
+    if (!row || row.deletedAt) return null
+    const file = await findStoredFile(database, row.id, data.fileId)
+    return file ? driveFileToPhotoDetails(file) : null
   })
 
 export const refreshAlbumFn = createServerFn({ method: 'POST' })
