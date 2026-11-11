@@ -1,4 +1,4 @@
-import { betterAuth } from 'better-auth'
+import { betterAuth } from 'better-auth/minimal'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { planNewAccount } from '@/lib/auth/new-account'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
@@ -28,6 +28,12 @@ export const auth = betterAuth({
     additionalFields: {
       termsAcceptedAt: { type: 'date', required: false, input: false },
     },
+  },
+  session: {
+    // A signed cookie answers getSession for 5 minutes without reading D1.
+    // Bans and deactivation still take effect at once: resolveSession reads
+    // the user row on every server call.
+    cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
   plugins: [tanstackStartCookies()],
   databaseHooks: {

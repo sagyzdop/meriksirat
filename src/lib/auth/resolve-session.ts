@@ -22,11 +22,11 @@ async function resolveSessionUncached(headers: Headers) {
   const { eq } = await import('drizzle-orm')
   const database = db(env.meriksirat_d1 as D1Database)
   const row = await database
-    .select({ bannedAt: user.bannedAt })
+    .select({ bannedAt: user.bannedAt, status: user.status })
     .from(user)
     .where(eq(user.id, result.user.id))
     .get()
-  if (!row?.bannedAt) return result
+  if (row && !row.bannedAt && row.status !== 'Inactive') return result
   await database.delete(session).where(eq(session.userId, result.user.id))
   return null
 }
