@@ -12,6 +12,7 @@ import {
   getBookingDetailsForLogging,
 } from './server-utils'
 import {
+  escapeHtml,
   formatAlbumLog,
   formatBanLog,
   formatBookingLog,
@@ -104,6 +105,13 @@ async function sendChannelText(text: string): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
     })
   }
+}
+
+/**
+ * Posts a plain notice to the club Telegram channel. Never throws.
+ */
+export async function logChannelNotice(text: string): Promise<void> {
+  await sendChannelText(escapeHtml(text))
 }
 
 /**

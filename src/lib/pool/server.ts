@@ -89,9 +89,11 @@ export async function sendAdminsTelegramResult(
     .where(and(eq(user.role, 'admin'), isNotNull(user.telegramChatId)))
     .all()
   if (admins.length === 0) return 'no_admins'
+  // One message per admin, plus a copy in the club channel as the log.
+  const cost = admins.length + 1
   if (budget) {
-    if (options.force) budget.spend(admins.length)
-    else if (!budget.take(admins.length)) return 'over_budget'
+    if (options.force) budget.spend(cost)
+    else if (!budget.take(cost)) return 'over_budget'
   }
   const { TelegramAPI } = await import('@/lib/telegram/api')
   const telegram = new TelegramAPI(botToken)
@@ -102,6 +104,8 @@ export async function sendAdminsTelegramResult(
       console.error('Failed to send admin alert:', error)
     }
   }
+  const { logChannelNotice } = await import('@/lib/telegram/logging')
+  await logChannelNotice(text)
   return 'sent'
 }
 
