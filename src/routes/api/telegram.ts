@@ -46,6 +46,13 @@ export const Route = createFileRoute('/api/telegram')({
           // Parse Telegram update
           const update = (await request.json()) as Update
 
+          // The bot only talks in private chats. Messages from groups or a
+          // channel's direct-messages chat (where a reply needs a topic id)
+          // are acknowledged and dropped, before any DB work.
+          if (update.message && update.message.chat.type !== 'private') {
+            return new Response('OK', { status: 200 })
+          }
+
           // Rate limit per chat so a single spammy chat cannot churn the whole
           // webhook (every update triggers DB reads and possibly bot replies).
           // Keying on the chat id (not IP) is required because all webhooks

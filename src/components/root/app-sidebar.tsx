@@ -158,7 +158,7 @@ export function AppSidebar({
       [userData.firstName, userData.lastName].filter(Boolean).join(' ') ||
       userData.email,
     email: userData.email,
-    avatar: userData.image || session?.user?.image || '/avatars/default.jpg',
+    avatar: userData.image || session?.user?.image || '',
   }
 
   const hasAdminAccess =
