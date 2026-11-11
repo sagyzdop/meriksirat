@@ -159,6 +159,9 @@ export async function getOrCreateDriveFolder(
 const LISTING_FIELDS =
   'nextPageToken, files(id, name, mimeType, size, md5Checksum, createdTime, imageMediaMetadata(time, cameraMake, cameraModel, exposureTime, aperture, focalLength, isoSpeed, width, height, whiteBalance))'
 
+// Enough to delete the files and count the bytes freed.
+export const ID_SIZE_FIELDS = 'nextPageToken, files(id, size)'
+
 /**
  * List the files directly inside a folder, page by page, until the folder is
  * done or `mayRequest` refuses another page. `complete` says which it was.
@@ -166,12 +169,13 @@ const LISTING_FIELDS =
 export async function listDriveFolderUpTo(
   accessToken: string,
   folderId: string,
-  mayRequest: () => boolean
+  mayRequest: () => boolean,
+  fields: string = LISTING_FIELDS
 ): Promise<{ files: DriveFileMeta[]; complete: boolean }> {
   return listFilesUpTo<DriveFileMeta>(
     accessToken,
     `'${folderId}' in parents`,
-    LISTING_FIELDS,
+    fields,
     mayRequest
   )
 }
@@ -187,7 +191,8 @@ export const FOLDERS_PER_LISTING = 40
 export async function listDriveFoldersUpTo(
   accessToken: string,
   folderIds: string[],
-  mayRequest: () => boolean
+  mayRequest: () => boolean,
+  fields: string = LISTING_FIELDS
 ): Promise<{
   files: (DriveFileMeta & { parents?: string[] })[]
   complete: boolean
@@ -198,7 +203,7 @@ export async function listDriveFoldersUpTo(
   return listFilesUpTo(
     accessToken,
     `(${folderIds.map((id) => `'${id}' in parents`).join(' or ')})`,
-    LISTING_FIELDS.replace('files(id,', 'files(id, parents,'),
+    fields.replace('files(id,', 'files(id, parents,'),
     mayRequest
   )
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   deleteAllowance,
+  groupDeletesByOwner,
   planTeardown,
   settleTeardown,
 } from '@/lib/albums/teardown'
@@ -143,5 +144,22 @@ describe('deleteAllowance', () => {
     expect(deleteAllowance(5)).toBe(100)
     expect(deleteAllowance(4)).toBe(0)
     expect(deleteAllowance(0)).toBe(0)
+  })
+})
+
+describe('groupDeletesByOwner', () => {
+  it('deletes the volumes of one owner in one batch', () => {
+    const plan = planTeardown(
+      [
+        source('volume:1', { kind: 'buffer', grantId: 'g1' }, listed(['a'])),
+        source('flamekeeper:u1', fk('u1'), listed(['b'])),
+        source('volume:2', { kind: 'buffer', grantId: 'g1' }, listed(['c'])),
+        source('volume:3', { kind: 'buffer', grantId: 'g2' }, listed(['d'])),
+      ],
+      100
+    )
+    expect(
+      groupDeletesByOwner(plan.deletes).map((g) => g.map((d) => d.key))
+    ).toEqual([['volume:1', 'volume:2'], ['flamekeeper:u1'], ['volume:3']])
   })
 })

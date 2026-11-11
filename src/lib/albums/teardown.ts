@@ -74,6 +74,32 @@ export function planTeardown(
   return { deletes, abandoned, complete }
 }
 
+function ownerKey(owner: ListingOwner): string {
+  switch (owner.kind) {
+    case 'master':
+      return 'master'
+    case 'buffer':
+      return `buffer:${owner.grantId ?? ''}`
+    case 'flamekeeper':
+      return `flamekeeper:${owner.userId}`
+  }
+}
+
+/**
+ * The planned deletes grouped by the token that deletes them, so an album
+ * split into many volumes costs one batch per owner instead of one per volume.
+ */
+export function groupDeletesByOwner(
+  deletes: TeardownDelete[]
+): TeardownDelete[][] {
+  const groups = new Map<string, TeardownDelete[]>()
+  for (const del of deletes) {
+    const key = ownerKey(del.owner)
+    groups.set(key, [...(groups.get(key) ?? []), del])
+  }
+  return [...groups.values()]
+}
+
 export function settleTeardown(
   plan: TeardownPlan,
   results: Record<string, { failed: number; threw?: boolean }>
