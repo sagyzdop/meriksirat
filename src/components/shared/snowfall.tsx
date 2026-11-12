@@ -72,7 +72,7 @@ export function Snowfall() {
         root,
         number: 140,
         // px per frame at a fixed 30fps; the library default is [1, 5].
-        velocityYRange: [0.2, 0.8],
+        velocityYRange: [1, 5],
         velocityXRange: [-0.3, 0.3],
         radiusRange: [0.6, 1.8],
         color: dark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(40, 40, 45, 0.35)',

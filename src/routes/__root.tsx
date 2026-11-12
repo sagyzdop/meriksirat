@@ -74,7 +74,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         data-halloween-start="01-10"
         data-halloween-end="11-11"
         // Same DD-MM convention for snowfall.tsx. Wraps the year boundary.
-        data-snow-start="01-12"
+        data-snow-start="12-11"
         data-snow-end="28-02"
       >
         {/* attribute="class" matches the `.dark` custom-variant in styles.css.
