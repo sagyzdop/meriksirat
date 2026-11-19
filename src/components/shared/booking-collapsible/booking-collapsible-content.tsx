@@ -4,9 +4,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import {
-  CalendarDays,
-  ClipboardList,
+  ArrowRight,
+  Clock,
   Eye,
+  Info,
   PackageCheck,
   Pencil,
   X,
@@ -26,11 +27,12 @@ import {
 import { ExtendBookingButton } from '@/components/shared/extend-booking-button'
 import { EquipmentTable } from '@/components/shared/equipment-table'
 import { BookingItemAction } from '@/components/shared/booking-item-action'
+import { isBookingOverdue } from '@/components/shared/booking-status-badge'
 import { cancelBookingItemFn } from '@/lib/booking'
 import type { BookingItemWithEquipment } from '@/lib/booking/types'
 import type { BookingCollapsibleRowData } from './types'
 import { formatDate } from '@/lib/format'
-import { errorMessage } from '@/lib/utils'
+import { cn, errorMessage } from '@/lib/utils'
 
 interface BookingCollapsibleContentProps {
   booking: BookingCollapsibleRowData
@@ -65,6 +67,7 @@ export function BookingCollapsibleContent({
   const queryClient = useQueryClient()
   const editable = canEdit ? canEdit(booking) : getDefaultCanEdit(booking)
   const eventName = booking.userEventDetails?.trim()
+  const isOverdue = isBookingOverdue(booking.endTime, booking.status)
   const [pendingCancelItem, setPendingCancelItem] =
     useState<BookingItemWithEquipment | null>(null)
   const [isCancellingItem, setIsCancellingItem] = useState(false)
@@ -101,16 +104,36 @@ export function BookingCollapsibleContent({
       <div className="space-y-1 rounded-md border bg-card px-3 py-2.5 text-sm">
         {eventName && (
           <div className="flex items-start gap-2 font-medium">
-            <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <span>{eventName}</span>
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-          <CalendarDays className="h-4 w-4 shrink-0" />
-          <span>{formatDate(booking.startTime)}</span>
-          <span className="tabular-nums">
-            {format(new Date(booking.startTime), 'HH:mm')} –{' '}
-            {format(new Date(booking.endTime), 'HH:mm')}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="text-muted-foreground">
+            {formatDate(booking.startTime)}
+          </span>
+          <span className="flex shrink-0 items-center gap-1">
+            <span
+              className={cn(
+                'font-medium tabular-nums',
+                isOverdue && 'text-destructive'
+              )}
+            >
+              {format(new Date(booking.startTime), 'HH:mm')}
+            </span>
+            <ArrowRight
+              className="h-3 w-3 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span
+              className={cn(
+                'font-medium tabular-nums',
+                isOverdue && 'text-destructive'
+              )}
+            >
+              {format(new Date(booking.endTime), 'HH:mm')}
+            </span>
           </span>
         </div>
       </div>

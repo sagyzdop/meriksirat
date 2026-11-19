@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
@@ -48,6 +49,24 @@ const SELECT_W = 'w-4'
 const CHEVRON_W = 'w-4'
 
 const TOOLBAR_BUTTON_CLASS = 'h-8 w-full border-dashed sm:w-auto'
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function resolveImageSrc(image?: string | null): string | undefined {
+  if (!image) return undefined
+  // User avatars are absolute URLs (e.g. Google OAuth) while R2-backed images
+  // are bare keys served through /api/images/{key}.
+  if (image.startsWith('http') || image.startsWith('/')) return image
+  return `/api/images/${image}`
+}
 
 interface PersonLinkProps {
   person: BookingCollapsiblePersonInfo
@@ -125,15 +144,28 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
             />
           </div>
 
-          <div className="min-w-0 flex-1">
-            <span className="block truncate font-medium">
-              {person ? <PersonLink person={person} /> : name}
-            </span>
-            {eventName && (
-              <span className="block truncate text-xs text-muted-foreground">
-                {eventName}
-              </span>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {person && (
+              <Avatar className="h-6 w-6 shrink-0">
+                <AvatarImage
+                  src={resolveImageSrc(person.image)}
+                  alt={person.name}
+                />
+                <AvatarFallback className="text-[10px]">
+                  {getInitials(person.name)}
+                </AvatarFallback>
+              </Avatar>
             )}
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">
+                {person ? <PersonLink person={person} /> : name}
+              </div>
+              {eventName && (
+                <div className="truncate text-xs text-muted-foreground">
+                  {eventName}
+                </div>
+              )}
+            </div>
           </div>
 
           <div
