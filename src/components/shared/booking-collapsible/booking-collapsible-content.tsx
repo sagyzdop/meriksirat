@@ -3,7 +3,14 @@ import { useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
-import { CalendarDays, Eye, PackageCheck, Pencil, X } from 'lucide-react'
+import {
+  CalendarDays,
+  ClipboardList,
+  Eye,
+  PackageCheck,
+  Pencil,
+  X,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createTelegramBotLink } from '@/lib/telegram/client-utils'
 import {
@@ -57,6 +64,7 @@ export function BookingCollapsibleContent({
   const router = useRouter()
   const queryClient = useQueryClient()
   const editable = canEdit ? canEdit(booking) : getDefaultCanEdit(booking)
+  const eventName = booking.userEventDetails?.trim()
   const [pendingCancelItem, setPendingCancelItem] =
     useState<BookingItemWithEquipment | null>(null)
   const [isCancellingItem, setIsCancellingItem] = useState(false)
@@ -90,14 +98,21 @@ export function BookingCollapsibleContent({
 
   return (
     <div className="space-y-4 border-t px-4 py-4">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-card px-3 py-2.5 text-sm">
-        <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="font-medium">{formatDate(booking.startTime)}</span>
-        <span className="text-muted-foreground">·</span>
-        <span className="tabular-nums">
-          {format(new Date(booking.startTime), 'HH:mm')} –{' '}
-          {format(new Date(booking.endTime), 'HH:mm')}
-        </span>
+      <div className="space-y-1 rounded-md border bg-card px-3 py-2.5 text-sm">
+        {eventName && (
+          <div className="flex items-start gap-2 font-medium">
+            <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>{eventName}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+          <CalendarDays className="h-4 w-4 shrink-0" />
+          <span>{formatDate(booking.startTime)}</span>
+          <span className="tabular-nums">
+            {format(new Date(booking.startTime), 'HH:mm')} –{' '}
+            {format(new Date(booking.endTime), 'HH:mm')}
+          </span>
+        </div>
       </div>
 
       <EquipmentTable

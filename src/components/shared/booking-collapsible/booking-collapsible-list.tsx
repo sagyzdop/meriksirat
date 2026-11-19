@@ -17,7 +17,6 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
@@ -28,7 +27,8 @@ import { DataTableFacetedFilter } from '@/components/shared/data-table-faceted-f
 import { DateRangeFilter } from '@/components/shared/date-range-filter'
 import { LoadingOverlay } from '@/components/shared/loading-overlay'
 import {
-  BookingStatusBadge,
+  getBookingStatusConfig,
+  getDisplayBookingStatus,
   isBookingOverdue,
 } from '@/components/shared/booking-status-badge'
 import { BulkCancelBookingsDialog } from '@/components/shared/bulk-cancel-bookings-dialog'
@@ -45,28 +45,9 @@ import type {
 import { formatDate } from '@/lib/format'
 
 const SELECT_W = 'w-4'
-const ID_W = 'w-14'
 const CHEVRON_W = 'w-4'
 
 const TOOLBAR_BUTTON_CLASS = 'h-8 w-full border-dashed sm:w-auto'
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-function resolveImageSrc(image?: string | null): string | undefined {
-  if (!image) return undefined
-  // User avatars are absolute URLs (e.g. Google OAuth) while R2-backed images
-  // are bare keys served through /api/images/{key}.
-  if (image.startsWith('http') || image.startsWith('/')) return image
-  return `/api/images/${image}`
-}
 
 interface PersonLinkProps {
   person: BookingCollapsiblePersonInfo
@@ -74,18 +55,6 @@ interface PersonLinkProps {
 
 function PersonLink({ person }: PersonLinkProps) {
   const router = useRouter()
-
-  const content = (
-    <>
-      <Avatar className="h-6 w-6 shrink-0">
-        <AvatarImage src={resolveImageSrc(person.image)} alt={person.name} />
-        <AvatarFallback className="text-[10px]">
-          {getInitials(person.name)}
-        </AvatarFallback>
-      </Avatar>
-      <span className="hidden truncate sm:inline">{person.name}</span>
-    </>
-  )
 
   if (person.href) {
     return (
@@ -96,18 +65,14 @@ function PersonLink({ person }: PersonLinkProps) {
           event.stopPropagation()
           router.navigate({ href: person.href! })
         }}
-        className="flex min-w-0 max-w-40 items-center gap-2 font-medium hover:underline lg:max-w-48"
+        className="inline-block max-w-full truncate align-middle hover:underline"
       >
-        {content}
+        {person.name}
       </a>
     )
   }
 
-  return (
-    <span className="flex min-w-0 max-w-40 items-center gap-2 font-medium lg:max-w-48">
-      {content}
-    </span>
-  )
+  return <span className="block truncate">{person.name}</span>
 }
 
 interface BookingCollapsibleRowProps<T extends BookingCollapsibleRowData> {
@@ -128,6 +93,10 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
   renderCollapsibleContent,
 }: BookingCollapsibleRowProps<T>) {
   const isOverdue = isBookingOverdue(booking.endTime, booking.status)
+  const statusConfig = getBookingStatusConfig(
+    getDisplayBookingStatus(booking.endTime, booking.status)
+  )
+  const eventName = booking.userEventDetails?.trim()
 
   const itemCount = booking.items.length
   const itemLabel = itemCount === 1 ? 'item' : 'items'
@@ -156,22 +125,16 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
             />
           </div>
 
-          <span
-            className={cn(
-              ID_W,
-              'font-medium text-muted-foreground tabular-nums'
-            )}
-          >
-            #{booking.id}
-          </span>
-
-          {person ? (
-            <PersonLink person={person} />
-          ) : (
-            <span className="min-w-0 max-w-40 truncate font-medium lg:max-w-48">
-              {name}
+          <div className="min-w-0 flex-1">
+            <span className="block truncate font-medium">
+              {person ? <PersonLink person={person} /> : name}
             </span>
-          )}
+            {eventName && (
+              <span className="block truncate text-xs text-muted-foreground">
+                {eventName}
+              </span>
+            )}
+          </div>
 
           <div
             className={cn(
@@ -180,52 +143,42 @@ function BookingCollapsibleRow<T extends BookingCollapsibleRowData>({
             )}
           >
             <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
-            <span className="hidden min-w-0 truncate text-muted-foreground sm:inline">
-              {formatDate(booking.startTime)}
-            </span>
-            <span
-              className={cn(
-                'shrink-0 font-medium',
-                isOverdue && 'text-destructive'
-              )}
-            >
-              {format(new Date(booking.startTime), 'HH:mm')}
-            </span>
-            <ArrowRight
-              className="h-3 w-3 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span
-              className={cn(
-                'shrink-0 font-medium',
-                isOverdue && 'text-destructive'
-              )}
-            >
-              {format(new Date(booking.endTime), 'HH:mm')}
-            </span>
+            <div className="flex min-w-0 flex-col sm:flex-row sm:items-center sm:gap-1.5">
+              <span className="truncate text-muted-foreground">
+                {formatDate(booking.startTime)}
+              </span>
+              <span className="flex shrink-0 items-center gap-1">
+                <span
+                  className={cn('font-medium', isOverdue && 'text-destructive')}
+                >
+                  {format(new Date(booking.startTime), 'HH:mm')}
+                </span>
+                <ArrowRight
+                  className="h-3 w-3 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <span
+                  className={cn('font-medium', isOverdue && 'text-destructive')}
+                >
+                  {format(new Date(booking.endTime), 'HH:mm')}
+                </span>
+              </span>
+            </div>
           </div>
 
           <Badge
-            variant="secondary"
-            className="h-6 min-w-6 shrink-0 justify-center rounded-full px-2 text-sm tabular-nums sm:min-w-14"
-            title={`${itemCount} ${itemLabel}`}
+            variant="outline"
+            className={cn(
+              'h-6 min-w-6 shrink-0 justify-center rounded-full px-2 text-sm tabular-nums',
+              statusConfig.color
+            )}
+            title={`${itemCount} ${itemLabel} ${statusConfig.label}`}
           >
-            <span className="tabular-nums">{itemCount}</span>
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              &nbsp;{itemLabel}
+            <span>{itemCount}</span>
+            <span className="hidden text-xs sm:inline">
+              &nbsp;{itemLabel} {statusConfig.label.toLowerCase()}
             </span>
           </Badge>
-
-          <span className="shrink-0">
-            <BookingStatusBadge
-              status={booking.status}
-              endTime={booking.endTime}
-              showOverdueIcon
-              mobileDot
-              colorized
-              className="h-6 w-6 shrink-0 justify-center rounded-full sm:w-36"
-            />
-          </span>
 
           <ChevronRight
             className={cn(
